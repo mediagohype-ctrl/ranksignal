@@ -1,26 +1,424 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Design tokens. Read docs/DESIGN_SYSTEM.md before using.
+   Single light theme on a white background (dark mode intentionally removed).
+   Raw values live on :root as CSS variables; @theme inline maps them to
+   Tailwind utilities (bg-surface, text-muted, border-border, shadow-card...).
+   Pages must use these tokens; never hard-code hex colours in pages.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f0f2f8;
+  --surface-3: #e5e9f2;
+  --border: #e1e5ee;
+  --border-strong: #c7cedc;
+  --overlay: rgb(8 12 32 / 0.5);
+
+  /* Text */
+  --fg: #0b1530;
+  --fg-soft: #2c3753;
+  --muted: #56627a; /* 5.8:1 on surface, 5.4:1 on bg */
+
+  /* Brand: deep indigo primary, teal accent, navy for hero bands */
+  --primary: #4338ca; /* 7.0:1 on white */
+  --primary-hover: #3730a3;
+  --primary-fg: #ffffff;
+  --primary-soft: #eceefe;
+  --primary-soft-fg: #3730a3;
+  --accent: #0f766e; /* 5.4:1 on white */
+  --accent-hover: #115e59;
+  --accent-fg: #ffffff;
+  --accent-soft: #e2f6f2;
+  --accent-bright: #14b8a6; /* decorative only (icons, rings, charts) — not for text */
+  --navy: #ffffff; /* "navy" bands are now light bands on white */
+  --navy-2: #f4f6fd;
+  --navy-fg: #0b1530; /* text on hero bands */
+
+  /* Semantic */
+  --success: #15803d;
+  --success-soft: #e8f8ee;
+  --warning: #b45309;
+  --warning-soft: #fdf4e3;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-fg: #ffffff;
+  --danger-soft: #fdecec;
+  --info: #1d4ed8;
+  --info-soft: #e8effd;
+
+  /* Severity */
+  --sev-critical: #9f1239;
+  --sev-critical-soft: #fde8ee;
+  --sev-high: #c2410c;
+  --sev-high-soft: #fdeee4;
+  --sev-medium: #b45309;
+  --sev-medium-soft: #fdf4e3;
+  --sev-low: #1d4ed8;
+  --sev-low-soft: #e8effd;
+  --sev-info: #56627a;
+  --sev-info-soft: #f0f2f8;
+
+  /* Risk classes A–D */
+  --risk-a: #15803d;
+  --risk-a-soft: #e8f8ee;
+  --risk-b: #1d4ed8;
+  --risk-b-soft: #e8effd;
+  --risk-c: #b45309;
+  --risk-c-soft: #fdf4e3;
+  --risk-d: #b91c1c;
+  --risk-d-soft: #fdecec;
+
+  /* Score bands: good >= 80, ok 50-79, poor < 50 */
+  --score-good: #047857;
+  --score-good-soft: #e3f7ef;
+  --score-ok: #b45309;
+  --score-ok-soft: #fdf4e3;
+  --score-poor: #b91c1c;
+  --score-poor-soft: #fdecec;
+  --score-none: #677185;
+  --score-track: #e5e9f2;
+
+  /* Focus, charts, diffs */
+  --ring: #4f46e5;
+  --ring-offset: #ffffff;
+  --chart-1: #4338ca;
+  --chart-2: #0f766e;
+  --chart-3: #c2410c;
+  --chart-4: #7c3aed;
+  --chart-5: #0369a1;
+  --chart-muted: #a7b1c4;
+  --chart-grid: #e5e9f2;
+  --diff-add: #c9f0d6;
+  --diff-remove: #fbd5d1;
+
+  /* Elevation */
+  --shadow-color: 222 47% 11%;
 }
+
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Colours */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-overlay: var(--overlay);
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-fg: var(--primary-soft-fg);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-bright: var(--accent-bright);
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-navy-fg: var(--navy-fg);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-sev-critical: var(--sev-critical);
+  --color-sev-critical-soft: var(--sev-critical-soft);
+  --color-sev-high: var(--sev-high);
+  --color-sev-high-soft: var(--sev-high-soft);
+  --color-sev-medium: var(--sev-medium);
+  --color-sev-medium-soft: var(--sev-medium-soft);
+  --color-sev-low: var(--sev-low);
+  --color-sev-low-soft: var(--sev-low-soft);
+  --color-sev-info: var(--sev-info);
+  --color-sev-info-soft: var(--sev-info-soft);
+  --color-risk-a: var(--risk-a);
+  --color-risk-a-soft: var(--risk-a-soft);
+  --color-risk-b: var(--risk-b);
+  --color-risk-b-soft: var(--risk-b-soft);
+  --color-risk-c: var(--risk-c);
+  --color-risk-c-soft: var(--risk-c-soft);
+  --color-risk-d: var(--risk-d);
+  --color-risk-d-soft: var(--risk-d-soft);
+  --color-score-good: var(--score-good);
+  --color-score-good-soft: var(--score-good-soft);
+  --color-score-ok: var(--score-ok);
+  --color-score-ok-soft: var(--score-ok-soft);
+  --color-score-poor: var(--score-poor);
+  --color-score-poor-soft: var(--score-poor-soft);
+  --color-score-none: var(--score-none);
+  --color-score-track: var(--score-track);
+  --color-ring: var(--ring);
+  --color-ring-offset: var(--ring-offset);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-muted: var(--chart-muted);
+  --color-chart-grid: var(--chart-grid);
+  --color-diff-add: var(--diff-add);
+  --color-diff-remove: var(--diff-remove);
+
+  /* Fonts — Google Sans Flex everywhere (loaded in src/app/layout.tsx) */
+  --font-sans: "Google Sans Flex", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Radius scale */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --radius-3xl: 1.5rem;
+
+  /* Shadow scale — soft, layered */
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.05);
+  --shadow-md: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 4px 8px -2px hsl(var(--shadow-color) / 0.07),
+    0 8px 16px -4px hsl(var(--shadow-color) / 0.05);
+  --shadow-lg: 0 2px 4px hsl(var(--shadow-color) / 0.04), 0 8px 16px -4px hsl(var(--shadow-color) / 0.08),
+    0 20px 32px -8px hsl(var(--shadow-color) / 0.1);
+  --shadow-xl: 0 4px 8px hsl(var(--shadow-color) / 0.05), 0 16px 32px -8px hsl(var(--shadow-color) / 0.12),
+    0 32px 64px -16px hsl(var(--shadow-color) / 0.16);
+  --shadow-card: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 2px 6px -1px hsl(var(--shadow-color) / 0.04);
+  --shadow-card-hover: 0 2px 4px hsl(var(--shadow-color) / 0.05), 0 10px 24px -6px hsl(var(--shadow-color) / 0.12);
+
+  /* Type scale — use text-display, text-h1 … text-caption (size + line-height + tracking + weight) */
+  --text-display: clamp(2.5rem, 1.6rem + 3.4vw, 4.25rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 650;
+  --text-h1: clamp(1.875rem, 1.5rem + 1.2vw, 2.5rem);
+  --text-h1--line-height: 1.12;
+  --text-h1--letter-spacing: -0.028em;
+  --text-h1--font-weight: 640;
+  --text-h2: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
+  --text-h2--line-height: 1.2;
+  --text-h2--letter-spacing: -0.022em;
+  --text-h2--font-weight: 620;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.35;
+  --text-h3--letter-spacing: -0.014em;
+  --text-h3--font-weight: 600;
+  --text-h4: 1.0625rem;
+  --text-h4--line-height: 1.4;
+  --text-h4--letter-spacing: -0.008em;
+  --text-h4--font-weight: 600;
+  --text-lead: 1.1875rem;
+  --text-lead--line-height: 1.6;
+  --text-lead--letter-spacing: -0.006em;
+  --text-lead--font-weight: 400;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.6;
+  --text-body--letter-spacing: -0.003em;
+  --text-body--font-weight: 400;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-small--letter-spacing: 0em;
+  --text-small--font-weight: 400;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+  --text-caption--letter-spacing: 0.01em;
+  --text-caption--font-weight: 500;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-in: fade-in 180ms var(--ease-out-soft);
+  --animate-pop-in: pop-in 200ms var(--ease-out-soft);
+  --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+  html {
+    color-scheme: light;
+    font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    font-weight: 400;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  input,
+  button,
+  textarea,
+  select,
+  optgroup {
+    font: inherit;
+    letter-spacing: inherit;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="tab"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out-soft);
+  }
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* Small helpers (documented in docs/DESIGN_SYSTEM.md) */
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+@utility focus-ring {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@utility container-page {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 2rem;
+  }
+}
+@utility container-marketing {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
+}
+@utility bg-hero {
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, color-mix(in srgb, var(--accent-bright) 10%, transparent), transparent 60%),
+    radial-gradient(50rem 30rem at 0% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
+  color: var(--navy-fg);
+}
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+@utility text-gradient {
+  background: linear-gradient(90deg, var(--primary), var(--accent-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
 }

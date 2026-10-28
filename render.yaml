@@ -1,0 +1,44 @@
+# Render Blueprint — one always-on web service that also runs the background job worker
+# (RUN_WORKER_IN_APP=true). Database is Neon (external), so no Render database is declared.
+# Secrets are marked sync:false: Render asks for their values when you create the Blueprint.
+services:
+  - type: web
+    name: ranksignal
+    runtime: node
+    region: singapore # closest Render region to the Neon database (ap-southeast-1)
+    plan: starter # always-on; the free plan sleeps, which stops scans mid-run
+    buildCommand: npm ci && npx prisma migrate deploy && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22.18.0"
+      - key: RUN_WORKER_IN_APP
+        value: "true"
+      - key: ALLOW_SIMULATED_PROVIDER
+        value: "false"
+      - key: OPENROUTER_VISIBILITY_MODELS
+        value: openai/gpt-6.1-sol,anthropic/claude-opus-5.5
+      - key: OPENROUTER_ANALYSIS_MODELS
+        value: anthropic/claude-opus-5.5,openai/gpt-6.1-sol
+      - key: OPENROUTER_WEB_ENGINE
+        value: native
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CREDENTIALS_KEY # must be 64 hex chars — paste one, don't let Render generate it
+        sync: false
+      - key: APP_URL # e.g. https://ranksignal.onrender.com, later your own domain
+        sync: false
+      - key: DATABASE_URL # Neon pooled URL with &pgbouncer=true
+        sync: false
+      - key: DIRECT_URL # Neon direct (non -pooler) URL, used by prisma migrate deploy
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false

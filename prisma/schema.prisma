@@ -1,0 +1,458 @@
+// Data model — blueprint §7. PostgreSQL (Neon). DATABASE_URL = pooled connection for the app;
+// DIRECT_URL = non-pooled connection for migrations. Every tenant-owned row carries organizationId.
+// JSON columns are stored as Json; status/enum-like columns are strings validated in code
+// (see src/lib/types.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // non-pooled connection used by prisma migrate
+}
+
+model Organization {
+  id                String   @id @default(cuid())
+  name              String
+  region            String   @default("IN")
+  billingCustomerId String?
+  planId            String   @default("trial") // trial | starter | growth | agency
+  status            String   @default("active") // active | past_due | cancelled | suspended
+  publishingEnabled Boolean  @default(true) // per-tenant kill switch
+  createdAt         DateTime @default(now())
+
+  memberships   Membership[]
+  projects      Project[]
+  integrations  Integration[]
+  subscriptions Subscription[]
+  usage         UsageLedger[]
+  auditLogs     AuditLog[]
+  workflowRuns  WorkflowRun[]
+  notifications Notification[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String
+  emailVerified Boolean  @default(false)
+  isStaff       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  memberships Membership[]
+}
+
+model Membership {
+  id             String    @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String    @default("member") // owner | admin | member | viewer
+  status         String    @default("active") // active | invited | removed
+  invitedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  websiteUrl     String
+  brandNames     Json?      // string[] brand name + aliases
+  categories     Json?      // product/service categories
+  audience       String?
+  countries      Json?     
+  languages      Json?     
+  competitors    Json?      // {name, domain, aliases[]}[]
+  keywords       Json?     
+  settings       Json?      // crawl limits, schedules, automation permissions
+  createdAt      DateTime @default(now())
+
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resources     Resource[]
+  crawlRuns     CrawlRun[]
+  findings      AuditFinding[]
+  prompts       TrackedPrompt[]
+  visibilityRuns VisibilityRun[]
+  actions       Action[]
+  integrations  Integration[]
+
+  @@index([organizationId])
+}
+
+model Integration {
+  id                  String    @id @default(cuid())
+  organizationId      String
+  projectId           String?
+  provider            String // wordpress | github | gsc | manual | crawler
+  credentialEncrypted String? // AES-GCM ciphertext; never logged or sent to client
+  scopes              Json?      
+  capabilities        Json?       // capability snapshot
+  health              String    @default("unknown") // healthy | degraded | failed | unknown
+  connectorVersion    String    @default("1")
+  config              Json?       // non-secret config, e.g. siteUrl
+  connectedBy         String?
+  lastSyncAt          DateTime?
+  createdAt           DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId])
+}
+
+model Resource {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  projectId          String
+  canonicalUrl       String
+  resourceType       String   @default("page")
+  cmsResourceId      String?
+  lastSeen           DateTime @default(now())
+  status             String   @default("active")
+  contentFingerprint String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, canonicalUrl])
+  @@index([organizationId])
+}
+
+model CrawlRun {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  workflowRunId  String?
+  status         String    @default("queued")
+  pagesFound     Int       @default(0)
+  pagesCrawled   Int       @default(0)
+  error          String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pages   CrawlPage[]
+
+  @@index([organizationId, projectId, createdAt])
+}
+
+model CrawlPage {
+  id              String   @id @default(cuid())
+  organizationId  String
+  crawlRunId      String
+  url             String
+  finalUrl        String?
+  statusCode      Int?
+  redirectChain   Json?     
+  contentType     String?
+  responseBytes   Int?
+  extracted       Json?      // title, description, headings, canonical, robotsMeta, links, images, jsonLd, wordCount
+  error           String?
+  crawledAt       DateTime @default(now())
+
+  crawlRun CrawlRun       @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
+  findings AuditFinding[]
+
+  @@index([crawlRunId])
+}
+
+model AuditFinding {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  crawlPageId    String?
+  pageUrl        String?
+  category       String // technical | content | metadata | schema | indexability | links | ai_readiness
+  code           String // stable rule id e.g. missing_meta_description
+  severity       String // critical | high | medium | low | info
+  confidence     Float     @default(1)
+  message        String
+  evidence       Json?      
+  status         String    @default("open") // open | resolved | ignored
+  detectedAt     DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  crawlPage CrawlPage? @relation(fields: [crawlPageId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, projectId, status])
+}
+
+model TrackedPrompt {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  text           String
+  intent         String   @default("informational") // informational | commercial | comparison | navigational | transactional
+  topic          String?
+  locale         String   @default("en-IN")
+  targetProvider String   @default("all")
+  priority       Int      @default(2)
+  active         Boolean  @default(true)
+  promptSetVersion Int    @default(1)
+  createdAt      DateTime @default(now())
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  observations Observation[]
+
+  @@index([organizationId, projectId, active])
+}
+
+model VisibilityRun {
+  id               String    @id @default(cuid())
+  organizationId   String
+  projectId        String
+  workflowRunId    String?
+  status           String    @default("queued")
+  providers        Json?      
+  promptSetVersion Int       @default(1)
+  sampleSize       Int       @default(0)
+  collected        Int       @default(0)
+  failed           Int       @default(0)
+  costMicros       Int       @default(0) // cost in micro-USD
+  metrics          Json?       // computed VisibilityMetrics snapshot
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  observations Observation[]
+
+  @@index([organizationId, projectId, createdAt])
+}
+
+model Observation {
+  id                String   @id @default(cuid())
+  organizationId    String
+  visibilityRunId   String
+  promptId          String
+  provider          String // e.g. openai, dataforseo, simulated
+  platformLabel     String // e.g. "ChatGPT (API: gpt-4o-mini)"
+  model             String?
+  locale            String?
+  rawResponse       String // raw answer text (large payloads → object storage later)
+  rawPayloadRef     String?
+  citations         Json?      // {url, domain, title?, ownedByCustomer}[]
+  brandMentioned    Boolean  @default(false)
+  brandRecommended  Boolean  @default(false)
+  brandCited        Boolean  @default(false)
+  competitorMentions Json?     // name -> count
+  sentiment         String?  // positive | neutral | negative
+  parseConfidence   Float    @default(1)
+  limitations       String?
+  costMicros        Int      @default(0)
+  simulated         Boolean  @default(false) // true for demo provider — always labelled in UI
+  createdAt         DateTime @default(now())
+
+  visibilityRun VisibilityRun @relation(fields: [visibilityRunId], references: [id], onDelete: Cascade)
+  prompt        TrackedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, visibilityRunId])
+  @@index([promptId])
+}
+
+model Action {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  type           String // update_meta_description | update_title | add_faq_schema | content_brief | ...
+  target         Json?       // {resourceType, resourceId, url}
+  rationale      String
+  evidenceRefs   Json?      
+  priority       String    @default("medium") // critical | high | medium | low
+  priorityScore  Float     @default(0)
+  expectedImpact String?
+  effort         String    @default("low")
+  confidence     Float     @default(0.5)
+  riskClass      String    @default("C") // A | B | C | D
+  policyDecision String    @default("approval_required") // auto_execute | approval_required | blocked
+  policyReason   String?
+  policyVersion  String    @default("1")
+  proposedChange Json?       // {field, before, after}
+  draftHash      String?
+  status         String    @default("proposed") // proposed | awaiting_approval | approved | rejected | expired | executing | succeeded | succeeded_with_warnings | failed | rollback_pending | rolled_back | rollback_failed | blocked | cancelled
+  integrationId  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvals  Approval[]
+  executions ActionExecution[]
+
+  @@index([organizationId, projectId, status])
+}
+
+model Approval {
+  id          String    @id @default(cuid())
+  organizationId String
+  actionId    String
+  requestedBy String?
+  approverId  String?
+  draftHash   String
+  decision    String    @default("pending") // pending | approved | rejected | expired | invalidated
+  comments    String?
+  expiresAt   DateTime
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([actionId])
+}
+
+model ActionExecution {
+  id              String    @id @default(cuid())
+  organizationId  String
+  actionId        String
+  connector       String
+  idempotencyKey  String    @unique
+  beforeState     Json?
+  expectedVersion String?
+  result          String    @default("pending") // pending | success | partial | failure
+  resultDetail    Json?      
+  validation      String?   // passed | warning | failed
+  rollbackStatus  String?   // not_needed | pending | rolled_back | failed | manual_required
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowRun {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String?
+  kind           String // crawl | visibility | analyze | execute_action | rollback | scheduled
+  version        String    @default("1")
+  state          String    @default("queued") // see WorkflowState in src/lib/types.ts
+  idempotencyKey String?   @unique
+  input          Json?      
+  output         Json?      
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  runAfter       DateTime  @default(now())
+  lockedAt       DateTime?
+  lockedBy       String?
+  error          String?
+  errorClass     String?   // transient | permanent | policy | quota
+  usage          Json?      
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events       WorkflowEvent[]
+
+  @@index([state, runAfter])
+  @@index([organizationId, projectId])
+}
+
+model WorkflowEvent {
+  id            String   @id @default(cuid())
+  workflowRunId String
+  name          String // e.g. crawl.started — see Appendix A event names
+  fromState     String?
+  toState       String?
+  data          Json?     
+  createdAt     DateTime @default(now())
+
+  workflowRun WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  @@index([workflowRunId])
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  organizationId         String
+  provider               String    @default("razorpay") // razorpay | stripe
+  providerCustomerId     String?
+  providerSubscriptionId String?   @unique
+  planId                 String
+  status                 String // trialing | active | past_due | cancelled | expired
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  trialEndsAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model UsageLedger {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  provider       String // openai | dataforseo | crawler | simulated
+  taskType       String // crawl_page | visibility_prompt | llm_analysis | content_generation
+  runId          String?
+  kind           String   @default("actual") // reservation | actual | release
+  credits        Int
+  costMicros     Int      @default(0)
+  billingPeriod  String // YYYY-MM
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, billingPeriod])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  eventId     String
+  type        String
+  payload     Json
+  processedAt DateTime @default(now())
+
+  @@unique([provider, eventId]) // replay protection / idempotency
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  actorId        String?
+  actorType      String   @default("user") // user | system | staff
+  action         String
+  resourceType   String?
+  resourceId     String?
+  before         Json?
+  after          Json?
+  requestId      String?
+  ip             String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  type           String // approval_requested | change_completed | job_failed | usage_threshold | monthly_report
+  title          String
+  body           String
+  link           String?
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, readAt])
+}
+
+model FeatureFlag {
+  key       String   @id // e.g. global.publishing, provider.openai, action.update_meta_description
+  enabled   Boolean  @default(true)
+  note      String?
+  updatedAt DateTime @updatedAt
+}

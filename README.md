@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Visibility & Optimization SaaS (working name: RankSignal)
 
-## Getting Started
+This SaaS measures how a brand appears in AI search answers and traditional search. It audits the brand's site and recommends evidence-backed fixes. It executes approved changes safely, then re-measures.
+It is built from the product blueprint v1.0. See [docs/COMPETITIVE_ANALYSIS.md](docs/COMPETITIVE_ANALYSIS.md) for the feature map against Upranke.
 
-First, run the development server:
+## Quick start (local)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install                 # also runs prisma generate
+cp .env.example .env        # then fill SESSION_SECRET and CREDENTIALS_KEY (64 hex chars each)
+npm run db:push             # create SQLite dev DB
+npm run db:seed             # demo@example.com / demo-password-123 (staff user)
+npm run dev                 # http://localhost:3000 — worker runs in-process
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If `OPENAI_API_KEY` and the DataForSEO credentials are not set, visibility runs use the simulated provider. Its data is fake but deterministic, and it is always labelled "Simulated demo data" in the UI. Set `ALLOW_SIMULATED_PROVIDER=false` in production.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture (blueprint §4)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app is a modular monolith: Next.js App Router for the UI and API, Prisma for the database (SQLite in dev, PostgreSQL/Supabase in prod), and a durable DB-backed workflow queue.
 
-## Learn More
+| Layer | Path |
+|---|---|
+| Web app (marketing) | `src/app/(marketing)` |
+| Product app | `src/app/app`, `src/components/app`, `src/components/ui` |
+| Auth / orgs / billing / admin | `src/lib/auth`, `src/lib/billing`, `src/app/api/{auth,org,billing,webhooks,usage,admin}`, `src/middleware.ts` |
+| Workflow queue (states, retries, backoff, idempotency) | `src/lib/jobs` (`npm run worker` for a separate process) |
+| Crawler (SSRF-safe) + audit rules | `src/lib/crawler`, `src/lib/audit` |
+| LLM + visibility providers, metrics, prompt research | `src/lib/providers`, `src/lib/visibility`, `src/lib/prompts` |
+| Recommendations, policy engine, approvals, connectors, execution/rollback | `src/lib/recommendations`, `src/lib/policy`, `src/lib/actions`, `src/lib/connectors` |
+| Shared contracts | `src/lib/types.ts`, `src/lib/api.ts` |
 
-To learn more about Next.js, take a look at the following resources:
+Workflow: trigger → preflight (plan/credits/flags) → crawl → audit → visibility measurement → analyze → policy classification → approval gate (exact draft hash) → execute (idempotency key + expected version) → validate → rollback if needed → re-measure → report.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Moving to PostgreSQL
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. In `prisma/schema.prisma`, set `provider = "postgresql"` and point `DATABASE_URL` at Postgres.
+2. Run `npx prisma migrate dev --name init`.
+3. Add row-level security policies keyed on `organizationId` (blueprint §7). The app layer already scopes every query by organization.
 
-## Deploy on Vercel
+## Tests
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm test          # vitest: SSRF, normalization, audit rules, metrics, parsing, policy, approvals, crypto, webhooks, quotas
+npm run typecheck
+```
