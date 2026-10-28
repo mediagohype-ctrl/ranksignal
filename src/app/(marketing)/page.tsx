@@ -6,6 +6,7 @@ import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { AnswersPanel, ApprovalPanel, EngineStrip, FixPanel, HeroComposition } from "@/components/marketing/home-ui";
 import { FAQS } from "@/components/marketing/content";
+import { DoneForYouSection, MonthlyProofSection } from "@/components/marketing/home-proof";
 import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
 
 const TITLE = `${BRAND.name} — Get found and cited in AI answers`;
@@ -264,6 +265,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ------------------------------------------------------------ Proof every month */}
+      <MonthlyProofSection />
+
       {/* ------------------------------------------------------------ How it works */}
       <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-20 border-y border-border py-24 sm:py-32">
         <div className="container-marketing">
@@ -312,6 +316,9 @@ export default function HomePage() {
           </ul>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------ Do it yourself, or let us */}
+      <DoneForYouSection />
 
       {/* ------------------------------------------------------------ Pricing teaser */}
       <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 pb-24 sm:pb-32">

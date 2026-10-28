@@ -147,25 +147,26 @@ export const HOW_STEPS = [
 ];
 
 export const RISK_CLASSES = [
+  // Mirrors the policy engine (src/lib/policy/engine.ts). Keep the two in sync.
   {
     cls: "A" as const,
-    name: "Low risk",
-    body: "Reversible technical hygiene such as missing alt text or schema additions. Can be auto-applied only if you explicitly enable it.",
+    name: "Observe & prepare",
+    body: "Audits, content briefs and internal tasks. Nothing on your website changes, so these run on their own within your plan.",
   },
   {
     cls: "B" as const,
-    name: "Moderate",
-    body: "Small content edits like meta descriptions or answer-first intros. Requires approval of the exact diff by default.",
+    name: "Low risk",
+    body: "Small reversible edits such as meta descriptions, titles and image alt text on non-critical pages. They need your approval by default; you can let a specific type apply automatically, always with rollback.",
   },
   {
     cls: "C" as const,
     name: "Material",
-    body: "New sections, new pages or structural changes. Always requires human approval of the exact draft.",
+    body: "Page content, FAQ or schema changes, new drafts, and anything on your homepage or key pages. Always requires human approval of the exact draft.",
   },
   {
     cls: "D" as const,
     name: "Advisory only",
-    body: "Sensitive changes (redirects, robots rules, legal or pricing copy). Never executed by the system — recommendations only.",
+    body: "Sensitive changes (deleting pages, URLs and redirects, robots rules, checkout or payment, legal pages, regulated claims, site-wide changes). Never executed by the system — recommendations only.",
   },
 ];
 
