@@ -20,7 +20,9 @@ describe("renderEmail", () => {
       footer: evil,
     });
     expect(html).not.toContain("<script>");
-    expect(html).not.toContain(`"><img`);
+    // The injected CTA url must not break out of its attribute (the layout's own logo <img> is fine).
+    expect(html).not.toContain(`"><img src=x>`);
+    expect(html).not.toMatch(/<img[^>]*src=x/);
     expect(html).toContain("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;&#39;");
     expect(text).toContain(evil); // plain-text part is not HTML
   });

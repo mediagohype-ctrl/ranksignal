@@ -4,16 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { ArrowRight, Menu, X } from "lucide-react";
-import { LinkButton } from "@/components/ui";
+import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
+import { inkPill } from "./ui";
 
 const NAV = [
   { href: "/features", label: "Features" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
   { href: "/free-check", label: "Free check" },
-  { href: "/docs", label: "Docs" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -32,22 +31,22 @@ export function SiteHeader() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const isActive = (href: string) => !href.includes("#") && (pathname === href || pathname.startsWith(`${href}/`));
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/70">
-      <div className="container-marketing flex h-16 items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-bg">
+      <div className="container-marketing flex h-16 items-center justify-between gap-6 lg:h-[72px]">
         <Logo />
 
-        <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-8 lg:flex">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
               className={clsx(
-                "rounded-lg px-3 py-2 text-small font-medium transition-colors",
-                isActive(n.href) ? "bg-surface-2 text-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
+                "rounded-md py-1 text-[0.9375rem] font-medium transition-colors",
+                isActive(n.href) ? "text-fg underline decoration-2 underline-offset-[10px]" : "text-fg-soft hover:text-fg",
               )}
             >
               {n.label}
@@ -55,52 +54,70 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <LinkButton href="/login" variant="ghost" size="sm">
+        <div className="hidden items-center gap-6 lg:flex">
+          <Link href="/login" className="rounded-md py-1 text-[0.9375rem] font-medium text-fg-soft hover:text-fg">
             Log in
-          </LinkButton>
-          <LinkButton href="/signup" size="sm" iconRight={<ArrowRight />}>
-            Free report
-          </LinkButton>
+          </Link>
+          <Link href="/signup" className={inkPill("md")}>
+            Start free
+          </Link>
         </div>
 
-        <button
-          type="button"
-          className="inline-flex size-10 items-center justify-center rounded-lg text-fg hover:bg-surface-2 md:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-nav"
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X aria-hidden size={22} /> : <Menu aria-hidden size={22} />}
-        </button>
+        <div className="flex items-center gap-2 lg:hidden">
+          <Link href="/signup" className={inkPill("md", false, "h-9 px-4 max-[359px]:hidden")}>
+            Start free
+          </Link>
+          <button
+            type="button"
+            className="inline-flex size-10 items-center justify-center rounded-full text-fg hover:bg-surface-2"
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X aria-hidden size={22} /> : <Menu aria-hidden size={22} />}
+          </button>
+        </div>
       </div>
 
       {open && (
-        <nav id="mobile-nav" aria-label="Mobile" className="animate-fade-in border-t border-border bg-surface shadow-lg md:hidden">
-          <ul className="container-marketing space-y-1 py-3">
+        <nav
+          id="mobile-nav"
+          aria-label="Mobile"
+          className="animate-fade-in absolute inset-x-0 top-full h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-bg lg:hidden"
+        >
+          <ul className="container-marketing py-4">
             {NAV.map((n) => (
-              <li key={n.href}>
+              <li key={n.href} className="border-b border-border">
                 <Link
                   href={n.href}
                   onClick={() => setOpen(false)}
                   aria-current={isActive(n.href) ? "page" : undefined}
                   className={clsx(
-                    "block rounded-lg px-3 py-3 text-body font-medium",
-                    isActive(n.href) ? "bg-surface-2 text-fg" : "text-fg-soft hover:bg-surface-2",
+                    "block py-4 text-[1.375rem] font-medium tracking-[-0.02em]",
+                    isActive(n.href) ? "text-primary" : "text-fg",
                   )}
                 >
                   {n.label}
                 </Link>
               </li>
             ))}
-            <li className="grid grid-cols-2 gap-2 border-t border-border pt-3">
-              <LinkButton href="/login" variant="secondary" fullWidth onClick={() => setOpen(false)}>
+            <li className="border-b border-border">
+              <Link href="/docs" onClick={() => setOpen(false)} className="block py-4 text-[1.375rem] font-medium tracking-[-0.02em] text-fg">
+                Docs
+              </Link>
+            </li>
+            <li className="mt-8 grid gap-3 sm:grid-cols-2">
+              <Link href="/signup" onClick={() => setOpen(false)} className={inkPill("lg")}>
+                Start free
+              </Link>
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="inline-flex h-14 items-center justify-center rounded-full border border-border-strong text-[1rem] font-medium text-fg hover:bg-surface-2"
+              >
                 Log in
-              </LinkButton>
-              <LinkButton href="/signup" fullWidth onClick={() => setOpen(false)}>
-                Free report
-              </LinkButton>
+              </Link>
             </li>
           </ul>
         </nav>

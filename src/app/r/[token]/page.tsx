@@ -12,6 +12,7 @@ import { MeasuredWith } from "@/components/app/providers-status";
 import { PrintButton } from "@/components/app/print-button";
 import { ReportBody } from "@/components/app/report/report-body";
 import { Badge, Card, EmptyState, LinkButton, Notice } from "@/components/ui";
+import { LogoLockup } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-bg">
       <header className="border-b border-border bg-surface">
         <div className="container-page flex h-14 items-center justify-between gap-3">
-          <span className="text-h4 text-fg">{BRAND.name}</span>
+          <LogoLockup size="sm" />
           <Badge tone="neutral" size="sm">
             Shared report · read only
           </Badge>

@@ -1,11 +1,25 @@
 import type { ReactNode } from "react";
 import clsx from "clsx";
 import { ArrowRight } from "lucide-react";
-import { LinkButton } from "@/components/ui";
+import Link from "next/link";
 import { TRIAL_DAYS } from "./plans";
 
 /** AI engines we measure. Text only — no third-party logos. */
 export const ENGINES = ["ChatGPT", "Gemini", "Perplexity", "Google AI Overviews"] as const;
+
+/** Wider list for the homepage strip. Plain text names only. */
+export const STRIP_ENGINES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Google AI Overviews", "Copilot"] as const;
+
+/** Solid ink pill (primary marketing CTA). `inverse` for use on ink bands. */
+export function inkPill(size: "md" | "lg" = "md", inverse = false, className?: string) {
+  return clsx(
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium tracking-[-0.005em]",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px [&_svg]:shrink-0",
+    size === "lg" ? "h-14 px-7 text-[1rem] [&_svg]:size-[18px]" : "h-10 px-5 text-small [&_svg]:size-4",
+    inverse ? "bg-bg text-fg hover:bg-surface-3 focus-visible:outline-bg" : "bg-fg text-bg hover:bg-fg-soft",
+    className,
+  );
+}
 
 /** Standard marketing section: generous vertical rhythm + max-w-6xl container. */
 export function Section({
@@ -120,28 +134,32 @@ export function JsonLd({ data }: { data: Record<string, unknown> | Record<string
   );
 }
 
-/** Closing call-to-action band. */
+/** Closing call-to-action band: full-bleed ink. */
 export function FinalCta({ title, body }: { title: string; body: ReactNode }) {
   return (
-    <section aria-labelledby="final-cta" className="bg-bg py-20 sm:py-24">
-      <div className="container-marketing">
-        <div className="bg-hero relative overflow-hidden rounded-2xl px-6 py-14 text-center shadow-lg sm:px-12 sm:py-20">
-          <h2 id="final-cta" className="mx-auto max-w-2xl text-balance text-h2 text-navy-fg">
+    <section aria-labelledby="final-cta" className="bg-fg text-bg">
+      <div className="container-marketing grid gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
+        <div className="lg:col-span-8">
+          <h2 id="final-cta" className="mk-statement max-w-[16ch] text-balance text-bg">
             {title}
           </h2>
-          <div className="mx-auto mt-4 max-w-xl text-lead text-navy-fg/80">{body}</div>
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <LinkButton href="/signup" size="lg" variant="accent" iconRight={<ArrowRight />}>
-              Get your free AI visibility report
-            </LinkButton>
-            <LinkButton href="/pricing" size="lg" variant="secondary">
-              View pricing
-            </LinkButton>
-          </div>
-          <p className="mt-5 text-small text-navy-fg/70">
-            {TRIAL_DAYS}-day free trial · No guaranteed rankings, just honest measurement.
-          </p>
+          <div className="mk-lead mt-6 max-w-xl text-bg/75">{body}</div>
         </div>
+        <div className="flex flex-col gap-3 sm:flex-row lg:col-span-4 lg:justify-end">
+          <Link href="/signup" className={inkPill("lg", true)}>
+            Start free
+            <ArrowRight aria-hidden />
+          </Link>
+          <Link
+            href="/pricing"
+            className="inline-flex h-14 items-center justify-center rounded-full px-7 text-[1rem] font-medium text-bg ring-1 ring-bg/30 hover:bg-bg/10"
+          >
+            View pricing
+          </Link>
+        </div>
+        <p className="text-small text-bg/65 lg:col-span-12">
+          {TRIAL_DAYS}-day free trial. No guaranteed rankings, just honest measurement.
+        </p>
       </div>
     </section>
   );

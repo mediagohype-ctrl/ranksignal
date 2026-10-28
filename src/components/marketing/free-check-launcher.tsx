@@ -2,66 +2,65 @@
 // without JavaScript and in server components (homepage hero, CTA bands).
 import clsx from "clsx";
 import { ArrowRight } from "lucide-react";
-import { Button, Input } from "@/components/ui";
 
 export function FreeCheckLauncher({
   id = "free-check-url",
   onDark,
   className,
-  buttonLabel = "Check my site free",
+  buttonLabel = "Check my site",
+  hint = "Free · No card · Results in about a minute",
 }: {
   id?: string;
-  /** Navy hero bands: light label text. */
+  /** Ink (dark) bands: inverted colours. */
   onDark?: boolean;
   className?: string;
   buttonLabel?: string;
+  hint?: string | null;
 }) {
   return (
     <form action="/free-check" method="get" role="search" aria-label="Free AI-readiness check" className={clsx("w-full", className)}>
-      <label htmlFor={id} className={clsx("text-small font-medium", onDark ? "text-navy-fg" : "text-fg")}>
-        Your website
+      <label htmlFor={id} className="sr-only">
+        Your website address
       </label>
-      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-        <Input
+      <div
+        className={clsx(
+          "flex flex-col gap-2 rounded-[28px] p-1.5 sm:flex-row sm:items-center sm:rounded-full",
+          "focus-within:ring-4",
+          onDark
+            ? "bg-bg/10 ring-1 ring-bg/20 focus-within:ring-bg/30"
+            : "border border-border-strong bg-surface shadow-md focus-within:border-fg focus-within:ring-ring/15",
+        )}
+      >
+        <input
           id={id}
           name="url"
           type="text"
           inputMode="url"
           autoComplete="url"
+          autoCapitalize="none"
+          spellCheck={false}
           placeholder="yourbusiness.com"
           required
           maxLength={2048}
-          inputSize="lg"
-          className="sm:flex-1"
+          className={clsx(
+            "h-12 min-w-0 flex-1 rounded-full bg-transparent px-5 text-[1.0625rem] outline-none sm:h-14",
+            "focus-visible:outline-none",
+            onDark ? "text-bg placeholder:text-bg/60" : "text-fg placeholder:text-muted",
+          )}
         />
-        <Button type="submit" size="lg" variant="accent" iconRight={<ArrowRight />}>
+        <button
+          type="submit"
+          className={clsx(
+            "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full px-6 text-[1rem] font-medium sm:h-14 sm:px-7",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px [&_svg]:size-[18px]",
+            onDark ? "bg-bg text-fg hover:bg-surface-3 focus-visible:outline-bg" : "bg-fg text-bg hover:bg-fg-soft",
+          )}
+        >
           {buttonLabel}
-        </Button>
+          <ArrowRight aria-hidden />
+        </button>
       </div>
-      <p className={clsx("mt-2 text-xs", onDark ? "text-navy-fg/70" : "text-muted")}>
-        Free, no sign-up. We read your homepage and up to 4 key pages — about 20 seconds.
-      </p>
+      {hint && <p className={clsx("mt-3 pl-1 text-small", onDark ? "text-bg/70" : "text-muted")}>{hint}</p>}
     </form>
-  );
-}
-
-/** Full-width call-to-action band with the URL box. */
-export function FreeCheckBand({ id = "free-check-band" }: { id?: string }) {
-  return (
-    <section aria-labelledby={`${id}-title`} className="bg-bg py-16 sm:py-20">
-      <div className="container-marketing">
-        <div className="bg-hero relative grid items-center gap-8 overflow-hidden rounded-2xl px-6 py-10 shadow-lg sm:px-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:py-12">
-          <div>
-            <h2 id={`${id}-title`} className="text-balance text-h2 text-navy-fg">
-              Can AI assistants read your website?
-            </h2>
-            <p className="mt-3 text-lead text-navy-fg/80">
-              Run a free AI-readiness check: SEO, AEO and GEO scores plus your top five fixes, in about 20 seconds.
-            </p>
-          </div>
-          <FreeCheckLauncher id={`${id}-url`} onDark />
-        </div>
-      </div>
-    </section>
   );
 }

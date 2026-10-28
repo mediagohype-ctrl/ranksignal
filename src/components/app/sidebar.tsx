@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
-  BarChart3,
   ChevronsUpDown,
   Eye,
   FileBarChart2,
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { Avatar } from "@/components/ui";
+import { LogoLockup } from "@/components/brand/logo";
 
 interface ProjectLite {
   id: string;
@@ -111,11 +111,8 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
   const nav = (
     <nav aria-label="Primary" className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-4">
-        <Link href="/app" className="flex items-center gap-2.5 rounded-lg text-h4 tracking-tight text-fg">
-          <span aria-hidden className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-fg shadow-sm">
-            <BarChart3 size={17} />
-          </span>
-          {BRAND.name}
+        <Link href="/app" className="flex items-center rounded-lg" aria-label={`${BRAND.name} projects`}>
+          <LogoLockup size="sm" />
         </Link>
         <button
           type="button"

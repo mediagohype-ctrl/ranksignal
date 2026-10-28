@@ -64,7 +64,7 @@ ${preheader}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg};font-family:${FONT};">
 <tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
-<tr><td style="padding:0 4px 16px 4px;font-size:18px;font-weight:700;color:${C.fg};">${brand}</td></tr>
+<tr><td style="padding:0 4px 16px 4px;font-size:19px;font-weight:700;letter-spacing:-0.3px;color:${C.fg};"><img src="${escapeHtml(BRAND.appUrl.replace(/\/$/, ""))}/brand/logo-mark-96.png" width="28" height="28" alt="" style="vertical-align:middle;border:0;margin-right:8px;">${brand}</td></tr>
 <tr><td style="background:${C.card};border:1px solid ${C.border};border-radius:16px;padding:32px 28px;">
 <h1 style="margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:650;color:${C.fg};">${title}</h1>
 ${paragraphs}${cta}

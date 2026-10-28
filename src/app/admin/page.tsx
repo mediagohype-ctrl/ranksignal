@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Activity, AlertOctagon, BarChart3, Building2, Coins, Flag, LifeBuoy, ShieldAlert, Webhook } from "lucide-react";
+import { Activity, AlertOctagon, Building2, Coins, Flag, LifeBuoy, ShieldAlert, Webhook } from "lucide-react";
 import { db } from "@/lib/db";
 import { getStaffUser } from "@/lib/auth/staff";
 import { FLAG_DEFAULTS, isEnabled } from "@/lib/flags";
 import { billingPeriod } from "@/lib/billing/usage";
-import { BRAND } from "@/lib/brand";
 import {
   Badge,
   Card,
@@ -23,6 +22,7 @@ import {
   ToastProvider,
 } from "@/components/ui";
 import { FlagToggles, OrgControls, SupportAccess } from "./admin-client";
+import { LogoLockup, LogoMark } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Staff admin" };
@@ -85,10 +85,8 @@ export default async function AdminPage() {
         <header className="sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur-md">
           <div className="container-page flex h-16 items-center justify-between gap-3">
             <Link href="/admin" className="flex items-center gap-2.5 text-h4 tracking-tight text-fg">
-              <span aria-hidden className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-fg">
-                <BarChart3 size={16} />
-              </span>
-              <span className="hidden sm:inline">{BRAND.name}</span>
+              <span className="hidden sm:inline-flex"><LogoLockup size="sm" /></span>
+              <span className="sm:hidden"><LogoMark size={26} /></span>
               <Badge tone="danger" size="sm" icon={<ShieldAlert />}>
                 Staff
               </Badge>
