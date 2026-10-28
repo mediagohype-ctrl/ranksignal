@@ -7,7 +7,7 @@ import { FinalCta, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { MARKETING_PLANS, TRIAL_DAYS, freq, inr, num } from "@/components/marketing/plans";
 
 export const metadata: Metadata = {
-  title: "Pricing",
+  title: "Pricing and plans",
   description: `${BRAND.name} plans for AI visibility tracking, AI-readiness audits and approval-gated publishing. Starter ₹2,999/mo, Growth ₹7,999/mo, Agency from ₹19,999/mo. ${TRIAL_DAYS}-day free trial.`,
   alternates: { canonical: "/pricing" },
 };
@@ -89,9 +89,15 @@ export default function PricingPage() {
     })),
   };
 
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: PRICING_FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
+
   return (
     <>
-      <JsonLd data={jsonLd} />
+      <JsonLd data={[jsonLd, faqLd]} />
       <PageHero
         eyebrow="Pricing"
         title="Simple plans, honest limits"
@@ -133,7 +139,7 @@ export default function PricingPage() {
                 </p>
                 <p className="mt-1 text-xs text-muted">+ GST · indicative price</p>
                 <LinkButton
-                  href={`/signup?plan=${p.id}`}
+                  href={p.id === "agency" ? "/contact" : `/signup?plan=${p.id}`}
                   variant={p.featured ? "primary" : "secondary"}
                   size="lg"
                   fullWidth

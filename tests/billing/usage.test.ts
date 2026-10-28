@@ -31,6 +31,7 @@ vi.mock("@/lib/db", () => {
       }),
     },
     notification: { create: vi.fn(async ({ data }: { data: { title: string; type: string } }) => state.notifications.push(data)) },
+    subscription: { findMany: vi.fn(async () => []) },
     project: { count: vi.fn(async () => state.projects) },
     trackedPrompt: { count: vi.fn(async () => state.prompts) },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(db)),

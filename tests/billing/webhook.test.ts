@@ -36,6 +36,9 @@ vi.mock("@/lib/db", () => {
         return row;
       }),
       updateMany: vi.fn(async () => ({ count: 0 })),
+      findFirst: vi.fn(async ({ where }: { where: { status: string; NOT: { providerSubscriptionId: string } } }) =>
+        state.subs.find((s) => s.status === where.status && s.providerSubscriptionId !== where.NOT.providerSubscriptionId) ?? null,
+      ),
     },
     organization: {
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => (where.id === state.org.id ? { ...state.org } : null)),

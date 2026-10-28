@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { handler, HttpError, json, requireProject, requireSession } from "@/lib/api";
 import { enqueue } from "@/lib/jobs/queue";
+import { assertOrgActive } from "@/lib/billing/access";
+import { crawlRetryAfterSec } from "@/lib/billing/ai-limits";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -11,6 +13,7 @@ export const POST = handler(async (_req: Request, { params }: Ctx) => {
   const { id } = await params;
   const s = await requireSession("member");
   const project = await requireProject(s, id);
+  await assertOrgActive(s.organizationId);
 
   const active = await db.crawlRun.findFirst({
     where: {
@@ -22,6 +25,22 @@ export const POST = handler(async (_req: Request, { params }: Ctx) => {
     select: { id: true, status: true },
   });
   if (active) throw new HttpError(409, "crawl_in_progress", "A crawl is already queued or running for this project", { crawlRunId: active.id });
+
+  // One crawl per project every 10 minutes.
+  const retryAfterSec = await crawlRetryAfterSec(s.organizationId, project.id);
+  if (retryAfterSec > 0) {
+    const mins = Math.ceil(retryAfterSec / 60);
+    return json(
+      {
+        error: {
+          code: "crawl_rate_limited",
+          message: `This site was scanned a moment ago. You can start another scan in about ${mins} minute${mins === 1 ? "" : "s"}.`,
+          details: { retryAfterSec },
+        },
+      },
+      { status: 409, headers: { "Retry-After": String(retryAfterSec) } },
+    );
+  }
 
   const run = await db.crawlRun.create({ data: { organizationId: s.organizationId, projectId: project.id, status: "queued" } });
   const wf = await enqueue({

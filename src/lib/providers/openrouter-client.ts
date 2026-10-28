@@ -1,5 +1,6 @@
 // OpenRouter (OpenAI-compatible chat completions; one key for GPT, Claude and other models).
 // Shared by the visibility adapter and the structured-generation helper. Never logs keys or prompts.
+import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
 import { JobError } from "@/lib/types";
 import { providerError, withTimeout } from "./visibility/errors";
 
@@ -30,10 +31,14 @@ const isObj = (v: unknown): v is Json => typeof v === "object" && v !== null && 
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
-/** POST a chat completion. Throws JobError (transient for 408/429/5xx/network). */
+/**
+ * POST a chat completion. Throws JobError (transient for 408/429/5xx/network; quota when the global daily
+ * AI budget is spent — checked before every request).
+ */
 export async function openRouterChat(body: Json, timeoutMs: number): Promise<unknown> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new JobError("OpenRouter is not configured", "permanent");
+  await assertAiBudget();
   let res: Response;
   try {
     res = await withTimeout(
@@ -67,6 +72,8 @@ export async function openRouterChat(body: Json, timeoutMs: number): Promise<unk
     const code = num(payload.error.code);
     throw providerError("openrouter", code || 502, String(payload.error.message ?? ""));
   }
+  const cost = isObj(payload) && isObj(payload.usage) ? payload.usage.cost : undefined;
+  if (typeof cost === "number") noteAiSpend(cost * 1_000_000);
   return payload;
 }
 

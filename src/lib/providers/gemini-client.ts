@@ -1,6 +1,7 @@
 // Minimal Google Gemini API client (plain fetch). The key travels in the x-goog-api-key header — never in
 // the URL — so it can't leak into logs of request URLs. Never log the key or request bodies.
 import { JobError } from "@/lib/types";
+import { assertAiBudget } from "@/lib/billing/ai-budget";
 import { providerError, withTimeout } from "./visibility/errors";
 
 export const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -49,6 +50,7 @@ export function readGeminiCandidate(payload: unknown): { text: string; finishRea
 export async function geminiGenerateContent(model: string, body: Record<string, unknown>, timeoutMs = 90_000): Promise<unknown> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new JobError("Gemini is not configured", "permanent");
+  await assertAiBudget();
   let res: Response;
   try {
     res = await withTimeout(

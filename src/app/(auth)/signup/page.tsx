@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { ArrowRight } from "lucide-react";
 import { Button, Field, Input, Skeleton, SkeletonText, fieldDescribedBy } from "@/components/ui";
+import { Turnstile, isTurnstileConfigured } from "@/components/turnstile";
 import { AuthHeading, EMAIL_RE, FormError, PasswordInput, passwordStrength, postJson, safeNext } from "../auth-ui";
 
 const MIN_PASSWORD = 10;
@@ -17,8 +18,21 @@ function validateForm(f: Record<FormKey, string>): Partial<Record<FormKey, strin
   if (!f.email.trim()) e.email = "Enter your work email.";
   else if (!EMAIL_RE.test(f.email.trim())) e.email = "That doesn't look like an email address.";
   if (f.password.length < MIN_PASSWORD) e.password = `Use at least ${MIN_PASSWORD} characters.`;
+  else if (f.email.trim() && f.password.trim().toLowerCase() === f.email.trim().toLowerCase())
+    e.password = "Your password can't be your email address.";
   if (!f.organizationName.trim()) e.organizationName = "Give your workspace a name — usually your company name.";
   return e;
+}
+
+/** Accepts only an absolute http(s) URL of at most 2048 chars; anything else is dropped. */
+function safeWebsite(raw: string | null): string | null {
+  if (!raw || raw.length > 2048) return null;
+  try {
+    const u = new URL(raw.trim());
+    return u.protocol === "http:" || u.protocol === "https:" ? raw.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 const STRENGTH_TONE = ["bg-score-track", "bg-danger", "bg-warning", "bg-success"] as const;
@@ -26,8 +40,17 @@ const STRENGTH_TONE = ["bg-score-track", "bg-danger", "bg-warning", "bg-success"
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = safeNext(params.get("next"), "/app/onboarding");
-  const [form, setForm] = useState<Record<FormKey, string>>({ name: "", email: "", password: "", organizationName: "" });
+  // Free-check visitors arrive with ?website=<url>; carry it into onboarding (an explicit ?next wins).
+  const website = safeWebsite(params.get("website"));
+  const next = safeNext(params.get("next"), website ? `/app/onboarding?website=${encodeURIComponent(website)}` : "/app/onboarding");
+  const [form, setForm] = useState<Record<FormKey, string>>({
+    name: "",
+    email: params.get("email") ?? "",
+    password: "",
+    organizationName: "",
+  });
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<FormKey, string>>>({});
@@ -55,13 +78,24 @@ function SignupForm() {
       document.getElementById(`su-${firstBad}`)?.focus();
       return;
     }
+    if (isTurnstileConfigured() && !captchaToken) {
+      setError("Please complete the security check below, then try again.");
+      return;
+    }
     setLoading(true);
-    const res = await postJson("/api/auth/signup", { ...form, email: form.email.trim() });
+    const res = await postJson("/api/auth/signup", {
+      ...form,
+      email: form.email.trim().toLowerCase(),
+      ...(captchaToken ? { turnstileToken: captchaToken } : {}),
+    });
     if (res.ok) {
       router.replace(next);
       router.refresh();
       return;
     }
+    // Turnstile tokens are single-use: get a fresh one for the next attempt.
+    setCaptchaToken("");
+    setCaptchaKey((k) => k + 1);
     setError(res.message ?? "Sign-up failed.");
     const fe = res.fieldErrors ?? {};
     setErrors(Object.fromEntries(Object.entries(fe).map(([k, msgs]) => [k, msgs[0]])) as Partial<Record<FormKey, string>>);
@@ -78,7 +112,7 @@ function SignupForm() {
         subtitle={
           <>
             7 days free, no card needed. Already have an account?{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href={`/login${next !== "/app/onboarding" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">
               Sign in
             </Link>
           </>
@@ -153,6 +187,7 @@ function SignupForm() {
             ))}
           </div>
         </Field>
+        <Turnstile key={captchaKey} action="signup" onToken={setCaptchaToken} />
         <Button type="submit" size="lg" fullWidth loading={loading} loadingText="Creating your workspace…" iconRight={<ArrowRight />}>
           Create account
         </Button>

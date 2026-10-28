@@ -27,6 +27,7 @@ import {
   TR,
 } from "@/components/ui";
 import { SettingsTabs } from "./settings-tabs";
+import { AccountPanel } from "./account-panel";
 
 export const metadata = { title: "Settings" };
 
@@ -34,7 +35,7 @@ const REGION_LABEL: Record<string, string> = { IN: "India", US: "United States",
 
 export default async function SettingsPage() {
   const s = await requireAppSession();
-  const [org, usage, sub, projectCount, memberCount] = await Promise.all([
+  const [org, usage, sub, projectCount, memberCount, me] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: s.organizationId },
       select: { name: true, planId: true, status: true, region: true, createdAt: true, publishingEnabled: true },
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
     }),
     db.project.count({ where: { organizationId: s.organizationId } }),
     db.membership.count({ where: { organizationId: s.organizationId, status: { not: "removed" } } }),
+    db.user.findUnique({ where: { id: s.userId }, select: { name: true, email: true, emailVerified: true, createdAt: true } }),
   ]);
   const plan = getPlan(org.planId);
   const byType = Object.entries(usage.byTaskType).sort((a, b) => b[1] - a[1]);
@@ -173,13 +175,18 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Manage your workspace, team and plan." meta={<span>{org.name}</span>} />
+      <PageHeader title="Settings" description="Manage your workspace, team, plan and your own account." meta={<span>{org.name}</span>} />
       <Suspense fallback={<Skeleton className="h-10 w-80" />}>
         <SettingsTabs
           memberCount={memberCount}
           workspace={workspace}
           members={<MembersPanel canManage={canManage} currentUserId={s.userId} seatLimit={plan.seats} />}
           billing={billing}
+          account={
+            me ? (
+              <AccountPanel user={{ name: me.name, email: me.email, emailVerified: me.emailVerified, createdAt: me.createdAt.toISOString() }} />
+            ) : undefined
+          }
         />
       </Suspense>
     </>

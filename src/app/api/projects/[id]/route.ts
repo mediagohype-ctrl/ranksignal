@@ -1,9 +1,11 @@
 import { Prisma } from "@prisma/client";
-import { handler, json, parseBody, requireProject, requireSession } from "@/lib/api";
+import { handler, HttpError, json, parseBody, requireProject, requireSession } from "@/lib/api";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
 import { writeAuditLog } from "@/lib/audit-log";
-import { projectPatchSchema, readSettings } from "@/lib/dashboard/project-schema";
+import {
+  SettingsPatchError, mergeSettingsPatch, patchNeedsAdmin, projectPatchSchema, readSchedule, readSettings,
+} from "@/lib/dashboard/project-schema";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,47 +21,55 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const project = await requireProject(s, id);
   const body = await parseBody(req, projectPatchSchema);
+  // Schedules spend credits and automation decides what is published without review: admin+ only.
+  if (patchNeedsAdmin(body) && s.role !== "admin" && s.role !== "owner") {
+    throw new HttpError(403, "forbidden", "Only owners and admins can change schedules or automatic fixes");
+  }
 
   const data: Prisma.ProjectUpdateInput = {};
-  if (body.name !== undefined) data.name = body.name;
-  if (body.websiteUrl !== undefined) data.websiteUrl = body.websiteUrl;
-  if (body.brandNames !== undefined) data.brandNames = body.brandNames;
-  if (body.categories !== undefined) data.categories = body.categories;
-  if (body.audience !== undefined) data.audience = body.audience;
-  if (body.countries !== undefined) data.countries = body.countries;
-  if (body.languages !== undefined) data.languages = body.languages;
-  if (body.competitors !== undefined) data.competitors = body.competitors as Prisma.InputJsonValue;
-  if (body.keywords !== undefined) data.keywords = body.keywords;
+  const changed: string[] = [];
+  const set = <K extends keyof typeof body>(key: K, apply: () => void) => {
+    if (body[key] !== undefined) {
+      apply();
+      changed.push(String(key));
+    }
+  };
+  set("name", () => (data.name = body.name));
+  set("websiteUrl", () => (data.websiteUrl = body.websiteUrl));
+  set("brandNames", () => (data.brandNames = body.brandNames));
+  set("categories", () => (data.categories = body.categories));
+  set("audience", () => (data.audience = body.audience));
+  set("countries", () => (data.countries = body.countries));
+  set("languages", () => (data.languages = body.languages));
+  set("competitors", () => (data.competitors = body.competitors as Prisma.InputJsonValue));
+  set("keywords", () => (data.keywords = body.keywords));
 
   const before = readSettings(project.settings);
   let automationChanged = false;
+  let scheduleChanged = false;
   if (body.settings) {
     const org = await db.organization.findUnique({ where: { id: s.organizationId }, select: { planId: true } });
-    const plan = getPlan(org?.planId ?? "trial");
-    const next = { ...before, ...body.settings };
-    if (body.settings.maxPagesPerCrawl !== undefined) next.maxPagesPerCrawl = Math.min(body.settings.maxPagesPerCrawl, plan.maxPagesPerCrawl);
-    if (body.settings.automation) {
-      next.automation = { allowClassB: body.settings.automation.allowClassB ?? [] };
-      automationChanged =
-        JSON.stringify([...(before.automation?.allowClassB ?? [])].sort()) !==
-        JSON.stringify([...next.automation.allowClassB!].sort());
+    try {
+      // Only known keys are merged; server-owned keys (e.g. `share`) keep their stored value.
+      const merged = mergeSettingsPatch(before, body.settings, getPlan(org?.planId ?? "trial"));
+      automationChanged = merged.automationChanged;
+      scheduleChanged = merged.scheduleChanged;
+      changed.push(...merged.changed);
+      data.settings = merged.next as Prisma.InputJsonValue;
+    } catch (e) {
+      if (e instanceof SettingsPatchError) throw new HttpError(400, e.code, e.message);
+      throw e;
     }
-    data.settings = next as Prisma.InputJsonValue;
   }
 
   const item = await db.project.update({ where: { id: project.id }, data });
-  if (automationChanged) {
-    // Automation permissions gate auto-execution — keep an audit trail of who changed them.
-    await writeAuditLog({
-      organizationId: s.organizationId,
-      actorId: s.userId,
-      action: "project.automation_updated",
-      resourceType: "project",
-      resourceId: project.id,
-      before: before.automation ?? null,
-      after: readSettings(item.settings).automation ?? null,
-    });
-  }
+  const after = readSettings(item.settings);
+  const log = (action: string, b: unknown, a: unknown) =>
+    writeAuditLog({ organizationId: s.organizationId, actorId: s.userId, action, resourceType: "project", resourceId: project.id, before: b, after: a });
+  // Automation permissions gate auto-execution and schedules spend credits — keep an audit trail of who changed them.
+  if (automationChanged) await log("project.automation_updated", before.automation ?? null, after.automation ?? null);
+  if (scheduleChanged) await log("project.schedule_updated", readSchedule(before), readSchedule(after));
+  if (changed.length) await log("project.updated", { fields: changed }, { fields: changed });
   return json({ item });
 });
 

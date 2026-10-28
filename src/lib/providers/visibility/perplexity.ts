@@ -1,6 +1,7 @@
 // Perplexity Sonar API (OpenAI-compatible chat completions with built-in web search).
 import { JobError, type ProviderAnswer, type VisibilityProvider, type VisibilityQuery } from "@/lib/types";
 import { estimatePerplexityCostMicros } from "@/lib/providers/pricing";
+import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
 import { providerError, withTimeout } from "./errors";
 import { describeLocale } from "./locale";
 
@@ -74,6 +75,7 @@ export const perplexityVisibilityProvider: VisibilityProvider = {
     };
     if (country) body.web_search_options = { user_location: { country } };
 
+    await assertAiBudget();
     let res: Response;
     try {
       res = await withTimeout(
@@ -98,6 +100,7 @@ export const perplexityVisibilityProvider: VisibilityProvider = {
       parsed.reportedCostUsd !== undefined
         ? Math.round(parsed.reportedCostUsd * 1_000_000)
         : estimatePerplexityCostMicros(model, parsed.inputTokens, parsed.outputTokens);
+    noteAiSpend(costMicros);
     return {
       provider: "perplexity",
       platformLabel: "Perplexity (Sonar API)",

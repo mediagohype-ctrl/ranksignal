@@ -59,16 +59,28 @@ function backoffMs(attempt: number) {
 
 const WORKER_ID = `worker-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
 const LOCK_TIMEOUT_MS = 10 * 60_000;
+// While a handler runs its lock is refreshed on this interval, so a lock older than LOCK_TIMEOUT_MS
+// means the worker died (e.g. a deploy restart) and the run can safely be reclaimed.
+const HEARTBEAT_MS = 60_000;
+/** Non-terminal states a handler can leave a run in while it works. */
+const IN_PROGRESS_STATES = ["running", "preflight", "executing", "validating", "rollback_pending"];
 const MAX_CONCURRENT = 4;
 
 /** Claim one due run with an optimistic lock. Returns null when nothing is due. */
 async function claim() {
   const now = new Date();
+  const stale = new Date(now.getTime() - LOCK_TIMEOUT_MS);
   const candidate = await db.workflowRun.findFirst({
     where: {
-      state: { in: ["queued", "retry_scheduled"] },
-      runAfter: { lte: now },
-      OR: [{ lockedAt: null }, { lockedAt: { lt: new Date(now.getTime() - LOCK_TIMEOUT_MS) } }],
+      OR: [
+        {
+          state: { in: ["queued", "retry_scheduled"] },
+          runAfter: { lte: now },
+          OR: [{ lockedAt: null }, { lockedAt: { lt: stale } }],
+        },
+        // Abandoned by a dead worker: in progress, but no heartbeat for LOCK_TIMEOUT_MS.
+        { state: { in: IN_PROGRESS_STATES }, lockedAt: { lt: stale } },
+      ],
     },
     orderBy: { runAfter: "asc" },
   });
@@ -105,10 +117,23 @@ async function execute(run: NonNullable<Awaited<ReturnType<typeof claim>>>) {
     },
   };
 
+  if (run.attempts > run.maxAttempts) {
+    await db.workflowRun.update({
+      where: { id: run.id },
+      data: { state: "failed", error: "Interrupted too many times (worker restarts)", errorClass: "transient", lockedAt: null },
+    });
+    await ctx.event(`${run.kind}.failed`, { error: "attempts_exhausted" });
+    return;
+  }
   if (!handler) {
     await db.workflowRun.update({ where: { id: run.id }, data: { state: "failed", error: `No handler for ${run.kind}`, errorClass: "permanent", lockedAt: null } });
     return;
   }
+  const heartbeat = setInterval(() => {
+    void db.workflowRun
+      .updateMany({ where: { id: run.id, lockedBy: WORKER_ID }, data: { lockedAt: new Date() } })
+      .catch(() => undefined);
+  }, HEARTBEAT_MS);
   try {
     const output = (await handler(ctx)) ?? {};
     const terminal = ["succeeded", "succeeded_with_warnings", "awaiting_approval", "blocked", "rejected", "rolled_back", "rollback_failed", "cancelled", "failed"];
@@ -131,6 +156,8 @@ async function execute(run: NonNullable<Awaited<ReturnType<typeof claim>>>) {
       },
     });
     await ctx.event(`${run.kind}.${retry ? "retry_scheduled" : "failed"}`, { error: message.slice(0, 500), errorClass });
+  } finally {
+    clearInterval(heartbeat);
   }
 }
 

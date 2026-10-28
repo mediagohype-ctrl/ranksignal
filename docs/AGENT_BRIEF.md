@@ -68,3 +68,33 @@ Goals: (1) every page looks excellent and consistent; (2) reports are REAL: SEO/
   `src/lib/report/build.ts`; API `GET /api/projects/[id]/report` → `{ item: SiteReport }`.
 - Plain language: write for a small-business owner. No jargon without a short explanation. No guaranteed outcomes.
 - Verification: `npx tsc --noEmit` must be clean for your files; run your tests. Still don't run `next dev/build`.
+
+---
+# ROUND 3 (2026-10-28) — production completeness
+The app is LIVE at https://ranksignal.onrender.com (Render, single always-on instance running the job worker in-process)
+on Neon PostgreSQL. Goal: make it safe and complete for real self-serve customers.
+
+## HARD RULES THIS ROUND
+- The local `.env` points at the PRODUCTION database. NEVER run anything that touches the DB: no `next dev/start/build`,
+  no tsx scripts, no prisma commands. Verify only with `npx tsc --noEmit`, `npx vitest run <your tests>` (db mocked), `npx eslint <paths>`.
+- NO schema changes (prisma/schema.prisma is frozen). Store small per-project config in `Project.settings` JSON and use
+  signed tokens (jose, SESSION_SECRET-derived key with a distinct `aud`) instead of new tables.
+- Follow docs/DESIGN_SYSTEM.md for every UI (white background, Google Sans Flex, @/components/ui primitives).
+- Every new external service is OPTIONAL: when its env vars are missing the feature degrades gracefully (log/skip), never crashes.
+- Middleware already allows unauthenticated `/api/public/**` (same-origin enforced for POST) and pages outside /app,/admin.
+
+## Shared contracts (implement yours exactly; others call them even before they exist)
+- **Email** (agent: accounts) `src/lib/email/send.ts`: `sendEmail(o: {to: string; subject: string; html: string; text: string; replyTo?: string}): Promise<{ok: boolean; id?: string; skipped?: boolean}>`
+  — Resend REST API when RESEND_API_KEY + EMAIL_FROM set, otherwise logs a one-line notice (never the body) and returns {ok:false, skipped:true}.
+  `src/lib/email/layout.ts`: `renderEmail(o: {title: string; preheader?: string; paragraphs: string[]; cta?: {label: string; url: string}; footer?: string}): {html: string; text: string}`
+  (simple, inline-styled, white background, escapes all input). Put YOUR templates in your own folder and build them with renderEmail.
+- **Captcha** (agent: accounts) `src/lib/security/turnstile.ts`: `isTurnstileEnabled(): boolean`, `verifyTurnstile(token: string | undefined, ip?: string): Promise<boolean>`
+  (Cloudflare Turnstile; returns true when TURNSTILE_SECRET_KEY unset). Client widget `src/components/turnstile.tsx`: `<Turnstile onToken={(t)=>…} />`
+  rendering nothing when NEXT_PUBLIC_TURNSTILE_SITE_KEY is unset.
+- **Rate limit** (exists): `src/lib/auth/rate-limit.ts` (in-memory, single instance is fine).
+- **AI budget** (agent: billing) `src/lib/billing/ai-budget.ts`: `assertAiBudget(): Promise<void>` — throws `JobError(msg, "quota")` when today's (UTC)
+  total AI spend across all orgs (sum UsageLedger.costMicros) ≥ AI_DAILY_BUDGET_USD (default 5). `getAiBudgetStatus(): Promise<{spentUsd; limitUsd; remainingUsd}>`.
+- **Plan access** (agent: billing) `src/lib/billing/access.ts`: `getOrgAccess(orgId): Promise<{active: boolean; reason?: "trial_expired"|"past_due"|"cancelled"|"suspended"; trialEndsAt?: Date|null; planId: string}>`
+  and `assertOrgActive(orgId)` (HttpError 402 code "plan_inactive"). Used before starting scans.
+- **Schedules** (agent: automation) live in `Project.settings.schedule = {crawl: "off"|"weekly"|"monthly", visibility: "off"|"weekly"|"monthly"}`.
+- **Share links** (agent: sharing) live in `Project.settings.share = {enabled: boolean; tokenId: string}` (tokenId rotates to revoke).

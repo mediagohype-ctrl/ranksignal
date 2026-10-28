@@ -1,6 +1,10 @@
 // Signed, httpOnly session cookie (JWT via jose). Server-only.
+// Each session carries `pwf`, a fingerprint of the user's password hash at sign-in, so changing or
+// resetting the password ends every other session immediately.
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { db } from "@/lib/db";
+import { passwordFingerprint } from "@/lib/auth/password-reset";
 import type { Role, SessionContext } from "@/lib/types";
 
 const COOKIE = "av_session";
@@ -12,8 +16,8 @@ function secret() {
   return new TextEncoder().encode(s);
 }
 
-export async function createSessionToken(ctx: SessionContext) {
-  return new SignJWT({ email: ctx.email, org: ctx.organizationId, role: ctx.role })
+export async function createSessionToken(ctx: SessionContext, pwf: string) {
+  return new SignJWT({ email: ctx.email, org: ctx.organizationId, role: ctx.role, pwf })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(ctx.userId)
     .setIssuedAt()
@@ -21,10 +25,16 @@ export async function createSessionToken(ctx: SessionContext) {
     .sign(secret());
 }
 
+async function currentFingerprint(userId: string): Promise<string | null> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+  return user ? passwordFingerprint(user.passwordHash) : null;
+}
+
 export async function verifySessionToken(token: string): Promise<SessionContext | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
-    if (!payload.sub || typeof payload.org !== "string") return null;
+    if (!payload.sub || typeof payload.org !== "string" || typeof payload.pwf !== "string") return null;
+    if (payload.pwf !== (await currentFingerprint(payload.sub))) return null; // password changed since sign-in
     return {
       userId: payload.sub,
       email: String(payload.email ?? ""),
@@ -36,8 +46,11 @@ export async function verifySessionToken(token: string): Promise<SessionContext 
   }
 }
 
+/** Issue a session for the user's CURRENT password; call again after a password change to keep this device signed in. */
 export async function setSessionCookie(ctx: SessionContext) {
-  const token = await createSessionToken(ctx);
+  const pwf = await currentFingerprint(ctx.userId);
+  if (!pwf) throw new Error("Cannot create a session for an unknown user");
+  const token = await createSessionToken(ctx, pwf);
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

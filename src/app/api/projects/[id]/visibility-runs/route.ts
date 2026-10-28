@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { handler, HttpError, json, requireProject, requireSession } from "@/lib/api";
 import { enqueue } from "@/lib/jobs/queue";
 import { currentPromptSetVersion } from "@/lib/prompts/service";
+import { assertOrgActive } from "@/lib/billing/access";
+import { assertVisibilityRunAllowed } from "@/lib/billing/ai-limits";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -41,6 +43,7 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
     }
   }
   const body = createSchema.parse(raw);
+  await assertOrgActive(s.organizationId);
 
   const active = await db.visibilityRun.findFirst({
     where: { organizationId: s.organizationId, projectId: project.id, status: { in: ACTIVE_STATUSES } },
@@ -49,6 +52,8 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
 
   const promptCount = await db.trackedPrompt.count({ where: { organizationId: s.organizationId, projectId: project.id, active: true } });
   if (promptCount === 0) throw new HttpError(400, "no_prompts", "Add at least one tracked prompt before running a visibility scan");
+  // Monthly AI-check allowance (402 plan_limit). Prompts per run are capped in the job via getRunPromptCap().
+  const allowance = await assertVisibilityRunAllowed(s.organizationId);
 
   const run = await db.visibilityRun.create({
     data: {
@@ -63,7 +68,7 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
     kind: "visibility",
     organizationId: s.organizationId,
     projectId: project.id,
-    input: { visibilityRunId: run.id, requestedBy: s.userId },
+    input: { visibilityRunId: run.id, requestedBy: s.userId, maxPrompts: allowance.maxPromptsPerRun },
     idempotencyKey: `visibility:${run.id}`,
   });
   const item = await db.visibilityRun.update({ where: { id: run.id }, data: { workflowRunId: wf.id } });

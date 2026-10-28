@@ -9,6 +9,7 @@ function geminiReply(text: string) {
 }
 
 beforeEach(() => {
+  vi.stubEnv("OPENROUTER_API_KEY", "");
   vi.stubEnv("OPENAI_API_KEY", "");
   vi.stubEnv("GEMINI_API_KEY", "");
   vi.stubEnv("GEMINI_MODEL", "");

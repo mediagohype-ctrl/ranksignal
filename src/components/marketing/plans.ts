@@ -22,7 +22,7 @@ const COPY: Record<PaidPlanId, { blurb: string; suffix?: string; featured?: bool
   agency: {
     blurb: "For agencies and multi-brand teams looking after many client sites.",
     suffix: "+",
-    cta: "Start trial or talk to us",
+    cta: "Talk to us",
   },
 };
 

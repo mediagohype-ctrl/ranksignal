@@ -18,6 +18,7 @@ import {
   Plus,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { BRAND } from "@/lib/brand";
@@ -38,6 +39,7 @@ const NAV = [
   { slug: "actions", label: "Actions & Approvals", icon: ShieldCheck },
   { slug: "integrations", label: "Integrations", icon: Plug },
   { slug: "reports", label: "History & print", icon: History },
+  { slug: "settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
 const LAST_PROJECT_KEY = "app.lastProjectId";

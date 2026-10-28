@@ -4,6 +4,7 @@
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
+import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
 import { geminiGenerateContent, getGeminiModel, isGeminiConfigured, readGeminiCandidate } from "./gemini-client";
 import { estimateGeminiCostMicros } from "./pricing";
 import { getOpenRouterAnalysisModels, isOpenRouterConfigured, openRouterChat, parseOpenRouterResponse } from "./openrouter-client";
@@ -97,6 +98,17 @@ function parseJson(content: string): unknown {
   }
 }
 
+/** False when the global daily AI budget is spent; generateStructured then degrades to null (caller fallbacks). */
+async function withinAiBudget(): Promise<boolean> {
+  try {
+    await assertAiBudget();
+    return true;
+  } catch (err) {
+    console.warn("[llm] skipped: daily AI budget reached", { message: (err as Error)?.message?.slice(0, 120) });
+    return false;
+  }
+}
+
 export async function generateStructured<T>(o: StructuredInput<T>): Promise<{ data: T; costMicros: number } | null> {
   const backend = getLlmBackend();
   if (backend === "openrouter") return generateWithOpenRouter(o);
@@ -114,6 +126,7 @@ async function generateWithOpenAI<T>(o: StructuredInput<T>): Promise<{ data: T; 
 
   let costMicros = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
+    if (!(await withinAiBudget())) return null;
     try {
       const res = await openai.chat.completions.create({
         model,
@@ -125,7 +138,9 @@ async function generateWithOpenAI<T>(o: StructuredInput<T>): Promise<{ data: T; 
         max_tokens: o.maxTokens ?? 1500,
         temperature: 0.2,
       });
-      costMicros += estimateCostMicros(model, res.usage?.prompt_tokens, res.usage?.completion_tokens);
+      const callCost = estimateCostMicros(model, res.usage?.prompt_tokens, res.usage?.completion_tokens);
+      noteAiSpend(callCost);
+      costMicros += callCost;
       const content = res.choices[0]?.message?.content;
       if (!content) continue;
       const parsedJson = parseJson(content);
@@ -169,6 +184,7 @@ async function generateWithGemini<T>(o: StructuredInput<T>): Promise<{ data: T; 
 
   let costMicros = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
+    if (!(await withinAiBudget())) return null;
     try {
       const payload = await geminiGenerateContent(
         model,
@@ -180,7 +196,9 @@ async function generateWithGemini<T>(o: StructuredInput<T>): Promise<{ data: T; 
         TIMEOUT_MS,
       );
       const { text, usage } = readGeminiCandidate(payload);
-      costMicros += estimateGeminiCostMicros(model, usage.inputTokens, usage.outputTokens, false);
+      const callCost = estimateGeminiCostMicros(model, usage.inputTokens, usage.outputTokens, false);
+      noteAiSpend(callCost);
+      costMicros += callCost;
       if (!text) continue;
       const parsedJson = parseJson(text);
       if (parsedJson === undefined) continue;
@@ -233,6 +251,7 @@ ${js}` : wrapped.system;
       } catch (err) {
         const errorClass = (err as { errorClass?: string }).errorClass;
         console.warn("[llm] openrouter request failed", { model, attempt, errorClass, message: (err as Error)?.message?.slice(0, 160) });
+        if (errorClass === "quota") return null; // daily AI budget reached: no further calls
         if (errorClass === "permanent") break; // try the next model
       }
     }

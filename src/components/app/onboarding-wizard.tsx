@@ -122,12 +122,12 @@ type KickoffState = "pending" | "running" | "done" | "error";
 
 /* ------------------------------------------------------------------ component */
 
-export function OnboardingWizard({ maxPagesLimit }: { maxPagesLimit: number }) {
+export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPagesLimit: number; initialWebsite?: string }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Errors>({});
 
-  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState(initialWebsite);
   const [brand, setBrand] = useState("");
   const [aliases, setAliases] = useState("");
   const [name, setName] = useState("");

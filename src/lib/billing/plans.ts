@@ -3,7 +3,20 @@ import type { PlanId, PlanLimits } from "@/lib/types";
 
 export const TRIAL_DAYS = 7;
 
-export const PLANS: Record<PlanId, PlanLimits> = {
+/**
+ * AI-check limits per plan. Kept local (PlanLimits in @/lib/types is a frozen shared contract), so PLANS is typed
+ * with the extended shape; it is still assignable to Record<PlanId, PlanLimits>.
+ *   maxVisibilityRunsPerMonth — AI visibility checks an organization may start per calendar month (UTC).
+ *   maxPromptsPerRun          — tracked questions asked per check (caps provider calls per run).
+ * PLACEHOLDER VALUES — tune once real provider costs per plan are known.
+ */
+export interface PlanAiLimits {
+  maxVisibilityRunsPerMonth: number;
+  maxPromptsPerRun: number;
+}
+export type PlanWithAiLimits = PlanLimits & PlanAiLimits;
+
+export const PLANS: Record<PlanId, PlanWithAiLimits> = {
   // Trial mirrors Starter limits for TRIAL_DAYS, with a smaller credit pool.
   trial: {
     id: "trial",
@@ -17,6 +30,8 @@ export const PLANS: Record<PlanId, PlanLimits> = {
     seats: 2,
     competitorTracking: true,
     approvalPublishing: true,
+    maxVisibilityRunsPerMonth: 2, // PLACEHOLDER
+    maxPromptsPerRun: 10, // PLACEHOLDER
   },
   starter: {
     id: "starter",
@@ -30,6 +45,8 @@ export const PLANS: Record<PlanId, PlanLimits> = {
     seats: 2,
     competitorTracking: true,
     approvalPublishing: true,
+    maxVisibilityRunsPerMonth: 4, // PLACEHOLDER
+    maxPromptsPerRun: 25, // PLACEHOLDER
   },
   growth: {
     id: "growth",
@@ -43,6 +60,8 @@ export const PLANS: Record<PlanId, PlanLimits> = {
     seats: 5,
     competitorTracking: true,
     approvalPublishing: true,
+    maxVisibilityRunsPerMonth: 12, // PLACEHOLDER
+    maxPromptsPerRun: 60, // PLACEHOLDER
   },
   agency: {
     id: "agency",
@@ -56,6 +75,8 @@ export const PLANS: Record<PlanId, PlanLimits> = {
     seats: 15,
     competitorTracking: true,
     approvalPublishing: true,
+    maxVisibilityRunsPerMonth: 40, // PLACEHOLDER
+    maxPromptsPerRun: 150, // PLACEHOLDER
   },
 };
 
@@ -67,6 +88,11 @@ export function isPlanId(id: string): id is PlanId {
 
 /** Unknown plan ids fall back to trial limits (fail closed toward the smallest plan). */
 export function getPlan(planId: string): PlanLimits {
+  return isPlanId(planId) ? PLANS[planId] : PLANS.trial;
+}
+
+/** Plan limits including the AI-check limits (unknown ids fall back to trial). */
+export function getPlanWithAiLimits(planId: string): PlanWithAiLimits {
   return isPlanId(planId) ? PLANS[planId] : PLANS.trial;
 }
 

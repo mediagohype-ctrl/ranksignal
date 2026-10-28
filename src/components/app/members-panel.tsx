@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, UserMinus, UserPlus, Users } from "lucide-react";
+import { MailPlus, RefreshCw, UserMinus, UserPlus, Users } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate } from "@/lib/dashboard/format";
 import {
@@ -87,8 +87,15 @@ export function MembersPanel({
     setInviting(true);
     setInviteError(null);
     try {
-      await api("/api/org/members", { body: { email: addr, role } });
-      toast(`Invitation sent to ${addr}.`, "success");
+      const r = await api<{ emailSent?: boolean; emailSkipped?: boolean }>("/api/org/members", { body: { email: addr, role } });
+      if (r.emailSent) toast(`Invitation sent to ${addr}.`, "success");
+      else
+        toast(
+          r.emailSkipped
+            ? `${addr} was added as invited. Email isn't set up, so ask them to sign up with this address.`
+            : `${addr} was added as invited, but the email didn't send. Use "Resend" to try again.`,
+          "warning",
+        );
       setEmail("");
       await load();
     } catch (err) {
@@ -103,6 +110,19 @@ export function MembersPanel({
     try {
       await api(`/api/org/members/${m.id}`, { method: "PATCH", body: { role: next } });
       toast(`${m.user.name ?? m.user.email} is now ${next}.`, "success");
+      await load();
+    } catch (err) {
+      toast(errorMessage(err), "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function resend(m: Member) {
+    setBusy(m.id);
+    try {
+      await api(`/api/org/members/${m.id}/resend`, { method: "POST" });
+      toast(`Invitation re-sent to ${m.user.email}.`, "success");
       await load();
     } catch (err) {
       toast(errorMessage(err), "error");
@@ -277,6 +297,19 @@ export function MembersPanel({
                     <TD className="hidden whitespace-nowrap text-muted md:table-cell">{fmtDate(m.invitedAt ?? m.createdAt)}</TD>
                     {canManage && (
                       <TD align="right">
+                        <div className="flex items-center justify-end gap-1">
+                        {!self && m.status === "invited" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<MailPlus />}
+                            loading={busy === m.id}
+                            aria-label={`Resend invitation to ${m.user.email}`}
+                            onClick={() => resend(m)}
+                          >
+                            Resend
+                          </Button>
+                        )}
                         {!self && (
                           <Button
                             variant="ghost"
@@ -288,6 +321,7 @@ export function MembersPanel({
                             <UserMinus />
                           </Button>
                         )}
+                        </div>
                       </TD>
                     )}
                   </TR>

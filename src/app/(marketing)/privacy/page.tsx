@@ -3,7 +3,7 @@ import { BRAND } from "@/lib/brand";
 import { LegalPage } from "@/components/marketing/legal";
 
 export const metadata: Metadata = {
-  title: `Privacy Policy (draft) — ${BRAND.name}`,
+  title: "Privacy policy (draft)",
   description: `Draft privacy policy for ${BRAND.name}, pending legal review.`,
   alternates: { canonical: "/privacy" },
   robots: { index: false, follow: true },

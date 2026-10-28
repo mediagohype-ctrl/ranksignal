@@ -44,6 +44,9 @@ export async function middleware(req: NextRequest) {
       return apiError(403, "csrf_rejected", "Cross-origin request rejected");
     }
     if (pathname.startsWith("/api/auth/")) return NextResponse.next();
+    // Unauthenticated endpoints (free check, contact form, shared reports); each enforces its own
+    // captcha / rate limits. Still behind the same-origin check above for mutating methods.
+    if (pathname.startsWith("/api/public/")) return NextResponse.next();
     if (!(await hasValidSession(req))) return apiError(401, "unauthorized", "Sign in required");
     return NextResponse.next();
   }

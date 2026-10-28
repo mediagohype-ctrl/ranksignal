@@ -19,6 +19,7 @@ import { Badge, Card, LinkButton, Meter, Notice, RiskBadge, SectionHeading } fro
 import { BRAND } from "@/lib/brand";
 import { EngineChips, FinalCta, HeroEyebrow, IconTile, JsonLd, Section } from "@/components/marketing/ui";
 import { SampleReport, SampleReportPeek } from "@/components/marketing/sample-report";
+import { FreeCheckBand, FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { FAQS, FEATURES, HOW_STEPS, RISK_CLASSES } from "@/components/marketing/content";
 import { MARKETING_PLANS, TRIAL_DAYS, inr } from "@/components/marketing/plans";
 
@@ -32,6 +33,8 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITLE,
     description: BRAND.tagline,
+    url: "/",
+    siteName: BRAND.name,
     type: "website",
   },
 };
@@ -103,15 +106,40 @@ const HONEST: { icon: LucideIcon; title: string; body: string }[] = [
   },
 ];
 
+const SITE = BRAND.appUrl.replace(/\/$/, "");
+
 export default function HomePage() {
   const jsonLd = [
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": `${SITE}/#organization`,
       name: BRAND.name,
-      url: BRAND.appUrl,
+      url: SITE,
+      logo: `${SITE}/icon`,
       email: BRAND.supportEmail,
       description: BRAND.tagline,
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: BRAND.supportEmail, url: `${SITE}/contact` },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": `${SITE}/#website`,
+      name: BRAND.name,
+      url: SITE,
+      description: BRAND.tagline,
+      publisher: { "@id": `${SITE}/#organization` },
+      inLanguage: "en",
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: BRAND.name,
+      url: SITE,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description: "Audits websites for SEO, answer-engine (AEO) and generative-AI (GEO) readiness and measures how often AI assistants mention and cite a brand.",
+      publisher: { "@id": `${SITE}/#organization` },
     },
     {
       "@context": "https://schema.org",
@@ -140,17 +168,16 @@ export default function HomePage() {
               See how search engines and AI assistants see your business, in plain English. Get a clear list of what to
               fix, and ship the fixes you approve — with rollback built in.
             </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <LinkButton href="/signup" size="lg" variant="accent" iconRight={<ArrowRight />}>
-                Get your free AI visibility report
+            <FreeCheckLauncher id="hero-url" onDark className="mt-9 max-w-xl" />
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <LinkButton href="/signup" variant="accent" iconRight={<ArrowRight />}>
+                Start your {TRIAL_DAYS}-day free trial
               </LinkButton>
-              <LinkButton href="#sample" size="lg" variant="secondary">
+              <LinkButton href="#sample" variant="secondary">
                 See a sample report
               </LinkButton>
             </div>
-            <p className="mt-5 text-small text-navy-fg/70">
-              {TRIAL_DAYS}-day free trial on every plan. Honest, sample-based numbers — no guaranteed rankings.
-            </p>
+            <p className="mt-4 text-small text-navy-fg/70">Honest, sample-based numbers — no guaranteed rankings.</p>
 
             <div className="mt-12 border-t border-navy-fg/15 pt-6">
               <p className="text-caption uppercase tracking-[0.08em] text-navy-fg/70">We measure your visibility in</p>
@@ -265,6 +292,8 @@ export default function HomePage() {
           </LinkButton>
         </div>
       </Section>
+
+      <FreeCheckBand />
 
       {/* ------------------------------------------------------------ How it works */}
       <Section id="how-it-works" labelledBy="how-title" tone="surface">

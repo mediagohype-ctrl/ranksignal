@@ -91,10 +91,20 @@ export async function processRazorpayWebhook(
         // Paid subscription supersedes the trial.
         await tx.subscription.updateMany({ where: { organizationId, status: "trialing" }, data: { status: "expired" } });
       }
-      await tx.organization.update({
-        where: { id: organizationId },
-        data: { status: mapping.org, ...(mapping.sub === "active" ? { planId } : {}) },
-      });
+      // An old subscription ending (or failing) must not downgrade an org that has a newer active subscription.
+      const supersededBy =
+        mapping.sub === "active"
+          ? null
+          : await tx.subscription.findFirst({
+              where: { organizationId, status: "active", NOT: { providerSubscriptionId: entity.id } },
+              select: { id: true },
+            });
+      if (!supersededBy) {
+        await tx.organization.update({
+          where: { id: organizationId },
+          data: { status: mapping.org, ...(mapping.sub === "active" ? { planId } : {}) },
+        });
+      }
       await tx.auditLog.create({
         data: {
           organizationId,
@@ -103,7 +113,9 @@ export async function processRazorpayWebhook(
           resourceType: "subscription",
           resourceId: entity.id,
           before: { planId: org.planId, status: org.status },
-          after: { planId: mapping.sub === "active" ? planId : org.planId, status: mapping.org },
+          after: supersededBy
+            ? { planId: org.planId, status: org.status, note: "superseded subscription; organization unchanged" }
+            : { planId: mapping.sub === "active" ? planId : org.planId, status: mapping.org },
         },
       });
       return { status: "processed", eventId, organizationId } as const;

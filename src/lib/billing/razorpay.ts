@@ -53,3 +53,19 @@ export async function createRazorpaySubscription(o: {
   }
   return (await res.json()) as RazorpaySubscription;
 }
+
+/** Cancel a subscription. With atCycleEnd the customer keeps the paid period; the signed webhook applies the change. */
+export async function cancelRazorpaySubscription(subscriptionId: string, atCycleEnd = true): Promise<RazorpaySubscription> {
+  const auth = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
+  const res = await fetch(`${API}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ cancel_at_cycle_end: atCycleEnd ? 1 : 0 }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    console.error("[billing] razorpay cancel subscription failed", res.status);
+    throw new Error(`Razorpay returned ${res.status}`);
+  }
+  return (await res.json()) as RazorpaySubscription;
+}

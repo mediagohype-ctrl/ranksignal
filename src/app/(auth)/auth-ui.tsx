@@ -9,21 +9,30 @@ export function safeNext(next: string | null, fallback: string): string {
   return next;
 }
 
-export async function postJson(
-  url: string,
-  body: unknown,
-): Promise<{ ok: boolean; status?: number; message?: string; fieldErrors?: Record<string, string[]> }> {
+export interface PostJsonResult<T = unknown> {
+  ok: boolean;
+  status?: number;
+  code?: string;
+  message?: string;
+  fieldErrors?: Record<string, string[]>;
+  details?: Record<string, unknown>;
+  data?: T;
+}
+
+export async function postJson<T = unknown>(url: string, body: unknown): Promise<PostJsonResult<T>> {
   try {
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) return { ok: true, status: res.status };
-    const data = (await res.json().catch(() => null)) as {
-      error?: { message?: string; details?: { fieldErrors?: Record<string, string[]> } };
-    } | null;
+    const data = (await res.json().catch(() => null)) as
+      | (T & { error?: { code?: string; message?: string; details?: Record<string, unknown> & { fieldErrors?: Record<string, string[]> } } })
+      | null;
+    if (res.ok) return { ok: true, status: res.status, data: (data ?? undefined) as T | undefined };
     return {
       ok: false,
       status: res.status,
+      code: data?.error?.code,
       message: data?.error?.message ?? (res.status === 429 ? "Too many attempts. Please wait a minute and try again." : "Something went wrong. Please try again."),
       fieldErrors: data?.error?.details?.fieldErrors,
+      details: data?.error?.details,
     };
   } catch {
     return { ok: false, message: "We couldn't reach the server. Check your connection and try again." };

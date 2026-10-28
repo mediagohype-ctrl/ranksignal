@@ -6,7 +6,20 @@ import { PageHeader } from "@/components/ui";
 
 export const metadata = { title: "New project" };
 
-export default async function OnboardingPage() {
+/** Only a plain http(s) URL from the free check (?website=) is used to prefill the form. */
+function safeWebsite(v: string | string[] | undefined): string {
+  const raw = Array.isArray(v) ? v[0] : v;
+  if (!raw || raw.length > 2048) return "";
+  try {
+    const u = new URL(raw);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ website?: string | string[] }> }) {
+  const { website } = await searchParams;
   const s = await requireAppSession();
   const [org, projectCount] = await Promise.all([
     db.organization.findUnique({ where: { id: s.organizationId }, select: { planId: true } }),
@@ -22,7 +35,7 @@ export default async function OnboardingPage() {
         title={projectCount === 0 ? "Let's set up your first project" : "Set up a project"}
         description="Answer a few quick questions. We'll scan your website, ask AI assistants what your buyers ask, and build a plain-English report."
       />
-      <OnboardingWizard maxPagesLimit={plan.maxPagesPerCrawl} />
+      <OnboardingWizard maxPagesLimit={plan.maxPagesPerCrawl} initialWebsite={safeWebsite(website)} />
     </>
   );
 }

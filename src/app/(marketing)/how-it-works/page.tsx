@@ -6,7 +6,7 @@ import { FinalCta, PageHero, Section } from "@/components/marketing/ui";
 import { HOW_STEPS, RISK_CLASSES } from "@/components/marketing/content";
 
 export const metadata: Metadata = {
-  title: "How it works",
+  title: "How it works: audit, fix, approve and re-measure",
   description: `How ${BRAND.name} works: connect your site, audit and measure AI visibility, review prioritised fixes, then approve, publish and re-measure — with rollback.`,
   alternates: { canonical: "/how-it-works" },
 };

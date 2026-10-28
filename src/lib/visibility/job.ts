@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { enqueue, type JobContext, type JobHandler } from "@/lib/jobs/queue";
 import { getPlan } from "@/lib/billing/plans";
+import { getRunPromptCap } from "@/lib/billing/ai-limits";
 import { recordUsage, releaseReservation, reserveCredits } from "@/lib/billing/usage";
 import { getAvailableProviders } from "@/lib/providers/visibility/registry";
 import { withTimeout } from "@/lib/providers/visibility/errors";
@@ -59,7 +60,8 @@ export const visibilityJob: JobHandler = async (ctx) => {
   const prompts = await db.trackedPrompt.findMany({
     where: { organizationId: orgId, projectId: project.id, active: true },
     orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-    take: plan.maxTrackedPrompts,
+    // Plan cap per run (also applies to scheduled runs, which pass no maxPrompts).
+    take: Math.min(plan.maxTrackedPrompts, await getRunPromptCap(orgId)),
   });
   const pctx = projectVisibilityContext(project);
   const requested = (run.providers as string[] | null) ?? undefined;

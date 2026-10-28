@@ -5,7 +5,9 @@ import { db } from "@/lib/db";
 import { readMetrics } from "@/lib/dashboard/data";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { asArray, asRecord, fmtDate, isActiveStatus, pct } from "@/lib/dashboard/format";
+import { describeProviders } from "@/lib/providers/visibility/registry";
 import { AutoRefresh } from "@/components/app/auto-refresh";
+import { ProvidersStatus, type PublicProvider } from "@/components/app/providers-status";
 import { RunButtons } from "@/components/app/run-buttons";
 import { VisibilityTable, type ObservationRow } from "@/components/app/visibility-table";
 import {
@@ -31,6 +33,9 @@ export default async function VisibilityPage({
     take: 20,
   });
   const active = runs.some((r) => isActiveStatus(r.status));
+  const engines: PublicProvider[] | null = await describeProviders()
+    .then((d) => d.providers.map(({ id, label, configured, enabled, active: on, simulated }) => ({ id, label, configured, enabled, active: on, simulated })))
+    .catch(() => null);
   const run =
     runs.find((r) => r.id === runParam) ??
     runs.find((r) => r.status === "succeeded" || r.status === "succeeded_with_warnings") ??
@@ -83,6 +88,7 @@ export default async function VisibilityPage({
           </>
         }
       />
+      {engines && <ProvidersStatus providers={engines} />}
       {simulated && (
         <SimulatedDataBanner>
           these answers came from the built-in simulator, not real AI assistants. Add a GEMINI_API_KEY to your .env file and run the

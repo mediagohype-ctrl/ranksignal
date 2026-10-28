@@ -19,6 +19,12 @@ export function checkRateLimit(key: string, limit: number, windowMs: number, now
   return { allowed: b.count <= limit, retryAfterSec: Math.max(1, Math.ceil((b.resetAt - now) / 1000)) };
 }
 
+/** Current count in the active window without incrementing it (0 when no live window). */
+export function peekRateLimit(key: string, now = Date.now()): number {
+  const b = buckets.get(key);
+  return b && b.resetAt > now ? b.count : 0;
+}
+
 export function resetRateLimit(key: string) {
   buckets.delete(key);
 }

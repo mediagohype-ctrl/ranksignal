@@ -7,21 +7,39 @@ import {
   Badge, Card, CardBody, CardHeader, EmptyState, LinkButton, SimulatedDataBanner, Stat,
 } from "@/components/ui";
 
-/** AI visibility block of the site report: rates, competitor share, cited domains, missing prompts, brand knowledge. */
+/**
+ * AI visibility block of the site report: rates, competitor share, cited domains, missing prompts, brand knowledge.
+ * `readOnly` (shared client reports): no run buttons or app links, no setup hints, and no AI answer text.
+ */
 export function AiVisibilitySection({
   ai,
   brand,
   projectId,
-  canRun,
-  visibilityActive,
+  canRun = false,
+  visibilityActive = false,
+  readOnly = false,
+  measuredWith,
 }: {
   ai: AiVisibilitySummary;
   brand: string;
-  projectId: string;
-  canRun: boolean;
-  visibilityActive: boolean;
+  projectId?: string;
+  canRun?: boolean;
+  visibilityActive?: boolean;
+  readOnly?: boolean;
+  /** Shown above the numbers, e.g. <MeasuredWith labels={ai.providers} />. */
+  measuredWith?: React.ReactNode;
 }) {
   if (!ai.measured) {
+    if (readOnly || !projectId) {
+      return (
+        <EmptyState
+          icon={<Radar />}
+          title="AI answers not measured yet"
+          description="This report doesn't include an AI visibility check yet. It covers the website scan only."
+          bordered
+        />
+      );
+    }
     return (
       <EmptyState
         icon={<Radar />}
@@ -59,7 +77,13 @@ export function AiVisibilitySection({
 
   return (
     <div className="space-y-6">
-      {ai.simulated && (
+      {measuredWith}
+      {ai.simulated && readOnly && (
+        <SimulatedDataBanner>
+          these AI answers came from a built-in simulator, not from real AI assistants, so treat the numbers as a demo only.
+        </SimulatedDataBanner>
+      )}
+      {ai.simulated && !readOnly && (
         <SimulatedDataBanner>
           these AI answers came from the built-in simulator, not from real AI assistants, so treat the numbers as a demo. To get
           real answers, add a <code className="font-mono text-xs">GEMINI_API_KEY</code> to your <code className="font-mono text-xs">.env</code>{" "}
@@ -208,9 +232,10 @@ export function AiVisibilitySection({
 
       {ai.brandKnowledge && ai.brandKnowledge.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-h4 text-fg">What AI says about your brand</h3>
+          <h3 className="text-h4 text-fg">{readOnly ? "Does AI know your brand?" : "What AI says about your brand"}</h3>
           <p className="-mt-2 text-small text-muted">
-            We asked each assistant what it knows about {brand}. Wrong facts here are worth correcting on your site and profiles.
+            We asked each assistant what it knows about {brand}.
+            {readOnly ? "" : " Wrong facts here are worth correcting on your site and profiles."}
           </p>
           <div className="grid gap-6 md:grid-cols-2">
             {ai.brandKnowledge.map((k, i) => (
@@ -230,8 +255,10 @@ export function AiVisibilitySection({
                     </Badge>
                   )}
                 </div>
-                {/* Provider text is untrusted: rendered as plain text only. */}
-                <p className="mt-3 whitespace-pre-line text-small leading-relaxed text-fg-soft">{k.summary || "No description returned."}</p>
+                {/* Provider text is untrusted: rendered as plain text only. Hidden on shared reports. */}
+                {!readOnly && (
+                  <p className="mt-3 whitespace-pre-line text-small leading-relaxed text-fg-soft">{k.summary || "No description returned."}</p>
+                )}
                 {k.inaccuracies.length > 0 && (
                   <div className="mt-4 rounded-xl bg-danger-soft px-4 py-3">
                     <h4 className="text-caption uppercase tracking-[0.06em] text-danger">Possible inaccuracies</h4>

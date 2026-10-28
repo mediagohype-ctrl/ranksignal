@@ -11,6 +11,7 @@ const COLS = [
       { href: "/how-it-works", label: "How it works" },
       { href: "/pricing", label: "Pricing" },
       { href: "/#sample", label: "Sample report" },
+      { href: "/free-check", label: "Free AI-readiness check" },
     ],
   },
   {
@@ -19,6 +20,7 @@ const COLS = [
       { href: "/docs", label: "Getting started" },
       { href: "/#explained", label: "SEO vs AEO vs GEO" },
       { href: "/#faq", label: "FAQ" },
+      { href: "/contact", label: "Contact us" },
     ],
   },
   {

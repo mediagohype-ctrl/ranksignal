@@ -7,7 +7,7 @@ import { FinalCta, IconTile, PageHero } from "@/components/marketing/ui";
 import { FEATURES } from "@/components/marketing/content";
 
 export const metadata: Metadata = {
-  title: "Features",
+  title: "Features: AI visibility tracking, site audits and safe fixes",
   description:
     "Prompt research, AI visibility and citation tracking, competitor share, technical and AI-readiness audits, evidence-backed recommendations and approval-gated publishing.",
   alternates: { canonical: "/features" },

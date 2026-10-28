@@ -5,6 +5,8 @@ import { requireActiveMembership } from "@/lib/auth/membership";
 import { UNUSABLE_PASSWORD } from "@/lib/auth/password";
 import { getPlan } from "@/lib/billing/plans";
 import { writeAuditLog } from "@/lib/audit-log";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { sendInviteEmail } from "@/lib/auth/invite";
 
 const memberSelect = {
   id: true,
@@ -34,9 +36,13 @@ export const POST = handler(async (req: Request) => {
   const s = await requireSession("admin");
   const actor = await requireActiveMembership(s, ["owner", "admin"]);
   const input = await parseBody(req, inviteSchema);
+  // Invites send email to arbitrary addresses: cap volume per workspace to prevent abuse.
+  if (!checkRateLimit(`invite-org:${s.organizationId}`, 30, 24 * 60 * 60 * 1000).allowed) {
+    throw new HttpError(429, "rate_limited", "You've sent a lot of invitations today. Please try again tomorrow.");
+  }
   if (input.role === "owner" && actor.role !== "owner") throw new HttpError(403, "forbidden", "Only owners can invite owners");
 
-  const org = await db.organization.findUniqueOrThrow({ where: { id: s.organizationId }, select: { planId: true } });
+  const org = await db.organization.findUniqueOrThrow({ where: { id: s.organizationId }, select: { planId: true, name: true } });
   const plan = getPlan(org.planId);
   const seatsUsed = await db.membership.count({ where: { organizationId: s.organizationId, status: { in: ["active", "invited"] } } });
   if (seatsUsed >= plan.seats) {
@@ -66,6 +72,14 @@ export const POST = handler(async (req: Request) => {
     resourceId: membership.id,
     after: { email: input.email, role: input.role },
   });
-  // TODO: send invitation email. The invitee accepts by signing in and switching to the org (POST /api/auth/switch-org).
-  return json({ item: membership }, { status: 201 });
+  // The invitee accepts via the emailed link (/accept-invite) or by switching to the org (POST /api/auth/switch-org).
+  const inviter = await db.user.findUnique({ where: { id: s.userId }, select: { name: true, email: true } });
+  const sent = await sendInviteEmail({
+    membershipId: membership.id,
+    email: input.email,
+    role: input.role,
+    organizationName: org.name,
+    inviterName: inviter?.name || inviter?.email || "A teammate",
+  }).catch(() => ({ ok: false, skipped: false }));
+  return json({ item: membership, emailSent: sent.ok, emailSkipped: Boolean(sent.skipped) }, { status: 201 });
 });

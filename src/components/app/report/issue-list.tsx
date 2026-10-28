@@ -40,7 +40,10 @@ function Chip({
   );
 }
 
-/** Full "What's wrong & how to fix it" list with client-side pillar / impact filter chips. */
+/**
+ * Full "What's wrong & how to fix it" list with client-side pillar / impact filter chips.
+ * Without `projectId` (shared client reports) no links into the app are rendered.
+ */
 export function IssueList({
   issues,
   quickWins,
@@ -48,7 +51,7 @@ export function IssueList({
 }: {
   issues: ReportIssue[];
   quickWins: string[];
-  projectId: string;
+  projectId?: string;
 }) {
   const [pillar, setPillar] = useState<PillarFilter>("all");
   const [impact, setImpact] = useState<ImpactFilter>("all");
@@ -153,7 +156,7 @@ export function IssueList({
                   defaultOpen={idx < 2}
                   className="scroll-mt-24 break-inside-avoid"
                   actions={
-                    i.relatedActionType ? (
+                    i.relatedActionType && projectId ? (
                       <LinkButton
                         href={`/app/projects/${projectId}/actions`}
                         size="sm"

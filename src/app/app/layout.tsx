@@ -5,6 +5,9 @@ import { getPlan } from "@/lib/billing/plans";
 import { AppSidebar } from "@/components/app/sidebar";
 import { NotificationsBell, UsageMeter, UserMenu } from "@/components/app/topbar-widgets";
 import { Badge, Divider, ToastProvider } from "@/components/ui";
+import { PlanBanner } from "@/components/app/plan-banner";
+import { VerifyEmailBanner } from "@/components/app/verify-email-banner";
+import { getPlanBannerData } from "@/lib/billing/banner";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true } }),
   ]);
   if (!org) redirect("/login");
+  // Trial / past-due / usage banner; never block the app if billing data can't be loaded.
+  const banner = await getPlanBannerData(session.organizationId).catch(() => null);
   const plan = getPlan(org.planId);
   const trial = org.planId === "trial";
 
@@ -61,6 +66,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
           </header>
           <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            <VerifyEmailBanner className="mb-6" />
+            {banner && (
+              <PlanBanner
+                access={banner.access}
+                usage={banner.usage}
+                canManageBilling={session.role === "owner" || session.role === "admin"}
+                className="mb-6"
+              />
+            )}
             {children}
           </main>
         </div>

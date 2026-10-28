@@ -5,6 +5,7 @@
 import { HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
 import { JobError } from "@/lib/types";
+import { accessMessage, getOrgAccess } from "./access";
 import { getPlan } from "./plans";
 
 export const USAGE_THRESHOLDS = [0.8, 1] as const;
@@ -48,6 +49,9 @@ export async function reserveCredits(
 ): Promise<void> {
   if (!Number.isInteger(o.credits) || o.credits < 0) throw new JobError("credits must be a non-negative integer", "permanent");
   if (o.credits === 0) return;
+  // Expired trial / lapsed payment / suspended: stop metered work, including scheduled jobs.
+  const access = await getOrgAccess(orgId);
+  if (!access.active) throw new JobError(accessMessage(access), "quota");
   const period = billingPeriod();
   // Interactive transaction: check + insert together. A per-organization advisory lock (released at commit)
   // stops two concurrent jobs from both passing the limit check.
