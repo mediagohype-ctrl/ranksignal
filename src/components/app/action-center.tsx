@@ -9,7 +9,7 @@ import {
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate } from "@/lib/dashboard/format";
 import {
-  Badge, Button, Card, Dialog, EmptyState, Field, Meter, Notice, RiskBadge, StatusBadge, TabPanel, Tabs, Textarea, useToast,
+  Badge, Button, Card, Dialog, EmptyState, Field, Input, Meter, Notice, RiskBadge, StatusBadge, TabPanel, Tabs, Textarea, useToast,
 } from "@/components/ui";
 import { DiffView, fieldLabel } from "./diff-view";
 import { CopyBlock } from "./actions/copy-block";
@@ -50,7 +50,7 @@ const TABS = [
   { id: "awaiting", label: "Needs approval", statuses: ["awaiting_approval"], empty: "Nothing is waiting for your approval right now." },
   { id: "ready", label: "Ready", statuses: ["proposed", "approved"], empty: "No suggestions are waiting to be applied." },
   { id: "running", label: "In progress", statuses: ["executing", "rollback_pending"], empty: "Nothing is being applied at the moment." },
-  { id: "done", label: "Done", statuses: ["succeeded", "succeeded_with_warnings"], empty: "Applied changes will show up here." },
+  { id: "done", label: "Done", statuses: ["succeeded", "succeeded_with_warnings", "completed_manually"], empty: "Applied changes will show up here." },
   { id: "manual", label: "Do by hand", statuses: ["blocked"], empty: "No changes need to be done by hand." },
   {
     id: "closed",
@@ -158,7 +158,9 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<null | "approve" | "reject" | "edit" | "execute" | "rollback">(null);
+  const [dialog, setDialog] = useState<null | "approve" | "reject" | "edit" | "execute" | "rollback" | "manual">(null);
+  const [manualNote, setManualNote] = useState("");
+  const [manualUrl, setManualUrl] = useState("");
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
   const [draft, setDraft] = useState(a.change?.after ?? "");
@@ -210,13 +212,32 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
     }
   }
 
+  async function completeManually() {
+    setBusy("manual");
+    try {
+      await api(`/api/actions/${a.id}/complete-manually`, {
+        method: "POST",
+        body: { ...(manualNote.trim() ? { note: manualNote.trim() } : {}), ...(manualUrl.trim() ? { url: manualUrl.trim() } : {}) },
+      });
+      toast("Marked as done. It now counts as shipped work.", "success");
+      setDialog(null);
+      router.refresh();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const canRollback =
     ["succeeded", "succeeded_with_warnings", "failed", "rollback_failed"].includes(a.status) &&
     !!a.execution &&
     a.execution.rollbackStatus !== "rolled_back" &&
     a.execution.rollbackStatus !== "pending" &&
     !!a.integrationId;
+  // Class A items are briefs / internal tasks: nothing to publish automatically.
   const canExecute =
+    a.riskClass !== "A" &&
     !!a.integrationId &&
     (a.status === "approved" || (a.policyDecision === "auto_execute" && ["proposed", "failed"].includes(a.status)));
   const locked = a.status === "awaiting_approval" || a.status === "approved";
@@ -225,7 +246,12 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
   const summary = actionSummary(a.type);
   const showEdit = canEdit && !!a.change && EDITABLE.includes(a.status);
   const showApprove = canApprove && a.status === "awaiting_approval";
-  const hasButtons = showEdit || showApprove || (canEdit && canExecute) || (canApprove && canRollback);
+  // Work done by hand (no connector, a brief, or blocked/failed automation). The server re-checks eligibility.
+  const canCompleteManually =
+    canApprove &&
+    !["succeeded", "succeeded_with_warnings", "completed_manually", "rejected", "cancelled", "rolled_back", "executing", "validating"].includes(a.status) &&
+    (!a.integrationId || a.riskClass === "A" || ["blocked", "failed"].includes(a.status));
+  const hasButtons = showEdit || showApprove || (canEdit && canExecute) || (canApprove && canRollback) || canCompleteManually;
 
   return (
     <Card as="article" className="overflow-hidden" aria-labelledby={`act-${a.id}-title`}>
@@ -417,6 +443,11 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
               Apply change
             </Button>
           )}
+          {canCompleteManually && (
+            <Button variant="secondary" size="sm" icon={<CheckCircle2 />} onClick={() => setDialog("manual")}>
+              Mark as done manually
+            </Button>
+          )}
         </div>
       )}
 
@@ -486,6 +517,31 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
           </>
         }
       />
+
+      <Dialog
+        open={dialog === "manual"}
+        onClose={close}
+        icon={<CheckCircle2 />}
+        title="Mark this as done by hand?"
+        description="Use this when the change was made outside RankSignal (for example edited directly in your CMS). It will count as shipped work in reports."
+        footer={
+          <>
+            <Button variant="secondary" onClick={close}>Cancel</Button>
+            <Button loading={busy === "manual"} loadingText="Saving…" onClick={completeManually}>
+              Mark as done
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="What was done" htmlFor={`man-note-${a.id}`} optional>
+            <Textarea id={`man-note-${a.id}`} rows={2} value={manualNote} onChange={(e) => setManualNote(e.target.value)} maxLength={2000} />
+          </Field>
+          <Field label="Link to the changed page" htmlFor={`man-url-${a.id}`} optional>
+            <Input id={`man-url-${a.id}`} type="url" value={manualUrl} onChange={(e) => setManualUrl(e.target.value)} placeholder="https://" />
+          </Field>
+        </div>
+      </Dialog>
 
       <Dialog
         open={dialog === "rollback"}

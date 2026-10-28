@@ -131,6 +131,7 @@ const STATUS_TONE: Record<string, Tone> = {
   approved: "accent",
   succeeded: "success",
   succeeded_with_warnings: "warning",
+  completed_manually: "success",
   resolved: "success",
   healthy: "success",
   open: "primary",
@@ -150,13 +151,15 @@ const STATUS_TONE: Record<string, Tone> = {
   past_due: "danger",
 };
 
+const STATUS_LABEL: Record<string, string> = { completed_manually: "done by hand" };
+
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
   const tone = STATUS_TONE[status] ?? "neutral";
   const live = ["queued", "preflight", "running", "validating", "executing"].includes(status);
   return (
     <Badge tone={tone} className={clsx("capitalize", className)}>
       <span aria-hidden className={clsx("size-1.5 rounded-full bg-current", live && "animate-pulse")} />
-      {status.replace(/_/g, " ")}
+      {STATUS_LABEL[status] ?? status.replace(/_/g, " ")}
     </Badge>
   );
 }

@@ -20,7 +20,13 @@ const REASONS = [
   { icon: <Mail />, title: "Support", body: "Already a customer? Include your workspace name so we can help faster." },
 ];
 
-export default function ContactPage() {
+const SERVICE_TIER_NAMES: Record<string, string> = { fix: "Fix", grow: "Grow", authority: "Authority" };
+
+export default async function ContactPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const isServices = one(sp.topic) === "services";
+  const tierName = isServices ? SERVICE_TIER_NAMES[one(sp.tier) ?? ""] : undefined;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ContactPage",
@@ -37,14 +43,20 @@ export default function ContactPage() {
     <>
       <JsonLd data={jsonLd} />
       <PageHero
-        eyebrow="Contact"
-        title="Talk to us"
-        intro={<p>Questions about agency plans, onboarding or your report? Send us a message and a real person will reply.</p>}
+        eyebrow={isServices ? "Done-for-you services" : "Contact"}
+        title={isServices ? "Book a free strategy call" : "Talk to us"}
+        intro={
+          isServices ? (
+            <p>Tell us about your business and we&apos;ll set up a free 30-minute call to look at your site and AI answers together.</p>
+          ) : (
+            <p>Questions about agency plans, onboarding or your report? Send us a message and a real person will reply.</p>
+          )
+        }
       />
       <section aria-label="Contact form" className="bg-bg py-14 sm:py-20">
         <div className="container-marketing grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
           <Card variant="elevated" padding="lg" className="relative">
-            <ContactForm supportEmail={BRAND.supportEmail} />
+            <ContactForm supportEmail={BRAND.supportEmail} topic={isServices ? "services" : undefined} tierName={tierName} />
           </Card>
           <aside aria-label="Ways we can help" className="space-y-6">
             <ul className="space-y-6">

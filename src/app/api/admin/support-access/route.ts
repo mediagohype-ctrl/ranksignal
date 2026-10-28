@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handler, json, parseBody, HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
-import { requireStaff } from "@/lib/auth/staff";
+import { requireStaffApi as requireStaff } from "@/lib/admin/guard";
 import { clientIp } from "@/lib/auth/rate-limit";
 import { writeAuditLog } from "@/lib/audit-log";
 

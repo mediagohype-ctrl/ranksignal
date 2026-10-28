@@ -1,6 +1,7 @@
 // Server-side aggregation for the project overview (used by the page and GET /api/projects/[id]/dashboard).
 import { db } from "@/lib/db";
 import type { VisibilityMetrics } from "@/lib/types";
+import { appliedChangeWhere } from "@/lib/actions/service";
 import { ACTIVE_RUN_STATUSES } from "./format";
 
 const DONE = ["succeeded", "succeeded_with_warnings"];
@@ -52,7 +53,7 @@ export function readMetrics(v: unknown): VisibilityMetrics | null {
 
 export async function getProjectDashboard(organizationId: string, projectId: string) {
   const where = { organizationId, projectId };
-  const [visRuns, crawlRuns, findingGroups, actionGroups, topActions, lastCrawl, promptCount] = await Promise.all([
+  const [visRuns, crawlRuns, findingGroups, actionGroups, topActions, lastCrawl, promptCount, appliedCount] = await Promise.all([
     db.visibilityRun.findMany({ where, orderBy: { createdAt: "asc" }, take: 200 }),
     db.crawlRun.findMany({ where, orderBy: { createdAt: "desc" }, take: 10 }),
     db.auditFinding.groupBy({ by: ["severity"], where: { ...where, status: "open" }, _count: { _all: true } }),
@@ -64,6 +65,7 @@ export async function getProjectDashboard(organizationId: string, projectId: str
     }),
     db.crawlRun.findFirst({ where: { ...where, status: { in: DONE } }, orderBy: { createdAt: "desc" } }),
     db.trackedPrompt.count({ where: { ...where, active: true } }),
+    db.action.count({ where: appliedChangeWhere(organizationId, projectId) }),
   ]);
 
   const history: HistoryPoint[] = [];
@@ -132,7 +134,8 @@ export async function getProjectDashboard(organizationId: string, projectId: str
       pagesCrawled: lastCrawl?.pagesCrawled ?? 0,
       crawledAt: (lastCrawl?.finishedAt ?? lastCrawl?.createdAt)?.toISOString() ?? null,
     },
-    actions: { byStatus: actionsByStatus, top: topActions },
+    /** applied = changes that reached the site (auto-applied or completed manually), excluding class A briefs. */
+    actions: { byStatus: actionsByStatus, top: topActions, applied: appliedCount },
     activePromptCount: promptCount,
     recentRuns,
     activeRuns,

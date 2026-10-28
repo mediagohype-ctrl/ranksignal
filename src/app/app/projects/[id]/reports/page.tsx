@@ -4,7 +4,10 @@ import { getProjectDashboard } from "@/lib/dashboard/data";
 import { requireAppProject } from "@/lib/dashboard/server";
 import { fmtDate, humanize, pct } from "@/lib/dashboard/format";
 import { BRAND } from "@/lib/brand";
+import { appliedChangeWhere, APPLIED_STATUSES } from "@/lib/actions/service";
+import { backfillSnapshots, listSnapshots, type SnapshotView } from "@/lib/snapshots";
 import { TrendChart } from "@/components/app/charts";
+import { HistoryExplorer, type HistorySnapshotRow, type ShippedChange } from "@/components/app/history/history-explorer";
 import { PrintButton } from "@/components/app/print-button";
 import {
   Badge, Card, CardBody, CardHeader, EmptyState, LinkButton, Notice, PageHeader, SimulatedDataBanner, Stat, StatusBadge, Table, TD, TH,
@@ -16,24 +19,37 @@ export const metadata = { title: "Reports" };
 export default async function ReportsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { session, project } = await requireAppProject(id);
-  const [d, executed] = await Promise.all([
-    getProjectDashboard(session.organizationId, project.id),
+  const orgId = session.organizationId;
+  const [d, executed, appliedValidated, shippedRows, snapshots] = await Promise.all([
+    getProjectDashboard(orgId, project.id),
     db.action.findMany({
       where: {
-        organizationId: session.organizationId,
+        organizationId: orgId,
         projectId: project.id,
-        status: { in: ["succeeded", "succeeded_with_warnings", "failed", "rolled_back", "rollback_failed"] },
+        status: { in: [...APPLIED_STATUSES, "failed", "rolled_back", "rollback_failed"] },
+        // Only real attempts: excludes class A briefs that older versions auto-marked "succeeded".
+        executions: { some: {} },
       },
       orderBy: { updatedAt: "desc" },
       take: 50,
-      include: { executions: { orderBy: { startedAt: "desc" }, take: 1, select: { validation: true, finishedAt: true } } },
+      include: { executions: { orderBy: { startedAt: "desc" }, take: 1, select: { validation: true, finishedAt: true, connector: true } } },
     }),
+    db.action.count({ where: { ...appliedChangeWhere(orgId, project.id), executions: { some: { result: "success", validation: "passed" } } } }),
+    db.actionExecution.findMany({
+      where: { organizationId: orgId, result: "success", action: { projectId: project.id } },
+      orderBy: { startedAt: "asc" },
+      take: 500,
+      select: { startedAt: true, finishedAt: true, action: { select: { type: true } } },
+    }),
+    loadSnapshots(project.id, orgId),
   ]);
   const s = d.actions.byStatus;
-  const applied = (s.succeeded ?? 0) + (s.succeeded_with_warnings ?? 0);
-  const validated = executed.filter((a) => a.executions[0]?.validation === "passed").length;
+  const applied = d.actions.applied;
+  const validated = appliedValidated;
   const failed = (s.failed ?? 0) + (s.rollback_failed ?? 0);
   const rolledBack = s.rolled_back ?? 0;
+  const historyRows: HistorySnapshotRow[] = snapshots.map(toRow);
+  const shipped: ShippedChange[] = shippedRows.map((e) => ({ at: (e.finishedAt ?? e.startedAt).toISOString(), title: humanize(e.action.type) }));
   const anySimulated = d.history.some((h) => h.simulated);
   const first = d.history[0];
   const last = d.history[d.history.length - 1];
@@ -92,6 +108,20 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
         <Stat label="Changes applied" value={applied} hint={`${validated} confirmed live after applying`} />
         <Stat label="Failed / rolled back" value={`${failed} / ${rolledBack}`} hint="Changes that didn't stick or were undone" />
       </section>
+
+      <Card className="break-inside-avoid">
+        <CardHeader
+          title="Score history"
+          description="Overall score and the four pillars after each check. Dots mark changes shipped to your site; dashed lines mark where the questions or our scoring method changed."
+        />
+        {historyRows.length === 0 ? (
+          <CardBody>
+            <EmptyState size="sm" title="No history yet" description="Run a website scan to record your first scores. Each later scan adds a point." />
+          </CardBody>
+        ) : (
+          <HistoryExplorer snapshots={historyRows} shipped={shipped} />
+        )}
+      </Card>
 
       <Card className="break-inside-avoid">
         <CardHeader title="AI visibility over time" description="Dashed lines mark where the questions changed, so compare like with like." />
@@ -155,7 +185,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <Card className="break-inside-avoid">
-        <CardHeader title="Changes made" description="The 50 most recent changes applied to your site, and how they went." />
+        <CardHeader title="Changes made" description="The 50 most recent changes made to your site, whether applied automatically or done by hand, and how they went." />
         {executed.length === 0 ? (
           <CardBody>
             <EmptyState
@@ -184,7 +214,10 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
               {executed.map((a) => (
                 <TR key={a.id}>
                   <TD>{fmtDate(a.executions[0]?.finishedAt ?? a.updatedAt)}</TD>
-                  <TD className="font-medium text-fg">{humanize(a.type)}</TD>
+                  <TD className="font-medium text-fg">
+                    {humanize(a.type)}
+                    {a.executions[0]?.connector === "manual" && <span className="ml-1.5 text-xs font-normal text-muted">(done by hand)</span>}
+                  </TD>
                   <TD className="max-w-xs truncate text-xs text-muted">{(a.target as { url?: string } | null)?.url ?? "—"}</TD>
                   <TD>
                     <StatusBadge status={a.status} />
@@ -202,4 +235,41 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       </p>
     </div>
   );
+}
+
+/** Snapshots incl. simulated (the explorer toggles them). Lazily backfills past runs the first time. */
+async function loadSnapshots(projectId: string, organizationId: string): Promise<SnapshotView[]> {
+  try {
+    let rows = await listSnapshots(projectId, organizationId, { includeSimulated: true });
+    if (rows.length === 0) {
+      const attempted = await backfillSnapshots(projectId, organizationId);
+      if (attempted.crawl + attempted.visibility > 0) rows = await listSnapshots(projectId, organizationId, { includeSimulated: true });
+    }
+    return rows;
+  } catch (e) {
+    console.error("[history] snapshots unavailable", e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+function toRow(s: SnapshotView): HistorySnapshotRow {
+  return {
+    id: s.id,
+    kind: s.kind,
+    at: s.createdAt.toISOString(),
+    crawlRunId: s.crawlRunId,
+    overall: s.overallScore,
+    grade: s.grade,
+    seo: s.pillarScores.seo,
+    aeo: s.pillarScores.aeo,
+    geo: s.pillarScores.geo,
+    brand: s.pillarScores.brand,
+    openIssues: s.openIssues?.total ?? null,
+    mentionRate: s.visibility?.mentionRate ?? null,
+    citationRate: s.visibility?.citationRate ?? null,
+    sampleSize: s.visibility?.collected ?? null,
+    promptSetVersion: s.promptSetVersion,
+    methodologyVersion: s.methodologyVersion,
+    simulated: s.simulated,
+  };
 }

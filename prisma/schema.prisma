@@ -21,6 +21,7 @@ model Organization {
   planId            String   @default("trial") // trial | starter | growth | agency
   status            String   @default("active") // active | past_due | cancelled | suspended
   publishingEnabled Boolean  @default(true) // per-tenant kill switch
+  serviceTier       String? // done-for-you tier: fix | grow | authority (null = self-serve)
   createdAt         DateTime @default(now())
 
   memberships   Membership[]
@@ -455,4 +456,122 @@ model FeatureFlag {
   enabled   Boolean  @default(true)
   note      String?
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------------------------
+// Round 4: measurement history, service delivery, monthly impact reports, admin records.
+
+/** Frozen scores after each successful crawl / visibility run, so change over time can be shown. */
+model ReportSnapshot {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  projectId          String
+  kind               String // crawl | visibility
+  crawlRunId         String?
+  visibilityRunId    String?
+  overallScore       Int?
+  grade              String?
+  pillarScores       Json? // { seo, aeo, geo, brand } -> number | null
+  openIssues         Json? // { critical, high, medium, low, info, total }
+  visibility         Json? // VisibilityMetrics subset (rates, index, competitorShare, sampleSize, providers)
+  promptSetVersion   Int?
+  methodologyVersion String
+  simulated          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  @@index([organizationId, projectId, createdAt])
+  @@index([projectId, kind, createdAt])
+}
+
+/** Work items for the service team or the client (on-site fixes, content, off-site, reporting). */
+model Task {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  actionId       String?
+  findingId      String?
+  title          String
+  description    String?
+  category       String    @default("onsite") // onsite | content | technical | offsite | reporting | other
+  performedBy    String    @default("agency") // agency | client | system
+  assigneeId     String?
+  createdById    String?
+  status         String    @default("backlog") // backlog | in_progress | client_review | done | blocked | cancelled
+  priority       String    @default("medium") // high | medium | low
+  dueAt          DateTime?
+  completedAt    DateTime?
+  clientVisible  Boolean   @default(true)
+  shippedUrl     String?
+  evidence       Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  comments TaskComment[]
+
+  @@index([organizationId, projectId, status])
+  @@index([projectId, completedAt])
+}
+
+model TaskComment {
+  id             String   @id @default(cuid())
+  organizationId String
+  taskId         String
+  authorId       String?
+  body           String
+  internal       Boolean  @default(false) // staff-only note, hidden from client viewers
+  createdAt      DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+/** One impact report per project per month: drafted automatically, reviewed by staff, then sent. */
+model MonthlyReport {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  period         String // YYYY-MM
+  status         String    @default("draft") // draft | reviewed | sent
+  payload        Json? // frozen report data (see src/lib/monthly-report/types.ts)
+  summary        String? // editable narrative
+  reviewedById   String?
+  reviewedAt     DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([projectId, period])
+  @@index([organizationId, period])
+}
+
+/** Inbound leads: free checks and contact-form messages (admin CRM). */
+model Lead {
+  id        String   @id @default(cuid())
+  source    String // free_check | contact | signup_intent
+  email     String?
+  name      String?
+  company   String?
+  url       String?
+  message   String?
+  score     Int?
+  ipHash    String?
+  status    String   @default("new") // new | contacted | qualified | converted | closed
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([source, createdAt])
+  @@index([status, createdAt])
+}
+
+/** Internal staff notes on a customer organization. */
+model AdminNote {
+  id             String   @id @default(cuid())
+  organizationId String
+  authorId       String?
+  body           String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
 }

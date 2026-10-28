@@ -11,6 +11,7 @@ import { inkPill } from "./ui";
 const NAV = [
   { href: "/features", label: "Features" },
   { href: "/how-it-works", label: "How it works" },
+  { href: "/services", label: "Services" },
   { href: "/pricing", label: "Pricing" },
   { href: "/free-check", label: "Free check" },
   { href: "/contact", label: "Contact" },

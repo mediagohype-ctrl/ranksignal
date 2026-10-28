@@ -59,3 +59,94 @@ export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
 });
 
 export { TRIAL_DAYS };
+
+/* ------------------------------------------------------------------ done-for-you service tiers */
+// Done-for-you service (Organization.serviceTier). Prices in INR, excluding GST. We promise delivery, never rankings.
+
+export type ServiceTierId = "fix" | "grow" | "authority";
+
+export interface ServiceTier {
+  id: ServiceTierId;
+  name: string;
+  /** Monthly retainer, INR, excl. GST. */
+  price: number;
+  /** One-time setup fee, INR, excl. GST. */
+  setup: number;
+  minimumMonths: number;
+  /** Extra term detail shown under the minimum. */
+  termNote?: string;
+  blurb: string;
+  /** "Everything in X, plus" line. */
+  inherits?: string;
+  includes: string[];
+  questions: number;
+  updates: string;
+  featured?: boolean;
+}
+
+export const SERVICE_TIERS: ServiceTier[] = [
+  {
+    id: "fix",
+    name: "Fix",
+    price: 19_999,
+    setup: 9_999,
+    minimumMonths: 3,
+    blurb: "For a local business that wants the basics done properly, every month, without learning SEO.",
+    includes: [
+      "Up to 15 approved fixes shipped a month",
+      "Google Business Profile optimisation",
+      "2 page refreshes a month",
+      "50 tracked questions on 5 AI engines",
+      "Monthly impact report and a 30-minute call",
+    ],
+    questions: 50,
+    updates: "Monthly report + 30-minute call",
+  },
+  {
+    id: "grow",
+    name: "Grow",
+    price: 49_999,
+    setup: 19_999,
+    minimumMonths: 6,
+    blurb: "For businesses ready to win more of the questions buyers ask, with new pages every month.",
+    inherits: "Everything in Fix, plus",
+    includes: [
+      "4 answer-shaped pages a month",
+      "10 directory and citation listings",
+      "A review-request programme",
+      "FAQ and comparison pages",
+      "100 tracked questions",
+      "Fortnightly WhatsApp update",
+    ],
+    questions: 100,
+    updates: "Fortnightly WhatsApp + monthly report",
+    featured: true,
+  },
+  {
+    id: "authority",
+    name: "Authority",
+    price: 119_999,
+    setup: 39_999,
+    minimumMonths: 6,
+    termNote: "Or a 3-month pilot at +15%",
+    blurb: "For brands in competitive categories that need to become a source AI assistants already trust.",
+    inherits: "Everything in Grow, plus",
+    includes: [
+      "8 articles a month",
+      "2 digital PR placements on sources AI already cites",
+      "Entity clean-up across the web",
+      "Disclosed Reddit and forum participation",
+      "A quarterly competitor deep-dive",
+      "Bi-weekly review call",
+    ],
+    questions: 100,
+    updates: "Bi-weekly review + monthly report",
+  },
+];
+
+export const SERVICE_FROM_PRICE = Math.min(...SERVICE_TIERS.map((t) => t.price));
+
+/** Contact link that pre-fills the "Done-for-you services" topic (optionally a tier). */
+export function servicesContactHref(tier?: ServiceTierId) {
+  return `/contact?topic=services${tier ? `&tier=${tier}` : ""}`;
+}

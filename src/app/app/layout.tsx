@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
+import { requireAppSession } from "@/lib/dashboard/server";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
 import { AppSidebar } from "@/components/app/sidebar";
@@ -12,8 +12,7 @@ import { getPlanBannerData } from "@/lib/billing/banner";
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-  if (!session) redirect("/login?next=/app");
+  const session = await requireAppSession();
 
   const [org, projects, user] = await Promise.all([
     db.organization.findUnique({ where: { id: session.organizationId }, select: { name: true, planId: true, status: true } }),
@@ -66,7 +65,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
           </header>
           <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-            <VerifyEmailBanner className="mb-6" />
+            {session.staffMode && (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-small text-fg">
+                <span>
+                  <strong>Support mode:</strong> you are working inside <strong>{org.name}</strong> as RankSignal staff. Every action is
+                  audit-logged.
+                </span>
+                <span className="flex items-center gap-4">
+                  <a href="/admin" className="font-semibold text-primary hover:underline">
+                    Back to admin
+                  </a>
+                  <form method="post" action="/api/admin/exit-support">
+                    <button type="submit" className="font-semibold text-fg underline-offset-2 hover:underline">
+                      Exit support mode
+                    </button>
+                  </form>
+                </span>
+              </div>
+            )}
+            {!session.staffMode && <VerifyEmailBanner className="mb-6" />}
             {banner && (
               <PlanBanner
                 access={banner.access}

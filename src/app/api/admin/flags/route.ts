@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handler, json, parseBody } from "@/lib/api";
 import { db } from "@/lib/db";
-import { requireStaff } from "@/lib/auth/staff";
+import { requireStaffApi as requireStaff } from "@/lib/admin/guard";
 import { FLAG_DEFAULTS, isEnabled, setFlag } from "@/lib/flags";
 import { writeAuditLog } from "@/lib/audit-log";
 

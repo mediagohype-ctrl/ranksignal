@@ -21,7 +21,12 @@ const summaryCache = new Map<string, string>();
 
 const strArr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0) : []);
 
-export async function buildSiteReport(projectId: string, organizationId: string): Promise<SiteReport> {
+/**
+ * @param crawlRunId optional: build the report for this (older) succeeded crawl instead of the latest one —
+ *   findings as they were open when that crawl finished, the latest AI check finished by then, and the template
+ *   summary only (no paid LLM call). Used for measurement-history snapshots. Default behaviour is unchanged.
+ */
+export async function buildSiteReport(projectId: string, organizationId: string, crawlRunId?: string): Promise<SiteReport> {
   const project = await db.project.findFirst({ where: { id: projectId, organizationId } });
   if (!project) throw new HttpError(404, "not_found", "Project not found");
 
@@ -30,14 +35,33 @@ export async function buildSiteReport(projectId: string, organizationId: string)
   const competitors = (Array.isArray(project.competitors) ? (project.competitors as unknown[]) : [])
     .filter((c): c is { name: string; domain?: string } => !!c && typeof c === "object" && typeof (c as { name?: unknown }).name === "string");
 
+  const asOf = crawlRunId
+    ? await db.crawlRun.findFirst({ where: { id: crawlRunId, organizationId, projectId, status: "succeeded" } })
+    : null;
+  if (crawlRunId && !asOf) throw new HttpError(404, "not_found", "Crawl run not found");
+  const cutoff = asOf ? (asOf.finishedAt ?? asOf.createdAt) : null;
+
   const [crawlRun, visRun, findingsRows] = await Promise.all([
-    db.crawlRun.findFirst({ where: { organizationId, projectId, status: "succeeded" }, orderBy: { createdAt: "desc" } }),
+    asOf ?? db.crawlRun.findFirst({ where: { organizationId, projectId, status: "succeeded" }, orderBy: { createdAt: "desc" } }),
     db.visibilityRun.findFirst({
-      where: { organizationId, projectId, status: { in: ["succeeded", "succeeded_with_warnings"] } },
+      where: {
+        organizationId,
+        projectId,
+        status: { in: ["succeeded", "succeeded_with_warnings"] },
+        ...(cutoff ? { finishedAt: { lte: cutoff } } : {}),
+      },
       orderBy: { createdAt: "desc" },
     }),
     db.auditFinding.findMany({
-      where: { organizationId, projectId, status: "open" },
+      where: cutoff
+        ? {
+            organizationId,
+            projectId,
+            status: { in: ["open", "resolved"] },
+            detectedAt: { lte: cutoff },
+            OR: [{ resolvedAt: null }, { resolvedAt: { gt: cutoff } }],
+          }
+        : { organizationId, projectId, status: "open" },
       select: { code: true, severity: true, category: true, pageUrl: true, message: true, evidence: true },
       take: 5000,
     }),
@@ -105,7 +129,7 @@ export async function buildSiteReport(projectId: string, organizationId: string)
   });
 
   // Optional LLM-written executive summary (computed facts only), cached per data version.
-  if (crawlRun) {
+  if (crawlRun && !crawlRunId) {
     const key = `${organizationId}|${crawlRun.id}|${visRun?.id ?? "-"}|${report.overall.score}|${report.issues.length}`;
     const cached = summaryCache.get(key);
     if (cached) {

@@ -7,8 +7,31 @@ import { Turnstile, isTurnstileConfigured } from "@/components/turnstile";
 
 type Errors = Partial<Record<"name" | "email" | "message", string>>;
 
-export function ContactForm({ supportEmail }: { supportEmail: string }) {
-  const [form, setForm] = useState({ name: "", email: "", company: "", message: "", website: "" });
+/** Message prefill for /contact?topic=services (optionally &tier=fix|grow|authority). */
+function servicesPrefill(tierName?: string): string {
+  return `Topic: Done-for-you services${tierName ? ` (${tierName} plan)` : ""}
+
+I'd like to book a free strategy call. Our website is: 
+What we'd most like help with: `;
+}
+
+export function ContactForm({
+  supportEmail,
+  topic,
+  tierName,
+}: {
+  supportEmail: string;
+  /** "services" pre-fills the message for the done-for-you strategy call. */
+  topic?: "services";
+  tierName?: string;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    company: "",
+    message: topic === "services" ? servicesPrefill(tierName) : "",
+    website: "",
+  });
   const [token, setToken] = useState("");
   const [widgetKey, setWidgetKey] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -72,6 +95,11 @@ export function ContactForm({ supportEmail }: { supportEmail: string }) {
   return (
     <form onSubmit={submit} noValidate className="space-y-5">
       {formError && <Notice tone="danger">{formError}</Notice>}
+      {topic === "services" && (
+        <p className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-small font-medium text-primary-soft-fg">
+          Topic: Done-for-you services{tierName ? ` · ${tierName}` : ""}
+        </p>
+      )}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Name" htmlFor="c-name" error={errors.name} required>
           <Input id="c-name" autoComplete="name" value={form.name} onChange={set("name")} maxLength={100} required invalid={!!errors.name}
@@ -85,7 +113,7 @@ export function ContactForm({ supportEmail }: { supportEmail: string }) {
       <Field label="Company or agency" htmlFor="c-company" optional>
         <Input id="c-company" autoComplete="organization" value={form.company} onChange={set("company")} maxLength={120} />
       </Field>
-      <Field label="How can we help?" htmlFor="c-message" hint="E.g. how many client sites you manage, or what you'd like to know." error={errors.message} required>
+      <Field label="How can we help?" htmlFor="c-message" hint={topic === "services" ? "Add your website and what you'd like help with. We'll reply to arrange a time." : "E.g. how many client sites you manage, or what you'd like to know."} error={errors.message} required>
         <Textarea id="c-message" rows={6} value={form.message} onChange={set("message")} maxLength={5000} required invalid={!!errors.message}
           aria-describedby={fieldDescribedBy("c-message", { hint: true, error: errors.message })} />
       </Field>

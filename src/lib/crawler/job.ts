@@ -12,6 +12,7 @@ import { clampMaxPages, crawlSite } from "@/lib/crawler/crawl";
 import { SafeFetchError } from "@/lib/crawler/safe-fetch";
 import { urlKey } from "@/lib/crawler/normalize";
 import { runAudit } from "@/lib/audit/rules";
+import { writeSnapshot } from "@/lib/snapshots";
 
 const MAX_ATTEMPTS = 3; // matches enqueue() in the crawl-runs route
 
@@ -122,6 +123,8 @@ export const crawlJob: JobHandler = async (ctx) => {
       data: { status: "succeeded", finishedAt: new Date(), pagesCrawled, error: null },
     });
     await ctx.event("crawl.completed", { crawlRunId, pagesCrawled, findings: findings.length, ...summary });
+    // Measurement history; writeSnapshot never throws, the extra catch guards against import-time surprises.
+    await writeSnapshot({ organizationId, projectId: project.id, kind: "crawl", crawlRunId }).catch(() => undefined);
 
     await enqueue({
       kind: "analyze",

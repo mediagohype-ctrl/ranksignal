@@ -8,6 +8,8 @@ import type { SiteReport } from "@/lib/report/types";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { RunButtons } from "@/components/app/run-buttons";
 import { ShareBarChart, TrendChart } from "@/components/app/charts";
+import { SinceLastMonth } from "@/components/app/history/since-last-month";
+import { backfillSnapshots, getPeriodComparison } from "@/lib/snapshots";
 import { PILLAR_SHORT } from "@/components/app/report/pillars";
 import {
   Badge, Card, CardBody, CardHeader, EffortChip, EmptyState, ImpactChip, LinkButton, Meter, PageHeader, RiskBadge, ScoreRing,
@@ -28,6 +30,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
       console.error("[overview] buildSiteReport failed", e);
     }
   }
+  const since = await loadSinceLastMonth(project.id, session.organizationId, d.recentRuns.length > 0);
   const m = d.latest?.metrics ?? null;
   const brandNames = asArray<string>(project.brandNames);
   const crawlActive = d.activeRuns.some((r) => r.kind === "crawl");
@@ -98,6 +101,15 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
           />
         )}
       </Card>
+
+      {since && (since.comparison.after || since.preparing) && (
+        <SinceLastMonth
+          delta={since.comparison.delta}
+          baselineIsFirst={since.comparison.baselineIsFirst}
+          historyHref={`/app/projects/${project.id}/reports`}
+          preparing={since.preparing}
+        />
+      )}
 
       {/* Stats */}
       <section aria-label="AI visibility metrics" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -216,7 +228,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
         <Card>
           <CardHeader
             title="Suggested changes"
-            description={`${d.actions.byStatus.awaiting_approval ?? 0} waiting for your approval · ${d.actions.byStatus.succeeded ?? 0} done`}
+            description={`${d.actions.byStatus.awaiting_approval ?? 0} waiting for your approval · ${d.actions.applied} applied`}
             actions={
               <LinkButton href={`/app/projects/${project.id}/actions`} variant="ghost" size="sm" iconRight={<ArrowRight />}>
                 Actions center
@@ -326,4 +338,20 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
       )}
     </div>
   );
+}
+
+/** Period comparison for the strip. With no snapshots yet, starts a background backfill of past runs. */
+async function loadSinceLastMonth(projectId: string, organizationId: string, hasRuns: boolean) {
+  try {
+    const comparison = await getPeriodComparison(projectId, organizationId);
+    let preparing = false;
+    if (!comparison.after && hasRuns) {
+      preparing = true;
+      void backfillSnapshots(projectId, organizationId).catch((e) => console.error("[overview] snapshot backfill failed", e instanceof Error ? e.message : e));
+    }
+    return { comparison, preparing };
+  } catch (e) {
+    console.error("[overview] since-last-month unavailable", e instanceof Error ? e.message : e);
+    return null;
+  }
 }

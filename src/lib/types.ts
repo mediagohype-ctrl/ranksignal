@@ -25,6 +25,8 @@ export interface SessionContext {
   email: string;
   organizationId: string;
   role: Role;
+  /** Staff member working inside a customer workspace ("support mode"); see src/lib/auth/access.ts. */
+  staffMode?: boolean;
 }
 
 // ---------- Plans (blueprint §10) ----------
@@ -182,7 +184,7 @@ export type PolicyDecision = "auto_execute" | "approval_required" | "blocked";
 export type ActionStatus =
   | "proposed" | "awaiting_approval" | "approved" | "rejected" | "expired" | "executing"
   | "succeeded" | "succeeded_with_warnings" | "failed" | "rollback_pending" | "rolled_back"
-  | "rollback_failed" | "blocked" | "cancelled";
+  | "rollback_failed" | "blocked" | "cancelled" | "completed_manually";
 
 export interface ProposedChange {
   field: string;

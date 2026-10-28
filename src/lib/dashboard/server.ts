@@ -1,11 +1,15 @@
 // Server-component helpers: session + tenant-scoped project loading for /app pages.
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { resolveAccess } from "@/lib/auth/access";
 import { db } from "@/lib/db";
 import type { Role, SessionContext } from "@/lib/types";
 
 export async function requireAppSession(): Promise<SessionContext> {
-  const s = await getSession();
+  const token = await getSession();
+  if (!token) redirect("/login");
+  // Same membership / staff-support check as API routes, so removed members lose page access immediately.
+  const s = await resolveAccess(token);
   if (!s) redirect("/login");
   return s;
 }

@@ -235,3 +235,88 @@ export async function requestRollback(actionId: string, session: SessionContext)
   });
   return run;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Applied changes + manual completion (round 4, measurement history).
+
+/** Statuses that mean a change really reached the site (auto-applied, or done by hand and recorded). */
+export const APPLIED_STATUSES = ["succeeded", "succeeded_with_warnings", "completed_manually"] as const;
+
+/**
+ * Prisma filter for "Changes applied": an applied status AND a successful ActionExecution. The execution
+ * requirement excludes class A briefs/internal tasks that older versions auto-marked "succeeded".
+ */
+export function appliedChangeWhere(organizationId: string, projectId?: string): Prisma.ActionWhereInput {
+  return {
+    organizationId,
+    ...(projectId ? { projectId } : {}),
+    status: { in: [...APPLIED_STATUSES] },
+    executions: { some: { result: { in: ["success", "partial"] } } },
+  };
+}
+
+/** Pure version of appliedChangeWhere for already-loaded rows. */
+export function isAppliedChange(a: { status: string; executions?: { result: string }[] | null }): boolean {
+  return (APPLIED_STATUSES as readonly string[]).includes(a.status) && (a.executions ?? []).some((e) => e.result === "success" || e.result === "partial");
+}
+
+const MANUAL_COMPLETABLE = ["proposed", "awaiting_approval", "approved", "blocked", "failed", "expired"];
+
+/**
+ * Record that a person applied this change by hand (manual connector, blocked, or a class A brief that was
+ * published). Admin+ (staff support mode resolves to admin). Writes an ActionExecution (connector "manual",
+ * result "success") so it counts as an applied change, plus an audit log entry.
+ */
+export async function completeManually(actionId: string, body: { note?: string; url?: string }, session: SessionContext) {
+  if (ROLE_RANK[session.role] < ROLE_RANK.admin && !session.staffMode) {
+    throw new HttpError(403, "forbidden", "Only an admin or owner can mark a change as done");
+  }
+  const action = await loadAction(actionId, session.organizationId);
+  if (!MANUAL_COMPLETABLE.includes(action.status)) {
+    throw new HttpError(409, "invalid_state", `Action is ${action.status} and cannot be marked as done`);
+  }
+  const lastExec = await db.actionExecution.findFirst({ where: { actionId: action.id, organizationId: action.organizationId }, orderBy: { startedAt: "desc" } });
+  const manualOnly =
+    !action.integrationId ||
+    action.riskClass === "A" ||
+    action.status === "blocked" ||
+    action.policyDecision === "blocked" ||
+    action.status === "failed" ||
+    lastExec?.result === "failure";
+  if (!manualOnly) {
+    throw new HttpError(409, "auto_apply_available", "This change can be applied automatically through the connected site. Use Apply instead.");
+  }
+
+  const now = new Date();
+  const note = body.note?.trim() || null;
+  const url = body.url?.trim() || targetOf(action)?.url || null;
+  const execution = await db.actionExecution.create({
+    data: {
+      organizationId: action.organizationId,
+      actionId: action.id,
+      connector: "manual",
+      idempotencyKey: `manual:${action.id}:${now.getTime()}`,
+      result: "success",
+      resultDetail: { manual: true, note, url, completedBy: session.userId, staffMode: !!session.staffMode } as Prisma.InputJsonValue,
+      rollbackStatus: "manual_required",
+      startedAt: now,
+      finishedAt: now,
+    },
+  });
+  await db.approval.updateMany({
+    where: { actionId: action.id, organizationId: action.organizationId, decision: "pending" },
+    data: { decision: "invalidated", decidedAt: now, comments: "Completed manually" },
+  });
+  const updated = await db.action.update({ where: { id: action.id }, data: { status: "completed_manually" } });
+  await writeAuditLog({
+    organizationId: action.organizationId,
+    actorId: session.userId,
+    actorType: session.staffMode ? "staff" : "user",
+    action: "action.completed_manually",
+    resourceType: "action",
+    resourceId: action.id,
+    before: { status: action.status },
+    after: { status: "completed_manually", executionId: execution.id, note, url },
+  });
+  return { action: updated, execution };
+}

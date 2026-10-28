@@ -1,6 +1,6 @@
 "use client";
 import {
-  Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 
 const axis = { stroke: "var(--chart-grid)", tick: { fill: "var(--muted)", fontSize: 12 }, tickLine: false, axisLine: false } as const;
@@ -115,6 +115,120 @@ export function ShareBarChart({
             ))}
           </Bar>
         </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Score history (overall + 4 pillars) on a time axis, with method/prompt-set markers and shipped-change dots.
+
+export interface ScoreHistoryPoint {
+  t: number; // epoch ms
+  overall: number | null;
+  seo: number | null;
+  aeo: number | null;
+  geo: number | null;
+  brand: number | null;
+}
+export interface HistoryMarker {
+  t: number;
+  kind: "methodology" | "prompt_set";
+  label: string;
+}
+export interface ShippedMarker {
+  t: number;
+  count: number;
+  label: string;
+}
+
+const SCORE_SERIES: { key: keyof Omit<ScoreHistoryPoint, "t">; name: string; color: string; width: number }[] = [
+  { key: "overall", name: "Overall", color: "var(--chart-1)", width: 3 },
+  { key: "seo", name: "SEO", color: "var(--chart-2)", width: 2 },
+  { key: "aeo", name: "AEO", color: "var(--chart-3)", width: 2 },
+  { key: "geo", name: "GEO", color: "var(--chart-4)", width: 2 },
+  { key: "brand", name: "Brand", color: "var(--chart-5)", width: 2 },
+];
+
+const shortDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+const longDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+export function ScoreHistoryChart({
+  data,
+  markers = [],
+  shipped = [],
+  height = 300,
+}: {
+  data: ScoreHistoryPoint[];
+  markers?: HistoryMarker[];
+  shipped?: ShippedMarker[];
+  height?: number;
+}) {
+  const times = [...data.map((d) => d.t), ...shipped.map((s) => s.t)];
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  const pad = Math.max(86_400_000, (max - min) * 0.03);
+  const last = data[data.length - 1];
+  const summary = last
+    ? `Score history, ${data.length} measurements. Latest ${longDate(last.t)}: ${SCORE_SERIES.map((s) => `${s.name} ${last[s.key] ?? "not measured"}`).join(", ")}.`
+    : "Score history: no measurements.";
+  return (
+    <div style={{ height }} role="img" aria-label={summary}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 20, right: 16, bottom: 0, left: -12 }}>
+          <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+          <XAxis
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={[min - pad, max + pad]}
+            tickFormatter={shortDate}
+            {...axis}
+            minTickGap={32}
+          />
+          <YAxis domain={[0, 100]} {...axis} width={44} />
+          <Tooltip
+            {...tooltipStyle}
+            labelFormatter={(l) => longDate(Number(l))}
+            formatter={(v, n) => [v === null || v === undefined ? "—" : String(Math.round(Number(v))), String(n)]}
+          />
+          <Legend verticalAlign="bottom" height={28} iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--fg-soft)" }} />
+          {markers.map((m, i) => (
+            <ReferenceLine
+              key={`m-${m.t}-${i}`}
+              x={m.t}
+              stroke={m.kind === "methodology" ? "var(--muted)" : "var(--warning)"}
+              strokeDasharray="4 3"
+              label={{ value: m.label, position: "insideTopLeft", fill: "var(--muted)", fontSize: 11 }}
+            />
+          ))}
+          {SCORE_SERIES.map((s) => (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              name={s.name}
+              stroke={s.color}
+              strokeWidth={s.width}
+              connectNulls
+              dot={{ r: s.key === "overall" ? 4 : 3, strokeWidth: 2, stroke: "var(--surface)", fill: s.color }}
+              activeDot={{ r: 5 }}
+              isAnimationActive={false}
+            />
+          ))}
+          {shipped.map((s) => (
+            <ReferenceDot
+              key={`s-${s.t}`}
+              x={s.t}
+              y={3}
+              r={Math.min(9, 4 + s.count)}
+              fill="var(--fg-soft)"
+              stroke="var(--surface)"
+              strokeWidth={2}
+              ifOverflow="extendDomain"
+            />
+          ))}
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

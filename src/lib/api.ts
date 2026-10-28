@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { ZodError, type ZodTypeAny, type z } from "zod";
 import { getSession } from "@/lib/auth/session";
+import { resolveAccess } from "@/lib/auth/access";
 import { db } from "@/lib/db";
 import type { Role, SessionContext } from "@/lib/types";
 
@@ -42,13 +43,9 @@ const ROLE_RANK: Record<Role, number> = { viewer: 0, member: 1, admin: 2, owner:
 export async function requireSession(minRole: Role = "viewer"): Promise<SessionContext> {
   const token = await getSession();
   if (!token) throw new HttpError(401, "unauthorized", "Sign in required");
-  // Re-read membership so removals and role changes take effect immediately, not at JWT expiry.
-  const membership = await db.membership.findUnique({
-    where: { userId_organizationId: { userId: token.userId, organizationId: token.organizationId } },
-    select: { role: true, status: true },
-  });
-  if (!membership || membership.status !== "active") throw new HttpError(401, "unauthorized", "Membership is no longer active");
-  const session: SessionContext = { ...token, role: membership.role as Role };
+  // Re-read access so removals and role changes take effect immediately, not at JWT expiry.
+  const session = await resolveAccess(token);
+  if (!session) throw new HttpError(401, "unauthorized", "Membership is no longer active");
   if (ROLE_RANK[session.role] < ROLE_RANK[minRole]) throw new HttpError(403, "forbidden", "Insufficient role");
   return session;
 }

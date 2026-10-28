@@ -1,313 +1,345 @@
-import { notFound } from "next/navigation";
+// Admin overview: KPIs with period comparison, trend charts and a "needs attention" list.
 import Link from "next/link";
-import { Activity, AlertOctagon, Building2, Coins, Flag, LifeBuoy, ShieldAlert, Webhook } from "lucide-react";
-import { db } from "@/lib/db";
-import { getStaffUser } from "@/lib/auth/staff";
-import { FLAG_DEFAULTS, isEnabled } from "@/lib/flags";
-import { billingPeriod } from "@/lib/billing/usage";
 import {
-  Badge,
-  Card,
-  CardBody,
-  CardHeader,
-  EmptyState,
-  PageHeader,
-  Stat,
-  StatusBadge,
-  Table,
-  TD,
-  TH,
-  THead,
-  TR,
-  ToastProvider,
-} from "@/components/ui";
-import { FlagToggles, OrgControls, SupportAccess } from "./admin-client";
-import { LogoLockup, LogoMark } from "@/components/brand/logo";
+  Activity,
+  AlertOctagon,
+  Bot,
+  Building2,
+  Clock,
+  CreditCard,
+  FileText,
+  Hourglass,
+  IndianRupee,
+  Layers,
+  ScanSearch,
+  UserMinus,
+  UserPlus,
+} from "lucide-react";
+import { db } from "@/lib/db";
+import { billingPeriod } from "@/lib/billing/usage";
+import { getAiDailyBudgetUsd } from "@/lib/billing/ai-budget";
+import { requireStaffPage } from "@/lib/admin/guard";
+import { estimateMrr, formatInr, formatUsd, microsToInr, microsToUsd, SERVICE_TIERS } from "@/lib/admin/money";
+import { bucketTrials, dailyCostByProvider, dailyCounts, loadTrialOrgs, orgNames, seriesFromMap } from "@/lib/admin/metrics";
+import { DAY_MS, fmtAgo, fmtDate, pctDelta, rangeParam, utcDayStart, type SearchParams } from "@/lib/admin/params";
+import { Badge, Card, CardBody, CardHeader, EmptyState, Meter, PageHeader, Stat, type Tone } from "@/components/ui";
+import { DailyArea, DailyStackedBars } from "@/components/admin/charts";
+import { EstimatedTag, RangePicker } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Staff admin" };
+export const metadata = { title: "Overview" };
 
-const fmtDate = (d: Date) => d.toISOString().replace("T", " ").slice(0, 16);
+const sumMicros = (a: { _sum: { costMicros: number | null } }) => a._sum.costMicros ?? 0;
 
-export default async function AdminPage() {
-  const staff = await getStaffUser();
-  if (!staff) notFound(); // don't reveal the admin surface to non-staff
-
+export default async function AdminOverview({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  await requireStaffPage();
+  const sp = await searchParams;
+  const r = rangeParam(sp);
+  const cur = { gte: r.since, lt: r.now };
+  const prev = { gte: r.prevSince, lt: r.since };
+  const today = utcDayStart();
   const period = billingPeriod();
-  const [orgs, failedRuns, queue, costs, webhooks, storedFlags] = await Promise.all([
-    db.organization.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      select: {
-        id: true,
-        name: true,
-        planId: true,
-        status: true,
-        publishingEnabled: true,
-        createdAt: true,
-        _count: { select: { memberships: true, projects: true } },
-      },
+  const sevenDaysAgo = new Date(Date.now() - 7 * DAY_MS);
+
+  const [
+    signupsCur,
+    signupsPrev,
+    runOrgsCur,
+    runOrgsPrev,
+    auditOrgsCur,
+    auditOrgsPrev,
+    orgGroups,
+    trials,
+    churnCur,
+    churnPrev,
+    aiToday,
+    aiMonth,
+    aiCur,
+    aiPrev,
+    crawlCur,
+    crawlPrev,
+    visCur,
+    visPrev,
+    failedCur,
+    failedPrev,
+    signupsDaily,
+    crawlDaily,
+    visDaily,
+    costDaily,
+    failedByOrg,
+    pastDue,
+    drafts,
+  ] = await Promise.all([
+    db.user.count({ where: { createdAt: cur } }),
+    db.user.count({ where: { createdAt: prev } }),
+    db.workflowRun.groupBy({ by: ["organizationId"], where: { createdAt: cur } }),
+    db.workflowRun.groupBy({ by: ["organizationId"], where: { createdAt: prev } }),
+    db.auditLog.groupBy({ by: ["organizationId"], where: { createdAt: cur, actorType: "user", organizationId: { not: null } } }),
+    db.auditLog.groupBy({ by: ["organizationId"], where: { createdAt: prev, actorType: "user", organizationId: { not: null } } }),
+    db.organization.groupBy({ by: ["planId", "status", "serviceTier"], _count: { _all: true } }),
+    loadTrialOrgs(),
+    db.subscription.count({ where: { status: { in: ["cancelled", "expired"] }, updatedAt: cur } }),
+    db.subscription.count({ where: { status: { in: ["cancelled", "expired"] }, updatedAt: prev } }),
+    db.usageLedger.aggregate({ where: { kind: "actual", createdAt: { gte: today } }, _sum: { costMicros: true } }),
+    db.usageLedger.aggregate({ where: { kind: "actual", billingPeriod: period }, _sum: { costMicros: true } }),
+    db.usageLedger.aggregate({ where: { kind: "actual", createdAt: cur }, _sum: { costMicros: true } }),
+    db.usageLedger.aggregate({ where: { kind: "actual", createdAt: prev }, _sum: { costMicros: true } }),
+    db.crawlRun.count({ where: { createdAt: cur } }),
+    db.crawlRun.count({ where: { createdAt: prev } }),
+    db.visibilityRun.count({ where: { createdAt: cur } }),
+    db.visibilityRun.count({ where: { createdAt: prev } }),
+    db.workflowRun.count({ where: { state: "failed", updatedAt: cur } }),
+    db.workflowRun.count({ where: { state: "failed", updatedAt: prev } }),
+    dailyCounts("User", r.since),
+    dailyCounts("CrawlRun", r.since),
+    dailyCounts("VisibilityRun", r.since),
+    dailyCostByProvider(r.since),
+    db.workflowRun.groupBy({
+      by: ["organizationId"],
+      where: { state: { in: ["failed", "rollback_failed"] }, updatedAt: { gte: sevenDaysAgo } },
+      _count: { _all: true },
+      orderBy: { _count: { organizationId: "desc" } },
+      take: 10,
     }),
-    db.workflowRun.findMany({
-      where: { state: { in: ["failed", "rollback_failed"] } },
-      orderBy: { updatedAt: "desc" },
-      take: 25,
-      select: { id: true, organizationId: true, kind: true, state: true, error: true, errorClass: true, attempts: true, updatedAt: true },
-    }),
-    db.workflowRun.groupBy({ by: ["state"], _count: { _all: true } }),
-    db.usageLedger.groupBy({
-      by: ["provider"],
-      where: { billingPeriod: period, kind: "actual" },
-      _sum: { costMicros: true, credits: true },
-    }),
-    db.webhookEvent.findMany({
-      orderBy: { processedAt: "desc" },
-      take: 20,
-      select: { id: true, provider: true, eventId: true, type: true, processedAt: true },
-    }),
-    db.featureFlag.findMany(),
+    db.organization.findMany({ where: { status: "past_due" }, select: { id: true, name: true }, take: 10 }),
+    db.monthlyReport.groupBy({ by: ["organizationId"], where: { status: "draft" }, _count: { _all: true }, orderBy: { organizationId: "asc" }, take: 10 }),
   ]);
 
-  const flagKeys = [...new Set([...Object.keys(FLAG_DEFAULTS), ...storedFlags.map((f) => f.key)])].sort();
-  const flags = await Promise.all(
-    flagKeys.map(async (key) => ({ key, enabled: await isEnabled(key), isDefault: !storedFlags.some((f) => f.key === key) })),
-  );
-  const sortedQueue = [...queue].sort((a, b) => a.state.localeCompare(b.state));
-  const totalCost = costs.reduce((a, c) => a + (c._sum.costMicros ?? 0), 0) / 1_000_000;
-  const globalPublishing = flags.find((f) => f.key === "global.publishing")?.enabled ?? true;
-  const activeJobs = queue
-    .filter((q) => ["queued", "preflight", "running", "retry_scheduled", "validating", "executing"].includes(q.state))
-    .reduce((a, q) => a + q._count._all, 0);
+  const active = (a: { organizationId: string | null }[], b: { organizationId: string | null }[]) =>
+    new Set([...a, ...b].map((x) => x.organizationId).filter(Boolean)).size;
+  const activeCur = active(runOrgsCur, auditOrgsCur);
+  const activePrev = active(runOrgsPrev, auditOrgsPrev);
+
+  const groups = orgGroups.map((g) => ({ planId: g.planId, status: g.status, serviceTier: g.serviceTier, count: g._count._all }));
+  const mrr = estimateMrr(groups);
+  const billed = groups.filter((g) => g.status === "active" || g.status === "past_due");
+  const payingByPlan = new Map<string, number>();
+  for (const g of billed) if (g.planId !== "trial") payingByPlan.set(g.planId, (payingByPlan.get(g.planId) ?? 0) + g.count);
+  const paying = [...payingByPlan.values()].reduce((a, n) => a + n, 0);
+  const tierCounts = new Map<string, number>();
+  for (const g of billed) if (g.serviceTier) tierCounts.set(g.serviceTier, (tierCounts.get(g.serviceTier) ?? 0) + g.count);
+  const serviceClients = [...tierCounts.values()].reduce((a, n) => a + n, 0);
+  const cancelledNow = groups.filter((g) => g.status === "cancelled").reduce((a, g) => a + g.count, 0);
+  const t = bucketTrials(trials);
+
+  const budgetUsd = getAiDailyBudgetUsd();
+  const todayUsd = microsToUsd(sumMicros(aiToday));
+  const monthMicros = sumMicros(aiMonth);
+
+  // Needs attention
+  const names = await orgNames([...failedByOrg.map((f) => f.organizationId), ...drafts.map((d) => d.organizationId)]);
+  const attention: { key: string; orgId: string; name: string; label: string; tone: Tone; icon: React.ReactNode; href: string }[] = [
+    ...failedByOrg.map((f) => ({
+      key: `f-${f.organizationId}`,
+      orgId: f.organizationId,
+      name: names.get(f.organizationId) ?? f.organizationId,
+      label: `${f._count._all} failed job${f._count._all === 1 ? "" : "s"} (7d)`,
+      tone: "danger" as Tone,
+      icon: <AlertOctagon />,
+      href: `/admin/jobs?org=${f.organizationId}&state=failed`,
+    })),
+    ...pastDue.map((o) => ({
+      key: `p-${o.id}`,
+      orgId: o.id,
+      name: o.name,
+      label: "Payment past due",
+      tone: "warning" as Tone,
+      icon: <CreditCard />,
+      href: `/admin/customers/${o.id}`,
+    })),
+    ...t.expiringSoon.slice(0, 10).map((o) => ({
+      key: `t-${o.id}`,
+      orgId: o.id,
+      name: o.name,
+      label: `Trial ends ${fmtAgo(o.trialEndsAt)}`,
+      tone: "info" as Tone,
+      icon: <Hourglass />,
+      href: `/admin/customers/${o.id}`,
+    })),
+    ...drafts.map((d) => ({
+      key: `d-${d.organizationId}`,
+      orgId: d.organizationId,
+      name: names.get(d.organizationId) ?? d.organizationId,
+      label: `${d._count._all} monthly report draft${d._count._all === 1 ? "" : "s"} to review`,
+      tone: "accent" as Tone,
+      icon: <FileText />,
+      href: "/admin/monthly-reports?status=draft",
+    })),
+  ];
+
+  const deltaLabel = `vs previous ${r.days}d`;
+  const signupSeries = seriesFromMap({ key: "Signups", map: signupsDaily });
+  const scanSeries = seriesFromMap({ key: "Crawls", map: crawlDaily }, { key: "AI checks", map: visDaily });
 
   return (
-    <ToastProvider>
-      <div className="min-h-screen bg-bg">
-        <header className="sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur-md">
-          <div className="container-page flex h-16 items-center justify-between gap-3">
-            <Link href="/admin" className="flex items-center gap-2.5 text-h4 tracking-tight text-fg">
-              <span className="hidden sm:inline-flex"><LogoLockup size="sm" /></span>
-              <span className="sm:hidden"><LogoMark size={26} /></span>
-              <Badge tone="danger" size="sm" icon={<ShieldAlert />}>
-                Staff
-              </Badge>
-            </Link>
-            <span className="truncate text-xs text-muted">
-              <span className="hidden sm:inline">Signed in as </span>
-              <span className="font-medium text-fg-soft">{staff.user.email}</span>
-            </span>
-          </div>
-        </header>
+    <div className="space-y-8">
+      <PageHeader
+        className="mb-0"
+        eyebrow="RankSignal back-office"
+        title="Overview"
+        description={`Business and platform health for the last ${r.days} days, compared with the ${r.days} days before.`}
+        actions={<RangePicker basePath="/admin" sp={sp} active={r.key} />}
+      />
 
-        <main className="container-page space-y-8 py-8">
-          <PageHeader
-            title="Staff admin"
-            description="Platform health, tenants and safety switches. Every action here is written to the audit log."
-            meta={
-              <Badge tone={globalPublishing ? "success" : "danger"} variant="dot">
-                Global publishing {globalPublishing ? "on" : "off"}
-              </Badge>
+      <section aria-labelledby="kpi-growth" className="space-y-4">
+        <h2 id="kpi-growth" className="text-caption uppercase tracking-[0.06em] text-muted">
+          Customers
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Stat label="Signups" value={signupsCur.toLocaleString()} delta={pctDelta(signupsCur, signupsPrev)} deltaLabel={deltaLabel} icon={<UserPlus />} />
+          <Stat label="Active orgs" value={activeCur.toLocaleString()} delta={pctDelta(activeCur, activePrev)} deltaLabel={deltaLabel} icon={<Building2 />} hint="Ran a job or used the app" />
+          <Stat
+            label="Trials"
+            value={t.active.length.toLocaleString()}
+            icon={<Clock />}
+            hint={
+              <span>
+                <Link href="/admin/customers?plan=trial" className="text-warning hover:underline">
+                  {t.expiringSoon.length} expiring in 7d
+                </Link>{" "}
+                · {t.expired.length} expired
+              </span>
             }
-            className="mb-0"
           />
+          <Stat
+            label="Cancelled / churned"
+            value={churnCur.toLocaleString()}
+            delta={pctDelta(churnCur, churnPrev)}
+            invertDelta
+            deltaLabel={deltaLabel}
+            icon={<UserMinus />}
+            hint={`${cancelledNow} orgs currently cancelled`}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Stat
+            label="Paying orgs"
+            value={paying.toLocaleString()}
+            icon={<CreditCard />}
+            hint={[...payingByPlan.entries()].map(([p, n]) => `${p} ${n}`).join(" · ") || "None yet"}
+          />
+          <Stat
+            label="Service clients"
+            value={serviceClients.toLocaleString()}
+            icon={<Layers />}
+            hint={SERVICE_TIERS.map((tier) => `${tier} ${tierCounts.get(tier) ?? 0}`).join(" · ")}
+          />
+          <Stat
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                MRR <EstimatedTag />
+              </span>
+            }
+            value={formatInr(mrr.totalInr)}
+            icon={<IndianRupee />}
+            hint={`Plans ${formatInr(mrr.planInr, { compact: true })} · Service ${formatInr(mrr.serviceInr, { compact: true })}`}
+            footer={
+              <Link href="/admin/revenue" className="text-xs font-medium text-primary hover:underline">
+                Breakdown →
+              </Link>
+            }
+          />
+          <Stat
+            label="Scans run"
+            value={(crawlCur + visCur).toLocaleString()}
+            delta={pctDelta(crawlCur + visCur, crawlPrev + visPrev)}
+            deltaLabel={deltaLabel}
+            icon={<ScanSearch />}
+            hint={`${crawlCur} crawls · ${visCur} AI checks`}
+          />
+        </div>
+      </section>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Organizations" value={orgs.length} icon={<Building2 />} hint={orgs.length === 100 ? "Showing newest 100" : undefined} />
-            <Stat label="Active jobs" value={activeJobs} icon={<Activity />} />
-            <Stat label="Failed runs" value={failedRuns.length} icon={<AlertOctagon />} hint="Most recent 25" />
-            <Stat label={`Provider cost · ${period}`} value={`$${totalCost.toFixed(2)}`} icon={<Coins />} />
-          </div>
+      <section aria-labelledby="kpi-platform" className="space-y-4">
+        <h2 id="kpi-platform" className="text-caption uppercase tracking-[0.06em] text-muted">
+          Platform & cost
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Stat
+            label="AI spend today (UTC)"
+            value={formatUsd(todayUsd)}
+            icon={<Bot />}
+            footer={<Meter value={todayUsd} max={Math.max(budgetUsd, 0.0001)} label={`Daily budget ${formatUsd(budgetUsd)}`} size="xs" showValue />}
+          />
+          <Stat
+            label={`AI spend · ${period}`}
+            value={formatUsd(microsToUsd(monthMicros))}
+            icon={<Bot />}
+            hint={`≈ ${formatInr(microsToInr(monthMicros))}`}
+          />
+          <Stat
+            label={`AI spend · ${r.days}d`}
+            value={formatUsd(microsToUsd(sumMicros(aiCur)))}
+            delta={pctDelta(sumMicros(aiCur), sumMicros(aiPrev))}
+            invertDelta
+            deltaLabel={deltaLabel}
+            icon={<Bot />}
+          />
+          <Stat
+            label="Failed jobs"
+            value={failedCur.toLocaleString()}
+            delta={pctDelta(failedCur, failedPrev)}
+            invertDelta
+            deltaLabel={deltaLabel}
+            icon={<Activity />}
+            footer={
+              <Link href="/admin/jobs?state=failed" className="text-xs font-medium text-primary hover:underline">
+                View failed jobs →
+              </Link>
+            }
+          />
+        </div>
+      </section>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-1">
-              <Card>
-                <CardHeader icon={<Flag />} title="Kill switches & flags" description="Changes apply immediately." />
-                <CardBody>
-                  <FlagToggles initial={flags} />
-                </CardBody>
-              </Card>
-
-              <Card>
-                <CardHeader icon={<Activity />} title="Queue depth" description="Workflow runs by state." />
-                {sortedQueue.length === 0 ? (
-                  <EmptyState size="sm" title="No workflow runs" />
-                ) : (
-                  <Table caption="Workflow runs by state" density="compact">
-                    <THead>
-                      <tr>
-                        <TH>State</TH>
-                        <TH align="right">Runs</TH>
-                      </tr>
-                    </THead>
-                    <tbody>
-                      {sortedQueue.map((q) => (
-                        <TR key={q.state}>
-                          <TD>
-                            <StatusBadge status={q.state} />
-                          </TD>
-                          <TD numeric>{q._count._all.toLocaleString()}</TD>
-                        </TR>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </Card>
-
-              <Card>
-                <CardHeader icon={<Coins />} title="Provider usage" description={`Actual cost for ${period}.`} />
-                {costs.length === 0 ? (
-                  <EmptyState size="sm" title="No usage recorded" />
-                ) : (
-                  <Table caption="Provider usage cost" density="compact">
-                    <THead>
-                      <tr>
-                        <TH>Provider</TH>
-                        <TH align="right">Cost</TH>
-                        <TH align="right">Credits</TH>
-                      </tr>
-                    </THead>
-                    <tbody>
-                      {costs.map((c) => (
-                        <TR key={c.provider}>
-                          <TD className="font-medium text-fg">{c.provider}</TD>
-                          <TD numeric>${((c._sum.costMicros ?? 0) / 1_000_000).toFixed(2)}</TD>
-                          <TD numeric>{(c._sum.credits ?? 0).toLocaleString()}</TD>
-                        </TR>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </Card>
-
-              <Card>
-                <CardHeader icon={<LifeBuoy />} title="Support access" description="Read-only view of a tenant. Every request is logged." />
-                <CardBody>
-                  <SupportAccess />
-                </CardBody>
-              </Card>
-            </div>
-
-            <div className="min-w-0 space-y-6 lg:col-span-2">
-              <Card>
-                <CardHeader icon={<Building2 />} title="Organizations" description={`${orgs.length} newest tenants. Toggle publishing per tenant.`} />
-                {orgs.length === 0 ? (
-                  <EmptyState size="sm" title="No organizations yet" />
-                ) : (
-                  <Table caption="Organizations" stickyHeader zebra maxHeight="36rem">
-                    <THead>
-                      <tr>
-                        <TH>Organization</TH>
-                        <TH>Plan</TH>
-                        <TH>Status</TH>
-                        <TH align="right">Members</TH>
-                        <TH align="right">Projects</TH>
-                        <TH>Created</TH>
-                        <TH>Publishing</TH>
-                      </tr>
-                    </THead>
-                    <tbody>
-                      {orgs.map((o) => (
-                        <TR key={o.id}>
-                          <TD>
-                            <div className="font-medium text-fg">{o.name}</div>
-                            <div className="font-mono text-xs text-muted">{o.id}</div>
-                          </TD>
-                          <TD>
-                            <Badge tone={o.planId === "trial" ? "warning" : "primary"} size="sm" className="capitalize">
-                              {o.planId}
-                            </Badge>
-                          </TD>
-                          <TD>
-                            <Badge tone={o.status === "active" ? "success" : "danger"} variant="dot" size="sm" className="capitalize">
-                              {o.status.replace(/_/g, " ")}
-                            </Badge>
-                          </TD>
-                          <TD numeric>{o._count.memberships}</TD>
-                          <TD numeric>{o._count.projects}</TD>
-                          <TD className="whitespace-nowrap text-xs text-muted tabular-nums">{fmtDate(o.createdAt)}</TD>
-                          <TD>
-                            <OrgControls orgId={o.id} orgName={o.name} publishingEnabled={o.publishingEnabled} />
-                          </TD>
-                        </TR>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </Card>
-
-              <Card>
-                <CardHeader icon={<AlertOctagon />} title="Recent failed workflow runs" />
-                {failedRuns.length === 0 ? (
-                  <EmptyState size="sm" title="No failures" description="Nothing has failed recently." />
-                ) : (
-                  <Table caption="Recent failed workflow runs" zebra>
-                    <THead>
-                      <tr>
-                        <TH>Run</TH>
-                        <TH>Error</TH>
-                        <TH align="right">Attempts</TH>
-                        <TH>When</TH>
-                      </tr>
-                    </THead>
-                    <tbody>
-                      {failedRuns.map((r) => (
-                        <TR key={r.id}>
-                          <TD>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="font-medium text-fg">{r.kind}</span>
-                              <StatusBadge status={r.state} />
-                              {r.errorClass && (
-                                <Badge tone="warning" size="sm">
-                                  {r.errorClass}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="mt-0.5 font-mono text-xs text-muted">org {r.organizationId}</div>
-                          </TD>
-                          <TD className="max-w-xs">
-                            <span className="line-clamp-2 text-xs text-fg-soft" title={r.error ?? undefined}>
-                              {r.error ?? "No error message"}
-                            </span>
-                          </TD>
-                          <TD numeric>{r.attempts}</TD>
-                          <TD className="whitespace-nowrap text-xs text-muted tabular-nums">{fmtDate(r.updatedAt)}</TD>
-                        </TR>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </Card>
-
-              <Card>
-                <CardHeader icon={<Webhook />} title="Recent webhook events" />
-                {webhooks.length === 0 ? (
-                  <EmptyState size="sm" title="No webhook events yet" />
-                ) : (
-                  <Table caption="Recent webhook events" density="compact" zebra>
-                    <THead>
-                      <tr>
-                        <TH>Provider</TH>
-                        <TH>Type</TH>
-                        <TH>Event id</TH>
-                        <TH>Processed</TH>
-                      </tr>
-                    </THead>
-                    <tbody>
-                      {webhooks.map((w) => (
-                        <TR key={w.id}>
-                          <TD className="font-medium text-fg">{w.provider}</TD>
-                          <TD>{w.type}</TD>
-                          <TD className="font-mono text-xs text-muted">{w.eventId.slice(0, 24)}</TD>
-                          <TD className="whitespace-nowrap text-xs text-muted tabular-nums">{fmtDate(w.processedAt)}</TD>
-                        </TR>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </Card>
-            </div>
-          </div>
-        </main>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card>
+          <CardHeader title="Signups per day" description={`Since ${fmtDate(r.since)}`} />
+          <CardBody>
+            <DailyArea data={signupSeries} keys={["Signups"]} title="Signups per day" />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="AI cost per day" description="Actual provider cost (USD), by provider" />
+          <CardBody>
+            <DailyStackedBars data={costDaily.data} keys={costDaily.providers} title="AI cost per day by provider" format="usd" />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Scans per day" description="Crawls and AI visibility checks started" />
+          <CardBody>
+            <DailyArea data={scanSeries} keys={["Crawls", "AI checks"]} title="Scans per day" />
+          </CardBody>
+        </Card>
       </div>
-    </ToastProvider>
+
+      <Card>
+        <CardHeader
+          title="Needs attention"
+          description="Failed jobs (7 days), payments past due, trials ending within 7 days and monthly reports awaiting review."
+          actions={<Badge tone={attention.length ? "warning" : "success"}>{attention.length} items</Badge>}
+        />
+        {attention.length === 0 ? (
+          <EmptyState size="sm" title="All clear" description="Nothing needs a human right now." />
+        ) : (
+          <ul className="divide-y divide-border">
+            {attention.map((a) => (
+              <li key={a.key} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Badge tone={a.tone} icon={a.icon}>
+                    {a.label}
+                  </Badge>
+                  <Link href={`/admin/customers/${a.orgId}`} className="truncate text-small font-medium text-fg hover:underline">
+                    {a.name}
+                  </Link>
+                </div>
+                <Link href={a.href} className="text-small font-medium text-primary hover:underline">
+                  Open →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }

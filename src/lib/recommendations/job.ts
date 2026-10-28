@@ -84,6 +84,15 @@ async function llmRefine(d: RecDraft, facts: BusinessFacts): Promise<{ costMicro
   return { costMicros: res.costMicros };
 }
 
+/**
+ * Starting status for a new recommendation. Class A briefs / internal tasks (auto_execute, nothing is written to
+ * the site) stay "proposed" with policyDecision auto_execute: they are ready to use but are NOT applied changes.
+ * They only count as applied once someone marks them done (status "completed_manually").
+ */
+export function initialActionStatus(decision: string): "blocked" | "awaiting_approval" | "proposed" {
+  return decision === "blocked" ? "blocked" : decision === "approval_required" ? "awaiting_approval" : "proposed";
+}
+
 export const analyzeJob: JobHandler = async (ctx) => {
   const orgId = ctx.run.organizationId;
   const projectId = ctx.run.projectId;
@@ -191,8 +200,7 @@ export const analyzeJob: JobHandler = async (ctx) => {
     const { score, priority } = scorePriority(d.impact, d.confidence, d.effort, policy.riskClass);
     const hash = draftHash({ type: d.type, target: d.target, proposedChange: d.proposedChange, policyVersion: POLICY_VERSION });
 
-    let status = policy.decision === "blocked" ? "blocked" : policy.decision === "approval_required" ? "awaiting_approval" : "proposed";
-    if (policy.decision === "auto_execute" && policy.riskClass === "A") status = "succeeded"; // internal task / brief is ready
+    const status = initialActionStatus(policy.decision);
 
     const action = await db.action.create({
       data: {

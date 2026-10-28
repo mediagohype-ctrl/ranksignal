@@ -8,6 +8,7 @@ import { recordUsage, releaseReservation, reserveCredits } from "@/lib/billing/u
 import { getAvailableProviders } from "@/lib/providers/visibility/registry";
 import { withTimeout } from "@/lib/providers/visibility/errors";
 import { JobError, type ProviderAnswer, type VisibilityProvider } from "@/lib/types";
+import { writeSnapshot } from "@/lib/snapshots";
 import { computeMetrics, type MetricObservation } from "./metrics";
 import { parseAnswer } from "./parse";
 import { projectVisibilityContext } from "./project-context";
@@ -219,6 +220,8 @@ export const visibilityJob: JobHandler = async (ctx) => {
     ...(failures.length ? { errors: errorsByProvider } : {}),
   });
   if (status === "succeeded_with_warnings") await ctx.transition("succeeded_with_warnings", "visibility_run.partial", { failed: failures.length });
+  // Measurement history; writeSnapshot never throws.
+  await writeSnapshot({ organizationId: orgId, projectId: project.id, kind: "visibility", visibilityRunId: run.id }).catch(() => undefined);
 
   await enqueue({
     kind: "analyze",

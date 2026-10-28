@@ -98,3 +98,35 @@ on Neon PostgreSQL. Goal: make it safe and complete for real self-serve customer
   and `assertOrgActive(orgId)` (HttpError 402 code "plan_inactive"). Used before starting scans.
 - **Schedules** (agent: automation) live in `Project.settings.schedule = {crawl: "off"|"weekly"|"monthly", visibility: "off"|"weekly"|"monthly"}`.
 - **Share links** (agent: sharing) live in `Project.settings.share = {enabled: boolean; tokenId: string}` (tokenId rotates to revoke).
+
+---
+# ROUND 4 (2026-10-28) — service delivery: history, work board, monthly impact reports, admin, packages
+Business direction: software + done-for-you service. We fix clients' sites and send a monthly impact report.
+Done-for-you tiers (Organization.serviceTier): fix ₹19,999/mo, grow ₹49,999/mo, authority ₹1,19,999/mo (+ setup fees;
+3–6 month minimums). Self-serve plans unchanged. Promise delivery, never rankings/placement.
+
+## HARD RULES (unchanged from round 3, plus)
+- Local .env = PRODUCTION DB. Never run next dev/start/build, tsx scripts or prisma commands. Verify with tsc, vitest, eslint only.
+- prisma/schema.prisma was updated by the coordinator (new models ReportSnapshot, Task, TaskComment, MonthlyReport, Lead,
+  AdminNote; Organization.serviceTier). The client is regenerated. Do NOT edit the schema; ask the coordinator.
+- Access: use requireSession / requireAppSession (now enforce membership OR staff "support mode": SessionContext.staffMode).
+  Staff (User.isStaff) enter a client org via POST /api/admin/orgs/[id]/enter (admin agent builds it) which issues a session
+  with {organizationId, role:"admin", staffMode:true}. Show/allow staff-only controls when session.staffMode is true.
+- Design: docs/DESIGN_SYSTEM.md, white background, Google Sans Flex, @/components/ui primitives. Honest copy, plain English.
+
+## Contracts
+- Snapshots (agent: history) `src/lib/snapshots/index.ts`:
+  `writeSnapshot(o: {organizationId; projectId; kind: "crawl"|"visibility"; crawlRunId?; visibilityRunId?}): Promise<void>` (never throws; logs)
+  `listSnapshots(projectId, organizationId, o?: {from?: Date; to?: Date; kind?: "crawl"|"visibility"}): Promise<SnapshotView[]>` (excludes simulated by default)
+  `getSnapshotAt(projectId, organizationId, at: Date, kind): Promise<SnapshotView|null>` (latest at/before `at`)
+  `computeDelta(before: SnapshotView|null, after: SnapshotView|null): SnapshotDelta` — overall/pillars/issues/visibility rate deltas +
+  `notes: string[]` (methodology or prompt-set changes, simulated data, missing baseline). Types exported from `src/lib/snapshots/types.ts`.
+- Work (agent: work) `src/lib/tasks/index.ts`:
+  `listShippedWork(projectId, organizationId, from: Date, to: Date, o?: {clientVisibleOnly?: boolean}): Promise<ShippedItem[]>` where
+  ShippedItem = {kind: "task"|"change"; title; category; performedBy: "agency"|"client"|"system"; completedAt: Date; url?: string; taskId?; actionId?}
+  ("change" = succeeded ActionExecution; tasks = status done with completedAt in range).
+  `listOpenWork(projectId, organizationId): Promise<{title; status; category; dueAt?: Date|null}[]>` (for "next month" plan).
+- Monthly reports (agent: monthly) `src/lib/monthly-report/`: payload type `MonthlyReportPayload` in types.ts;
+  `generateMonthlyReport(projectId, organizationId, period: "YYYY-MM"): Promise<MonthlyReport row>`.
+- Leads (agent: admin) write `Lead` rows from POST /api/public/free-check (source free_check, url, score, ipHash) and
+  /api/public/contact (source contact, name, email, company, message).

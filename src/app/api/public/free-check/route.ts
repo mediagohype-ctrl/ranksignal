@@ -1,5 +1,6 @@
 // POST /api/public/free-check — anonymous AI-readiness check (lead magnet).
-// Captcha + 3/IP/hour + 30/hour global, SSRF-safe fetching, ~25s budget, no DB writes, no LLM calls.
+// Captcha + 3/IP/hour + 30/hour global, SSRF-safe fetching, ~25s budget, no LLM calls.
+// The only DB write is a best-effort Lead row for the admin CRM (url, score, hashed IP) that never blocks the response.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody } from "@/lib/api";
 import { clientIp } from "@/lib/auth/rate-limit";
@@ -7,6 +8,7 @@ import { verifyTurnstile } from "@/lib/security/turnstile";
 import { checkFreeCheckLimit } from "@/lib/free-check/limits";
 import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/validate";
 import { FreeCheckError, runFreeCheck } from "@/lib/free-check/run";
+import { recordLeadInBackground } from "@/lib/admin/leads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +42,7 @@ export const POST = handler(async (req: Request) => {
 
   try {
     const item = await runFreeCheck(valid.url);
+    recordLeadInBackground({ source: "free_check", url: item.url, score: item.overall.score, ip });
     return json({ item }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof FreeCheckError) throw new HttpError(e.code === "blocked_url" ? 400 : 422, e.code, e.message);

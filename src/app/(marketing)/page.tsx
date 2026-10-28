@@ -6,7 +6,7 @@ import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { AnswersPanel, ApprovalPanel, EngineStrip, FixPanel, HeroComposition } from "@/components/marketing/home-ui";
 import { FAQS } from "@/components/marketing/content";
-import { MARKETING_PLANS, TRIAL_DAYS, inr } from "@/components/marketing/plans";
+import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
 
 const TITLE = `${BRAND.name} — Get found and cited in AI answers`;
 
@@ -328,6 +328,16 @@ export default function HomePage() {
                 Compare plans
                 <ArrowUpRight aria-hidden />
               </Link>
+              <p className="mt-8 border-t border-border pt-6 text-[1rem] text-fg-soft">
+                Prefer we do it for you?{" "}
+                <Link
+                  href="/services"
+                  className="inline-flex items-center gap-1 font-medium text-fg underline decoration-border-strong underline-offset-[6px] hover:decoration-fg"
+                >
+                  Done-for-you from {inr(SERVICE_FROM_PRICE)}/mo
+                  <ArrowRight aria-hidden size={16} />
+                </Link>
+              </p>
             </div>
             <ul className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3 lg:col-span-7">
               {MARKETING_PLANS.map((p) => (

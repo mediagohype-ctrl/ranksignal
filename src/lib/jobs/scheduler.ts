@@ -11,6 +11,7 @@ import { currentPromptSetVersion } from "@/lib/prompts/service";
 import { frequencyDays, readSchedule, type ScheduleFrequency } from "@/lib/dashboard/project-schema";
 import { recoverInterruptedRuns } from "@/lib/jobs/recovery";
 import { dispatchRunNotifications } from "@/lib/notifications/dispatch";
+import { scheduleMonthlyReports } from "@/lib/monthly-report/schedule";
 
 export type ScanKind = "crawl" | "visibility";
 
@@ -187,6 +188,8 @@ export async function schedulerTick(now = new Date()) {
         const since = new Date((state.notifyCursor ?? now).getTime() - NOTIFY_LOOKBACK_MS);
         const ok = await step("notifications", () => dispatchRunNotifications({ since, now }));
         if (ok !== undefined) state.notifyCursor = now;
+        // Days 1-3 (UTC): last month's impact reports, a few projects per tick (idempotent per project + period).
+        await step("monthly-reports", () => scheduleMonthlyReports(now));
       },
       { maxWait: 10_000, timeout: SCHEDULER_INTERVAL_MS - 30_000 },
     );

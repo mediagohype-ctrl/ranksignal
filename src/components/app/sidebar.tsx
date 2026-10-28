@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
+  CalendarCheck,
   ChevronsUpDown,
   Eye,
   FileBarChart2,
   FolderKanban,
   History,
+  KanbanSquare,
   LayoutDashboard,
   ListChecks,
   Menu,
@@ -37,6 +39,8 @@ const NAV = [
   { slug: "prompts", label: "Prompts", icon: MessageSquareText },
   { slug: "audit", label: "Audit", icon: ListChecks },
   { slug: "actions", label: "Actions & Approvals", icon: ShieldCheck },
+  { slug: "work", label: "Work", icon: KanbanSquare },
+  { slug: "monthly", label: "Monthly reports", icon: CalendarCheck },
   { slug: "integrations", label: "Integrations", icon: Plug },
   { slug: "reports", label: "History & print", icon: History },
   { slug: "settings", label: "Settings", icon: SlidersHorizontal },
