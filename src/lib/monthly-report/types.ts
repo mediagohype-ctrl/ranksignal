@@ -71,6 +71,44 @@ export interface WrongAnswer {
   detectedAt: string; // ISO
 }
 
+/** This month vs last month for one count. `pct` is relative (0.25 = +25%); null when last month was 0. */
+export interface CountChange {
+  previous: number;
+  current: number;
+  delta: number;
+  pct: number | null;
+}
+
+/** First-party Google data (Search Console + GA4) for the month vs the previous calendar month. Real data only. */
+export interface SearchSection {
+  gsc: {
+    siteUrl: string | null;
+    clicks: CountChange;
+    impressions: CountChange;
+    ctr: { previous: number | null; current: number | null };
+    /** Average position (lower is better). */
+    position: { previous: number | null; current: number | null };
+    topQueries: { query: string; clicks: number; previousClicks: number; change: number }[];
+    /** Queries that brought clicks this month and none last month. */
+    queriesWon: { query: string; clicks: number; impressions: number }[];
+    lastDataDate: string | null;
+  } | null;
+  ga4: {
+    propertyName: string | null;
+    sessions: CountChange;
+    conversions: CountChange;
+    aiSessions: CountChange;
+    aiBySource: { label: string; sessions: number; previousSessions: number }[];
+  } | null;
+  note: string;
+}
+
+/** Off-site work that went live in the report period (OffsiteItem rows with status "live" and liveAt in range). */
+export interface OffsiteSection {
+  live: { name: string; type: string; url?: string }[];
+  count: number;
+}
+
 export interface MonthlyReportPayload {
   version: typeof MONTHLY_REPORT_VERSION;
   period: string; // YYYY-MM (UTC month)
@@ -121,6 +159,10 @@ export interface MonthlyReportPayload {
   work: { shipped: ShippedLine[]; byPerformer: Record<"agency" | "client" | "system", number> };
   nextMonth: PlanLine[];
   wrongAnswers: WrongAnswer[];
+  /** Google Search Console / GA4 numbers; absent on reports generated before this section existed or when not connected. */
+  search?: SearchSection | null;
+  /** Off-site items (listings, profiles, mentions) that went live this month; absent on older reports. */
+  offsite?: OffsiteSection | null;
   attribution: string;
   notes: string[];
 }

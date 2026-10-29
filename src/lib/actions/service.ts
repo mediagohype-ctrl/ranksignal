@@ -3,7 +3,7 @@
 import { Prisma, type Action } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/api";
-import { writeAuditLog } from "@/lib/audit-log";
+import { auditActorFromSession, writeAuditLog } from "@/lib/audit-log";
 import { enqueue } from "@/lib/jobs/queue";
 import { isEnabled } from "@/lib/flags";
 import type { ProposedChange, Role, SessionContext } from "@/lib/types";
@@ -21,12 +21,38 @@ async function loadAction(actionId: string, orgId: string) {
   return action;
 }
 
+type ActorSession = SessionContext | { organizationId: string; userId?: null };
+
+/** Audit actor for a user/staff session, or "system" for background jobs (no userId). */
+function actorOf(session: ActorSession): { actorId: string | null; actorType: "user" | "staff" | "system" } {
+  return isUserSession(session) ? auditActorFromSession(session) : { actorId: null, actorType: "system" };
+}
+
+function isUserSession(session: ActorSession): session is SessionContext {
+  return Boolean(session.userId) && "role" in session;
+}
+
+/** Owners/admins with an active membership (staff in support mode are not counted: they are not the business). */
+export async function countOrgApprovers(organizationId: string): Promise<number> {
+  return db.membership.count({ where: { organizationId, status: "active", role: { in: ["owner", "admin"] } } });
+}
+
+/** The user who last edited this action's draft text (from the audit trail), if any. */
+async function lastDraftEditor(action: Pick<Action, "id" | "organizationId">): Promise<string | null> {
+  const row = await db.auditLog.findFirst({
+    where: { organizationId: action.organizationId, resourceType: "action", resourceId: action.id, action: "action.draft_edited" },
+    orderBy: { createdAt: "desc" },
+    select: { actorId: true },
+  });
+  return row?.actorId ?? null;
+}
+
 function link(a: Pick<Action, "projectId" | "id">) {
   return `/app/projects/${a.projectId}/actions?focus=${a.id}`;
 }
 
 /** Create a pending Approval for the action's current draft hash and notify approvers. */
-export async function requestApproval(actionId: string, session: SessionContext | { organizationId: string; userId?: null }, opts: { ttlMs?: number } = {}) {
+export async function requestApproval(actionId: string, session: ActorSession, opts: { ttlMs?: number } = {}) {
   const action = await loadAction(actionId, session.organizationId);
   const hash = hashOf(action);
   const approval = await db.approval.create({
@@ -51,8 +77,7 @@ export async function requestApproval(actionId: string, session: SessionContext 
   });
   await writeAuditLog({
     organizationId: action.organizationId,
-    actorId: session.userId ?? null,
-    actorType: session.userId ? "user" : "system",
+    ...actorOf(session),
     action: "action.approval_requested",
     resourceType: "action",
     resourceId: action.id,
@@ -73,7 +98,7 @@ export async function approve(actionId: string, body: { draftHash: string; comme
   const current = hashOf(action);
   if (body.draftHash !== current || (action.draftHash && action.draftHash !== current)) {
     await writeAuditLog({
-      organizationId: action.organizationId, actorId: session.userId, action: "action.approval_rejected_stale",
+      organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.approval_rejected_stale",
       resourceType: "action", resourceId: action.id, after: { submitted: body.draftHash, current },
     });
     throw new HttpError(409, "stale_draft", "The draft changed since you reviewed it. Reload and review the current version.", { currentHash: current });
@@ -89,10 +114,28 @@ export async function approve(actionId: string, body: { draftHash: string; comme
     await db.approval.update({ where: { id: pending.id }, data: { decision: "expired", decidedAt: now } });
     await db.action.update({ where: { id: action.id }, data: { status: "expired" } });
     await writeAuditLog({
-      organizationId: action.organizationId, actorId: session.userId, action: "action.approval_expired",
+      organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.approval_expired",
       resourceType: "action", resourceId: action.id, after: { approvalId: pending.id },
     });
     throw new HttpError(409, "approval_expired", "This approval request has expired. Request a new review.");
+  }
+
+  // Separation of duties: whoever requested the review or last edited the draft can't also approve it. Solo
+  // businesses (a single owner/admin) may self-approve as that owner/admin; it is flagged in the audit trail.
+  const editor = await lastDraftEditor(action);
+  const involved = pending.requestedBy === session.userId || editor === session.userId;
+  let selfApproved = false;
+  if (involved) {
+    const soloAdmin =
+      !session.staffMode && ROLE_RANK[session.role] >= ROLE_RANK.admin && (await countOrgApprovers(action.organizationId)) <= 1;
+    if (!soloAdmin) {
+      await writeAuditLog({
+        organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.approval_denied_self",
+        resourceType: "action", resourceId: action.id, after: { approvalId: pending.id, requestedBy: pending.requestedBy, lastEditor: editor },
+      });
+      throw new HttpError(403, "separation_of_duties", "You requested or edited this change, so another teammate needs to approve it.");
+    }
+    selfApproved = true;
   }
 
   const approval = await db.approval.update({
@@ -101,9 +144,13 @@ export async function approve(actionId: string, body: { draftHash: string; comme
   });
   const updated = await db.action.update({ where: { id: action.id }, data: { status: "approved" } });
   await writeAuditLog({
-    organizationId: action.organizationId, actorId: session.userId, action: "action.approved",
+    organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.approved",
     resourceType: "action", resourceId: action.id,
-    before: { status: action.status }, after: { status: "approved", approvalId: approval.id, draftHash: current, riskClass: action.riskClass },
+    before: { status: action.status },
+    after: {
+      status: "approved", approvalId: approval.id, draftHash: current, riskClass: action.riskClass,
+      ...(selfApproved ? { self_approved: true, selfApprovalReason: "sole_owner_or_admin" } : {}),
+    },
   });
   return { action: updated, approval };
 }
@@ -120,7 +167,7 @@ export async function reject(actionId: string, reason: string | undefined, sessi
   });
   const updated = await db.action.update({ where: { id: action.id }, data: { status: "rejected" } });
   await writeAuditLog({
-    organizationId: action.organizationId, actorId: session.userId, action: "action.rejected",
+    organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.rejected",
     resourceType: "action", resourceId: action.id, before: { status: action.status }, after: { status: "rejected", reason: reason ?? null },
   });
   return updated;
@@ -161,7 +208,7 @@ export async function editDraft(actionId: string, after: string, session: Sessio
     },
   });
   await writeAuditLog({
-    organizationId: action.organizationId, actorId: session.userId, action: "action.draft_edited",
+    organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.draft_edited",
     resourceType: "action", resourceId: action.id,
     before: { after: prev.after, draftHash: action.draftHash, status: action.status },
     after: { after, draftHash: hash, status, invalidatedApprovals: invalidated.count, riskClass: policy.riskClass },
@@ -170,8 +217,14 @@ export async function editDraft(actionId: string, after: string, session: Sessio
   return (await db.action.findFirst({ where: { id: action.id, organizationId: action.organizationId } })) ?? updated;
 }
 
-/** Backend re-check then enqueue the execute job (idempotent on action + exact hash). */
-export async function requestExecution(actionId: string, session: SessionContext | { organizationId: string; userId?: null }) {
+/**
+ * Backend re-check then enqueue the execute job (idempotent on action + exact hash).
+ * People: admin/owner (or staff support mode) only. Background jobs (no userId) may request auto-execution.
+ */
+export async function requestExecution(actionId: string, session: ActorSession) {
+  if (session.userId && (!isUserSession(session) || (ROLE_RANK[session.role] < ROLE_RANK.admin && !session.staffMode))) {
+    throw new HttpError(403, "forbidden", "Only an admin or owner can publish changes to the site");
+  }
   const action = await loadAction(actionId, session.organizationId);
   const executable = action.status === "approved" || (action.policyDecision === "auto_execute" && ["proposed", "failed"].includes(action.status));
   if (!executable) throw new HttpError(409, "invalid_state", `Action is ${action.status} and cannot be executed`);
@@ -181,10 +234,18 @@ export async function requestExecution(actionId: string, session: SessionContext
       instructions: buildManualInstructions({ type: action.type, target: targetOf(action), proposedChange: changeOf(action), rationale: action.rationale }),
     });
   }
+  // The stored decision is authoritative too: if review was ever required (e.g. AI-written text), an approval of
+  // the exact current draft must exist even if a fresh policy evaluation would now allow auto-execution.
+  if (action.policyDecision !== "auto_execute") {
+    const approved = await db.approval.findFirst({
+      where: { actionId: action.id, organizationId: action.organizationId, decision: "approved", draftHash: hashOf(action) },
+    });
+    if (!approved) throw new HttpError(409, "approval_required", "No approval exists for the exact current draft.");
+  }
   const gate = await checkExecutionGate(action);
   if (!gate.ok) {
     await writeAuditLog({
-      organizationId: action.organizationId, actorId: session.userId ?? null, actorType: session.userId ? "user" : "system",
+      organizationId: action.organizationId, ...actorOf(session),
       action: "action.execution_denied", resourceType: "action", resourceId: action.id, after: { code: gate.code, message: gate.message },
     });
     throw new HttpError(409, gate.code, gate.message);
@@ -197,7 +258,7 @@ export async function requestExecution(actionId: string, session: SessionContext
     idempotencyKey: `exec:${action.id}:${gate.hash}`,
   });
   await writeAuditLog({
-    organizationId: action.organizationId, actorId: session.userId ?? null, actorType: session.userId ? "user" : "system",
+    organizationId: action.organizationId, ...actorOf(session),
     action: "action.execution_requested", resourceType: "action", resourceId: action.id,
     after: { workflowRunId: run.id, draftHash: gate.hash, riskClass: gate.policy.riskClass },
   });
@@ -230,7 +291,7 @@ export async function requestRollback(actionId: string, session: SessionContext)
   });
   await db.action.update({ where: { id: action.id }, data: { status: "rollback_pending" } });
   await writeAuditLog({
-    organizationId: action.organizationId, actorId: session.userId, action: "action.rollback_requested",
+    organizationId: action.organizationId, ...auditActorFromSession(session), action: "action.rollback_requested",
     resourceType: "action", resourceId: action.id, after: { workflowRunId: run.id, executionId: execution.id },
   });
   return run;
@@ -310,8 +371,7 @@ export async function completeManually(actionId: string, body: { note?: string; 
   const updated = await db.action.update({ where: { id: action.id }, data: { status: "completed_manually" } });
   await writeAuditLog({
     organizationId: action.organizationId,
-    actorId: session.userId,
-    actorType: session.staffMode ? "staff" : "user",
+    ...auditActorFromSession(session),
     action: "action.completed_manually",
     resourceType: "action",
     resourceId: action.id,

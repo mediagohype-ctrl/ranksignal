@@ -7,6 +7,7 @@ import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { readNotificationPrefs } from "@/lib/dashboard/project-schema";
 import { monthlyReportEmail, monthlyReportNotice } from "./email";
 import type { MonthlyReportPayload } from "./types";
+import { getBranding } from "@/lib/branding";
 
 export async function deliverMonthlyReport(
   reportId: string,
@@ -54,10 +55,12 @@ export async function deliverMonthlyReport(
         select: { user: { select: { email: true } } },
       });
       const recipients = [...new Set(members.map((m) => m.user.email).filter(Boolean))];
-      const mail = monthlyReportEmail(payload, sent.summary ?? "");
+      // White-label (agency / done-for-you): the client sees the agency's name, logo and reply-to address.
+      const branding = await getBranding(report.organizationId);
+      const mail = monthlyReportEmail(payload, sent.summary ?? "", undefined, branding);
       for (const to of recipients) {
         try {
-          await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text });
+          await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, ...(mail.replyTo ? { replyTo: mail.replyTo } : {}) });
         } catch (e) {
           console.error("[monthly-report] email send failed:", e instanceof Error ? e.message : e);
         }

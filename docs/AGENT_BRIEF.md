@@ -130,3 +130,43 @@ Done-for-you tiers (Organization.serviceTier): fix ₹19,999/mo, grow ₹49,999/
   `generateMonthlyReport(projectId, organizationId, period: "YYYY-MM"): Promise<MonthlyReport row>`.
 - Leads (agent: admin) write `Lead` rows from POST /api/public/free-check (source free_check, url, score, ipHash) and
   /api/public/contact (source contact, name, email, company, message).
+
+---
+# ROUND 5 (2026-10-29) — finish every promised feature + backend hardening
+Everything the website promises must actually work. Plus security & reliability fixes from the backend review.
+
+## HARD RULES (as round 3/4)
+- Local .env = PRODUCTION DB. Never run next dev/start/build, tsx scripts or prisma CLI. Verify: tsc, vitest, eslint only.
+- Schema already updated by the coordinator (do NOT edit): Organization.branding Json?, ReportSnapshot.report Json? (+ relation),
+  Task/MonthlyReport/ReportSnapshot → Project cascade, AdminNote → Organization cascade, new OffsiteItem, new MetricDaily,
+  Observation index (visibilityRunId, createdAt). Client regenerated. Migration file exists, not yet applied.
+- Next.js upgraded to 15.5.28 / React 19.1.10 (security). Don't add npm dependencies; use fetch.
+- Captcha stays optional/off (owner's decision). Don't make it mandatory.
+- Design: docs/DESIGN_SYSTEM.md; honest copy; external services optional (degrade gracefully when env vars are missing).
+
+## Connector plugin contract (connector agents)
+- Implement `Connector` from src/lib/types.ts in `src/lib/connectors/<id>.ts`. Every outbound HTTP call to a customer-supplied host
+  MUST be SSRF-safe: call `assertPublicUrl` and pin the resolved IP (reuse the pinned-lookup approach in src/lib/crawler/safe-fetch.ts;
+  you may export a small `safeRequest(url, {method, headers, body, timeoutMs, maxBytes})` helper from a NEW file
+  src/lib/net/safe-request.ts — the GitHub agent owns that file; others import it). Fixed vendor API hosts (api.github.com,
+  *.myshopify.com, api.webflow.com, api.contentful.com, *.api.sanity.io, www.wixapis.com) still go through safeRequest.
+- Export a descriptor from `src/lib/connectors/catalog/<id>.ts`:
+  `export const descriptor: ConnectorDescriptor` with {id, family, name, status: "available", description, capabilities: ConnectorCapabilities,
+  connectFields: {key, label, type: "text"|"password"|"url", help}[], setupSteps: string[], create(config, secrets): Connector,
+  validateConfig(input): {config, secrets}}` — type `ConnectorDescriptor` lives in src/lib/connectors/catalog/types.ts (GitHub agent creates it first; others code against this shape).
+- Generic connect route (GitHub agent builds): POST /api/integrations/[provider]/connect {projectId, ...fields} → validateConfig, create(...).testConnection(),
+  encrypt secrets (src/lib/crypto.ts), store Integration {provider, config, credentialEncrypted, capabilities, health}. Admin+ only. Audit-logged.
+- Do NOT edit src/lib/connectors/registry.ts or src/components/app/integrations-panel.tsx — the coordinator wires all descriptors in at the end.
+- Writes: drafts by default where the platform supports drafts; publish only through the existing approval gate; record before-state for rollback;
+  honest capability flags (never claim rollback/publish you can't do).
+
+## Other contracts
+- Env validation (security agent): `src/lib/env.ts` exports `validateEnv(): {ok: boolean; errors: string[]; warnings: string[]}` and
+  `assertProductionEnv()` (throws in NODE_ENV=production on fatal errors). Reliability agent calls assertProductionEnv() in src/instrumentation.ts.
+- Structured logging (reliability agent): `src/lib/log.ts` exports `log.info|warn|error(event: string, fields?: Record<string, unknown>)` (JSON lines,
+  redacts keys matching /secret|token|password|key|authorization/i). Everyone may import it.
+- Stored report (reliability agent): `getStoredReport(projectId, organizationId): Promise<SiteReport | null>` in src/lib/report/stored.ts —
+  reads the newest ReportSnapshot.report; falls back to buildSiteReport (without LLM) only if none.
+- Google metrics (google agent): `syncGoogleMetricsDue(): Promise<void>` in src/lib/google/sync.ts (coordinator wires into the scheduler);
+  `getSearchSummary(projectId, organizationId, from, to)` for reports.
+- Branding (white-label agent): `getBranding(organizationId): Promise<Branding>` in src/lib/branding.ts (falls back to BRAND).

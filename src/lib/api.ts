@@ -4,6 +4,7 @@ import { ZodError, type ZodTypeAny, type z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { resolveAccess } from "@/lib/auth/access";
 import { db } from "@/lib/db";
+import { log } from "@/lib/log";
 import type { Role, SessionContext } from "@/lib/types";
 
 export class HttpError extends Error {
@@ -16,15 +17,29 @@ export function json<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init);
 }
 
-export function errorResponse(err: unknown) {
+const REQUEST_ID_RE = /^[A-Za-z0-9._:-]{1,128}$/;
+
+/** Correlation id: the caller's/proxy's x-request-id when it looks sane (no log injection), else a fresh UUID. */
+export function requestIdOf(req?: unknown): string {
+  const headers = req && typeof req === "object" && "headers" in req ? (req as { headers?: unknown }).headers : undefined;
+  const incoming = headers instanceof Headers ? headers.get("x-request-id") : null;
+  return incoming && REQUEST_ID_RE.test(incoming) ? incoming : crypto.randomUUID();
+}
+
+export function errorResponse(err: unknown, req?: unknown) {
+  const requestId = requestIdOf(req);
+  const headers = { "x-request-id": requestId };
   if (err instanceof HttpError) {
-    return NextResponse.json({ error: { code: err.code, message: err.message, details: err.details } }, { status: err.status });
+    if (err.status >= 500) log.error("api.http_error", { requestId, code: err.code, err });
+    return NextResponse.json({ error: { code: err.code, message: err.message, details: err.details, requestId } }, { status: err.status, headers });
   }
   if (err instanceof ZodError) {
-    return NextResponse.json({ error: { code: "validation_error", message: "Invalid input", details: err.flatten() } }, { status: 400 });
+    return NextResponse.json({ error: { code: "validation_error", message: "Invalid input", details: err.flatten(), requestId } }, { status: 400, headers });
   }
-  console.error("[api] unhandled", err instanceof Error ? err.message : err);
-  return NextResponse.json({ error: { code: "internal_error", message: "Something went wrong" } }, { status: 500 });
+  // Unhandled: log class/message/stack (log.ts serializes Errors) with the id the client sees, so a support
+  // ticket quoting requestId leads straight to the stack trace. The client never sees internals.
+  log.error("api.unhandled", { requestId, err: err instanceof Error ? err : { class: typeof err, message: String(err) } });
+  return NextResponse.json({ error: { code: "internal_error", message: "Something went wrong", requestId } }, { status: 500, headers });
 }
 
 /** Wrap a route handler so thrown HttpError/ZodError become JSON error envelopes. */
@@ -33,7 +48,7 @@ export function handler<A extends unknown[]>(fn: (...args: A) => Promise<Respons
     try {
       return await fn(...args);
     } catch (err) {
-      return errorResponse(err);
+      return errorResponse(err, args[0]);
     }
   };
 }

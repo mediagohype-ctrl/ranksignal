@@ -1,5 +1,5 @@
-import { handler, json, requireProject, requireSession } from "@/lib/api";
-import { buildSiteReport } from "@/lib/report/build";
+import { HttpError, handler, json, requireProject, requireSession } from "@/lib/api";
+import { getStoredReport } from "@/lib/report/stored";
 import { reportToMarkdown } from "@/lib/report/markdown";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,9 @@ export const GET = handler(async (req: Request, { params }: { params: Promise<{ 
   const s = await requireSession("viewer");
   const { id } = await params;
   const project = await requireProject(s, id);
-  const item = await buildSiteReport(project.id, s.organizationId);
+  // Stored report: GET never triggers a paid LLM call (the summary is generated once when a run finishes).
+  const item = await getStoredReport(project.id, s.organizationId);
+  if (!item) throw new HttpError(404, "not_found", "Report not available");
 
   const format = new URL(req.url).searchParams.get("format");
   if (format === "markdown" || format === "md") {

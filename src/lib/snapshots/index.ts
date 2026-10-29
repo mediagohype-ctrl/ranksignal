@@ -2,6 +2,8 @@
 import { Prisma, type ReportSnapshot } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildSiteReport } from "@/lib/report/build";
+import type { SiteReport } from "@/lib/report/types";
+import { log } from "@/lib/log";
 import { METHODOLOGY_VERSION } from "@/lib/report/score";
 import { FORMULA_VERSION } from "@/lib/visibility/metrics";
 import { computeDelta, likeForLikeFromObservations } from "./delta";
@@ -19,6 +21,9 @@ export const SNAPSHOT_METHODOLOGY_VERSION = `${METHODOLOGY_VERSION}+${FORMULA_VE
 const VIS_DONE = ["succeeded", "succeeded_with_warnings"];
 const BACKFILL_MAX_CRAWLS = 12;
 const BACKFILL_MAX_VIS = 60;
+
+/** Snapshot reads never load the (large) stored report JSON; only getStoredReport does. */
+const OMIT_REPORT = { report: true } as const;
 
 // ---------------------------------------------------------------------------------------------
 // Parsing
@@ -59,7 +64,7 @@ export function parseVisibility(v: unknown, providers?: string[]): SnapshotVisib
   };
 }
 
-export function toSnapshotView(r: ReportSnapshot): SnapshotView {
+export function toSnapshotView(r: Omit<ReportSnapshot, "report">): SnapshotView {
   return {
     id: r.id,
     projectId: r.projectId,
@@ -110,11 +115,14 @@ async function issuesAsOf(organizationId: string, projectId: string, at: Date): 
   return counts;
 }
 
-async function crawlScores(organizationId: string, projectId: string, crawlRunId: string, at: Date): Promise<CrawlScores> {
-  const report = await buildSiteReport(projectId, organizationId, crawlRunId);
+async function crawlScores(
+  organizationId: string, projectId: string, crawlRunId: string, at: Date, llmSummary = false,
+): Promise<CrawlScores & { report: SiteReport }> {
+  const report = await buildSiteReport(projectId, organizationId, { crawlRunId, llmSummary });
   const pillarScores = Object.fromEntries(SNAPSHOT_PILLARS.map((p) => [p, null])) as SnapshotPillarScores;
   for (const p of report.pillars) pillarScores[p.pillar] = p.score;
   return {
+    report,
     crawlRunId,
     overallScore: report.overall.score,
     grade: report.overall.grade,
@@ -139,11 +147,16 @@ async function visibilityAsOf(organizationId: string, projectId: string, at: Dat
   return null;
 }
 
-async function writeCrawlSnapshot(organizationId: string, projectId: string, crawlRunId: string) {
+const reportJson = (r: SiteReport | null) => (r ? (r as unknown as Prisma.InputJsonValue) : Prisma.JsonNull);
+
+async function writeCrawlSnapshot(organizationId: string, projectId: string, crawlRunId: string, allowLlm: boolean) {
   const run = await db.crawlRun.findFirst({ where: { id: crawlRunId, organizationId, projectId, status: "succeeded" } });
   if (!run) return;
   const at = run.finishedAt ?? run.createdAt;
-  const [scores, vis] = await Promise.all([crawlScores(organizationId, projectId, run.id, at), visibilityAsOf(organizationId, projectId, at)]);
+  // The paid LLM summary is generated here, once, and only for the newest crawl (never for backfilled history).
+  const latest = await db.crawlRun.findFirst({ where: { organizationId, projectId, status: "succeeded" }, orderBy: { createdAt: "desc" }, select: { id: true } });
+  const llm = allowLlm && latest?.id === run.id;
+  const [scores, vis] = await Promise.all([crawlScores(organizationId, projectId, run.id, at, llm), visibilityAsOf(organizationId, projectId, at)]);
   await db.reportSnapshot.create({
     data: {
       organizationId,
@@ -159,12 +172,13 @@ async function writeCrawlSnapshot(organizationId: string, projectId: string, cra
       promptSetVersion: vis?.promptSetVersion ?? null,
       methodologyVersion: SNAPSHOT_METHODOLOGY_VERSION,
       simulated: false, // scores never use simulated answers; simulated visibility is not copied in
+      report: reportJson(scores.report), // served by getStoredReport; pages never rebuild or call the LLM
       createdAt: at,
     },
   });
 }
 
-async function writeVisibilitySnapshot(organizationId: string, projectId: string, visibilityRunId: string) {
+async function writeVisibilitySnapshot(organizationId: string, projectId: string, visibilityRunId: string, allowLlm: boolean) {
   const run = await db.visibilityRun.findFirst({ where: { id: visibilityRunId, organizationId, projectId, status: { in: VIS_DONE } } });
   if (!run) return;
   const at = run.finishedAt ?? run.createdAt;
@@ -175,6 +189,7 @@ async function writeVisibilitySnapshot(organizationId: string, projectId: string
   // Copy the latest crawl scores (as of this run) so every snapshot is complete.
   let crawl: CrawlScores | null = null;
   const prevCrawlSnap = await db.reportSnapshot.findFirst({
+    omit: OMIT_REPORT,
     where: { organizationId, projectId, kind: "crawl", createdAt: { lte: at } },
     orderBy: { createdAt: "desc" },
   });
@@ -194,6 +209,22 @@ async function writeVisibilitySnapshot(organizationId: string, projectId: string
     if (lastCrawl) crawl = await crawlScores(organizationId, projectId, lastCrawl.id, at);
   }
 
+  // Full report including this AI check: only when this is the newest finished visibility run (the live build
+  // reads the latest data). Older runs (backfill) store no report; getStoredReport reads the newest one.
+  let report: SiteReport | null = null;
+  const latestVis = await db.visibilityRun.findFirst({
+    where: { organizationId, projectId, status: { in: VIS_DONE } },
+    orderBy: { finishedAt: "desc" },
+    select: { id: true },
+  });
+  if (latestVis?.id === run.id) {
+    try {
+      report = await buildSiteReport(projectId, organizationId, { llmSummary: allowLlm });
+    } catch (err) {
+      log.warn("snapshots.report_build_failed", { projectId, orgId: organizationId, visibilityRunId: run.id, err });
+    }
+  }
+
   await db.reportSnapshot.create({
     data: {
       organizationId,
@@ -209,6 +240,7 @@ async function writeVisibilitySnapshot(organizationId: string, projectId: string
       promptSetVersion: run.promptSetVersion,
       methodologyVersion: SNAPSHOT_METHODOLOGY_VERSION,
       simulated: m?.simulated === true,
+      report: reportJson(report),
       createdAt: at,
     },
   });
@@ -221,6 +253,8 @@ export async function writeSnapshot(o: {
   kind: SnapshotKind;
   crawlRunId?: string;
   visibilityRunId?: string;
+  /** false = never generate the paid LLM summary (backfill / page-load callers). Default true. */
+  allowLlm?: boolean;
 }): Promise<void> {
   try {
     const runId = o.kind === "crawl" ? o.crawlRunId : o.visibilityRunId;
@@ -230,10 +264,11 @@ export async function writeSnapshot(o: {
       select: { id: true },
     });
     if (existing) return;
-    if (o.kind === "crawl") await writeCrawlSnapshot(o.organizationId, o.projectId, runId);
-    else await writeVisibilitySnapshot(o.organizationId, o.projectId, runId);
+    const allowLlm = o.allowLlm !== false;
+    if (o.kind === "crawl") await writeCrawlSnapshot(o.organizationId, o.projectId, runId, allowLlm);
+    else await writeVisibilitySnapshot(o.organizationId, o.projectId, runId, allowLlm);
   } catch (err) {
-    console.error("[snapshots] writeSnapshot failed", o.kind, err instanceof Error ? err.message : err);
+    log.error("snapshots.write_failed", { kind: o.kind, projectId: o.projectId, orgId: o.organizationId, err });
   }
 }
 
@@ -246,6 +281,7 @@ export async function listSnapshots(
   o: { from?: Date; to?: Date; kind?: SnapshotKind; includeSimulated?: boolean } = {},
 ): Promise<SnapshotView[]> {
   const rows = await db.reportSnapshot.findMany({
+    omit: OMIT_REPORT,
     where: {
       organizationId,
       projectId,
@@ -262,6 +298,7 @@ export async function listSnapshots(
 /** Latest non-simulated snapshot at/before `at`. `kind` omitted = either kind (both carry full scores). */
 export async function getSnapshotAt(projectId: string, organizationId: string, at: Date, kind?: SnapshotKind): Promise<SnapshotView | null> {
   const row = await db.reportSnapshot.findFirst({
+    omit: OMIT_REPORT,
     where: { organizationId, projectId, simulated: false, createdAt: { lte: at }, ...(kind ? { kind } : {}) },
     orderBy: { createdAt: "desc" },
   });
@@ -331,7 +368,7 @@ export async function getPeriodComparison(projectId: string, organizationId: str
   let before = await getSnapshotAt(projectId, organizationId, cutoff);
   let baselineIsFirst = false;
   if (!before) {
-    const first = await db.reportSnapshot.findFirst({ where: { organizationId, projectId, simulated: false }, orderBy: { createdAt: "asc" } });
+    const first = await db.reportSnapshot.findFirst({ omit: OMIT_REPORT, where: { organizationId, projectId, simulated: false }, orderBy: { createdAt: "asc" } });
     if (first && first.id !== after.id) {
       before = toSnapshotView(first);
       baselineIsFirst = true;
@@ -392,12 +429,12 @@ async function runBackfill(projectId: string, organizationId: string) {
   // Oldest first so each visibility snapshot can copy the crawl snapshot that preceded it.
   for (const c of [...crawls].reverse()) {
     if (haveCrawl.has(c.id)) continue;
-    await writeSnapshot({ organizationId, projectId, kind: "crawl", crawlRunId: c.id });
+    await writeSnapshot({ organizationId, projectId, kind: "crawl", crawlRunId: c.id, allowLlm: false });
     crawl++;
   }
   for (const v of [...visRuns].reverse()) {
     if (haveVis.has(v.id)) continue;
-    await writeSnapshot({ organizationId, projectId, kind: "visibility", visibilityRunId: v.id });
+    await writeSnapshot({ organizationId, projectId, kind: "visibility", visibilityRunId: v.id, allowLlm: false });
     visibility++;
   }
   return { crawl, visibility };

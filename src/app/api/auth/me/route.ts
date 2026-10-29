@@ -22,6 +22,9 @@ export const GET = handler(async () => {
     }),
   ]);
   if (!user || !membership || membership.status !== "active") throw new HttpError(401, "unauthorized", "Session is no longer valid");
+  // Pending invitations are only shown once the account has proven it owns the email address; otherwise someone
+  // who registered an invited address could see (and try to act on) another workspace's invitation.
+  const visible = user.emailVerified ? memberships : memberships.filter((m) => m.status === "active");
 
   return json({
     item: {
@@ -30,7 +33,7 @@ export const GET = handler(async () => {
       role: membership.role,
       plan: getPlan(membership.organization.planId),
       subscription,
-      organizations: memberships.map((m) => ({ id: m.organizationId, name: m.organization.name, role: m.role, status: m.status })),
+      organizations: visible.map((m) => ({ id: m.organizationId, name: m.organization.name, role: m.role, status: m.status })),
     },
   });
 });

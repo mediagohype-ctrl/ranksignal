@@ -5,7 +5,11 @@
 //     so a run claimed by a process that died stays "running" forever. For scan/analysis kinds (never
 //     execute_action/rollback — those touch customer sites and need a human) with no sign of life for 30 min we
 //     mark them failed; case 1 then settles their CrawlRun/VisibilityRun in the same pass.
+//  3. execute_action/rollback runs abandoned mid-write are never reclaimed by the queue (a re-run could apply
+//     a website change twice); flagAbandonedSiteWrites marks them failed/needs_review and notifies staff.
 import { db } from "@/lib/db";
+import { log } from "@/lib/log";
+import { flagAbandonedSiteWrites } from "@/lib/jobs/queue";
 
 export const STUCK_AFTER_MS = 30 * 60_000;
 export const INTERRUPTED_ERROR = "Interrupted (server restart)";
@@ -105,11 +109,12 @@ async function failStuckDomainRuns(kind: "crawl" | "visibility", now: Date): Pro
 
 /** Run at boot and on every scheduler tick. Returns counts for logging. */
 export async function recoverInterruptedRuns(now = new Date()) {
+  const needsReview = await flagAbandonedSiteWrites(now);
   const workflows = await failDeadWorkflowRuns(now);
   const crawls = await failStuckDomainRuns("crawl", now);
   const visibility = await failStuckDomainRuns("visibility", now);
-  if (workflows + crawls + visibility > 0) {
-    console.info(`[recovery] marked interrupted: ${workflows} workflow run(s), ${crawls} crawl(s), ${visibility} visibility run(s)`);
+  if (needsReview + workflows + crawls + visibility > 0) {
+    log.info("recovery.marked_interrupted", { needsReview, workflows, crawls, visibility });
   }
-  return { workflows, crawls, visibility };
+  return { workflows, crawls, visibility, needsReview };
 }

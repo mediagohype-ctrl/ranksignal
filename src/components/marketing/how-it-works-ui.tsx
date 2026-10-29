@@ -61,11 +61,10 @@ export function SetupVignette() {
     { label: "Website", value: <span className="font-medium text-fg">{DOMAIN}</span> },
     { label: "Brand name", value: <span className="font-medium text-fg">Greenleaf Bakery</span> },
     {
-      label: "Markets",
+      label: "Market",
       value: (
         <span className="flex flex-wrap gap-1.5">
           <Chip>India · English</Chip>
-          <Chip>India · Kannada</Chip>
         </span>
       ),
     },
@@ -96,10 +95,10 @@ export function SetupVignette() {
       <div className="flex flex-wrap items-center justify-between gap-4 bg-surface-2/60 px-5 py-4 sm:px-6">
         <div className="min-w-0">
           <p className="text-small font-medium text-fg">WordPress connected</p>
-          <p className="text-xs text-muted">Read-only. We can look, not change.</p>
+          <p className="text-xs text-muted">Nothing changes until you approve it.</p>
         </div>
         <p className="flex items-center gap-2.5 text-small text-fg-soft">
-          Publishing
+          Auto-apply
           <span aria-hidden className="relative inline-flex h-6 w-10 items-center rounded-full bg-border-strong">
             <span className="absolute left-0.5 size-5 rounded-full bg-surface shadow-sm" />
           </span>
@@ -148,8 +147,8 @@ export function BaselineVignette() {
         </ul>
         <dl className="grid grid-cols-2">
           {[
-            { label: "Mention rate", value: "14%", range: "likely 10–19%" },
-            { label: "Citation rate", value: "6%", range: "likely 4–10%" },
+            { label: "Mention rate", value: "14%", range: "named in 28" },
+            { label: "Citation rate", value: "6%", range: "linked in 12" },
           ].map((s, i) => (
             <div key={s.label} className={clsx("px-5 py-5 sm:px-6", i > 0 && "border-l border-border")}>
               <dt className="text-xs text-muted">{s.label}</dt>
@@ -166,7 +165,7 @@ export function BaselineVignette() {
         </dl>
       </div>
       <p className="border-t border-border bg-surface-2/60 px-5 py-3 text-xs text-muted sm:px-6">
-        50 questions, each asked across 4 AI assistants. Small samples move a lot, so the range is shown.
+        50 questions, each asked once on each of 4 AI assistants. Small samples move a lot, so the sample size is shown.
       </p>
     </Panel>
   );
@@ -175,8 +174,8 @@ export function BaselineVignette() {
 /* ------------------------------------------------------------------ 03 · review prioritised fixes */
 
 const QUEUE: { title: string; impact: string; effort: string; risk: "A" | "B" | "C" | "D" }[] = [
-  { title: "Answer “Do you deliver?” on the homepage", impact: "High impact", effort: "Quick fix", risk: "B" },
-  { title: "Add FAQ markup to the custom-cakes page", impact: "High impact", effort: "Quick fix", risk: "A" },
+  { title: "Answer “Do you deliver?” on the homepage", impact: "High impact", effort: "Quick fix", risk: "C" },
+  { title: "Add FAQ markup to the custom-cakes page", impact: "High impact", effort: "Quick fix", risk: "C" },
   { title: "Write a page for the sugar-free range", impact: "Medium impact", effort: "Bigger job", risk: "C" },
   { title: "Redirect the old menu PDF to the menu page", impact: "Low impact", effort: "Quick fix", risk: "D" },
 ];
@@ -257,7 +256,7 @@ export function ImpactReportVignette() {
       aside={
         <span aria-hidden className="hidden h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-xs font-medium text-fg-soft sm:inline-flex">
           <Download size={13} />
-          PDF
+          Save as PDF
         </span>
       }
       className="shadow-xl"
@@ -308,7 +307,7 @@ export function ImpactReportVignette() {
             {(
               [
                 { t: "Delivery areas answered on the homepage", who: "Automated" },
-                { t: "FAQ markup on the custom-cakes page", who: "Automated" },
+                { t: "Meta description updated on the custom-cakes page", who: "Automated" },
                 { t: "Opening hours fixed on Google Business Profile", who: "You" },
                 { t: "“Eggless cakes” page refreshed", who: "Our team" },
               ] as { t: string; who: Who }[]
@@ -390,7 +389,7 @@ export function ScheduleVignette() {
 /* ------------------------------------------------------------------ work you can see */
 
 const LOG: { date: string; title: string; who: Who; note?: string; undo?: boolean }[] = [
-  { date: "21 Oct", title: "FAQ markup added to the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
+  { date: "21 Oct", title: "Meta description updated on the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
   { date: "17 Oct", title: "Opening hours fixed on Google Business Profile", who: "You", note: "Done by hand, marked done" },
   { date: "14 Oct", title: "Delivery areas answered on the homepage", who: "Automated", note: "Approved by you", undo: true },
   { date: "9 Oct", title: "“Eggless cakes” page refreshed", who: "Our team" },
@@ -439,7 +438,7 @@ export function WorkLogVignette() {
       </ol>
       <p className="flex items-center gap-2 border-t border-border bg-surface-2/60 px-5 py-3 text-xs text-muted sm:px-6">
         <RotateCcw aria-hidden size={13} className="shrink-0" />
-        The page is saved before every automated change, so it can be put back.
+        The page is saved before every change made through a connector, so it can be put back.
       </p>
     </Panel>
   );

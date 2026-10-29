@@ -7,6 +7,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 import { FORBIDDEN_CLAIMS } from "@/lib/report/summary";
 import { isValidPeriod } from "./period";
 import type { MonthlyReportPayload } from "./types";
+import { clientIpFromHeaders } from "@/lib/auth/rate-limit";
 
 export const QUEUE_STATUSES = ["draft", "reviewed", "sent"] as const;
 
@@ -119,4 +120,4 @@ export async function staffAuditLog(o: {
   });
 }
 
-export const clientIp = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+export const clientIp = (req: Request) => clientIpFromHeaders(req.headers) || undefined;

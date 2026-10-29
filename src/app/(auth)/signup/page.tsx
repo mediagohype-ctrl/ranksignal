@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { ArrowRight } from "lucide-react";
 import { Button, Field, Input, Skeleton, SkeletonText, fieldDescribedBy } from "@/components/ui";
 import { Turnstile, isTurnstileConfigured } from "@/components/turnstile";
-import { AuthHeading, EMAIL_RE, FormError, PasswordInput, passwordStrength, postJson, safeNext } from "../auth-ui";
+import { AuthHeading, EMAIL_RE, FormError, PasswordInput, inviteTokenFromNext, passwordStrength, postJson, safeNext } from "../auth-ui";
 
 const MIN_PASSWORD = 10;
 
@@ -43,6 +43,8 @@ function SignupForm() {
   // Free-check visitors arrive with ?website=<url>; carry it into onboarding (an explicit ?next wins).
   const website = safeWebsite(params.get("website"));
   const next = safeNext(params.get("next"), website ? `/app/onboarding?website=${encodeURIComponent(website)}` : "/app/onboarding");
+  // Arriving from an invitation (/accept-invite?token=…): the signed token lets the server create the invited account.
+  const inviteToken = inviteTokenFromNext(next);
   const [form, setForm] = useState<Record<FormKey, string>>({
     name: "",
     email: params.get("email") ?? "",
@@ -87,6 +89,7 @@ function SignupForm() {
       ...form,
       email: form.email.trim().toLowerCase(),
       ...(captchaToken ? { turnstileToken: captchaToken } : {}),
+      ...(inviteToken ? { inviteToken } : {}),
     });
     if (res.ok) {
       router.replace(next);

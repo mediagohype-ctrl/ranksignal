@@ -11,13 +11,15 @@ import { buildSiteReport } from "@/lib/report/build";
 import { FORBIDDEN_CLAIMS } from "@/lib/report/summary";
 import { compareSnapshots, getSnapshotAt, listSnapshots } from "@/lib/snapshots";
 import { listOpenWork, listShippedWork } from "@/lib/tasks";
+import { getSearchSummary } from "@/lib/google/summary";
+import { listOffsiteForPeriod } from "@/lib/offsite";
 import {
   ATTRIBUTION_NOTE, buildHeadline, buildPlan, classifyIssues, competitorShareRows, engineRows, initialStatus, likeForLike,
-  normalizeSnapshot, pickStartEnd, promptsWonLost, rates, scoreDeltas, templateMonthlySummary, type RunObs, type Snap,
+  normalizeSnapshot, pickStartEnd, promptsWonLost, rates, scoreDeltas, searchSectionFrom, templateMonthlySummary, type RunObs, type Snap,
 } from "./compute";
 import { deliverMonthlyReport } from "./deliver";
 import { PERIOD_TIMEZONE_NOTE, isPeriodClosed, isValidPeriod, periodLabel, periodRange } from "./period";
-import { MONTHLY_REPORT_VERSION, type MonthlyReportPayload, type ShippedLine, type WrongAnswer } from "./types";
+import { MONTHLY_REPORT_VERSION, type MonthlyReportPayload, type OffsiteSection, type SearchSection, type ShippedLine, type WrongAnswer } from "./types";
 
 const DONE = ["succeeded", "succeeded_with_warnings"];
 const MAX_OBS = 3000;
@@ -195,6 +197,38 @@ export async function buildMonthlyPayload(
   }
   const nextMonth = buildPlan(openWork, reportIssues);
 
+  // ---- Google search (Search Console + GA4): this calendar month vs the previous one ----
+  let search: SearchSection | null = null;
+  try {
+    const DAY = 86_400_000;
+    const prevStart = new Date(Date.UTC(range.start.getUTCFullYear(), range.start.getUTCMonth() - 1, 1));
+    const summary = await getSearchSummary(projectId, organizationId, range.start, new Date(range.end.getTime() - DAY), {
+      previous: { from: prevStart, to: new Date(range.start.getTime() - DAY) },
+    });
+    search = searchSectionFrom(summary);
+    const connectedNoData = [summary.gsc, summary.ga4].some((x) => x?.connected && !x.hasData);
+    if (connectedNoData && !search) notes.push("Google Search Console or Analytics is connected, but no data was available for this month yet.");
+    if (search?.gsc && now.getTime() < range.end.getTime() + 3 * DAY) {
+      notes.push("Google Search Console data arrives 2–3 days late, so the last few days of the month may be incomplete.");
+    }
+  } catch (e) {
+    console.error("[monthly-report] search metrics unavailable:", e instanceof Error ? e.message : e);
+  }
+
+  // ---- off-site work (listings, profiles, mentions) that went live this month ----
+  let offsite: OffsiteSection | null = null;
+  try {
+    const live = await listOffsiteForPeriod(projectId, organizationId, range.start, range.end);
+    if (live.length) {
+      offsite = {
+        live: live.slice(0, 50).map((i) => ({ name: i.name, type: i.type, ...(i.url ? { url: i.url } : {}) })),
+        count: live.length,
+      };
+    }
+  } catch (e) {
+    console.error("[monthly-report] off-site work unavailable:", e instanceof Error ? e.message : e);
+  }
+
   const base: Omit<MonthlyReportPayload, "headline" | "attribution"> = {
     version: MONTHLY_REPORT_VERSION,
     period,
@@ -233,6 +267,8 @@ export async function buildMonthlyPayload(
     work,
     nextMonth,
     wrongAnswers: wrongAnswersFrom(realRuns),
+    search,
+    offsite,
     notes,
   };
   return { ...base, headline: buildHeadline(base), attribution: ATTRIBUTION_NOTE };
@@ -267,6 +303,10 @@ export async function llmMonthlySummary(p: MonthlyReportPayload, organizationId:
     workShipped: p.work.shipped.slice(0, 8).map((w) => w.title),
     nextMonth: p.nextMonth.slice(0, 3).map((n) => n.title),
     inaccurateAiStatements: p.wrongAnswers.length,
+    googleSearch: p.search?.gsc
+      ? { clicks: { lastMonth: p.search.gsc.clicks.previous, thisMonth: p.search.gsc.clicks.current }, impressions: { lastMonth: p.search.gsc.impressions.previous, thisMonth: p.search.gsc.impressions.current } }
+      : "not connected",
+    visitsFromAiAssistants: p.search?.ga4 ? { lastMonth: p.search.ga4.aiSessions.previous, thisMonth: p.search.ga4.aiSessions.current } : "not connected",
   };
   try {
     const res = await generateStructured({

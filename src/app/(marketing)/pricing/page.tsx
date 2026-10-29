@@ -10,7 +10,6 @@ import {
   SERVICE_FROM_PRICE,
   SERVICE_TIERS,
   TRIAL_DAYS,
-  freq,
   inr,
   num,
   servicesContactHref,
@@ -38,14 +37,21 @@ const ROWS: { label: string; hint?: string; values: Cell[] }[] = [
     hint: "Questions we ask AI assistants about your category",
     values: MARKETING_PLANS.map((p) => num(p.limits.maxTrackedPrompts)),
   },
-  { label: "How often we check", values: MARKETING_PLANS.map((p) => freq(p.limits.minScanIntervalDays)) },
+  { label: "Questions asked per AI check", values: MARKETING_PLANS.map((p) => num(p.ai.questionsPerCheck)) },
+  { label: "AI checks per month", values: MARKETING_PLANS.map((p) => num(p.ai.checksPerMonth)) },
+  { label: "AI engines per check", hint: "ChatGPT, Gemini, Perplexity, Claude and more", values: MARKETING_PLANS.map((p) => `Up to ${p.ai.engines}`) },
+  { label: "Automatic website scans", hint: "On a schedule you choose: weekly, monthly or off", values: MARKETING_PLANS.map(() => "Weekly") },
   { label: "Pages per site check", values: MARKETING_PLANS.map((p) => num(p.limits.maxPagesPerCrawl)) },
   { label: "Monthly usage credits", values: MARKETING_PLANS.map((p) => num(p.limits.monthlyCredits)) },
   { label: "Competitor comparison", values: MARKETING_PLANS.map((p) => p.limits.competitorTracking) },
   { label: "Approve-before-publish fixes", values: MARKETING_PLANS.map((p) => p.limits.approvalPublishing) },
   { label: "Rollback & audit log", values: MARKETING_PLANS.map(() => true) },
   { label: "Team seats", values: MARKETING_PLANS.map((p) => num(p.limits.seats)) },
-  { label: "White-label reports", values: MARKETING_PLANS.map((p) => (p.id === "agency" ? "Coming later" : false)) },
+  {
+    label: "White-label reports",
+    hint: "Your name, logo and colour on shared reports, monthly reports and report emails",
+    values: MARKETING_PLANS.map((p) => (p.id === "agency" ? "Included" : false)),
+  },
 ];
 
 const WHICH: { label: string; diy: string; dfy: string }[] = [

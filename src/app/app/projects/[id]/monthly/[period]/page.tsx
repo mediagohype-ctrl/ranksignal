@@ -6,6 +6,7 @@ import { isValidPeriod, periodLabel } from "@/lib/monthly-report/period";
 import { MonthlyReportView } from "@/components/app/monthly/report-view";
 import { PrintButton } from "@/components/app/print-button";
 import { LinkButton, Notice, buttonClass } from "@/components/ui";
+import { getBranding, toPublicBranding } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function MonthlyReportPage({ params }: { params: Promise<{ 
           This report is waiting for staff review. Approve and send it from the staff review queue.
         </Notice>
       )}
-      <MonthlyReportView payload={payload} summary={report.summary ?? ""} />
+      <MonthlyReportView payload={payload} summary={report.summary ?? ""} branding={toPublicBranding(await getBranding(session.organizationId))} />
     </>
   );
 }

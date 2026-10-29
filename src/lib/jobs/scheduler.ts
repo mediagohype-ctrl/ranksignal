@@ -12,6 +12,7 @@ import { frequencyDays, readSchedule, type ScheduleFrequency } from "@/lib/dashb
 import { recoverInterruptedRuns } from "@/lib/jobs/recovery";
 import { dispatchRunNotifications } from "@/lib/notifications/dispatch";
 import { scheduleMonthlyReports } from "@/lib/monthly-report/schedule";
+import { syncGoogleMetricsDue } from "@/lib/google/sync";
 
 export type ScanKind = "crawl" | "visibility";
 
@@ -190,6 +191,7 @@ export async function schedulerTick(now = new Date()) {
         if (ok !== undefined) state.notifyCursor = now;
         // Days 1-3 (UTC): last month's impact reports, a few projects per tick (idempotent per project + period).
         await step("monthly-reports", () => scheduleMonthlyReports(now));
+        await step("google-metrics", () => syncGoogleMetricsDue(now));
       },
       { maxWait: 10_000, timeout: SCHEDULER_INTERVAL_MS - 30_000 },
     );

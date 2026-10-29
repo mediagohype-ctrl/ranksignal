@@ -9,7 +9,7 @@ export const WORKFLOW_STATES = [
 ] as const;
 export type WorkflowState = (typeof WORKFLOW_STATES)[number];
 export type WorkflowKind = "crawl" | "visibility" | "analyze" | "execute_action" | "rollback";
-export type ErrorClass = "transient" | "permanent" | "policy" | "quota";
+export type ErrorClass = "transient" | "permanent" | "policy" | "quota" | "needs_review";
 
 /** Thrown by job handlers to classify failures; transient errors are retried with backoff. */
 export class JobError extends Error {

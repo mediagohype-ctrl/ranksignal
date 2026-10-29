@@ -1,6 +1,7 @@
 // DataForSEO AI Optimization — LLM Responses (ChatGPT) live endpoint. Response shapes vary by
 // model/version, so parsing is defensive: collect any text + url-bearing annotations we can find.
 import { JobError, type ProviderAnswer, type VisibilityProvider, type VisibilityQuery } from "@/lib/types";
+import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
 import { providerError, withTimeout } from "./errors";
 
 const ENDPOINT = "https://api.dataforseo.com/v3/ai_optimization/chat_gpt/llm_responses/live";
@@ -59,6 +60,8 @@ export const dataForSeoVisibilityProvider: VisibilityProvider = {
     const login = process.env.DATAFORSEO_LOGIN;
     const password = process.env.DATAFORSEO_PASSWORD;
     if (!login || !password) throw new JobError("DataForSEO is not configured", "permanent");
+    // Owner cost protection: refuse once today's global AI spend reaches the budget (throws JobError "quota").
+    await assertAiBudget();
     const auth = Buffer.from(`${login}:${password}`).toString("base64");
     let res: Response;
     try {
@@ -85,6 +88,9 @@ export const dataForSeoVisibilityProvider: VisibilityProvider = {
       throw new JobError(`dataforseo task status ${taskStatus}`, taskStatus >= 50000 ? "transient" : "permanent");
     }
     const parsed = parseDataForSeoPayload(payload);
+    const costMicros = Math.round(parsed.costUsd * 1_000_000);
+    // Record the provider-reported cost even when the answer turns out empty (the request was still billed).
+    noteAiSpend(costMicros);
     if (!parsed.text) throw new JobError("dataforseo returned no answer text", "transient");
     const m = parsed.modelName ?? model();
     return {
@@ -93,7 +99,7 @@ export const dataForSeoVisibilityProvider: VisibilityProvider = {
       model: m,
       answerText: parsed.text,
       citations: parsed.citations,
-      costMicros: Math.round(parsed.costUsd * 1_000_000),
+      costMicros,
       simulated: false,
       limitations: DATAFORSEO_LIMITATIONS,
     };

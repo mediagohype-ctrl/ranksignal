@@ -1,6 +1,6 @@
 // Marketing view of the billing plans. Limits and prices always come from @/lib/billing/plans
 // so the website matches what the app enforces.
-import { PAID_PLAN_IDS, TRIAL_DAYS, getPlan } from "@/lib/billing/plans";
+import { PAID_PLAN_IDS, TRIAL_DAYS, getEngineLimit, getPlan, getPlanWithAiLimits } from "@/lib/billing/plans";
 import type { PlanLimits } from "@/lib/types";
 
 export type PaidPlanId = (typeof PAID_PLAN_IDS)[number];
@@ -15,7 +15,7 @@ const COPY: Record<PaidPlanId, { blurb: string; suffix?: string; featured?: bool
     cta: `Start ${TRIAL_DAYS}-day free trial`,
   },
   growth: {
-    blurb: "For marketing teams actively improving visibility across several sites or markets.",
+    blurb: "For marketing teams actively improving visibility across several websites.",
     featured: true,
     cta: `Start ${TRIAL_DAYS}-day free trial`,
   },
@@ -36,10 +36,14 @@ export interface MarketingPlan {
   cta: string;
   highlights: string[];
   limits: PlanLimits;
+  /** AI-check limits the app enforces per plan. */
+  ai: { checksPerMonth: number; questionsPerCheck: number; engines: number };
 }
 
 export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
   const l = getPlan(id);
+  const a = getPlanWithAiLimits(id);
+  const engines = getEngineLimit(id);
   const plus = id === "agency" ? "+" : "";
   return {
     id,
@@ -48,13 +52,16 @@ export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
     ...COPY[id],
     highlights: [
       `${num(l.maxProjects)}${plus} website${l.maxProjects === 1 ? "" : "s"}`,
-      `${num(l.maxTrackedPrompts)}${plus} tracked AI questions`,
-      `${freq(l.minScanIntervalDays)} checks, up to ${num(l.maxPagesPerCrawl)} pages each`,
+      `${num(l.maxTrackedPrompts)}${plus} tracked AI questions (up to ${num(a.maxPromptsPerRun)} per check)`,
+      `${num(a.maxVisibilityRunsPerMonth)} AI checks a month on up to ${engines} AI engines`,
+      `Weekly website scans, up to ${num(l.maxPagesPerCrawl)} pages each`,
       l.competitorTracking ? "Compare against your competitors" : "No competitor comparison",
       l.approvalPublishing ? "Approve-before-publish fixes with rollback" : "Fixes exported as instructions",
       `${num(l.seats)}${plus} team seats`,
+      ...(id === "agency" ? ["White-label reports and emails"] : []),
     ],
     limits: l,
+    ai: { checksPerMonth: a.maxVisibilityRunsPerMonth, questionsPerCheck: a.maxPromptsPerRun, engines },
   };
 });
 
@@ -96,7 +103,7 @@ export const SERVICE_TIERS: ServiceTier[] = [
       "Up to 15 approved fixes shipped a month",
       "Google Business Profile optimisation",
       "2 page refreshes a month",
-      "50 tracked questions on 5 AI engines",
+      "50 tracked questions on up to 5 AI engines (ChatGPT, Claude, Gemini, Perplexity and more, depending on plan)",
       "Monthly impact report and a 30-minute call",
     ],
     questions: 50,

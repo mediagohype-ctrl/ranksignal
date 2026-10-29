@@ -12,6 +12,9 @@ import {
 } from "@/components/ui";
 import { CapabilityMatrix, type CatalogEntry } from "./integrations/capability-matrix";
 import { WordPressHelp } from "./integrations/wordpress-help";
+import { ConnectGeneric } from "./integrations/connect-generic";
+import { ConnectGoogle } from "./integrations/connect-google";
+import type { PublicConnectorDescriptor } from "@/lib/connectors/catalog/types";
 
 export type { CatalogEntry };
 
@@ -43,7 +46,18 @@ function HealthBadge({ health }: { health: string }) {
   );
 }
 
-const PROVIDER_NAME: Record<string, string> = { wordpress: "WordPress", manual: "Manual export", github: "GitHub" };
+const PROVIDER_NAME: Record<string, string> = {
+  wordpress: "WordPress",
+  manual: "Manual export",
+  github: "GitHub",
+  shopify: "Shopify",
+  webflow: "Webflow",
+  contentful: "Contentful",
+  sanity: "Sanity",
+  wix: "Wix",
+  gsc: "Google Search Console",
+  ga4: "Google Analytics 4",
+};
 const providerName = (p: string) => PROVIDER_NAME[p] ?? p.replace(/^\w/, (c) => c.toUpperCase());
 
 export function IntegrationsPanel({
@@ -52,6 +66,7 @@ export function IntegrationsPanel({
   integrations,
   catalog,
   capabilityMap,
+  descriptors = [],
   canAdmin,
   canTest,
 }: {
@@ -60,6 +75,8 @@ export function IntegrationsPanel({
   integrations: IntegrationView[];
   catalog: CatalogEntry[];
   capabilityMap: Record<string, ConnectorCapabilities>;
+  /** Credential-based connectors other than WordPress (GitHub, Shopify, Webflow, Contentful, Sanity, Wix). */
+  descriptors?: PublicConnectorDescriptor[];
   canAdmin: boolean;
   canTest: boolean;
 }) {
@@ -296,6 +313,40 @@ export function IntegrationsPanel({
           </CardBody>
         </Card>
       </section>
+
+      {/* Google Search Console + GA4 (OAuth, read-only) */}
+      <section aria-labelledby="int-google">
+        <SectionHeading
+          id="int-google"
+          title="Google Search Console & Analytics"
+          description="Read-only. Adds real clicks, impressions and AI-referred visits to your reports and monthly impact report."
+        />
+        <ConnectGoogle projectId={projectId} canAdmin={canAdmin} />
+      </section>
+
+      {/* Other platforms */}
+      {descriptors.length > 0 && (
+        <section aria-labelledby="int-more">
+          <SectionHeading
+            id="int-more"
+            title="Other platforms"
+            description="Code repositories, stores, website builders and headless CMSs. Changes are saved as drafts or pull requests wherever the platform allows."
+          />
+          <div className="grid gap-6 lg:grid-cols-2">
+            {descriptors.map((d) => (
+              <ConnectGeneric
+                key={d.id}
+                descriptor={d}
+                projectId={projectId}
+                canAdmin={canAdmin}
+                defaults={{ siteUrl: defaultSiteUrl }}
+                connected={integrations.some((i) => i.provider === d.id)}
+                onConnected={() => router.refresh()}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Catalog */}
       <section aria-labelledby="int-catalog">

@@ -251,7 +251,8 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
     canApprove &&
     !["succeeded", "succeeded_with_warnings", "completed_manually", "rejected", "cancelled", "rolled_back", "executing", "validating"].includes(a.status) &&
     (!a.integrationId || a.riskClass === "A" || ["blocked", "failed"].includes(a.status));
-  const hasButtons = showEdit || showApprove || (canEdit && canExecute) || (canApprove && canRollback) || canCompleteManually;
+  // Applying a change to a live site needs admin/owner (or staff support mode); canApprove carries that role.
+  const hasButtons = showEdit || showApprove || (canApprove && canExecute) || (canApprove && canRollback) || canCompleteManually;
 
   return (
     <Card as="article" className="overflow-hidden" aria-labelledby={`act-${a.id}-title`}>
@@ -438,7 +439,7 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
               </Button>
             </>
           )}
-          {canEdit && canExecute && (
+          {canApprove && canExecute && (
             <Button size="sm" icon={<Play />} onClick={() => setDialog("execute")}>
               Apply change
             </Button>

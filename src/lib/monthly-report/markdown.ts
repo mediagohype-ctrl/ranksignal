@@ -1,4 +1,5 @@
 // Plain-English Markdown export of a monthly impact report (downloadable).
+import { TYPE_LABEL, asType } from "@/lib/offsite/types";
 import type { MonthlyReportPayload, RateTriple } from "./types";
 
 const esc = (s: string) => s.replace(/([\\`*_[\]<>|])/g, "\\$1");
@@ -68,6 +69,24 @@ export function monthlyReportToMarkdown(p: MonthlyReportPayload, summary: string
     }
   }
 
+  const sr = p.search;
+  if (sr && (sr.gsc || sr.ga4)) {
+    const signedPct = (x: { pct: number | null }) => (x.pct === null ? "new" : signed(Math.round(x.pct * 100), "%"));
+    L.push("## Google search", "", "| Measure | Last month | This month | Change |", "|---|---|---|---|");
+    if (sr.gsc) {
+      L.push(`| Clicks from Google (Search Console) | ${sr.gsc.clicks.previous} | ${sr.gsc.clicks.current} | ${signedPct(sr.gsc.clicks)} |`);
+      L.push(`| Times shown in Google (impressions) | ${sr.gsc.impressions.previous} | ${sr.gsc.impressions.current} | ${signedPct(sr.gsc.impressions)} |`);
+    }
+    if (sr.ga4) {
+      L.push(`| Website visits (GA4 sessions) | ${sr.ga4.sessions.previous} | ${sr.ga4.sessions.current} | ${signedPct(sr.ga4.sessions)} |`);
+      L.push(`| Visits from AI assistants (GA4) | ${sr.ga4.aiSessions.previous} | ${sr.ga4.aiSessions.current} | ${signedPct(sr.ga4.aiSessions)} |`);
+    }
+    L.push("");
+    if (sr.gsc?.queriesWon.length) L.push("### New searches bringing clicks", "", ...sr.gsc.queriesWon.map((q) => `- ${esc(q.query)} (${q.clicks} clicks)`), "");
+    if (sr.ga4?.aiBySource.length) L.push("### Visits by AI assistant", "", ...sr.ga4.aiBySource.map((a) => `- ${esc(a.label)}: ${a.previousSessions} → ${a.sessions}`), "");
+    L.push(`_${esc(sr.note)}_`, "");
+  }
+
   L.push("## Website issues", "", `- Fixed this month: **${p.issues.fixed.total}**`, `- New this month: **${p.issues.new.total}**`);
   const o = p.issues.openBySeverity;
   L.push(`- Still open: **${o.total}** (critical ${o.critical}, high ${o.high}, medium ${o.medium}, low ${o.low})`, "");
@@ -77,6 +96,11 @@ export function monthlyReportToMarkdown(p: MonthlyReportPayload, summary: string
   L.push("## Work shipped", "");
   if (!p.work.shipped.length) L.push("Nothing was marked as shipped this month.", "");
   else L.push(...p.work.shipped.map((w) => `- ${date(w.completedAt)} — ${esc(w.title)} (${w.performedBy === "agency" ? "by us" : w.performedBy === "client" ? "by you" : "automatic"})${w.url ? ` — ${w.url}` : ""}`), "");
+
+  if (p.offsite && p.offsite.count > 0) {
+    L.push("## Off-site work", "", `${p.offsite.count} off-site ${p.offsite.count === 1 ? "item" : "items"} went live this month.`, "");
+    L.push(...p.offsite.live.map((x) => `- ${esc(x.name)} (${esc(TYPE_LABEL[asType(x.type)])})${x.url ? ` — ${x.url}` : ""}`), "");
+  }
 
   L.push("## Next month's plan", "");
   if (!p.nextMonth.length) L.push("No open items yet.", "");

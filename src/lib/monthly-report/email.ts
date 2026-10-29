@@ -1,6 +1,7 @@
 // Email + in-app notification copy for a delivered monthly report (pure).
 import { BRAND } from "@/lib/brand";
 import { renderEmail } from "@/lib/email/layout";
+import { emailBranding, type Branding } from "@/lib/branding";
 import type { MonthlyReportPayload } from "./types";
 
 export function monthlyReportLink(projectId: string, period: string): string {
@@ -9,7 +10,13 @@ export function monthlyReportLink(projectId: string, period: string): string {
 
 const pct = (n: number | null | undefined) => (typeof n === "number" ? `${Math.round(n * 100)}%` : "—");
 
-export function monthlyReportEmail(p: MonthlyReportPayload, summary: string, appUrl: string = BRAND.appUrl) {
+/**
+ * `branding` (optional, from getBranding(orgId)) white-labels the email; pass the returned `replyTo` to sendEmail.
+ * Without it the email is unchanged.
+ */
+export function monthlyReportEmail(p: MonthlyReportPayload, summary: string, appUrl: string = BRAND.appUrl, branding?: Branding) {
+  const eb = branding ? emailBranding(branding) : undefined;
+  const sender = eb?.displayName ?? BRAND.name;
   const subject = `Your ${p.periodLabel} impact report — ${p.project.name}`;
   const facts: string[] = [];
   if (p.scores.end.overall !== null) {
@@ -30,9 +37,10 @@ export function monthlyReportEmail(p: MonthlyReportPayload, summary: string, app
     preheader: facts[0] ?? `Your ${p.periodLabel} report is ready.`,
     paragraphs: [summary, ...facts, "Changes are measured, not guaranteed, and AI answers vary between checks — the report explains what we can and can't conclude."],
     cta: { label: "Open the full report", url: new URL(monthlyReportLink(p.project.id, p.period), appUrl).toString() },
-    footer: `You're getting this because you're an owner or admin on ${BRAND.name}. To stop these emails for this project, open Project settings → Notifications.`,
+    footer: `You're getting this because you're an owner or admin on ${sender}. To stop these emails for this project, open Project settings → Notifications.`,
+    branding: eb,
   });
-  return { subject, html, text };
+  return { subject, html, text, replyTo: (eb && branding?.replyTo) || undefined };
 }
 
 export function monthlyReportNotice(p: MonthlyReportPayload) {

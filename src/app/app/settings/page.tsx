@@ -7,6 +7,8 @@ import { requireAppSession, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, humanize } from "@/lib/dashboard/format";
 import { MembersPanel } from "@/components/app/members-panel";
 import { BillingPlans } from "@/components/app/billing-panel";
+import { BrandingPanel } from "@/components/app/settings/branding-panel";
+import { canHidePoweredBy, isBrandingEligible, readStoredBranding } from "@/lib/branding";
 import {
   Badge,
   Card,
@@ -38,7 +40,7 @@ export default async function SettingsPage() {
   const [org, usage, sub, projectCount, memberCount, me] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: s.organizationId },
-      select: { name: true, planId: true, status: true, region: true, createdAt: true, publishingEnabled: true },
+      select: { name: true, planId: true, status: true, region: true, createdAt: true, publishingEnabled: true, serviceTier: true, branding: true },
     }),
     getUsageSummary(s.organizationId),
     db.subscription.findFirst({
@@ -182,6 +184,15 @@ export default async function SettingsPage() {
           workspace={workspace}
           members={<MembersPanel canManage={canManage} currentUserId={s.userId} seatLimit={plan.seats} />}
           billing={billing}
+          branding={
+            <BrandingPanel
+              eligible={isBrandingEligible(org)}
+              canHidePoweredBy={canHidePoweredBy(org)}
+              canManage={canManage}
+              stored={readStoredBranding(org.branding)}
+              orgName={org.name}
+            />
+          }
           account={
             me ? (
               <AccountPanel user={{ name: me.name, email: me.email, emailVerified: me.emailVerified, createdAt: me.createdAt.toISOString() }} />

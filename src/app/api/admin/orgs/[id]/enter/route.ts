@@ -9,6 +9,9 @@ import { isFormPost, reasonSchema, seeOther, staffAudit } from "@/lib/admin/audi
 
 const schema = z.object({ reason: reasonSchema });
 
+/** Support-mode sessions are short-lived: staff re-enter (with a fresh, audit-logged reason) after 2 hours. */
+const SUPPORT_SESSION_MAX_AGE_SECONDS = 2 * 60 * 60;
+
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const staff = await requireStaffApi();
   const { id } = await params;
@@ -24,13 +27,16 @@ export const POST = handler(async (req: Request, { params }: { params: Promise<{
   const org = await db.organization.findUnique({ where: { id }, select: { id: true, name: true } });
   if (!org) throw new HttpError(404, "not_found", "Organization not found");
 
-  await setSessionCookie({ userId: staff.user.id, email: staff.user.email, organizationId: org.id, role: "admin", staffMode: true });
+  await setSessionCookie(
+    { userId: staff.user.id, email: staff.user.email, organizationId: org.id, role: "admin", staffMode: true },
+    { maxAgeSeconds: SUPPORT_SESSION_MAX_AGE_SECONDS },
+  );
   await staffAudit(staff, req, {
     organizationId: org.id,
     action: "support.enter",
     resourceType: "organization",
     resourceId: org.id,
-    after: { fromOrganizationId: staff.session.organizationId },
+    after: { fromOrganizationId: staff.session.organizationId, sessionMaxAgeSeconds: SUPPORT_SESSION_MAX_AGE_SECONDS },
     reason,
   });
   return form ? seeOther("/app") : json({ item: { redirect: "/app", organizationId: org.id } });

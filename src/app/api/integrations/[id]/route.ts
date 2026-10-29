@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { HttpError, handler, json, requireSession } from "@/lib/api";
 import { writeAuditLog } from "@/lib/audit-log";
 import { getConnectorForIntegration } from "@/lib/connectors/registry";
+import { disconnectGoogleIntegration } from "@/lib/google/integration";
+import { auditActorFromSession } from "@/lib/audit-log";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -10,6 +12,11 @@ export const DELETE = handler(async (_req: Request, { params }: Ctx) => {
   const s = await requireSession("admin");
   const integration = await db.integration.findFirst({ where: { id, organizationId: s.organizationId } });
   if (!integration) throw new HttpError(404, "not_found", "Integration not found");
+  // Google (OAuth) integrations: revoke the refresh token at Google, wipe it and audit-log.
+  if (integration.provider === "gsc" || integration.provider === "ga4") {
+    await disconnectGoogleIntegration(integration, { userId: s.userId, actorType: auditActorFromSession(s).actorType });
+    return json({ item: { id: integration.id, deleted: true } });
+  }
   try {
     const connector = await getConnectorForIntegration(integration.id, s.organizationId);
     await connector.disconnect();

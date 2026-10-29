@@ -22,6 +22,7 @@ model Organization {
   status            String   @default("active") // active | past_due | cancelled | suspended
   publishingEnabled Boolean  @default(true) // per-tenant kill switch
   serviceTier       String? // done-for-you tier: fix | grow | authority (null = self-serve)
+  branding          Json? // white-label: { displayName, logoUrl, accentColor, replyTo, footerText } (agency plan)
   createdAt         DateTime @default(now())
 
   memberships   Membership[]
@@ -32,6 +33,7 @@ model Organization {
   auditLogs     AuditLog[]
   workflowRuns  WorkflowRun[]
   notifications Notification[]
+  adminNotes    AdminNote[]
 }
 
 model User {
@@ -85,6 +87,11 @@ model Project {
   visibilityRuns VisibilityRun[]
   actions       Action[]
   integrations  Integration[]
+  snapshots     ReportSnapshot[]
+  tasks         Task[]
+  monthlyReports MonthlyReport[]
+  offsiteItems  OffsiteItem[]
+  dailyMetrics  MetricDaily[]
 
   @@index([organizationId])
 }
@@ -258,6 +265,7 @@ model Observation {
   prompt        TrackedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, visibilityRunId])
+  @@index([visibilityRunId, createdAt])
   @@index([promptId])
 }
 
@@ -477,7 +485,10 @@ model ReportSnapshot {
   promptSetVersion   Int?
   methodologyVersion String
   simulated          Boolean  @default(false)
+  report             Json? // full SiteReport built once when the run finished (served to report pages)
   createdAt          DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, projectId, createdAt])
   @@index([projectId, kind, createdAt])
@@ -506,6 +517,7 @@ model Task {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   comments TaskComment[]
 
   @@index([organizationId, projectId, status])
@@ -541,6 +553,8 @@ model MonthlyReport {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   @@unique([projectId, period])
   @@index([organizationId, period])
 }
@@ -573,5 +587,52 @@ model AdminNote {
   body           String
   createdAt      DateTime @default(now())
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([organizationId, createdAt])
+}
+
+/** Off-site GEO work: directory listings, review platforms, PR mentions, forums, entity profiles. */
+model OffsiteItem {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  type           String // directory | review_platform | pr_mention | forum_thread | wikidata | social_profile | best_list | other
+  name           String // e.g. "Justdial", "G2", "Inc42 article"
+  url            String?
+  status         String    @default("todo") // todo | submitted | live | rejected
+  napConsistent  Boolean? // name/address/phone matches the site
+  source         String    @default("manual") // manual | ai_citation (suggested from domains AI already cites)
+  taskId         String?
+  notes          String?
+  liveAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, status])
+}
+
+/** Daily first-party metrics from Google Search Console / GA4 (and later others). */
+model MetricDaily {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  source         String // gsc | ga4
+  date           String // YYYY-MM-DD
+  dimension      String   @default("total") // total | query | page | channel
+  key            String   @default("") // the query, page URL or channel name ("" for total)
+  clicks         Int?
+  impressions    Int?
+  ctr            Float?
+  position       Float?
+  sessions       Int?
+  conversions    Int?
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, source, date, dimension, key])
+  @@index([organizationId, projectId, source, date])
 }

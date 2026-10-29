@@ -51,10 +51,18 @@ export function readMetrics(v: unknown): VisibilityMetrics | null {
   };
 }
 
+/** Most recent N visibility runs. Query newest-first (asc + take would return the OLDEST runs once a project
+ * has more than N) and reverse to chronological order for the chart. Exported for tests. */
+export const HISTORY_LIMIT = 200;
+export async function loadRecentVisibilityRuns(organizationId: string, projectId: string) {
+  const rows = await db.visibilityRun.findMany({ where: { organizationId, projectId }, orderBy: { createdAt: "desc" }, take: HISTORY_LIMIT });
+  return rows.reverse();
+}
+
 export async function getProjectDashboard(organizationId: string, projectId: string) {
   const where = { organizationId, projectId };
   const [visRuns, crawlRuns, findingGroups, actionGroups, topActions, lastCrawl, promptCount, appliedCount] = await Promise.all([
-    db.visibilityRun.findMany({ where, orderBy: { createdAt: "asc" }, take: 200 }),
+    loadRecentVisibilityRuns(organizationId, projectId),
     db.crawlRun.findMany({ where, orderBy: { createdAt: "desc" }, take: 10 }),
     db.auditFinding.groupBy({ by: ["severity"], where: { ...where, status: "open" }, _count: { _all: true } }),
     db.action.groupBy({ by: ["status"], where, _count: { _all: true } }),

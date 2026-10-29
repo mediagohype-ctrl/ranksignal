@@ -5,6 +5,7 @@ import { decryptSecret } from "@/lib/crypto";
 import type { Connector } from "@/lib/types";
 import { WordPressConnector } from "@/lib/connectors/wordpress";
 import { createManualConnector } from "@/lib/connectors/manual";
+import { CONNECTOR_DESCRIPTORS } from "@/lib/connectors/catalog";
 
 export type CatalogStatus = "available" | "planned";
 export interface CatalogEntry {
@@ -16,16 +17,16 @@ export interface CatalogEntry {
 }
 
 export const CONNECTOR_CATALOG: CatalogEntry[] = [
-  { id: "wordpress", family: "CMS", name: "WordPress", status: "available", description: "Read pages/posts, update titles, excerpts and (where registered) meta descriptions; create drafts; rollback via before-state." },
+  ...Object.values(CONNECTOR_DESCRIPTORS).map((d) => ({
+    id: d.id,
+    family: d.family,
+    name: d.name,
+    status: "available" as const,
+    description: d.description,
+  })),
   { id: "manual", family: "Export", name: "Manual export", status: "available", description: "Copy-ready instructions for any platform. Nothing is written automatically." },
-  { id: "github", family: "Code repository", name: "GitHub (pull requests)", status: "planned", description: "Propose changes to static/Next.js sites as pull requests." },
-  { id: "shopify", family: "Commerce", name: "Shopify", status: "planned", description: "Product and collection metadata." },
-  { id: "webflow", family: "Website builder", name: "Webflow", status: "planned", description: "CMS collection items and page SEO settings." },
-  { id: "contentful", family: "Headless CMS", name: "Contentful", status: "planned", description: "Entries via the Content Management API with drafts." },
-  { id: "sanity", family: "Headless CMS", name: "Sanity", status: "planned", description: "Document patches with revision history." },
-  { id: "wix", family: "Website builder", name: "Wix", status: "planned", description: "Page SEO settings." },
-  { id: "gsc", family: "Analytics", name: "Google Search Console", status: "planned", description: "Read-only search performance for prioritisation." },
-  { id: "ga4", family: "Analytics", name: "Google Analytics 4", status: "planned", description: "Read-only traffic signals (high-traffic page detection)." },
+  { id: "gsc", family: "Analytics", name: "Google Search Console", status: "available", description: "Read-only clicks, impressions and top queries for your site, used in reports and monthly impact reports." },
+  { id: "ga4", family: "Analytics", name: "Google Analytics 4", status: "available", description: "Read-only sessions, conversions and AI-referred visits (ChatGPT, Perplexity, Gemini…)." },
 ];
 
 export interface WordPressCredentials {
@@ -46,7 +47,19 @@ export async function getConnectorForIntegration(integrationId: string, orgId: s
     }
     case "manual":
       return createManualConnector();
-    default:
-      throw new Error(`unsupported_connector:${integration.provider}`);
+    default: {
+      const d = CONNECTOR_DESCRIPTORS[integration.provider];
+      if (!d) throw new Error(`unsupported_connector:${integration.provider}`);
+      if (!integration.credentialEncrypted) throw new Error("integration_disconnected");
+      const project = integration.projectId
+        ? await db.project.findFirst({ where: { id: integration.projectId, organizationId: orgId }, select: { websiteUrl: true } })
+        : null;
+      return d.create(integration.config ?? {}, JSON.parse(decryptSecret(integration.credentialEncrypted)), {
+        organizationId: orgId,
+        integrationId: integration.id,
+        projectId: integration.projectId ?? undefined,
+        projectWebsiteUrl: project?.websiteUrl,
+      });
+    }
   }
 }

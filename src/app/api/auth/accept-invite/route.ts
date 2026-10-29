@@ -3,7 +3,7 @@ import { handler, json, parseBody, HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
 import { getSession, setSessionCookie } from "@/lib/auth/session";
 import { readInviteToken } from "@/lib/auth/invite";
-import { writeAuditLog } from "@/lib/audit-log";
+import { auditActorFromSession, writeAuditLog } from "@/lib/audit-log";
 import type { Role } from "@/lib/types";
 
 const schema = z.object({ token: z.string().min(10).max(4096) });
@@ -37,7 +37,7 @@ export const POST = handler(async (req: Request) => {
     await db.membership.update({ where: { id: membership.id }, data: { status: "active" } });
     await writeAuditLog({
       organizationId: membership.organizationId,
-      actorId: session.userId,
+      ...auditActorFromSession(session),
       action: "org.invite_accepted",
       resourceType: "membership",
       resourceId: membership.id,

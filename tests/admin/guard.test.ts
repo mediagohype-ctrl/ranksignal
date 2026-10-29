@@ -117,7 +117,7 @@ describe("staff access", () => {
       organizationId: "o1",
       role: "admin",
       staffMode: true,
-    });
+    }, { maxAgeSeconds: 7200 });
     expect(mockDb.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: "support.enter", organizationId: "o1" });
   });
 

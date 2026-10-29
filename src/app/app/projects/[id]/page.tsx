@@ -3,7 +3,8 @@ import { ArrowRight, FileText, Link2, MessageSquare, Radar, ThumbsUp, TriangleAl
 import { getProjectDashboard } from "@/lib/dashboard/data";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { asArray, fmtDate, fmtRelative, humanize, pct } from "@/lib/dashboard/format";
-import { buildSiteReport } from "@/lib/report/build";
+import { getStoredReport } from "@/lib/report/stored";
+import { log } from "@/lib/log";
 import type { SiteReport } from "@/lib/report/types";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { RunButtons } from "@/components/app/run-buttons";
@@ -11,6 +12,7 @@ import { ShareBarChart, TrendChart } from "@/components/app/charts";
 import { SinceLastMonth } from "@/components/app/history/since-last-month";
 import { backfillSnapshots, getPeriodComparison } from "@/lib/snapshots";
 import { PILLAR_SHORT } from "@/components/app/report/pillars";
+import { SearchPerformance } from "@/components/app/report/search-performance";
 import {
   Badge, Card, CardBody, CardHeader, EffortChip, EmptyState, ImpactChip, LinkButton, Meter, PageHeader, RiskBadge, ScoreRing,
   SeverityBadge, SimulatedDataBanner, Stat, StatusBadge, Table, TD, TH, THead, TR,
@@ -25,9 +27,10 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
   let report: SiteReport | null = null;
   if (d.findings.crawledAt) {
     try {
-      report = await buildSiteReport(project.id, session.organizationId);
+      // Stored report (built once when the last run finished); a page view never calls the LLM.
+      report = await getStoredReport(project.id, session.organizationId);
     } catch (e) {
-      console.error("[overview] buildSiteReport failed", e);
+      log.error("overview.report_failed", { projectId: project.id, orgId: session.organizationId, err: e });
     }
   }
   const since = await loadSinceLastMonth(project.id, session.organizationId, d.recentRuns.length > 0);
@@ -110,6 +113,8 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
           preparing={since.preparing}
         />
       )}
+
+      <SearchPerformance projectId={project.id} />
 
       {/* Stats */}
       <section aria-label="AI visibility metrics" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

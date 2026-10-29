@@ -14,6 +14,14 @@ export interface AuditEntry {
   ip?: string;
 }
 
+/**
+ * Who to record for an action taken by a signed-in session. Staff working in a customer's workspace
+ * ("support mode", session.staffMode) are recorded as "staff" so customers can tell their actions apart.
+ */
+export function auditActorFromSession(session: { userId: string; staffMode?: boolean }): { actorId: string; actorType: "staff" | "user" } {
+  return { actorId: session.userId, actorType: session.staffMode ? "staff" : "user" };
+}
+
 /** Append-only audit trail (blueprint §7, §11). Never pass secrets in before/after. */
 export async function writeAuditLog(entry: AuditEntry) {
   await db.auditLog.create({

@@ -7,8 +7,18 @@ services:
     runtime: node
     region: singapore # closest Render region to the Neon database (ap-southeast-1)
     plan: starter # always-on; the free plan sleeps, which stops scans mid-run
-    buildCommand: npm ci && npx prisma migrate deploy && npm run build
+    buildCommand: npm ci && npm run build
+    # Migrations run once per deploy AFTER a successful build and BEFORE the new instance takes traffic; a
+    # failed migration aborts the deploy and the old instance keeps serving. Running them in buildCommand
+    # changed the live DB even when the build later failed.
+    # Write migrations expand/contract: the OLD code keeps running against the NEW schema until the switch, so
+    # (1) expand — add nullable columns/tables/indexes only; (2) deploy code that writes/reads both;
+    # (3) contract — drop/rename/NOT NULL in a later deploy, once nothing reads the old shape.
+    preDeployCommand: npx prisma migrate deploy
     startCommand: npm run start
+    # SIGTERM → the worker stops claiming, gives scans 20s then releases them to the queue, and lets
+    # website-change runs finish (or flags them needs_review). Keep this above ~45s.
+    maxShutdownDelaySeconds: 60
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
@@ -16,10 +26,12 @@ services:
         value: "22.18.0"
       - key: RUN_WORKER_IN_APP
         value: "true"
+      - key: NEXT_MANUAL_SIG_HANDLE # let src/instrumentation.ts drain the job worker on SIGTERM, then exit
+        value: "true"
       - key: ALLOW_SIMULATED_PROVIDER
         value: "false"
       - key: OPENROUTER_VISIBILITY_MODELS
-        value: openai/gpt-6.1-sol,anthropic/claude-opus-5.5
+        value: openai/gpt-6.1-sol,google/gemini-3.8-flash,perplexity/sonar,anthropic/claude-opus-5.5,x-ai/grok-4.7 # priority order; plans cap the count (getEngineLimit)
       - key: OPENROUTER_ANALYSIS_MODELS
         value: anthropic/claude-opus-5.5,openai/gpt-6.1-sol
       - key: OPENROUTER_WEB_ENGINE

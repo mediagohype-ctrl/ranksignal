@@ -43,7 +43,27 @@ export const projectSettingsSchema = z
 
 export type ProjectSettingsInput = z.infer<typeof projectSettingsSchema>;
 
-export const projectCreateSchema = projectInputSchema.extend({ settings: projectSettingsSchema.optional() });
+/**
+ * Create: only known keys are accepted (.strict()), so a body can't smuggle in settings that other modules read
+ * (keyPages, highTrafficUrls, businessFacts, …). `share` is tolerated but always stripped (server-owned).
+ */
+export const projectCreateSettingsSchema = z
+  .object({
+    maxPagesPerCrawl: z.number().int().min(1).max(10_000).optional(),
+    automation: z.object({ allowClassB: z.array(z.string().min(1).max(64)).max(50).default([]) }).strict().optional(),
+    schedule: scheduleSchema.optional(),
+    notifications: notificationPrefsSchema.optional(),
+    share: z.unknown().optional(),
+  })
+  .strict()
+  .transform((v) => omitServerOwned(v) as Omit<typeof v, "share">);
+
+export const projectCreateSchema = projectInputSchema.extend({ settings: projectCreateSettingsSchema.optional() });
+
+/** Which keys in a create body need admin+: a non-empty class-B allow-list, or any schedule. */
+export function createNeedsAdmin(settings: z.infer<typeof projectCreateSettingsSchema> | undefined): boolean {
+  return Boolean(settings && ((settings.automation?.allowClassB?.length ?? 0) > 0 || settings.schedule !== undefined));
+}
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);
 const uniq = (xs: string[]) => xs.length === new Set(xs.map((x) => x.toLowerCase())).size;

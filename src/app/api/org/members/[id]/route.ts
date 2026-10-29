@@ -2,7 +2,7 @@ import { z } from "zod";
 import { handler, json, parseBody, requireSession, HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
 import { countActiveOwners, requireActiveMembership } from "@/lib/auth/membership";
-import { writeAuditLog } from "@/lib/audit-log";
+import { auditActorFromSession, writeAuditLog } from "@/lib/audit-log";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -32,7 +32,7 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const updated = await db.membership.update({ where: { id: target.id }, data: { role } });
   await writeAuditLog({
     organizationId: s.organizationId,
-    actorId: s.userId,
+    ...auditActorFromSession(s),
     action: "org.member_role_changed",
     resourceType: "membership",
     resourceId: target.id,
@@ -57,7 +57,7 @@ export const DELETE = handler(async (_req: Request, { params }: Ctx) => {
   await db.membership.update({ where: { id: target.id }, data: { status: "removed" } });
   await writeAuditLog({
     organizationId: s.organizationId,
-    actorId: s.userId,
+    ...auditActorFromSession(s),
     action: "org.member_removed",
     resourceType: "membership",
     resourceId: target.id,

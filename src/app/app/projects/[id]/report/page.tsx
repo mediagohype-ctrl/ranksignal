@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Download, History } from "lucide-react";
 import { db } from "@/lib/db";
-import { buildSiteReport } from "@/lib/report/build";
+import { getStoredReport } from "@/lib/report/stored";
+import { log } from "@/lib/log";
 import type { SiteReport } from "@/lib/report/types";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, fmtRelative, hostOf, isActiveStatus } from "@/lib/dashboard/format";
@@ -13,6 +14,7 @@ import { ReportBody } from "@/components/app/report/report-body";
 import { ReportInProgress, ReportNoCrawl } from "@/components/app/report/report-progress";
 import { ShareReportButton } from "@/components/app/report/share-report";
 import { Notice, PageHeader, buttonClass } from "@/components/ui";
+import { SearchPerformance } from "@/components/app/report/search-performance";
 
 export const metadata = { title: "SEO, AEO & GEO report" };
 export const dynamic = "force-dynamic";
@@ -73,9 +75,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   let report: SiteReport | null = null;
   let buildError: string | null = null;
   try {
-    report = await buildSiteReport(project.id, session.organizationId);
+    // Stored report (built once when the last run finished); a page view never calls the LLM.
+    report = await getStoredReport(project.id, session.organizationId);
   } catch (e) {
-    console.error("[report] buildSiteReport failed", e);
+    log.error("report_page.report_failed", { projectId: project.id, orgId: session.organizationId, err: e });
     buildError = e instanceof Error ? e.message : "Unknown error";
   }
 
@@ -170,6 +173,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         visibilityActive={visActive}
         measuredWith={<MeasuredWith labels={r.aiVisibility.providers} />}
       />
+
+      {/* Real Google data (Search Console / GA4) when connected; shows a connect prompt otherwise. */}
+      <SearchPerformance projectId={project.id} />
     </div>
   );
 }

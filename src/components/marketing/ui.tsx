@@ -5,10 +5,10 @@ import Link from "next/link";
 import { TRIAL_DAYS } from "./plans";
 
 /** AI engines we measure. Text only — no third-party logos. */
-export const ENGINES = ["ChatGPT", "Gemini", "Perplexity", "Google AI Overviews"] as const;
+export const ENGINES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Grok"] as const;
 
-/** Wider list for the homepage strip. Plain text names only. */
-export const STRIP_ENGINES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Google AI Overviews", "Copilot"] as const;
+/** List for the homepage strip (only engines we measure). Plain text names only. */
+export const STRIP_ENGINES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Grok"] as const;
 
 /** Solid ink pill (primary marketing CTA). `inverse` for use on ink bands. */
 export function inkPill(size: "md" | "lg" = "md", inverse = false, className?: string) {

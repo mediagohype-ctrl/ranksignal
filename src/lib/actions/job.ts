@@ -11,6 +11,12 @@ import { getConnectorForIntegration } from "@/lib/connectors/registry";
 import { buildManualInstructions } from "@/lib/connectors/manual";
 import { changeOf, checkExecutionGate, targetOf } from "@/lib/actions/gate";
 
+/** errorClass the queue maps to state failed + "needs_review" + staff notification (never retried). */
+const NEEDS_REVIEW = "needs_review";
+export class NeedsReviewError extends Error {
+  readonly errorClass = NEEDS_REVIEW;
+}
+
 type ResolvableConnector = Connector & { resolveResourceId?: (url: string) => Promise<string | null> };
 
 const norm = (v: string | null | undefined) => (v ?? "").replace(/\s+/g, " ").trim();
@@ -94,14 +100,37 @@ export const executeActionJob: JobHandler = async (ctx) => {
     return { failed: true, error: "resource_not_found" };
   }
 
-  // 5. Pending execution from a crashed attempt: query live state before retrying.
+  // 5. Pending execution from an interrupted attempt: applyPatch may or may not have reached the site, so it
+  //    is NEVER called again (a blind retry could double-apply or overwrite a newer edit). Read the live
+  //    resource: if it already equals the intended "after", finish via validation; otherwise stop and flag
+  //    the run for human review.
   let alreadyApplied = false;
   let execution = existing;
   let before: ConnectorResource | null = (existing?.beforeState as ConnectorResource | null) ?? null;
   if (existing) {
-    const live = await connector.getResource(resourceId);
-    if (live && norm(live.fields[change.field]) === norm(change.after)) alreadyApplied = true;
+    let live: ConnectorResource | null = null;
+    try {
+      live = await connector.getResource(resourceId);
+    } catch {
+      live = null;
+    }
+    alreadyApplied = !!live && norm(live.fields[change.field]) === norm(change.after);
     await ctx.event("action.execution_resumed", { executionId: existing.id, alreadyApplied });
+    if (!alreadyApplied) {
+      const reason = live ? "live_value_differs_from_intended" : "live_state_unavailable";
+      await db.actionExecution.update({
+        where: { id: existing.id },
+        data: { result: "failure", rollbackStatus: "manual_required", resultDetail: json({ error: NEEDS_REVIEW, reason }), finishedAt: new Date() },
+      });
+      await db.action.update({ where: { id: action.id }, data: { status: "failed" } });
+      await notify(
+        action, "job_failed", "Change needs review",
+        "An earlier attempt to apply this change was interrupted and we could not confirm whether it reached your site. " +
+          "Nothing was retried. Our team will check the page and follow up.",
+      );
+      await audit(action, "action.execution_needs_review", { executionId: existing.id, reason });
+      throw new NeedsReviewError(`Interrupted execution could not be verified (${reason})`);
+    }
   }
 
   // 6. Capture before-state.

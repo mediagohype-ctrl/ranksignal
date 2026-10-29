@@ -8,16 +8,18 @@ import { RISK_CLASSES } from "@/components/marketing/content";
 
 export const metadata: Metadata = {
   title: { absolute: `Getting started — ${BRAND.name} Docs` },
-  description: `Set up ${BRAND.name}: onboarding, connecting WordPress with an application password, how the approval policy works, and known limitations.`,
+  description: `Set up ${BRAND.name}: onboarding, connecting WordPress, GitHub and other platforms, how the approval policy works, white-label branding, the off-site tracker and known limitations.`,
   alternates: { canonical: "/docs" },
 };
 
 const TOC = [
   { id: "onboarding", label: "Onboarding" },
   { id: "wordpress", label: "Connect WordPress" },
-  { id: "git", label: "Connect a Git repository" },
+  { id: "git", label: "GitHub and other platforms" },
   { id: "approval-policy", label: "Approval policy" },
   { id: "reading-metrics", label: "Reading the metrics" },
+  { id: "offsite", label: "Off-site tracker" },
+  { id: "branding", label: "White-label branding" },
   { id: "limitations", label: "Known limitations" },
 ];
 
@@ -73,7 +75,7 @@ export default function DocsPage() {
                 </li>
                 <li>
                   <strong>Create a project</strong> for your site: enter the domain, your brand name (plus common
-                  variants and product names) and the countries and languages you want to track.
+                  variants and product names) and the main country and language you want to track.
                 </li>
                 <li>
                   <strong>Add competitors</strong> you want to benchmark against. You can add or remove them later.
@@ -125,11 +127,21 @@ export default function DocsPage() {
             </section>
 
             <section id="git" aria-labelledby="git-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
-              <h2 id="git-h">Connect a Git repository</h2>
+              <h2 id="git-h">Connect GitHub and other platforms</h2>
               <p>
-                For static or framework-based sites, connect a repository and {BRAND.name} will propose approved changes
-                as <strong>pull requests</strong>. Your existing code review and CI decide whether they merge. Use a
-                token scoped to the single repository with the minimum permissions needed to open pull requests.
+                <strong>GitHub:</strong> for static or framework-based sites, connect a repository and {BRAND.name} will
+                propose approved changes as <strong>pull requests</strong>. Your existing code review and CI decide
+                whether they merge. Use a token scoped to the single repository with the minimum permissions needed to
+                open pull requests.
+              </p>
+              <p>
+                <strong>Shopify, Webflow, Contentful, Sanity and Wix:</strong> connect from your project&apos;s{" "}
+                <em>Integrations</em> page with an API token for that platform. We write drafts and SEO fields (titles,
+                descriptions and similar) where each platform&apos;s API allows it; what each connector can and can&apos;t
+                do is shown before you connect it.
+              </p>
+              <p>
+                <strong>Everything else:</strong> export any approved fix as copy-ready instructions and apply it by hand.
               </p>
             </section>
 
@@ -154,13 +166,17 @@ export default function DocsPage() {
               </p>
               <h3>Auto-apply (optional)</h3>
               <p>
-                Owners can allow class A changes to run without manual approval for a project. This is off by default.
-                Class D changes are never executed by the system, whatever the policy.
+                Class A work (audits, briefs, internal tasks) never changes your site, so it runs on its own. Owners can
+                allow specific class B change types (small, reversible edits on non-critical pages) to apply without
+                manual approval for a project. This is off by default. Class D changes are never executed by the system,
+                whatever the policy.
               </p>
               <h3>Rollback and kill switch</h3>
               <p>
-                A snapshot is stored before each change; roll back from the change log. The publishing kill switch
-                pauses all executions for your workspace immediately; queued changes wait until it is turned off.
+                A snapshot is stored before each change made through a connector; roll it back from the change log.
+                Fixes you apply by hand can&apos;t be rolled back for you. The publishing kill switch pauses all executions
+                for your workspace immediately (email support and we&apos;ll switch it on); queued changes wait until it is
+                turned off.
                 Approvals, executions, rollbacks and credential changes are recorded in the audit log.
               </p>
             </section>
@@ -175,15 +191,45 @@ export default function DocsPage() {
                   <strong>Citation rate</strong> — share of sampled answers that cite or link one of your URLs.
                 </li>
                 <li>
-                  <strong>Visibility index</strong> — a 0–100 summary combining mention, position and citation signals.
+                  <strong>Visibility index</strong> — a 0–100 summary combining mention, citation and recommendation rates.
                 </li>
                 <li>
                   <strong>Share of voice</strong> — your mentions relative to the competitors you track.
                 </li>
               </ul>
               <p>
-                Every metric shows the number of answers it is based on. Small samples produce wide ranges — treat a
-                change of a few points on a small sample as noise, not a trend.
+                Every metric shows the number of answers it is based on. Small samples are noisy — treat a change of a
+                few points on a small sample as noise, not a trend.
+              </p>
+            </section>
+
+            <section id="offsite" aria-labelledby="offsite-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
+              <h2 id="offsite-h">Off-site tracker</h2>
+              <p>
+                AI assistants also learn about you from other sites: directories, review platforms, press, forums and
+                company profiles. Open your project → <em>Off-site</em> to track that work through{" "}
+                <strong>To do → Submitted → Live</strong> (or Rejected), and note whether each listing&apos;s name, address
+                and phone match your website.
+              </p>
+              <p>
+                <strong>Suggestions</strong> come from two places: third-party sites cited in your latest AI visibility
+                check that aren&apos;t in your tracker yet, and a starter list of common Indian listings (Google Business
+                Profile, Justdial, IndiaMART, Sulekha, Bing Places, Apple Business Connect, LinkedIn, Crunchbase, G2,
+                Capterra, Trustpilot). They are places worth considering, not a promise that a listing will be cited.
+              </p>
+            </section>
+
+            <section id="branding" aria-labelledby="branding-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
+              <h2 id="branding-h">White-label branding</h2>
+              <p>
+                On the Agency plan (and for done-for-you clients), owners and admins can open{" "}
+                <em>Settings → Branding</em> to set the name, logo (an https:// image link), accent colour, reply-to
+                email and a short footer line used on shared report links, monthly reports and monthly report emails. A
+                live preview shows the report header and email before you save.
+              </p>
+              <p>
+                Accent colours must be dark enough to read on white. Agency plans can also hide the &ldquo;Powered by{" "}
+                {BRAND.name}&rdquo; line.
               </p>
             </section>
 
@@ -211,9 +257,12 @@ export default function DocsPage() {
                   may be partially audited.
                 </li>
                 <li>
-                  Publishing connectors currently cover WordPress and Git. Other platforms use export-and-apply.
+                  Publishing connectors cover WordPress, GitHub, Shopify, Webflow, Contentful, Sanity and Wix, each
+                  limited to what its API allows. Other platforms use export-and-apply.
                 </li>
-                <li>White-label reports are not yet available.</li>
+                <li>
+                  Each project tracks one main country and language. To track another market, add a separate project.
+                </li>
               </ul>
               <p>
                 Questions? Email <a href={`mailto:${BRAND.supportEmail}`}>{BRAND.supportEmail}</a>.

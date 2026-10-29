@@ -83,7 +83,7 @@ export function SiteFooter() {
           </p>
           <p className="max-w-4xl lg:col-span-9">
             AI answer visibility is measured from samples and changes over time; no ranking, mention or citation
-            outcome is guaranteed. ChatGPT, Gemini, Perplexity, Claude, Copilot and Google AI Overviews are trademarks of their
+            outcome is guaranteed. ChatGPT, Gemini, Perplexity, Claude, Grok and Google AI Overviews are trademarks of their
             respective owners; {BRAND.name} is not affiliated with or endorsed by them.
           </p>
         </div>

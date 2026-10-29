@@ -3,11 +3,7 @@ import { forwardRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Input, Notice, type InputProps } from "@/components/ui";
 
-/** Only allow same-site relative redirects (blocks open redirects like //evil.com or https://…). */
-export function safeNext(next: string | null, fallback: string): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
-  return next;
-}
+export { inviteTokenFromNext, safeNext } from "./safe-next";
 
 export interface PostJsonResult<T = unknown> {
   ok: boolean;

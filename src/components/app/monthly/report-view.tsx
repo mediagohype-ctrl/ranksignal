@@ -1,11 +1,14 @@
 // Print-ready monthly impact report (server-compatible: no hooks). Used by the client page and the staff preview.
 import clsx from "clsx";
 import {
-  AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarCheck, CheckCircle2, ClipboardList, Info, ListChecks,
-  MessageSquareWarning, Scale, Sparkles, TrendingUp, Wrench,
+  AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarCheck, CheckCircle2, ClipboardList, Globe, Info, ListChecks,
+  MessageSquareWarning, Scale, Search, Sparkles, TrendingUp, Wrench,
 } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, Callout, EmptyState, SeverityBadge, Table, TD, TH, THead, TR } from "@/components/ui";
-import type { MonthlyReportPayload, RateTriple } from "@/lib/monthly-report/types";
+import type { CountChange, MonthlyReportPayload, RateTriple, SearchSection } from "@/lib/monthly-report/types";
+import type { PublicBranding } from "@/lib/branding";
+import { TYPE_LABEL, asType } from "@/lib/offsite/types";
+import { BRAND } from "@/lib/brand";
 
 const pct = (n: number | null | undefined) => (typeof n === "number" ? `${Math.round(n * 100)}%` : "—");
 const num = (n: number | null | undefined) => (typeof n === "number" ? String(Math.round(n)) : "—");
@@ -115,9 +118,147 @@ function ShareBar({ value, brand }: { value: number | null; brand: boolean }) {
   );
 }
 
+const int = (n: number) => n.toLocaleString("en-IN");
+
+function CountTile({ label, source, c }: { label: string; source: string; c: CountChange }) {
+  return (
+    <div className="mr-avoid rounded-xl border border-border bg-surface p-4">
+      <div className="text-caption uppercase tracking-[0.06em] text-muted">{label}</div>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-small tabular-nums text-muted">{int(c.previous)}</span>
+        <ArrowRight aria-label="to" className="size-3.5 self-center text-muted" />
+        <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums text-fg">{int(c.current)}</span>
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        {c.pct === null ? (
+          <span className="text-xs text-muted">{c.current > 0 ? "none last month" : "—"}</span>
+        ) : (
+          <span
+            className={clsx(
+              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+              c.pct > 0.005 ? "bg-success-soft text-success" : c.pct < -0.005 ? "bg-danger-soft text-danger" : "bg-surface-2 text-muted",
+            )}
+          >
+            {c.pct > 0 ? "+" : c.pct < 0 ? "−" : "±"}
+            {Math.abs(Math.round(c.pct * 100))}%
+          </span>
+        )}
+        <span className="text-xs text-muted">{source}</span>
+      </div>
+    </div>
+  );
+}
+
+function SearchCard({ s }: { s: SearchSection }) {
+  const g = s.gsc;
+  const a = s.ga4;
+  return (
+    <Card as="section" className="mr-break">
+      <CardHeader
+        icon={<Search />}
+        title="Google search and website visits"
+        description="Last month vs this month, from your own Google Search Console and Google Analytics 4 accounts."
+      />
+      <CardBody className="space-y-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {g && <CountTile label="Clicks from Google" source="Search Console" c={g.clicks} />}
+          {g && <CountTile label="Times shown in Google" source="Search Console" c={g.impressions} />}
+          {a && <CountTile label="Website visits" source="GA4" c={a.sessions} />}
+          {a && <CountTile label="Visits from AI assistants" source="GA4" c={a.aiSessions} />}
+        </div>
+        {g && (g.position.current !== null || g.ctr.current !== null) && (
+          <p className="text-small text-muted">
+            Average position in Google: {g.position.previous ?? "—"} → <strong className="text-fg">{g.position.current ?? "—"}</strong> (lower is
+            better) · Click-through rate: {pct(g.ctr.previous)} → <strong className="text-fg">{pct(g.ctr.current)}</strong>
+          </p>
+        )}
+        <div className="grid gap-4 md:grid-cols-2">
+          {g && (
+            <div className="mr-avoid rounded-xl bg-surface-2 p-4">
+              <h3 className="flex items-center gap-2 text-small font-semibold text-fg">
+                <CheckCircle2 aria-hidden className="size-4 text-success" /> New searches bringing clicks ({g.queriesWon.length})
+              </h3>
+              {g.queriesWon.length ? (
+                <ul className="mt-3 space-y-1.5 text-small text-fg-soft">
+                  {g.queriesWon.map((q) => (
+                    <li key={q.query} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate">“{q.query}”</span>
+                      <span className="shrink-0 tabular-nums text-muted">{int(q.clicks)} clicks</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-small text-muted">No new searches this month.</p>
+              )}
+            </div>
+          )}
+          {a && (
+            <div className="mr-avoid rounded-xl bg-surface-2 p-4">
+              <h3 className="flex items-center gap-2 text-small font-semibold text-fg">
+                <Bot aria-hidden className="size-4 text-primary" /> Visits by AI assistant
+              </h3>
+              {a.aiBySource.length ? (
+                <ul className="mt-3 space-y-1.5 text-small text-fg-soft">
+                  {a.aiBySource.map((x) => (
+                    <li key={x.label} className="flex justify-between gap-3">
+                      <span>{x.label}</span>
+                      <span className="tabular-nums">
+                        <span className="text-muted">{int(x.previousSessions)}</span> → <strong className="text-fg">{int(x.sessions)}</strong>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-small text-muted">No visits from AI assistants were recorded.</p>
+              )}
+            </div>
+          )}
+        </div>
+        {g && g.topQueries.length > 0 && (
+          <div className="mr-avoid overflow-hidden rounded-xl border border-border">
+            <Table caption="Top Google searches this month" density="compact">
+              <THead>
+                <tr>
+                  <TH>Top searches</TH>
+                  <TH align="right">Last month</TH>
+                  <TH align="right">This month</TH>
+                  <TH align="right">Change</TH>
+                </tr>
+              </THead>
+              <tbody>
+                {g.topQueries.map((q) => (
+                  <TR key={q.query}>
+                    <TD className="max-w-[18rem] truncate">{q.query}</TD>
+                    <TD numeric>{int(q.previousClicks)}</TD>
+                    <TD numeric className="font-semibold text-fg">{int(q.clicks)}</TD>
+                    <TD numeric><DeltaChip value={q.change} kind="count" /></TD>
+                  </TR>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
+        <p className="text-xs text-muted">{s.note}</p>
+      </CardBody>
+    </Card>
+  );
+}
+
 const PERFORMER: Record<string, string> = { agency: "By our team", client: "By you", system: "Automatic" };
 
-export function MonthlyReportView({ payload: p, summary }: { payload: MonthlyReportPayload; summary: string }) {
+/** Optional white-label branding (from getBranding(orgId) via toPublicBranding). Omitted = default look. */
+export type ReportBranding = Pick<PublicBranding, "displayName" | "logoUrl" | "accentColor" | "footerText" | "hidePoweredBy" | "custom">;
+
+export function MonthlyReportView({
+  payload: p,
+  summary,
+  branding,
+}: {
+  payload: MonthlyReportPayload;
+  summary: string;
+  branding?: ReportBranding;
+}) {
+  const brand = branding?.custom ? branding : null;
   const v = p.aiVisibility;
   const cmpStart = v.likeForLike?.start ?? v.start;
   const cmpEnd = v.likeForLike?.end ?? v.end;
@@ -130,7 +271,19 @@ export function MonthlyReportView({ payload: p, summary }: { payload: MonthlyRep
 
       {/* ---- page 1: one-page summary ---- */}
       <section aria-labelledby="mr-title" className="space-y-6">
-        <div className="rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8">
+        <div
+          className={clsx("rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8", brand?.accentColor && "border-t-4")}
+          style={brand?.accentColor ? { borderTopColor: brand.accentColor } : undefined}
+        >
+          {brand && (
+            <div className="mb-5 flex items-center gap-2.5 border-b border-border pb-4">
+              {brand.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- customer logo from an arbitrary https host (validated https-only)
+                <img src={brand.logoUrl} alt="" referrerPolicy="no-referrer" className="h-8 w-auto max-w-[160px] object-contain" />
+              )}
+              <span className="text-small font-semibold text-fg">{brand.displayName}</span>
+            </div>
+          )}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="eyebrow">Monthly impact report</p>
@@ -360,6 +513,9 @@ export function MonthlyReportView({ payload: p, summary }: { payload: MonthlyRep
         )}
       </Card>
 
+      {/* ---- Google search (Search Console + GA4) ---- */}
+      {p.search && (p.search.gsc || p.search.ga4) && <SearchCard s={p.search} />}
+
       {/* ---- issues ---- */}
       <Card as="section" className="mr-break mr-avoid">
         <CardHeader icon={<ClipboardList />} title="Website issues" description="From automatic scans of your site." />
@@ -439,6 +595,35 @@ export function MonthlyReportView({ payload: p, summary }: { payload: MonthlyRep
         </CardBody>
       </Card>
 
+      {/* ---- off-site work (optional; older reports have no `offsite`) ---- */}
+      {p.offsite && p.offsite.count > 0 && (
+        <Card as="section" className="mr-avoid">
+          <CardHeader
+            icon={<Globe />}
+            title="Off-site work"
+            description={`${p.offsite.count} ${p.offsite.count === 1 ? "listing, profile or mention" : "listings, profiles or mentions"} went live this month`}
+          />
+          <CardBody>
+            <ul className="divide-y divide-border">
+              {p.offsite.live.map((o, i) => (
+                <li key={i} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-small">
+                  <span className="font-medium text-fg">
+                    {o.url ? (
+                      <a href={o.url} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-4">
+                        {o.name}
+                      </a>
+                    ) : (
+                      o.name
+                    )}
+                  </span>
+                  <Badge size="sm" tone="neutral">{TYPE_LABEL[asType(o.type)]}</Badge>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
       {/* ---- next month ---- */}
       <Card as="section" className="mr-avoid">
         <CardHeader icon={<CalendarCheck />} title="Next month's plan" />
@@ -506,6 +691,13 @@ export function MonthlyReportView({ payload: p, summary }: { payload: MonthlyRep
           {p.dataSources.visibilityRuns} AI check{p.dataSources.visibilityRuns === 1 ? "" : "s"} this month
           {p.dataSources.providers.length > 0 && ` · Engines: ${p.dataSources.providers.join(", ")}`}
         </p>
+        {brand && (
+          <p className="border-t border-border pt-3 text-xs text-muted">
+            Prepared by <span className="font-semibold text-fg-soft">{brand.displayName}</span>
+            {brand.footerText && <> · {brand.footerText}</>}
+            {!brand.hidePoweredBy && <> · Powered by {BRAND.name}</>}
+          </p>
+        )}
       </div>
     </div>
   );

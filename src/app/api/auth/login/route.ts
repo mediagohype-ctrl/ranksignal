@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { setSessionCookie } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
 import { checkRateLimit, clientIp, resetRateLimit } from "@/lib/auth/rate-limit";
-import { clearLoginFailures, loginCaptchaRequired, recordLoginFailure } from "@/lib/auth/login-guard";
+import { ACCOUNT_LOCK_MS, clearLoginFailures, isAccountLocked, loginCaptchaRequired, recordLoginFailure } from "@/lib/auth/login-guard";
 import { defaultMembership } from "@/lib/auth/membership";
 import { isTurnstileEnabled, verifyTurnstile } from "@/lib/security/turnstile";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -28,6 +28,14 @@ export const POST = handler(async (req: Request) => {
   const rlIp = checkRateLimit(`login-ip:${ip}`, 50, 15 * 60 * 1000);
   if (!rl.allowed || !rlIp.allowed) {
     throw new HttpError(429, "rate_limited", "Too many sign-in attempts. Try again later.", { retryAfterSec: rl.retryAfterSec });
+  }
+
+  // Per-account lockout (any IP): many recent failures for this email pause sign-in for it. Same answer for
+  // unknown emails, so it does not reveal whether an account exists.
+  if (isAccountLocked(input.email)) {
+    throw new HttpError(429, "account_locked", "Too many failed sign-in attempts for this account. Wait 15 minutes, or reset your password.", {
+      retryAfterSec: Math.ceil(ACCOUNT_LOCK_MS / 1000),
+    });
   }
 
   // After a few failures for this IP+email, a Turnstile check is required (skipped when Turnstile isn't configured).

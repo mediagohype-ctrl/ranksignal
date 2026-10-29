@@ -1,6 +1,8 @@
 // Pure math for the monthly impact report (unit-tested). No DB, no network.
+import type { SearchSummary } from "@/lib/google/summary";
 import type {
-  CompetitorShareRow, EngineRow, IssueLine, MonthlyReportPayload, MonthlyReportStatus, PillarDelta, PlanLine, PromptChange, RateTriple,
+  CompetitorShareRow, CountChange, EngineRow, IssueLine, MonthlyReportPayload, MonthlyReportStatus, PillarDelta, PlanLine, PromptChange,
+  RateTriple, SearchSection,
 } from "./types";
 
 export const PILLARS = [
@@ -299,6 +301,9 @@ export function buildHeadline(p: Omit<MonthlyReportPayload, "headline" | "attrib
   if (md !== null && md <= -0.01) risks.push(`Mentioned in fewer AI answers: ${pctStr(cmp!.start.mentionRate)} → ${pctStr(cmp!.end.mentionRate)} (−${pp(md)}).`);
   if (v.promptsWon.length) gains.push(`Now mentioned for ${plural(v.promptsWon.length, "question")} where AI assistants didn't mention you before.`);
   if (v.promptsLost.length) risks.push(`No longer mentioned for ${plural(v.promptsLost.length, "question")} where you appeared before.`);
+  const sh = searchHeadlineLines(p.search);
+  gains.push(...sh.gains);
+  risks.push(...sh.risks);
 
   if (p.issues.fixed.total) gains.push(`${plural(p.issues.fixed.total, "website issue")} fixed this month.`);
   if (p.work.shipped.length) gains.push(`${plural(p.work.shipped.length, "piece")} of work shipped.`);
@@ -355,6 +360,10 @@ export function templateMonthlySummary(p: Omit<MonthlyReportPayload, "attributio
   if (v.promptsWon.length || v.promptsLost.length) {
     out.push(`You gained mentions for ${plural(v.promptsWon.length, "question")} and lost them for ${v.promptsLost.length}.`);
   }
+  const sc = p.search?.gsc?.clicks;
+  if (sc && (sc.current > 0 || sc.previous > 0)) {
+    out.push(`Google Search Console recorded ${plural(sc.current, "click")} from Google search this month, compared with ${sc.previous} last month.`);
+  }
   const urgent = p.issues.openBySeverity.critical + p.issues.openBySeverity.high;
   out.push(
     urgent
@@ -362,4 +371,62 @@ export function templateMonthlySummary(p: Omit<MonthlyReportPayload, "attributio
       : "There are no critical or high-priority issues open right now.",
   );
   return out.slice(0, 6).join(" ");
+}
+
+// ---- Google search (Search Console + GA4) --------------------------------------------------------------------------
+
+export const SEARCH_NOTE =
+  "Search numbers come straight from your Google Search Console and Google Analytics 4 accounts (real data, no estimates). " +
+  "Clicks and visits move for many reasons, including seasonality, Google updates and competitors, so read them alongside the " +
+  "work above rather than as proof of what caused them. \"Visits from AI assistants\" only counts people who clicked a link in " +
+  "ChatGPT, Perplexity, Gemini, Copilot or Claude and arrived with that referrer; many AI-influenced visits can't be seen this way.";
+
+const countChange = (current: number, previous: number): CountChange => ({
+  previous, current, delta: current - previous, pct: previous > 0 ? (current - previous) / previous : null,
+});
+
+/** Shape for the report from a stored-metrics summary. Null when neither Google source has data for the month. */
+export function searchSectionFrom(s: SearchSummary): SearchSection | null {
+  const g = s.gsc && (s.gsc.hasData || s.gsc.previous.clicks > 0 || s.gsc.previous.impressions > 0) ? s.gsc : null;
+  const a = s.ga4 && (s.ga4.hasData || s.ga4.previous.sessions > 0) ? s.ga4 : null;
+  if (!g && !a) return null;
+  return {
+    gsc: g
+      ? {
+          siteUrl: g.siteUrl,
+          clicks: countChange(g.current.clicks, g.previous.clicks),
+          impressions: countChange(g.current.impressions, g.previous.impressions),
+          ctr: { previous: g.previous.ctr, current: g.current.ctr },
+          position: { previous: g.previous.position, current: g.current.position },
+          topQueries: g.topQueries.slice(0, 10).map((q) => ({ query: q.key, clicks: q.clicks, previousClicks: q.previousClicks, change: q.clicksChange })),
+          queriesWon: g.queriesWon.slice(0, 10).map((q) => ({ query: q.key, clicks: q.clicks, impressions: q.impressions })),
+          lastDataDate: g.lastDataDate,
+        }
+      : null,
+    ga4: a
+      ? {
+          propertyName: a.propertyName,
+          sessions: countChange(a.current.sessions, a.previous.sessions),
+          conversions: countChange(a.current.conversions, a.previous.conversions),
+          aiSessions: countChange(a.current.aiSessions, a.previous.aiSessions),
+          aiBySource: a.aiBySource.map((x) => ({ label: x.label, sessions: x.sessions, previousSessions: x.previousSessions })),
+        }
+      : null,
+    note: SEARCH_NOTE,
+  };
+}
+
+/** Headline lines from the search section (measured changes only; small bases are ignored as noise). */
+export function searchHeadlineLines(search: SearchSection | null | undefined): { gains: string[]; risks: string[] } {
+  const gains: string[] = [];
+  const risks: string[] = [];
+  const c = search?.gsc?.clicks;
+  if (c && c.pct !== null && c.previous >= 20) {
+    const pctAbs = Math.round(Math.abs(c.pct) * 100);
+    if (c.pct >= 0.05) gains.push(`Clicks from Google search up ${pctAbs}% (${c.previous} → ${c.current}).`);
+    if (c.pct <= -0.1) risks.push(`Clicks from Google search down ${pctAbs}% (${c.previous} → ${c.current}).`);
+  }
+  const ai = search?.ga4?.aiSessions;
+  if (ai && ai.current > ai.previous && ai.current >= 3) gains.push(`Visits from AI assistants: ${ai.previous} → ${ai.current}.`);
+  return { gains, risks };
 }

@@ -122,5 +122,6 @@ export function platformFor(model: string): string {
   if (vendor === "anthropic") return "Claude-style answer";
   if (vendor === "google") return "Gemini-style answer";
   if (vendor === "perplexity") return "Perplexity-style answer";
+  if (vendor === "x-ai") return "Grok-style answer";
   return "AI answer";
 }

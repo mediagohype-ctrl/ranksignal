@@ -44,7 +44,7 @@ const STEPS = [
   {
     when: "Every month",
     title: "We ship the fixes",
-    body: "Our team makes the agreed changes on your site, profile and listings. Each one is logged, and anything can be rolled back in one click.",
+    body: "Our team makes the agreed changes on your site, profile and listings. Each one is logged, and changes made through a connected site can be rolled back in one click.",
   },
   {
     when: "Month end",
@@ -83,7 +83,7 @@ const PROMISES = [
   },
   {
     title: "Nothing happens in the dark",
-    body: "You get a live dashboard and a change log of every edit we make, with one-click rollback for anything you don’t like.",
+    body: "You get a live dashboard and a change log of every edit we make, with one-click rollback for site changes made through a connector.",
   },
   {
     title: "Short minimums, then 30 days’ notice",

@@ -19,6 +19,11 @@ export function getWebEngine(): "native" | "exa" {
 export const OPENROUTER_LIMITATIONS =
   "Answered through the OpenRouter API with web search available; like the real apps, the model decides whether to search, so answers without sources come from its built-in knowledge. Consumer apps (ChatGPT, Claude.ai) can still answer differently because of personalisation.";
 
+/** Models with built-in web search that must not get OpenRouter's web plugin. */
+export function searchesNatively(model: string): boolean {
+  return model.startsWith("perplexity/");
+}
+
 /** Stable provider id per model, e.g. "openrouter:anthropic/claude-opus-5.5". */
 export const openRouterProviderId = (model: string) => `openrouter:${model}`;
 
@@ -40,7 +45,8 @@ export function createOpenRouterProvider(model: string): VisibilityProvider {
             { role: "user", content: query.text },
           ],
           // engine must be explicit: without it some models (e.g. Claude) may answer without searching.
-          plugins: [{ id: "web", engine: getWebEngine(), max_results: 5 }],
+          // Perplexity models search on their own and reject the web plugin, so they get none.
+          ...(searchesNatively(model) ? {} : { plugins: [{ id: "web", engine: getWebEngine(), max_results: 5 }] }),
           max_tokens: 3000,
           reasoning: { effort: "low", exclude: true },
         },

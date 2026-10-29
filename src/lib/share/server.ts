@@ -1,6 +1,6 @@
 // Server-side loader for the public shared report page. Token → verified claims → project share settings → report.
 import { db } from "@/lib/db";
-import { buildSiteReport } from "@/lib/report/build";
+import { getStoredReport } from "@/lib/report/stored";
 import type { SiteReport } from "@/lib/report/types";
 import { toPublicReport } from "@/lib/share/public-report";
 import { isShareActive, verifyShareToken } from "@/lib/share/token";
@@ -30,9 +30,10 @@ export async function loadSharedReport(token: string): Promise<SharedReportResul
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return { status: "ok", report: hit.report };
 
-  const report = await buildSiteReport(project.id, project.organizationId);
-  if (!report.crawl.crawlRunId) {
-    return { status: "not_ready", brand: report.brand };
+  // Stored report: anonymous viewers can never trigger an LLM call (or a full rebuild when one is stored).
+  const report = await getStoredReport(project.id, project.organizationId);
+  if (!report || !report.crawl.crawlRunId) {
+    return { status: "not_ready", brand: report?.brand ?? project.name };
   }
   const pub = toPublicReport(report);
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);

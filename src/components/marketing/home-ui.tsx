@@ -116,7 +116,7 @@ export function EngineStrip() {
 
 /* ------------------------------------------------------------------ product tour */
 
-const ENGINE_COLS = ["ChatGPT", "Gemini", "Perplexity", "AI Overviews"] as const;
+const ENGINE_COLS = ["ChatGPT", "Gemini", "Perplexity", "Claude"] as const;
 type Cell = "cited" | "mentioned" | "none";
 const ANSWERS: { q: string; cells: Cell[] }[] = [
   { q: "Eggless birthday cake near Indiranagar", cells: ["cited", "mentioned", "cited", "none"] },
@@ -230,7 +230,7 @@ export function ApprovalPanel() {
           <p className="text-xs text-muted">Drafted from the delivery fix</p>
         </div>
         <div className="flex items-center gap-2">
-          <RiskBadge riskClass="B" />
+          <RiskBadge riskClass="C" />
           <SampleTag />
         </div>
       </div>

@@ -29,6 +29,9 @@ function collection(defaults: (d: Record<string, unknown>) => Record<string, unk
     async findMany(a: { where?: Record<string, unknown> } = {}) {
       return rows.filter((r) => matches(r, a.where));
     },
+    async count(a: { where?: Record<string, unknown> } = {}) {
+      return rows.filter((r) => matches(r, a.where)).length;
+    },
     async create(a: { data: Record<string, unknown> }) {
       if ("idempotencyKey" in a.data && rows.some((r) => r.idempotencyKey === a.data.idempotencyKey)) {
         throw new Error("unique constraint");
@@ -67,6 +70,7 @@ export function createFakeDb() {
     featureFlag: collection(),
     auditLog: collection(),
     workflowRun: collection(),
+    membership: collection(),
   };
 }
 export type FakeDb = ReturnType<typeof createFakeDb>;

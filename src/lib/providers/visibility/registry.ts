@@ -13,6 +13,8 @@ import { createSimulatedProvider, SIMULATED_LABEL, type SimulatedContext } from 
 export interface ProjectProviderContext extends SimulatedContext {
   /** Explicit provider ids to use (e.g. ["gemini"]); otherwise every configured real provider. */
   requested?: string[];
+  /** Plan cap on AI engines per run (see getEngineLimit); providers are taken in configured priority order. */
+  maxProviders?: number;
 }
 
 const DIRECT_PROVIDERS: VisibilityProvider[] = [
@@ -68,7 +70,8 @@ export async function getAvailableProviders(ctx: ProjectProviderContext): Promis
     // Real data available: never mix in simulated answers.
     const picked = requested ? configured.filter((p) => requested.has(p.id)) : configured;
     // A stale request (e.g. ["simulated"] saved before keys were added) falls back to all real providers.
-    return picked.length > 0 ? picked : configured;
+    const chosen = picked.length > 0 ? picked : configured;
+    return ctx.maxProviders && ctx.maxProviders > 0 ? chosen.slice(0, ctx.maxProviders) : chosen;
   }
   const wantsSimulated = !requested || requested.has("simulated");
   if (wantsSimulated && simulatedAllowed() && (await isProviderEnabled("simulated"))) return [createSimulatedProvider(ctx)];

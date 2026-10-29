@@ -25,13 +25,13 @@ export const metadata: Metadata = {
 
 const STEP_DETAILS: string[][] = [
   [
-    "Add your website, brand name and the countries and languages you sell in.",
+    "Add your website, brand name and the main country and language you sell in.",
     "Pick the competitors you want to compare against — you can add more later.",
-    "Optionally connect WordPress or a Git repository. Connections stay read-only until you turn on publishing.",
+    "Optionally connect WordPress or a Git repository. A connection never changes your site until you approve a change.",
   ],
   [
     "A polite crawler (it respects robots.txt and rate limits) checks your pages for SEO, AEO and GEO problems.",
-    "Your tracked questions are asked again and again across AI assistants to build a baseline.",
+    "Each tracked question is put to every AI assistant on your plan to build a baseline.",
     "You get scores, a mention rate and a citation rate — each with the number of answers behind it.",
   ],
   [
@@ -41,7 +41,7 @@ const STEP_DETAILS: string[][] = [
   ],
   [
     "Approve the exact change. It's published through your connector, or exported for you to apply by hand.",
-    "We snapshot the page before every change, so you can roll it back from the change log.",
+    "We snapshot the page before every change made through a connector, so you can roll it back from the change log.",
     "Follow-up checks show what moved afterwards — reported as observed change, not proven cause.",
   ],
 ];
@@ -89,7 +89,7 @@ const WORK_POINTS = [
   },
   {
     title: "One click to undo",
-    body: "Each automated change is logged with the page as it was before, so you can roll it back from the change log.",
+    body: "Each change made through a connector is logged with the page as it was before, so you can roll it back from the change log.",
   },
   {
     title: "Done by hand still counts",
@@ -219,7 +219,7 @@ export default function HowItWorksPage() {
               The impact report.
             </h2>
             <p className="mk-lead mt-8 max-w-[34rem] text-fg-soft">
-              Early each month, last month&apos;s report is emailed to you and opens as a page you can download as a PDF.
+              Early each month, last month&apos;s report is emailed to you and opens as a page you can save as a PDF.
               On done-for-you plans, our team checks it before it&apos;s sent.
             </p>
             <dl className="mt-10 max-w-[34rem] border-t border-fg">
@@ -330,8 +330,8 @@ export default function HowItWorksPage() {
           <div className="mk-reveal mt-14 grid gap-6 rounded-[28px] bg-fg p-8 text-bg sm:p-12 lg:grid-cols-12 lg:items-center lg:gap-10">
             <p className="mk-title text-bg lg:col-span-5">One switch stops it all.</p>
             <p className="mk-body text-bg/80 lg:col-span-7">
-              A workspace kill switch pauses all publishing immediately. Every change is checked again just before it runs,
-              so even changes you&apos;ve already approved wait until you switch publishing back on.
+              We can pause all publishing for your workspace instantly — just ask. Every change is checked again just before it
+              runs, so even changes you&apos;ve already approved wait until publishing is switched back on.
             </p>
           </div>
         </div>

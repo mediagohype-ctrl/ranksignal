@@ -7,6 +7,7 @@ import { payloadOf } from "@/lib/monthly-report/server";
 import { MonthlyReportView } from "@/components/app/monthly/report-view";
 import { ReviewEditor } from "@/components/app/monthly/review-editor";
 import { Badge, EmptyState, Notice, PageHeader } from "@/components/ui";
+import { getBranding, toPublicBranding } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Review monthly report" };
@@ -72,7 +73,7 @@ export default async function ReviewMonthlyReportPage({ params }: { params: Prom
               Preview (what the client sees)
             </h2>
             <div className="rounded-2xl border border-dashed border-border-strong p-3 sm:p-5">
-              <MonthlyReportView payload={payload} summary={report.summary ?? ""} />
+              <MonthlyReportView payload={payload} summary={report.summary ?? ""} branding={toPublicBranding(await getBranding(report.organizationId))} />
             </div>
           </section>
         </>

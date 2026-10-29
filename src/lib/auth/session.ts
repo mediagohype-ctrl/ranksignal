@@ -16,12 +16,12 @@ function secret() {
   return new TextEncoder().encode(s);
 }
 
-export async function createSessionToken(ctx: SessionContext, pwf: string) {
+export async function createSessionToken(ctx: SessionContext, pwf: string, maxAgeSeconds = MAX_AGE_SECONDS) {
   return new SignJWT({ email: ctx.email, org: ctx.organizationId, role: ctx.role, pwf, ...(ctx.staffMode ? { stf: true } : {}) })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(ctx.userId)
     .setIssuedAt()
-    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
+    .setExpirationTime(`${maxAgeSeconds}s`)
     .sign(secret());
 }
 
@@ -47,17 +47,21 @@ export async function verifySessionToken(token: string): Promise<SessionContext 
   }
 }
 
-/** Issue a session for the user's CURRENT password; call again after a password change to keep this device signed in. */
-export async function setSessionCookie(ctx: SessionContext) {
+/**
+ * Issue a session for the user's CURRENT password; call again after a password change to keep this device signed in.
+ * `maxAgeSeconds` shortens the session (e.g. 2h staff support-mode sessions); it can never exceed the default 7 days.
+ */
+export async function setSessionCookie(ctx: SessionContext, opts: { maxAgeSeconds?: number } = {}) {
   const pwf = await currentFingerprint(ctx.userId);
   if (!pwf) throw new Error("Cannot create a session for an unknown user");
-  const token = await createSessionToken(ctx, pwf);
+  const maxAge = Math.max(60, Math.min(opts.maxAgeSeconds ?? MAX_AGE_SECONDS, MAX_AGE_SECONDS));
+  const token = await createSessionToken(ctx, pwf, maxAge);
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: MAX_AGE_SECONDS,
+    maxAge,
   });
 }
 

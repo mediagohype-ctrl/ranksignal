@@ -12,21 +12,42 @@ import { composeReport } from "@/lib/report/compose";
 import { getCrawlSiteContext } from "@/lib/report/site-data";
 import { emptyVisibility, summarizeVisibility, type VisObservation } from "@/lib/report/visibility";
 import { llmSummary } from "@/lib/report/summary";
+import { getLlmBackend } from "@/lib/providers/llm";
+import { log } from "@/lib/log";
 
 const MAX_PAGES = 1000;
 const MAX_OBSERVATIONS = 3000;
-const SUMMARY_CACHE_MAX = 200;
-/** LLM summaries are cached per (crawl run, visibility run, report shape) to avoid paying on every view. */
-const summaryCache = new Map<string, string>();
+
+// Only the columns the checks read. CrawlPage.html-sized blobs and Observation.rawResponse (up to 100 KB
+// each × 3000 rows) are deliberately NOT loaded — they made every report build pull tens of MB.
+const PAGE_SELECT = {
+  url: true, finalUrl: true, statusCode: true, redirectChain: true, contentType: true, responseBytes: true, extracted: true, error: true,
+} as const;
+const OBSERVATION_SELECT = {
+  provider: true, platformLabel: true, promptId: true, brandMentioned: true, brandCited: true, brandRecommended: true,
+  competitorMentions: true, citations: true, simulated: true, createdAt: true, prompt: { select: { text: true } },
+} as const;
+
+export interface BuildReportOptions {
+  /** Build as of this (older) succeeded crawl: findings open when it finished and the AI check finished by then. */
+  crawlRunId?: string;
+  /**
+   * Generate the paid LLM executive summary (and record its usage). ONLY the snapshot writer passes this,
+   * once per finished run; request-time callers (pages, APIs, share links) never do — they read the stored
+   * report via getStoredReport().
+   */
+  llmSummary?: boolean;
+}
 
 const strArr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0) : []);
 
 /**
- * @param crawlRunId optional: build the report for this (older) succeeded crawl instead of the latest one —
- *   findings as they were open when that crawl finished, the latest AI check finished by then, and the template
- *   summary only (no paid LLM call). Used for measurement-history snapshots. Default behaviour is unchanged.
+ * @param opts a crawl run id (legacy form) or BuildReportOptions. Without `llmSummary: true` the summary is the
+ *   deterministic template — no paid call.
  */
-export async function buildSiteReport(projectId: string, organizationId: string, crawlRunId?: string): Promise<SiteReport> {
+export async function buildSiteReport(projectId: string, organizationId: string, opts?: string | BuildReportOptions): Promise<SiteReport> {
+  const o: BuildReportOptions = typeof opts === "string" ? { crawlRunId: opts } : (opts ?? {});
+  const crawlRunId = o.crawlRunId;
   const project = await db.project.findFirst({ where: { id: projectId, organizationId } });
   if (!project) throw new HttpError(404, "not_found", "Project not found");
 
@@ -69,13 +90,13 @@ export async function buildSiteReport(projectId: string, organizationId: string,
 
   const [pageRows, site, obsRows] = await Promise.all([
     crawlRun
-      ? db.crawlPage.findMany({ where: { organizationId, crawlRunId: crawlRun.id }, orderBy: { crawledAt: "asc" }, take: MAX_PAGES })
+      ? db.crawlPage.findMany({ where: { organizationId, crawlRunId: crawlRun.id }, select: PAGE_SELECT, orderBy: { crawledAt: "asc" }, take: MAX_PAGES })
       : Promise.resolve([]),
     crawlRun ? getCrawlSiteContext(organizationId, crawlRun) : Promise.resolve(null),
     visRun
       ? db.observation.findMany({
           where: { organizationId, visibilityRunId: visRun.id },
-          include: { prompt: { select: { text: true } } },
+          select: OBSERVATION_SELECT,
           take: MAX_OBSERVATIONS,
         })
       : Promise.resolve([]),
@@ -128,25 +149,18 @@ export async function buildSiteReport(projectId: string, organizationId: string,
     excludedSimulated: vis.excludedSimulated,
   });
 
-  // Optional LLM-written executive summary (computed facts only), cached per data version.
-  if (crawlRun && !crawlRunId) {
-    const key = `${organizationId}|${crawlRun.id}|${visRun?.id ?? "-"}|${report.overall.score}|${report.issues.length}`;
-    const cached = summaryCache.get(key);
-    if (cached) {
-      report.executiveSummary = cached;
+  // Optional LLM-written executive summary (computed facts only). Generated once per finished run by the
+  // snapshot writer and stored with the report — never on a page view.
+  if (o.llmSummary && crawlRun) {
+    const provider = getLlmBackend() ?? "llm"; // attribute spend to the backend actually used (OpenRouter ≠ OpenAI)
+    const llm = await llmSummary(report);
+    if (llm) {
+      report.executiveSummary = llm.text;
       report.executiveSummarySource = "llm";
-    } else {
-      const llm = await llmSummary(report);
-      if (llm) {
-        report.executiveSummary = llm.text;
-        report.executiveSummarySource = "llm";
-        if (summaryCache.size >= SUMMARY_CACHE_MAX) summaryCache.delete(summaryCache.keys().next().value as string);
-        summaryCache.set(key, llm.text);
-        try {
-          await recordUsage(organizationId, { provider: "openai", taskType: "llm_analysis", credits: 0, costMicros: llm.costMicros, projectId: project.id });
-        } catch {
-          /* usage accounting must not break the report */
-        }
+      try {
+        await recordUsage(organizationId, { provider, taskType: "llm_analysis", credits: 0, costMicros: llm.costMicros, projectId: project.id });
+      } catch (err) {
+        log.warn("report.usage_record_failed", { projectId: project.id, orgId: organizationId, err }); // must not break the report
       }
     }
   }

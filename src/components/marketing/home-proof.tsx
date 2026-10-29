@@ -33,7 +33,7 @@ const LOST = "Best bakery for a custom wedding cake";
 
 type Who = "Our team" | "You" | "Automated";
 const WORK: { title: string; who: Who; note?: string; undo?: boolean }[] = [
-  { title: "FAQ markup added to the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
+  { title: "Meta description updated on the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
   { title: "Delivery areas answered on the homepage", who: "Our team" },
   { title: "Opening hours fixed on Google Business Profile", who: "You", note: "Marked done by hand" },
 ];
@@ -109,7 +109,7 @@ export function MonthlyProofComposition() {
               className="hidden h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-xs font-medium text-fg-soft sm:inline-flex"
             >
               <Download size={13} />
-              PDF
+              Save as PDF
             </span>
             <SampleTag />
           </div>
@@ -251,11 +251,11 @@ export function MonthlyProofSection() {
             See what changed. Every month.
           </h2>
           <p className="mk-lead mt-8 max-w-[34rem] text-fg-soft">
-            Early each month, a short report lands in your inbox, with a PDF to pass on: your scores then and now, the AI
+            Early each month, a short report lands in your inbox, which you can save as a PDF to pass on: your scores then and now, the AI
             questions you won and lost, anything AI got wrong about you, and every fix that went live.
           </p>
           <p className="mk-body mt-5 max-w-[34rem] text-fg-soft">
-            Every change is logged with who made it, and automated ones roll back in one click. The report shows what
+            Every change is logged with who made it, and changes made through a connector roll back in one click. The report shows what
             we measured next to the work done. It doesn&apos;t claim one caused the other.
           </p>
         </div>

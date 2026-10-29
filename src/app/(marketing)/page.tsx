@@ -14,7 +14,7 @@ const TITLE = `${BRAND.name} — Get found and cited in AI answers`;
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description:
-    "Measure how ChatGPT, Gemini, Perplexity and Google AI Overviews mention and cite your brand, audit your site for AI readiness, and ship approved fixes safely.",
+    "Measure how ChatGPT, Gemini, Perplexity, Claude and Grok mention and cite your brand, audit your site for AI readiness, and ship approved fixes safely.",
   alternates: { canonical: "/" },
   openGraph: {
     title: TITLE,
@@ -49,7 +49,7 @@ const SCORES = [
 
 const STEPS = [
   { title: "Add your website", body: "Enter your address and pick the questions your customers ask. Nothing on your site changes." },
-  { title: "We read and ask", body: "We read your key pages and put your questions to AI assistants many times over." },
+  { title: "We read and ask", body: "We read your key pages and put every question you track to each AI assistant on every check." },
   { title: "Get your fix list", body: "Four scores and a short list of fixes, most useful first, each with clear steps." },
   { title: "Approve and re-check", body: "Approve the changes you want, publish them, and we measure again next cycle." },
 ];
@@ -61,7 +61,7 @@ const HONEST = [
   },
   {
     title: "Sample size on every number",
-    body: "Each figure says how many answers it comes from, with a likely range, so you know how far to trust it.",
+    body: "Each figure says how many answers it comes from, so you know how far to trust it.",
   },
   {
     title: "Every answer saved",
@@ -245,7 +245,7 @@ export default function HomePage() {
             <TourRow
               index="01"
               title="See what AI says about you"
-              body="We ask the questions your customers ask, many times over, and record whether each AI tool named you and linked to your site."
+              body="On every scheduled check we ask each AI tool the questions your customers ask, and record whether each AI tool named you and linked to your site."
               ui={<AnswersPanel />}
             />
             <TourRow
@@ -258,7 +258,7 @@ export default function HomePage() {
             <TourRow
               index="03"
               title="Approve changes before anything goes live"
-              body="We draft the exact change. You read it, approve it or edit it. Every page is saved first, so any change can be undone."
+              body="We draft the exact change. You read it, approve it or edit it. Every page is saved before a connector changes it, so those changes can be undone."
               ui={<ApprovalPanel />}
             />
           </div>

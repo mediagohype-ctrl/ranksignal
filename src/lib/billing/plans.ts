@@ -106,3 +106,14 @@ export function planIdFromRazorpayPlan(razorpayPlanId: string | undefined | null
   for (const id of PAID_PLAN_IDS) if (razorpayPlanIdFor(id) === razorpayPlanId) return id;
   return null;
 }
+
+/**
+ * AI engines measured per visibility run. OPENROUTER_VISIBILITY_MODELS is ordered by priority
+ * (ChatGPT, Gemini, Perplexity, Claude, Grok), so lower plans get the most-used engines first.
+ * Done-for-you clients (serviceTier set) always get every engine.
+ */
+export const ENGINES_BY_PLAN: Record<string, number> = { trial: 2, starter: 3, growth: 5, agency: 5 };
+export function getEngineLimit(planId: string, serviceTier?: string | null): number {
+  if (serviceTier) return 5;
+  return ENGINES_BY_PLAN[planId] ?? 2;
+}

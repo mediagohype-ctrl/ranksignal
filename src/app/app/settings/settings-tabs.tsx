@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Building2, CreditCard, UserRound, Users } from "lucide-react";
+import { Building2, CreditCard, Palette, UserRound, Users } from "lucide-react";
 import { TabPanel, Tabs } from "@/components/ui";
 
-const IDS = ["workspace", "members", "billing", "account"] as const;
+const IDS = ["workspace", "members", "billing", "branding", "account"] as const;
 type TabId = (typeof IDS)[number];
 
 function fromHash(hash: string): TabId | null {
@@ -12,6 +12,7 @@ function fromHash(hash: string): TabId | null {
   if (h === "billing" || h === "usage") return "billing";
   if (h === "members") return "members";
   if (h === "workspace") return "workspace";
+  if (h === "branding" || h === "white-label") return "branding";
   if (h === "account" || h === "profile") return "account";
   return null;
 }
@@ -20,12 +21,14 @@ export function SettingsTabs({
   workspace,
   members,
   billing,
+  branding,
   account,
   memberCount,
 }: {
   workspace: React.ReactNode;
   members: React.ReactNode;
   billing: React.ReactNode;
+  branding?: React.ReactNode;
   account?: React.ReactNode;
   memberCount?: number;
 }) {
@@ -61,11 +64,20 @@ export function SettingsTabs({
           { id: "workspace", label: "Workspace", icon: <Building2 /> },
           { id: "members", label: "Members", icon: <Users />, count: memberCount },
           { id: "billing", label: "Billing & usage", icon: <CreditCard /> },
+          ...(branding ? [{ id: "branding", label: "Branding", icon: <Palette /> }] : []),
           ...(account ? [{ id: "account", label: "Your account", icon: <UserRound /> }] : []),
         ]}
       />
       <TabPanel idPrefix="settings" value={tab} className="pt-8 animate-fade-in" key={tab}>
-        {tab === "workspace" ? workspace : tab === "members" ? members : tab === "account" && account ? account : billing}
+        {tab === "workspace"
+          ? workspace
+          : tab === "members"
+            ? members
+            : tab === "branding" && branding
+              ? branding
+              : tab === "account" && account
+                ? account
+                : billing}
       </TabPanel>
     </>
   );

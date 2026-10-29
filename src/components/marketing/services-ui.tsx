@@ -150,10 +150,10 @@ export function DeliveryComposition() {
             +9 pts
           </span>
         </p>
-        <p className="mt-2 text-xs text-muted">vs 22% in September · from 400 saved answers</p>
+        <p className="mt-2 text-xs text-muted">vs 22% in September · from 500 saved answers</p>
         <p className="mt-4 inline-flex items-center gap-1.5 border-t border-border pt-3 text-xs text-fg-soft">
           <RotateCcw aria-hidden size={13} />
-          Every change logged, one click to roll back
+          Every change logged; connector changes roll back in one click
         </p>
       </div>
     </figure>
@@ -173,8 +173,8 @@ const ENGINES = [
   { name: "ChatGPT", before: 26, after: 38 },
   { name: "Perplexity", before: 29, after: 41 },
   { name: "Gemini", before: 24, after: 30 },
-  { name: "Copilot", before: 13, after: 24 },
-  { name: "AI Overviews", before: 18, after: 22 },
+  { name: "Claude", before: 13, after: 24 },
+  { name: "Grok", before: 18, after: 22 },
 ];
 
 const SHIPPED = [
@@ -299,8 +299,8 @@ export function ImpactReportSample() {
           </ol>
         </div>
         <p className="self-end text-xs leading-relaxed text-muted lg:text-right">
-          Based on 400 saved answers (50 questions, 5 engines, asked twice). Likely range ±4 pts. AI answers change from
-          day to day; no ranking or mention is guaranteed.
+          Based on 500 saved answers (50 questions × 5 engines, checked twice this month). Small samples move a lot, and AI
+          answers change from day to day; no ranking or mention is guaranteed.
         </p>
       </div>
     </figure>

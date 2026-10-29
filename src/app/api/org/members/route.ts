@@ -4,9 +4,9 @@ import { db } from "@/lib/db";
 import { requireActiveMembership } from "@/lib/auth/membership";
 import { UNUSABLE_PASSWORD } from "@/lib/auth/password";
 import { getPlan } from "@/lib/billing/plans";
-import { writeAuditLog } from "@/lib/audit-log";
+import { auditActorFromSession, writeAuditLog } from "@/lib/audit-log";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { sendInviteEmail } from "@/lib/auth/invite";
+import { assertCanSendInvites, sendInviteEmail } from "@/lib/auth/invite";
 
 const memberSelect = {
   id: true,
@@ -36,6 +36,8 @@ export const POST = handler(async (req: Request) => {
   const s = await requireSession("admin");
   const actor = await requireActiveMembership(s, ["owner", "admin"]);
   const input = await parseBody(req, inviteSchema);
+  // Anti-phishing: only verified senders, and at most 20 invitations per person per day across all workspaces.
+  await assertCanSendInvites(s.userId);
   // Invites send email to arbitrary addresses: cap volume per workspace to prevent abuse.
   if (!checkRateLimit(`invite-org:${s.organizationId}`, 30, 24 * 60 * 60 * 1000).allowed) {
     throw new HttpError(429, "rate_limited", "You've sent a lot of invitations today. Please try again tomorrow.");
@@ -49,7 +51,7 @@ export const POST = handler(async (req: Request) => {
     throw new HttpError(402, "plan_limit", `Your ${plan.name} plan includes ${plan.seats} seats.`, { limit: plan.seats, current: seatsUsed });
   }
 
-  // Existing user -> invited membership; unknown email -> placeholder user that can claim the account at sign-up.
+  // Existing user -> invited membership; unknown email -> placeholder user that can only be claimed at sign-up with the invite token.
   const user =
     (await db.user.findUnique({ where: { email: input.email } })) ??
     (await db.user.create({ data: { email: input.email, passwordHash: UNUSABLE_PASSWORD } }));
@@ -66,13 +68,13 @@ export const POST = handler(async (req: Request) => {
 
   await writeAuditLog({
     organizationId: s.organizationId,
-    actorId: s.userId,
+    ...auditActorFromSession(s),
     action: "org.member_invited",
     resourceType: "membership",
     resourceId: membership.id,
     after: { email: input.email, role: input.role },
   });
-  // The invitee accepts via the emailed link (/accept-invite) or by switching to the org (POST /api/auth/switch-org).
+  // The invitee accepts via the emailed link (/accept-invite), or by switching to the org once their email is verified.
   const inviter = await db.user.findUnique({ where: { id: s.userId }, select: { name: true, email: true } });
   const sent = await sendInviteEmail({
     membershipId: membership.id,
