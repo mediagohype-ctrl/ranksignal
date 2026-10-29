@@ -1,8 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Activity, Blocks, Eye, EyeOff, FileDown, Globe, Plug, PlugZap, ShieldCheck, Unplug } from "lucide-react";
+import {
+  Activity, BarChart3, Blocks, Check, ChevronRight, Database, Eye, EyeOff, FileDown, GitBranch, Globe, Layers, LayoutTemplate, MousePointerClick,
+  PanelsTopLeft, Plug, PlugZap, ShieldCheck, ShoppingBag, Unplug, X,
+} from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate, fmtRelative, hostOf } from "@/lib/dashboard/format";
 import type { ConnectorCapabilities } from "@/lib/types";
@@ -58,6 +61,15 @@ const PROVIDER_NAME: Record<string, string> = {
   gsc: "Google Search Console",
   ga4: "Google Analytics 4",
 };
+const PROVIDER_ICON: Record<string, React.ReactNode> = {
+  github: <GitBranch />,
+  shopify: <ShoppingBag />,
+  webflow: <LayoutTemplate />,
+  contentful: <Layers />,
+  sanity: <Database />,
+  wix: <PanelsTopLeft />,
+};
+
 const providerName = (p: string) => PROVIDER_NAME[p] ?? p.replace(/^\w/, (c) => c.toUpperCase());
 
 export function IntegrationsPanel({
@@ -90,7 +102,6 @@ export function IntegrationsPanel({
   const [confirm, setConfirm] = useState<IntegrationView | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; text: string }>>({});
 
-  const available = catalog.filter((c) => c.status === "available");
   const planned = catalog.filter((c) => c.status === "planned");
   const hasWordPress = integrations.some((i) => i.provider === "wordpress");
 
@@ -145,6 +156,125 @@ export function IntegrationsPanel({
       setBusy(null);
     }
   }
+
+  const [picked, setPicked] = useState<string | null>(null);
+  const setupRef = useRef<HTMLDivElement>(null);
+  function pick(id: string) {
+    setPicked((cur) => (cur === id ? null : id));
+    requestAnimationFrame(() => setupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  const catalogBlurb = (id: string) => catalog.find((c) => c.id === id)?.description ?? "";
+  const options: { id: string; name: string; family: string; blurb: string; icon: React.ReactNode; connected: boolean; planned?: boolean }[] = [
+    { id: "wordpress", name: "WordPress", family: "Website CMS", blurb: catalogBlurb("wordpress"), icon: <Globe />, connected: hasWordPress },
+    {
+      id: "google",
+      name: "Google Search Console & GA4",
+      family: "Analytics · read-only",
+      blurb: "Real clicks, impressions and AI-referred visits in your reports.",
+      icon: <BarChart3 />,
+      connected: integrations.some((i) => i.provider === "gsc" || i.provider === "ga4"),
+    },
+    ...descriptors.map((d) => ({
+      id: d.id,
+      name: d.name,
+      family: d.family,
+      blurb: d.description,
+      icon: PROVIDER_ICON[d.id] ?? <Blocks />,
+      connected: integrations.some((i) => i.provider === d.id),
+    })),
+    { id: "manual", name: "Manual export", family: "Any platform", blurb: catalogBlurb("manual"), icon: <FileDown />, connected: true },
+    ...planned.map((c) => ({ id: c.id, name: c.name, family: c.family, blurb: c.description, icon: <Blocks />, connected: false, planned: true })),
+  ];
+
+  const wordpressPanel = (
+    <Card>
+      <CardHeader
+        icon={<PlugZap />}
+        title={hasWordPress ? "Connect another WordPress site" : "Connect WordPress"}
+        description="Takes about two minutes. We use a WordPress Application Password — a separate password you can revoke at any time without changing your login."
+      />
+      <CardBody className="grid gap-8 lg:grid-cols-2">
+        <div>
+          {canAdmin ? (
+            <form onSubmit={connect} className="space-y-5" noValidate={false}>
+              <Field label="Website address" htmlFor="wp-url" hint="Your WordPress site's home page, e.g. https://example.com" required>
+                <Input
+                  id="wp-url"
+                  type="url"
+                  required
+                  inputMode="url"
+                  value={form.siteUrl}
+                  onChange={(e) => setForm({ ...form, siteUrl: e.target.value })}
+                  aria-describedby={fieldDescribedBy("wp-url", { hint: true })}
+                />
+              </Field>
+              <Field label="WordPress username" htmlFor="wp-user" hint="The username you sign in with (not your email)." required>
+                <Input
+                  id="wp-user"
+                  autoComplete="off"
+                  required
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  aria-describedby={fieldDescribedBy("wp-user", { hint: true })}
+                />
+              </Field>
+              <Field
+                label="Application Password"
+                htmlFor="wp-pass"
+                hint="Paste the password WordPress generated. Spaces are fine."
+                error={formError}
+                required
+              >
+                <div className="relative">
+                  <Input
+                    id="wp-pass"
+                    type={showPass ? "text" : "password"}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    required
+                    minLength={8}
+                    invalid={!!formError}
+                    className="pr-11 font-mono"
+                    value={form.applicationPassword}
+                    onChange={(e) => setForm({ ...form, applicationPassword: e.target.value })}
+                    aria-describedby={fieldDescribedBy("wp-pass", { hint: true, error: formError })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2"
+                    aria-label={showPass ? "Hide password" : "Show password"}
+                    aria-pressed={showPass}
+                    onClick={() => setShowPass((v) => !v)}
+                  >
+                    {showPass ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
+              </Field>
+              <div className="flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-caption font-normal text-muted">
+                <ShieldCheck aria-hidden className="mt-px size-4 shrink-0 text-success" />
+                We save drafts and only change what you approve. Publishing, deleting pages and changing URLs are never done for you.
+              </div>
+              <div className="flex justify-end pt-1">
+                <Button type="submit" icon={<PlugZap />} loading={connecting} loadingText="Connecting…" className="w-full sm:w-auto">
+                  Connect WordPress
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <Notice tone="info" title="Admins only">
+              Only an organization admin can connect a website. Ask an admin on your team to do this step.
+            </Notice>
+          )}
+        </div>
+        <div className="border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+          <WordPressHelp />
+        </div>
+      </CardBody>
+    </Card>
+  );
 
   return (
     <div className="space-y-10">
@@ -224,174 +354,113 @@ export function IntegrationsPanel({
         )}
       </section>
 
-      {/* Connect WordPress */}
+      {/* Connect a platform: pick one, then only that platform's setup is shown */}
       <section aria-labelledby="int-connect">
-        <Card>
-          <CardHeader
-            icon={<PlugZap />}
-            title={hasWordPress ? "Connect another WordPress site" : "Connect WordPress"}
-            description="Takes about two minutes. We use a WordPress Application Password — a separate password you can revoke at any time without changing your login."
-          />
-          <CardBody className="grid gap-8 lg:grid-cols-2">
-            <div>
-              {canAdmin ? (
-                <form onSubmit={connect} className="space-y-5" noValidate={false}>
-                  <Field label="Website address" htmlFor="wp-url" hint="Your WordPress site's home page, e.g. https://example.com" required>
-                    <Input
-                      id="wp-url"
-                      type="url"
-                      required
-                      inputMode="url"
-                      value={form.siteUrl}
-                      onChange={(e) => setForm({ ...form, siteUrl: e.target.value })}
-                      aria-describedby={fieldDescribedBy("wp-url", { hint: true })}
-                    />
-                  </Field>
-                  <Field label="WordPress username" htmlFor="wp-user" hint="The username you sign in with (not your email)." required>
-                    <Input
-                      id="wp-user"
-                      autoComplete="off"
-                      required
-                      value={form.username}
-                      onChange={(e) => setForm({ ...form, username: e.target.value })}
-                      aria-describedby={fieldDescribedBy("wp-user", { hint: true })}
-                    />
-                  </Field>
-                  <Field
-                    label="Application Password"
-                    htmlFor="wp-pass"
-                    hint="Paste the password WordPress generated. Spaces are fine."
-                    error={formError}
-                    required
+        <SectionHeading
+          id="int-connect"
+          title="Connect a platform"
+          description="Choose where your website lives. We'll show the setup steps for just that platform."
+        />
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {options.map((o) => {
+            const selected = picked === o.id;
+            return (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  aria-controls="int-setup"
+                  disabled={o.planned}
+                  onClick={() => pick(o.id)}
+                  className={clsx(
+                    "focus-ring group flex h-full w-full items-start gap-3 rounded-2xl border bg-surface p-4 text-left transition",
+                    selected ? "border-primary shadow-sm ring-2 ring-primary/20" : "border-border hover:border-primary/50 hover:shadow-sm",
+                    o.planned && "cursor-not-allowed opacity-60 hover:border-border hover:shadow-none",
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={clsx(
+                      "flex size-10 shrink-0 items-center justify-center rounded-xl [&_svg]:size-5",
+                      selected ? "bg-primary text-white" : "bg-primary-soft text-primary-soft-fg",
+                    )}
                   >
-                    <div className="relative">
-                      <Input
-                        id="wp-pass"
-                        type={showPass ? "text" : "password"}
-                        autoComplete="new-password"
-                        spellCheck={false}
-                        required
-                        minLength={8}
-                        invalid={!!formError}
-                        className="pr-11 font-mono"
-                        value={form.applicationPassword}
-                        onChange={(e) => setForm({ ...form, applicationPassword: e.target.value })}
-                        aria-describedby={fieldDescribedBy("wp-pass", { hint: true, error: formError })}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="absolute right-1 top-1/2 -translate-y-1/2"
-                        aria-label={showPass ? "Hide password" : "Show password"}
-                        aria-pressed={showPass}
-                        onClick={() => setShowPass((v) => !v)}
-                      >
-                        {showPass ? <EyeOff /> : <Eye />}
-                      </Button>
-                    </div>
-                  </Field>
-                  <div className="flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-caption font-normal text-muted">
-                    <ShieldCheck aria-hidden className="mt-px size-4 shrink-0 text-success" />
-                    We save drafts and only change what you approve. Publishing, deleting pages and changing URLs are never done for you.
-                  </div>
-                  <div className="flex justify-end pt-1">
-                    <Button type="submit" icon={<PlugZap />} loading={connecting} loadingText="Connecting…" className="w-full sm:w-auto">
-                      Connect WordPress
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <Notice tone="info" title="Admins only">
-                  Only an organization admin can connect a website. Ask an admin on your team to do this step.
-                </Notice>
-              )}
-            </div>
-            <div className="border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-              <WordPressHelp />
-            </div>
-          </CardBody>
-        </Card>
-      </section>
-
-      {/* Google Search Console + GA4 (OAuth, read-only) */}
-      <section aria-labelledby="int-google">
-        <SectionHeading
-          id="int-google"
-          title="Google Search Console & Analytics"
-          description="Read-only. Adds real clicks, impressions and AI-referred visits to your reports and monthly impact report."
-        />
-        <ConnectGoogle projectId={projectId} canAdmin={canAdmin} />
-      </section>
-
-      {/* Other platforms */}
-      {descriptors.length > 0 && (
-        <section aria-labelledby="int-more">
-          <SectionHeading
-            id="int-more"
-            title="Other platforms"
-            description="Code repositories, stores, website builders and headless CMSs. Changes are saved as drafts or pull requests wherever the platform allows."
-          />
-          <div className="grid gap-6 lg:grid-cols-2">
-            {descriptors.map((d) => (
-              <ConnectGeneric
-                key={d.id}
-                descriptor={d}
-                projectId={projectId}
-                canAdmin={canAdmin}
-                defaults={{ siteUrl: defaultSiteUrl }}
-                connected={integrations.some((i) => i.provider === d.id)}
-                onConnected={() => router.refresh()}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Catalog */}
-      <section aria-labelledby="int-catalog">
-        <SectionHeading
-          id="int-catalog"
-          title="Available connections"
-          description="What you can connect today, and what's on the way."
-        />
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...available, ...planned].map((c) => (
-            <li key={c.id}>
-              <Card as="article" padding="md" className={clsx("flex h-full flex-col gap-2", c.status === "planned" && "bg-surface-2/50")}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      aria-hidden
-                      className={clsx(
-                        "flex size-9 items-center justify-center rounded-lg [&_svg]:size-[18px]",
-                        c.status === "available" ? "bg-primary-soft text-primary-soft-fg" : "bg-surface-3 text-muted",
+                    {o.icon}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-small font-semibold text-fg">{o.name}</span>
+                      {o.connected && (
+                        <Badge tone="success" size="sm">
+                          <Check aria-hidden className="size-3" />
+                          {o.id === "manual" ? "Always on" : "Connected"}
+                        </Badge>
                       )}
-                    >
-                      {c.id === "manual" ? <FileDown /> : c.id === "wordpress" ? <Globe /> : <Blocks />}
+                      {o.planned && <Badge size="sm">Planned</Badge>}
+                    </span>
+                    <span className="mt-0.5 block text-caption font-normal text-muted">{o.family}</span>
+                    <span className="mt-1.5 line-clamp-2 block text-caption font-normal text-fg-soft">{o.blurb}</span>
+                  </span>
+                  <ChevronRight
+                    aria-hidden
+                    className={clsx("mt-0.5 size-4 shrink-0 text-muted transition", selected ? "rotate-90 text-primary" : "group-hover:translate-x-0.5")}
+                  />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div id="int-setup" ref={setupRef} className="scroll-mt-24">
+          {picked ? (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-small text-muted">
+                  Setting up <span className="font-semibold text-fg">{options.find((o) => o.id === picked)?.name}</span>
+                </p>
+                <Button variant="ghost" size="sm" icon={<X />} onClick={() => setPicked(null)}>
+                  Close
+                </Button>
+              </div>
+              {picked === "wordpress" && wordpressPanel}
+              {picked === "google" && <ConnectGoogle projectId={projectId} canAdmin={canAdmin} />}
+              {picked === "manual" && (
+                <Card padding="lg">
+                  <div className="flex items-start gap-3">
+                    <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
+                      <Check className="size-5" />
                     </span>
                     <div>
-                      <h3 className="text-small font-semibold text-fg">{c.name}</h3>
-                      <p className="text-caption font-normal text-muted">{c.family}</p>
+                      <h3 className="text-h4 text-fg">No setup needed</h3>
+                      <p className="mt-1 max-w-2xl text-small text-fg-soft">
+                        Manual export is always on. Every approved change comes with copy-ready steps you can paste into any website editor. Nothing is
+                        written to your site automatically.
+                      </p>
                     </div>
                   </div>
-                  {c.status === "available" ? <Badge tone="success">Available</Badge> : <Badge>Planned</Badge>}
-                </div>
-                <p className="text-small text-fg-soft">{c.description}</p>
-                {capabilityMap[c.id]?.limitations?.length ? (
-                  <details className="mt-auto text-caption text-muted">
-                    <summary className="cursor-pointer font-medium hover:text-fg">Limitations</summary>
-                    <ul className="mt-1.5 list-disc space-y-1 pl-4 font-normal">
-                      {capabilityMap[c.id].limitations.map((l) => (
-                        <li key={l}>{l}</li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
-              </Card>
-            </li>
-          ))}
-        </ul>
+                </Card>
+              )}
+              {descriptors
+                .filter((d) => d.id === picked)
+                .map((d) => (
+                  <ConnectGeneric
+                    key={d.id}
+                    descriptor={d}
+                    projectId={projectId}
+                    canAdmin={canAdmin}
+                    defaults={{ siteUrl: defaultSiteUrl }}
+                    connected={integrations.some((i) => i.provider === d.id)}
+                    onConnected={() => router.refresh()}
+                  />
+                ))}
+            </div>
+          ) : (
+            <p className="mt-4 flex items-center gap-2 text-small text-muted">
+              <MousePointerClick aria-hidden className="size-4" />
+              Select a platform above to see how to connect it.
+            </p>
+          )}
+        </div>
       </section>
 
       <section aria-labelledby="int-matrix">
