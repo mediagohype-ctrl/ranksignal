@@ -42,7 +42,7 @@ export async function assertVisibilityRunAllowed(orgId: string, now = new Date()
     throw new HttpError(
       402,
       "plan_limit",
-      `You've used all ${a.limit} AI visibility checks included in your plan this month. Upgrade for more, or wait until next month.`,
+      `You've used all ${a.limit} AI ${a.limit === 1 ? "check" : "checks"} in your plan this month. Upgrade for more, or wait until next month.`,
       { limit: a.limit, used: a.used, upgradeUrl: "/app/settings?tab=billing" },
     );
   }

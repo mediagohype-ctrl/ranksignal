@@ -105,7 +105,7 @@ export function TaskDetailDialog({
       toast(`Moved to ${STATUS_LABEL[status]}`, "success");
       void load(task.id);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Couldn't move the task", "error");
+      toast(e instanceof Error ? e.message : "Couldn't move the task. Please try again.", "error");
     } finally {
       setMoving(false);
     }
@@ -123,7 +123,7 @@ export function TaskDetailDialog({
       setComments((c) => [...(c ?? []), res.item]);
       setBody("");
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Couldn't post the comment", "error");
+      toast(err instanceof Error ? err.message : "Couldn't post the comment. Please try again.", "error");
     } finally {
       setPosting(false);
     }
@@ -137,7 +137,7 @@ export function TaskDetailDialog({
       toast("Task deleted", "success");
       onDeleted(task.id);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Couldn't delete the task", "error");
+      toast(e instanceof Error ? e.message : "Couldn't delete the task. Please try again.", "error");
     } finally {
       setDeleting(false);
     }
@@ -150,7 +150,7 @@ export function TaskDetailDialog({
     ...(task.completedAt ? [{ label: "Completed", value: fmtDate(task.completedAt) }] : []),
     ...(task.shippedUrl
       ? [{
-          label: "Shipped at",
+          label: "Live page",
           value: (
             <a href={task.shippedUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 break-all font-medium text-primary hover:underline">
               {hostOf(task.shippedUrl)}{(() => { try { const p = new URL(task.shippedUrl).pathname; return p === "/" ? "" : p; } catch { return ""; } })()}

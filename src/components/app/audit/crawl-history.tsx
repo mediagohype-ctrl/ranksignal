@@ -32,13 +32,13 @@ export function CrawlHistory({ runs }: { runs: CrawlRunView[] }) {
     <Card>
       <CardHeader
         icon={<History />}
-        title="Crawl history"
-        description="Each crawl reads your pages the way a search engine would. Most recent first."
+        title="Past website checks"
+        description="Each check reads your pages the way Google would. Most recent first."
       />
       {runs.length === 0 ? (
-        <EmptyState size="sm" title="No crawls yet" description="Start an audit and your crawls will be listed here." />
+        <EmptyState size="sm" title="No website checks yet" description="Check your website and each check will be listed here." />
       ) : (
-        <Table caption="Crawl history" density="compact">
+        <Table caption="Past website checks" density="compact">
           <THead>
             <tr>
               <TH>Started</TH>
@@ -60,7 +60,7 @@ export function CrawlHistory({ runs }: { runs: CrawlRunView[] }) {
                   </TD>
                   <TD className="min-w-40">
                     {active && total > 0 ? (
-                      <Meter value={c.pagesCrawled} max={total} label={`Crawl progress: ${c.pagesCrawled} of ${total} pages`} tone="primary" showValue />
+                      <Meter value={c.pagesCrawled} max={total} label={`Website check progress: ${c.pagesCrawled} of ${total} pages`} tone="primary" showValue />
                     ) : (
                       <span className="tabular-nums">
                         {c.pagesCrawled}

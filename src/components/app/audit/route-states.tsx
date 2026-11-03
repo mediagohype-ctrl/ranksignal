@@ -14,7 +14,7 @@ export function RouteError({ error, reset, what }: { error: Error & { digest?: s
       size="lg"
       icon={<AlertTriangle />}
       title={`We couldn't load ${what}`}
-      description="This is usually temporary. Try again — if it keeps happening, refresh the page or contact support."
+      description="This is usually temporary. Try again — if it keeps happening, refresh the page or contact us."
       action={
         <Button icon={<RotateCw />} onClick={reset}>
           Try again

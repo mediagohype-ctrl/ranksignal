@@ -5,7 +5,7 @@ export async function offsiteApi<T>(url: string, init?: RequestInit & { body?: s
   if (!res.ok) {
     const fe = (data.error?.details as { fieldErrors?: Record<string, string[]> } | undefined)?.fieldErrors;
     const first = fe ? Object.entries(fe).find(([, v]) => v?.length) : undefined;
-    throw new Error(first ? `${first[0]}: ${first[1][0]}` : (data.error?.message ?? "Something went wrong"));
+    throw new Error(first ? `${first[0]}: ${first[1][0]}` : (data.error?.message ?? "Something went wrong. Please try again."));
   }
   return data as T;
 }

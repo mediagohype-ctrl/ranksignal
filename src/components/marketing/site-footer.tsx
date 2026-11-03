@@ -12,14 +12,14 @@ const COLS = [
       { href: "/services", label: "Done-for-you services" },
       { href: "/pricing", label: "Pricing" },
       { href: "/#sample", label: "Sample report" },
-      { href: "/free-check", label: "Free AI-readiness check" },
+      { href: "/free-check", label: "Free website check" },
     ],
   },
   {
     title: "Resources",
     links: [
       { href: "/docs", label: "Getting started" },
-      { href: "/#explained", label: "SEO vs AEO vs GEO" },
+      { href: "/#explained", label: "Your four scores" },
       { href: "/#faq", label: "FAQ" },
       { href: "/contact", label: "Contact us" },
     ],
@@ -82,8 +82,8 @@ export function SiteFooter() {
             © {new Date().getFullYear()} {BRAND.name}
           </p>
           <p className="max-w-4xl lg:col-span-9">
-            AI answer visibility is measured from samples and changes over time; no ranking, mention or citation
-            outcome is guaranteed. ChatGPT, Gemini, Perplexity, Claude, Grok and Google AI Overviews are trademarks of their
+            AI answers change over time, and we measure them from samples. We can&apos;t promise a Google position, an AI
+            mention or a link to your site. ChatGPT, Gemini, Perplexity, Claude, Grok and Google AI Overviews are trademarks of their
             respective owners; {BRAND.name} is not affiliated with or endorsed by them.
           </p>
         </div>

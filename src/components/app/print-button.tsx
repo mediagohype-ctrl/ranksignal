@@ -8,7 +8,7 @@ import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui";
  * then restored afterwards.
  */
 export function PrintButton({
-  label = "Print / PDF",
+  label = "Print or save as PDF",
   variant = "secondary",
   size = "md",
 }: {

@@ -92,21 +92,21 @@ function briefText(o: { kind: "content" | "comparison"; prompt: PromptEvidence; 
   const lines = [
     `# ${o.kind === "comparison" ? "Comparison page brief" : "Content brief"}: "${o.prompt.text}"`,
     `Intent: ${o.prompt.intent}`,
-    o.competitors.length ? `Competitors appearing in AI answers for this prompt: ${o.competitors.join(", ")}` : "",
-    o.citedDomains.length ? `Sources AI answers currently cite: ${o.citedDomains.slice(0, 8).join(", ")}` : "",
+    o.competitors.length ? `Competitors named in AI answers to this question: ${o.competitors.join(", ")}` : "",
+    o.citedDomains.length ? `Websites AI answers link to today: ${o.citedDomains.slice(0, 8).join(", ")}` : "",
     "## Goal",
-    `Publish a page that answers this question directly and accurately so ${o.brand} is a credible, citable source.`,
+    `Publish a page that answers this question directly and accurately, so AI assistants can trust ${o.brand} and link to it.`,
     "## Suggested outline",
     "1. A direct 2–3 sentence answer to the question at the top.",
     o.kind === "comparison"
       ? `2. A fair comparison table (${[o.brand, ...o.competitors.slice(0, 3)].join(" vs ")}) using verifiable, dated facts.`
       : "2. Key facts, specifications or steps, each verifiable.",
-    "3. FAQs drawn from real customer questions.",
-    "4. Clear authorship, last-updated date and links to primary sources.",
-    "## Guardrails",
-    "- Use only approved business facts; mark anything unverified for review.",
-    "- No guaranteed ranking, medical, legal or financial claims.",
-    "- Outcomes are measured after publishing; inclusion in AI answers is not guaranteed.",
+    "3. Common questions taken from real customers.",
+    "4. Who wrote it, a last-updated date, and links to the original sources.",
+    "## Rules",
+    "- Use only business facts you have approved; mark anything unchecked for review.",
+    "- No promises about Google rankings, and no medical, legal or financial claims.",
+    "- Results are measured after publishing; there's no promise AI assistants will use the page.",
   ];
   return lines.filter(Boolean).join("\n");
 }
@@ -127,7 +127,7 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
         out.push({
           type: "update_meta_description", target, rationale: f.message, evidenceRefs: [ref(f)],
           impact: 3, effort: "low", confidence: 0.7,
-          expectedImpact: "Clearer search/AI snippet for this page. Measured after re-crawl; not a ranking guarantee.",
+          expectedImpact: "A clearer Google summary for this page. We measure it at the next website check; it doesn't promise a higher ranking.",
           proposedChange: { field: "meta_description", before, after },
           llmDraft: { kind: "meta_description", page: f.page ?? undefined },
         });
@@ -149,7 +149,7 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
         out.push({
           type: "update_title", target, rationale: f.message, evidenceRefs: [ref(f)],
           impact: f.code === "missing_title" ? 4 : 2, effort: "low", confidence: 0.6,
-          expectedImpact: "More descriptive page title. Measured after re-crawl.",
+          expectedImpact: "A clearer Google headline for this page. We measure it at the next website check.",
           proposedChange: { field: "title", before, after },
         });
         break;
@@ -164,9 +164,9 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
         };
         out.push({
           type: "add_faq_schema", target,
-          rationale: `${f.message} Answers must match the visible page text before approval.`,
+          rationale: `${f.message} The answers must match the text on the page before you approve this.`,
           evidenceRefs: [ref(f)], impact: 2, effort: "medium", confidence: 0.5,
-          expectedImpact: "Machine-readable Q&A for this page. Does not guarantee rich results or AI inclusion.",
+          expectedImpact: "Questions and answers on this page that Google and AI can read reliably. It doesn't promise extra Google features or AI mentions.",
           proposedChange: { field: "schema", before: null, after: JSON.stringify(jsonLd, null, 2) },
         });
         break;
@@ -176,8 +176,8 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
         out.push({
           type: "robots_review", target: { resourceType: "site", url },
           rationale: f.message, evidenceRefs: [ref(f)], impact: f.severity === "medium" ? 4 : 1, effort: "low", confidence: 0.8,
-          expectedImpact: "A deliberate, documented robots.txt policy for AI crawlers.",
-          proposedChange: { field: "robots", before: null, after: `Review robots.txt rules for: ${blocked.join(", ")}. Decide per crawler (AI search vs training) and update manually.` },
+          expectedImpact: "A clear, deliberate choice about which AI robots can read your site.",
+          proposedChange: { field: "robots", before: null, after: `Review your site's robot rules file (robots.txt) for: ${blocked.join(", ")}. Decide for each robot (live AI answers vs AI training) and update it by hand.` },
         });
         break;
       }
@@ -186,7 +186,7 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
           out.push({
             type: "internal_task", target: { resourceType: "page", url },
             rationale: f.message, evidenceRefs: [ref(f)], impact: f.severity === "critical" ? 5 : 4, effort: "medium", confidence: 0.8,
-            expectedImpact: "Resolves a technical issue found in the audit.",
+            expectedImpact: "Fixes a problem found in the website check.",
             proposedChange: { field: "task", before: null, after: `Fix: ${f.message}${url ? `\nPage: ${url}` : ""}` },
           });
         }
@@ -196,7 +196,7 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
   // ---- Visibility-driven briefs ----
   const v = input.visibility;
   if (v && v.prompts.length) {
-    const sim = v.metrics?.simulated ? " (based on SIMULATED visibility data — demo only)" : "";
+    const sim = v.metrics?.simulated ? " (based on SIMULATED demo AI answers, not real ones)" : "";
     const confBase = v.metrics?.simulated ? 0.3 : 0.6;
     const citationRate = v.metrics?.citationRate ?? 0;
     const competitorsOf = (p: PromptEvidence) => {
@@ -215,10 +215,10 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
         const comps = Object.keys(competitorsOf(p));
         out.push({
           type: "content_brief", target: { resourceType: "prompt", resourceId: p.id },
-          rationale: `Your site was not cited in any of ${p.observations.length} sampled answers for "${p.text}" (overall citation rate ${(citationRate * 100).toFixed(0)}%)${sim}.`,
+          rationale: `None of ${p.observations.length} AI ${p.observations.length === 1 ? "answer" : "answers"} to "${p.text}" linked to your site (across all questions, AI linked to you in ${(citationRate * 100).toFixed(0)}% of answers)${sim}.`,
           evidenceRefs: [{ kind: "visibility_run", id: v.runId }, { kind: "prompt", id: p.id }],
           impact: 4, effort: "high", confidence: confBase,
-          expectedImpact: "A citable source page for this question. Changes in citation rate are measured, not guaranteed.",
+          expectedImpact: "A page AI assistants can link to for this question. We measure changes; we can't promise them.",
           proposedChange: { field: "brief", before: null, after: briefText({ kind: "content", prompt: p, brand: input.brand, competitors: comps, citedDomains: domainsOf(p) }) },
           llmDraft: { kind: "brief", prompt: p.text },
         });
@@ -239,10 +239,10 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
     for (const d of dominated) {
       out.push({
         type: "comparison_page_brief", target: { resourceType: "prompt", resourceId: d.p.id },
-        rationale: `${d.top![0]} appears in ${(d.share * 100).toFixed(0)}% of sampled answers for "${d.p.text}" while your brand appears in ${(d.brandRate * 100).toFixed(0)}%${sim}.`,
+        rationale: `AI named ${d.top![0]} in ${(d.share * 100).toFixed(0)}% of answers to "${d.p.text}", and you in ${(d.brandRate * 100).toFixed(0)}%${sim}.`,
         evidenceRefs: [{ kind: "visibility_run", id: v.runId }, { kind: "prompt", id: d.p.id }],
         impact: 3, effort: "high", confidence: confBase,
-        expectedImpact: "A fair, factual comparison resource. Measured on the next visibility run.",
+        expectedImpact: "A fair, factual comparison page. We measure it at the next AI check.",
         proposedChange: { field: "brief", before: null, after: briefText({ kind: "comparison", prompt: d.p, brand: input.brand, competitors: Object.keys(competitorsOf(d.p)), citedDomains: domainsOf(d.p) }) },
         llmDraft: { kind: "brief", prompt: d.p.text },
       });

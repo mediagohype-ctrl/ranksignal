@@ -3,6 +3,7 @@ import { ChevronRight, ExternalLink } from "lucide-react";
 import { requireAppProject } from "@/lib/dashboard/server";
 import { hostOf } from "@/lib/dashboard/format";
 import { Avatar } from "@/components/ui";
+import { SectionTabs } from "@/components/app/tab-bar";
 
 export default async function ProjectLayout({
   children,
@@ -17,7 +18,7 @@ export default async function ProjectLayout({
     <div>
       <nav aria-label="Project" className="no-print mb-5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-small text-muted">
         <Link href="/app" className="rounded hover:text-fg hover:underline underline-offset-4">
-          Projects
+          Websites
         </Link>
         <ChevronRight size={14} aria-hidden className="opacity-60" />
         <Link
@@ -38,6 +39,7 @@ export default async function ProjectLayout({
           <span className="sr-only">(opens in new tab)</span>
         </a>
       </nav>
+      <SectionTabs />
       {children}
     </div>
   );

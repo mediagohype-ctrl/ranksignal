@@ -90,16 +90,16 @@ export async function runFreeCheck(seedUrl: string, opts: { fetcher?: Fetcher; b
       throw new FreeCheckError("blocked_url", "That address isn't a public website we can check.");
     }
     if (e instanceof SafeFetchError && e.code === "timeout") {
-      throw new FreeCheckError("timeout", "Your homepage took too long to respond. Try again in a minute.");
+      throw new FreeCheckError("timeout", "Your homepage took too long to open. Please try again in a minute.");
     }
     throw new FreeCheckError("unreachable", "We couldn't load that website. Check the address and try again.");
   }
   const homeUrl = normalizeUrl(homeRes.finalUrl) ?? seedUrl;
   const homeType = homeRes.headers.get("content-type");
   if (homeRes.status >= 400) {
-    throw new FreeCheckError("unreachable", `Your homepage returned an error (HTTP ${homeRes.status}), so we couldn't check it.`);
+    throw new FreeCheckError("unreachable", `Your homepage showed an error (code ${homeRes.status}), so we couldn't check it. Check the address and try again.`);
   }
-  if (homeType && !/html/i.test(homeType)) throw new FreeCheckError("not_html", "That address doesn't return a web page.");
+  if (homeType && !/html/i.test(homeType)) throw new FreeCheckError("not_html", "That address doesn't open a web page. Check the address and try again.");
   const hosts = new Set([siteHost(new URL(seedUrl).hostname), siteHost(new URL(homeUrl).hostname)]);
   const origin = new URL(homeUrl).origin;
 

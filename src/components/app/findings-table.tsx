@@ -8,7 +8,7 @@ import { fmtDate } from "@/lib/dashboard/format";
 import { Badge, Button, Card, EmptyState, SeverityBadge, StatusBadge, useToast } from "@/components/ui";
 import { FilterChips } from "./audit/filter-chips";
 import { EvidenceList } from "./audit/evidence-list";
-import { SEVERITY_ORDER, categoryLabel, findingCopy } from "./audit/finding-copy";
+import { PRIORITY_OPTIONS, SEVERITY_ORDER, categoryLabel, findingCopy, priorityOf } from "./audit/finding-copy";
 
 export interface FindingRow {
   id: string;
@@ -40,7 +40,7 @@ const sevRank = (s: string) => {
 
 const PAGE_LIMIT = 15;
 
-/** Audit findings grouped by rule, with plain-English explanations, filters and per-page ignore/restore. */
+/** Website problems (audit findings) grouped by rule, with plain-English explanations, filters and per-page ignore/restore. */
 export function FindingsTable({ projectId, rows, canEdit }: { projectId: string; rows: FindingRow[]; canEdit: boolean }) {
   const [severity, setSeverity] = useState("all");
   const [category, setCategory] = useState("all");
@@ -51,12 +51,14 @@ export function FindingsTable({ projectId, rows, canEdit }: { projectId: string;
   const categories = useMemo(() => Array.from(new Set(rows.map((r) => r.category))).sort(), [rows]);
 
   const count = (pred: (r: FindingRow) => boolean, base: FindingRow[]) => base.filter(pred).length;
+  // The "severity" filter holds a priority group (urgent / important / nice), not a raw severity.
+  const sevMatch = (r: FindingRow) => severity === "all" || priorityOf(r.severity) === severity;
   const sevBase = byStatus.filter((r) => category === "all" || r.category === category);
-  const catBase = byStatus.filter((r) => severity === "all" || r.severity === severity);
-  const statusBase = rows.filter((r) => (severity === "all" || r.severity === severity) && (category === "all" || r.category === category));
+  const catBase = byStatus.filter(sevMatch);
+  const statusBase = rows.filter((r) => sevMatch(r) && (category === "all" || r.category === category));
 
   const groups = useMemo(() => {
-    const shown = byStatus.filter((r) => (severity === "all" || r.severity === severity) && (category === "all" || r.category === category));
+    const shown = byStatus.filter((r) => (severity === "all" || priorityOf(r.severity) === severity) && (category === "all" || r.category === category));
     const map = new Map<string, Group>();
     for (const r of shown) {
       let g = map.get(r.code);
@@ -98,12 +100,12 @@ export function FindingsTable({ projectId, rows, canEdit }: { projectId: string;
           ]}
         />
         <FilterChips
-          label="Severity"
+          label="Priority"
           value={severity}
           onChange={setSeverity}
           options={[
             { value: "all", label: "All", count: sevBase.length },
-            ...SEVERITY_ORDER.map((s) => ({ value: s, label: s[0].toUpperCase() + s.slice(1), count: count((r) => r.severity === s, sevBase) })),
+            ...PRIORITY_OPTIONS.map((p) => ({ value: p.value, label: p.label, count: count((r) => priorityOf(r.severity) === p.value, sevBase) })),
           ]}
         />
         {categories.length > 1 && (
@@ -121,7 +123,7 @@ export function FindingsTable({ projectId, rows, canEdit }: { projectId: string;
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-small text-muted" aria-live="polite">
-          {groups.length} {groups.length === 1 ? "problem" : "problems"} across {totalShown} {totalShown === 1 ? "page check" : "page checks"}
+          {groups.length} {groups.length === 1 ? "problem" : "problems"} on {totalShown} {totalShown === 1 ? "page" : "pages"}
         </p>
         {groups.length > 0 && (
           <Button
@@ -138,13 +140,13 @@ export function FindingsTable({ projectId, rows, canEdit }: { projectId: string;
         <EmptyState
           bordered
           icon={<SearchCheck />}
-          title={rows.length === 0 ? "No problems found yet" : status === "open" ? "Nothing open here" : "No findings match these filters"}
+          title={rows.length === 0 ? "No problems found yet" : status === "open" ? "Nothing open here" : "No problems match these filters"}
           description={
             rows.length === 0
-              ? "Run an audit and we'll check every page we can reach for issues that affect search engines and AI assistants."
+              ? "Check your website and we'll look at every page we can reach for problems that affect Google and AI assistants."
               : status === "open"
                 ? "Great — there are no open problems for these filters. Try “All” to see ignored or fixed items."
-                : "Try a different status, severity or area."
+                : "Try a different status, priority or area."
           }
           action={
             rows.length > 0 && (severity !== "all" || category !== "all" || status !== "all") ? (
@@ -238,7 +240,7 @@ function RuleGroup({
           </div>
           <p className="flex items-center gap-1.5 text-caption text-muted">
             <Lightbulb aria-hidden className="size-3.5" />
-            Rule <code className="font-mono">{g.code}</code> · fixed items are marked automatically after your next crawl.
+            Fixed problems are marked automatically after your next website check.
           </p>
         </div>
       )}
@@ -272,11 +274,10 @@ function FindingItem({ row: r, projectId, canEdit }: { row: FindingRow; projectI
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className={clsx("break-all text-small font-medium", ignored ? "text-muted line-through decoration-muted/60" : "text-fg")}>
-            {r.pageUrl ?? "Site-wide check"}
+            {r.pageUrl ?? "Whole website"}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted">
             <span>{r.message}</span>
-            {r.confidence < 1 && <span className="tabular-nums">· {Math.round(r.confidence * 100)}% sure</span>}
             {r.status !== "open" && <StatusBadge status={r.status === "resolved" ? "resolved" : r.status} />}
           </div>
         </div>
@@ -289,7 +290,7 @@ function FindingItem({ row: r, projectId, canEdit }: { row: FindingRow; projectI
             onClick={() => setDetails((v) => !v)}
             iconRight={<ChevronDown className={clsx("transition-transform", details && "rotate-180")} />}
           >
-            Evidence
+            Details
           </Button>
           {canEdit && r.status !== "resolved" && (
             <Button
@@ -298,7 +299,7 @@ function FindingItem({ row: r, projectId, canEdit }: { row: FindingRow; projectI
               loading={busy}
               icon={ignored ? <RotateCcw /> : <EyeOff />}
               onClick={toggleIgnore}
-              aria-label={`${ignored ? "Restore" : "Ignore"} this finding for ${r.pageUrl ?? "the site"}`}
+              aria-label={`${ignored ? "Restore" : "Ignore"} this problem for ${r.pageUrl ?? "the whole website"}`}
             >
               {ignored ? "Restore" : "Ignore"}
             </Button>
@@ -308,7 +309,7 @@ function FindingItem({ row: r, projectId, canEdit }: { row: FindingRow; projectI
       {details && (
         <div id={detailsId} className="animate-fade-in mt-3 rounded-lg bg-surface-2 p-3">
           <EvidenceList evidence={r.evidence} skipUrl={r.pageUrl} />
-          <p className="mt-2 text-caption text-muted">First detected {fmtDate(r.detectedAt, true)}</p>
+          <p className="mt-2 text-caption text-muted">First found {fmtDate(r.detectedAt, true)}</p>
         </div>
       )}
     </li>

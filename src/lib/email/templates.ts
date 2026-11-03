@@ -65,14 +65,16 @@ export function passwordChangedTemplate(o: { name?: string | null }): EmailConte
 
 export function inviteTemplate(o: { inviterName: string; organizationName: string; role: string; link: string }): EmailContent {
   const subject = `${o.inviterName} invited you to ${o.organizationName} on ${BRAND.name}`;
+  // Roles are capitalised on customer screens: "Owner", "Admin", "Member".
+  const role = o.role ? o.role.charAt(0).toUpperCase() + o.role.slice(1).toLowerCase() : "Member";
   return {
     subject: subject.slice(0, 200),
     ...renderEmail({
       title: `Join ${o.organizationName} on ${BRAND.name}`,
-      preheader: `${o.inviterName} invited you as ${o.role}.`,
+      preheader: `${o.inviterName} invited you as ${role}.`,
       paragraphs: [
-        `${o.inviterName} invited you to join the ${o.organizationName} workspace as ${o.role === "admin" ? "an" : "a"} ${o.role}.`,
-        `${BRAND.name} shows how AI assistants and search engines describe a business, and suggests fixes. Accept the invitation to see this workspace. The link works for 7 days.`,
+        `${o.inviterName} invited you to join the ${o.organizationName} team as ${/^[aeiou]/i.test(role) ? "an" : "a"} ${role}.`,
+        `${BRAND.name} checks how Google and AI assistants like ChatGPT describe a business, and suggests fixes. Accept the invitation to see this workspace. The link works for 7 days.`,
       ],
       cta: { label: "Accept invitation", url: o.link },
       footer: "If you weren't expecting this invitation, you can ignore this email.",

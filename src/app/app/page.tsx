@@ -36,7 +36,7 @@ export default async function ProjectsPage() {
       <PageHeader
         icon={<FolderKanban />}
         title="Projects"
-        description="Each project follows one website and brand — how healthy the site is, and how AI assistants talk about it."
+        description="Each project is one website. See how it looks to Google and whether AI tools name you."
         actions={
           <LinkButton href="/app/onboarding" icon={<Plus />}>
             New project
@@ -75,25 +75,25 @@ export default async function ProjectsPage() {
                   </a>
                 </div>
                 {m?.simulated && (
-                  <Tooltip content="Demo data — connect an AI provider for real answers" side="bottom" focusable className="relative z-[1]">
+                  <Tooltip content="Sample answers, not real ones. Real AI answers appear once AI checks are switched on." side="bottom" focusable className="relative z-[1]">
                     <Badge tone="warning" size="sm">
-                      Simulated
+                      Sample data
                     </Badge>
                   </Tooltip>
                 )}
               </div>
 
               <div className="flex items-center gap-4 px-5 pb-5">
-                <ScoreRing score={index} grade={null} size="sm" label="AI visibility index" />
+                <ScoreRing score={index} grade={null} size="sm" label="AI mentions score" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-caption uppercase tracking-[0.06em] text-muted">AI visibility</div>
+                  <div className="text-caption uppercase tracking-[0.06em] text-muted">AI mentions</div>
                   <div className="text-small text-fg-soft">
-                    {index === null ? "Not measured yet" : index >= 50 ? "Often appears in AI answers" : index >= 20 ? "Sometimes appears" : "Rarely appears"}
+                    {index === null ? "Not checked yet" : index >= 50 ? "Often named in AI answers" : index >= 20 ? "Sometimes named" : "Rarely named"}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-h3 tabular-nums text-fg">{p._count.findings}</div>
-                  <div className="text-xs text-muted">open issues</div>
+                  <div className="text-xs text-muted">{p._count.findings === 1 ? "problem to fix" : "problems to fix"}</div>
                 </div>
               </div>
 
@@ -103,7 +103,7 @@ export default async function ProjectsPage() {
                 ) : (
                   <span className="inline-flex items-center gap-1.5">
                     <Clock size={13} aria-hidden />
-                    {lastScan ? `Last scan ${fmtRelative(lastScan)}` : "No scans yet"}
+                    {lastScan ? `Last checked ${fmtRelative(lastScan)}` : "Not checked yet"}
                   </span>
                 )}
                 {p._count.actions > 0 && (
@@ -112,18 +112,18 @@ export default async function ProjectsPage() {
                   </Badge>
                 )}
                 <div className="relative z-[1] ml-auto flex items-center gap-1">
-                  <Tooltip content="Site audit">
-                    <LinkButton href={`${href}/audit`} variant="ghost" size="icon-sm" aria-label={`Site audit for ${p.name}`}>
+                  <Tooltip content="Website problems">
+                    <LinkButton href={`${href}/audit`} variant="ghost" size="icon-sm" aria-label={`Website problems for ${p.name}`}>
                       <ListChecks />
                     </LinkButton>
                   </Tooltip>
-                  <Tooltip content="Approvals">
-                    <LinkButton href={`${href}/actions`} variant="ghost" size="icon-sm" aria-label={`Actions and approvals for ${p.name}`}>
+                  <Tooltip content="Fixes to approve">
+                    <LinkButton href={`${href}/actions`} variant="ghost" size="icon-sm" aria-label={`Fixes to approve for ${p.name}`}>
                       <ShieldCheck />
                     </LinkButton>
                   </Tooltip>
                   <LinkButton href={`${href}/report`} variant="secondary" size="xs" icon={<FileBarChart2 />} iconRight={<ArrowRight />}>
-                    Report
+                    Full report
                   </LinkButton>
                 </div>
               </div>

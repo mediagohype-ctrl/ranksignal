@@ -15,12 +15,12 @@ type FormKey = "name" | "email" | "password" | "organizationName";
 function validateForm(f: Record<FormKey, string>): Partial<Record<FormKey, string>> {
   const e: Partial<Record<FormKey, string>> = {};
   if (!f.name.trim()) e.name = "Tell us your name.";
-  if (!f.email.trim()) e.email = "Enter your work email.";
-  else if (!EMAIL_RE.test(f.email.trim())) e.email = "That doesn't look like an email address.";
+  if (!f.email.trim()) e.email = "Enter your email address.";
+  else if (!EMAIL_RE.test(f.email.trim())) e.email = "That doesn't look like an email address. Check it and try again.";
   if (f.password.length < MIN_PASSWORD) e.password = `Use at least ${MIN_PASSWORD} characters.`;
   else if (f.email.trim() && f.password.trim().toLowerCase() === f.email.trim().toLowerCase())
-    e.password = "Your password can't be your email address.";
-  if (!f.organizationName.trim()) e.organizationName = "Give your workspace a name — usually your company name.";
+    e.password = "Your password can't be your email address. Pick something else.";
+  if (!f.organizationName.trim()) e.organizationName = "Enter your business name.";
   return e;
 }
 
@@ -99,7 +99,7 @@ function SignupForm() {
     // Turnstile tokens are single-use: get a fresh one for the next attempt.
     setCaptchaToken("");
     setCaptchaKey((k) => k + 1);
-    setError(res.message ?? "Sign-up failed.");
+    setError(res.message ?? "We couldn't create your account. Please try again, or contact us if it keeps happening.");
     const fe = res.fieldErrors ?? {};
     setErrors(Object.fromEntries(Object.entries(fe).map(([k, msgs]) => [k, msgs[0]])) as Partial<Record<FormKey, string>>);
     setLoading(false);
@@ -114,7 +114,8 @@ function SignupForm() {
         title="Start your free trial"
         subtitle={
           <>
-            7 days free, no card needed. Already have an account?{" "}
+            7 days free, no card needed. We&apos;ll check your website and ask ChatGPT, Gemini and others what they
+            say about you. Already have an account?{" "}
             <Link href={`/login${next !== "/app/onboarding" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">
               Sign in
             </Link>
@@ -138,11 +139,11 @@ function SignupForm() {
               aria-describedby={fieldDescribedBy("su-name", { error: errors.name })}
             />
           </Field>
-          <Field label="Company name" htmlFor="su-organizationName" error={errors.organizationName}>
+          <Field label="Business name" htmlFor="su-organizationName" error={errors.organizationName}>
             <Input
               id="su-organizationName"
               autoComplete="organization"
-              placeholder="Acme Tools"
+              placeholder="Sharma Sweets"
               required
               value={form.organizationName}
               onChange={set("organizationName")}
@@ -152,12 +153,12 @@ function SignupForm() {
             />
           </Field>
         </div>
-        <Field label="Work email" htmlFor="su-email" error={errors.email}>
+        <Field label="Email" htmlFor="su-email" error={errors.email}>
           <Input
             id="su-email"
             type="email"
             autoComplete="email"
-            placeholder="you@company.com"
+            placeholder="you@yourbusiness.com"
             required
             value={form.email}
             onChange={set("email")}
@@ -191,11 +192,11 @@ function SignupForm() {
           </div>
         </Field>
         <Turnstile key={captchaKey} action="signup" onToken={setCaptchaToken} />
-        <Button type="submit" size="lg" fullWidth loading={loading} loadingText="Creating your workspace…" iconRight={<ArrowRight />}>
+        <Button type="submit" size="lg" fullWidth loading={loading} loadingText="Creating your account…" iconRight={<ArrowRight />}>
           Create account
         </Button>
         <p className="text-center text-xs text-muted">
-          We measure and report how AI assistants describe your brand. We never guarantee rankings or placements.
+          We show you how Google and AI assistants see your business. Nobody can promise a Google position or an AI mention.
         </p>
       </form>
     </>

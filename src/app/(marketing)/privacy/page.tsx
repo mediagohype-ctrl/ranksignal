@@ -15,8 +15,8 @@ export default function PrivacyPage() {
       <h2>What we collect</h2>
       <ul>
         <li>Account data: name, email address, organisation name and billing details.</li>
-        <li>Project data: domains, brand names, competitors, tracked prompts and settings you provide.</li>
-        <li>Public data we gather for you: crawled public pages and answers returned by AI answer engines.</li>
+        <li>Project data: domains, brand names, competitors, customer questions and settings you provide.</li>
+        <li>Public data we gather for you: public pages we read and answers from AI assistants.</li>
         <li>Integration credentials (e.g. WordPress application passwords), stored encrypted at rest.</li>
         <li>Usage and security logs, including an audit log of approvals and published changes.</li>
       </ul>
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       </p>
       <h2>Sub-processors</h2>
       <p>
-        We use third-party providers for hosting, payments and AI model access. Prompts you track may be sent to those
+        We use third-party providers for hosting, payments and AI model access. Customer questions you add may be sent to those
         AI providers to generate answers. A list of sub-processors will be published here.
       </p>
       <h2>Retention and your rights</h2>

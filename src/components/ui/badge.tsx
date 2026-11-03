@@ -78,6 +78,15 @@ const SEVERITY_CLASS: Record<string, string> = {
   info: "bg-sev-info-soft text-sev-info capitalize",
 };
 
+/** Plain words for severity levels (critical/high → Urgent, medium → Important, low/info → Nice to have). */
+export const SEVERITY_LABEL: Record<string, string> = {
+  critical: "Urgent",
+  high: "Urgent",
+  medium: "Important",
+  low: "Nice to have",
+  info: "Nice to have",
+};
+
 export function SeverityBadge({ severity, className }: { severity: string; className?: string }) {
   return (
     <span
@@ -88,20 +97,20 @@ export function SeverityBadge({ severity, className }: { severity: string; class
       )}
     >
       <span aria-hidden className="size-1.5 rounded-full bg-current" />
-      {severity}
+      {SEVERITY_LABEL[severity] ?? "Nice to have"}
     </span>
   );
 }
 
 const RISK: Record<string, { cls: string; label: string; help: string }> = {
-  A: { cls: "bg-risk-a-soft text-risk-a", label: "Class A · low risk", help: "Reversible, low-impact change; may auto-execute when permitted." },
-  B: { cls: "bg-risk-b-soft text-risk-b", label: "Class B · moderate", help: "Auto-executes only if you allowed this action type; otherwise needs approval." },
-  C: { cls: "bg-risk-c-soft text-risk-c", label: "Class C · material", help: "Material change — always requires approval of the exact draft." },
-  D: { cls: "bg-risk-d-soft text-risk-d", label: "Class D · restricted", help: "High-risk change — blocked from automation." },
+  A: { cls: "bg-risk-a-soft text-risk-a", label: "Safe", help: "Safe — this doesn't change your website." },
+  B: { cls: "bg-risk-b-soft text-risk-b", label: "Needs your OK", help: "A small change to your website. It goes live only after you say OK, and can be undone." },
+  C: { cls: "bg-risk-c-soft text-risk-c", label: "Needs your OK", help: "Changes what visitors read. You approve the exact text first." },
+  D: { cls: "bg-risk-d-soft text-risk-d", label: "Needs your OK", help: "Too sensitive to change for you. We give you the steps to do it yourself." },
 };
 
 export function RiskBadge({ riskClass, compact, className }: { riskClass: string; compact?: boolean; className?: string }) {
-  const r = RISK[riskClass] ?? { cls: "bg-surface-2 text-fg-soft", label: `Class ${riskClass}`, help: "" };
+  const r = RISK[riskClass] ?? { cls: "bg-surface-2 text-fg-soft", label: "Needs your OK", help: "" };
   return (
     <span
       title={r.help || undefined}
@@ -111,10 +120,9 @@ export function RiskBadge({ riskClass, compact, className }: { riskClass: string
         className,
       )}
     >
-      <span aria-hidden className="flex size-4 items-center justify-center rounded-full bg-current/15 text-[10px] font-bold">
-        {riskClass}
-      </span>
-      {compact ? <span className="sr-only">{r.label}</span> : r.label.replace(/^Class \w · /, "")}
+      <span aria-hidden className="size-1.5 rounded-full bg-current" />
+      {/* `compact` is kept for callers; the short plain label fits either way (the letter class is never shown). */}
+      <span className={compact ? "max-sm:sr-only" : undefined}>{r.label}</span>
     </span>
   );
 }

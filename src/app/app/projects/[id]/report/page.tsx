@@ -16,7 +16,7 @@ import { ShareReportButton } from "@/components/app/report/share-report";
 import { Notice, PageHeader, buttonClass } from "@/components/ui";
 import { SearchPerformance } from "@/components/app/report/search-performance";
 
-export const metadata = { title: "SEO, AEO & GEO report" };
+export const metadata = { title: "Full report" };
 export const dynamic = "force-dynamic";
 
 const DONE = ["succeeded", "succeeded_with_warnings"];
@@ -45,9 +45,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   const header = (
     <PageHeader
-      eyebrow="SEO · AEO · GEO report"
+      eyebrow="Full report"
       title={`How visible is ${project.name}?`}
-      description={`A plain-English check-up of ${hostOf(project.websiteUrl)} for Google and AI assistants.`}
+      description={`A plain-English check-up of ${hostOf(project.websiteUrl)} for Google and AI tools.`}
     />
   );
 
@@ -73,13 +73,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   }
 
   let report: SiteReport | null = null;
-  let buildError: string | null = null;
   try {
     // Stored report (built once when the last run finished); a page view never calls the LLM.
     report = await getStoredReport(project.id, session.organizationId);
   } catch (e) {
     log.error("report_page.report_failed", { projectId: project.id, orgId: session.organizationId, err: e });
-    buildError = e instanceof Error ? e.message : "Unknown error";
   }
 
   if (!report) {
@@ -87,8 +85,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       <>
         {header}
         <Notice tone="danger" title="We couldn't put your report together">
-          Your scan finished, but building the report failed{buildError ? ` (${buildError})` : ""}. Try refreshing the page, or re-scan
-          your website.
+          Your website check finished, but we couldn&apos;t build the report. Refresh the page. If it still fails, check your website
+          again.
         </Notice>
       </>
     );
@@ -101,17 +99,17 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="SEO · AEO · GEO report"
+        eyebrow="Full report"
         title={`${r.brand} — ${host}`}
-        description="How easily Google and AI assistants can find, understand and recommend you — and what to fix first."
+        description="How easily Google and AI tools can find, understand and recommend you — and what to fix first."
         meta={
           <>
-            <span>Generated {fmtDate(r.generatedAt, true)}</span>
+            <span>Made {fmtDate(r.generatedAt, true)}</span>
             <span aria-hidden>·</span>
-            <span>Website scanned {r.crawl.finishedAt ? fmtRelative(r.crawl.finishedAt) : "—"}</span>
+            <span>Website checked {r.crawl.finishedAt ? fmtRelative(r.crawl.finishedAt) : "—"}</span>
             <span aria-hidden>·</span>
             <span className="tabular-nums">
-              {r.crawl.pagesCrawled} {r.crawl.pagesCrawled === 1 ? "page" : "pages"} scanned
+              {r.crawl.pagesCrawled} {r.crawl.pagesCrawled === 1 ? "page" : "pages"} checked
             </span>
             {previousCrawl && (
               <>
@@ -121,7 +119,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                   className="focus-ring inline-flex items-center gap-1 rounded text-primary hover:underline"
                 >
                   <History aria-hidden size={14} />
-                  Previous scan {fmtDate(previousCrawl.finishedAt ?? previousCrawl.createdAt)} — see history
+                  Previous check {fmtDate(previousCrawl.finishedAt ?? previousCrawl.createdAt)} — see score history
                 </Link>
               </>
             )}
@@ -134,7 +132,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
               crawlActive={crawlActive}
               visibilityActive={visActive}
               canRun={canRun}
-              labels={{ audit: "Re-scan website" }}
+              labels={{ audit: "Check website again" }}
               primary="none"
             />
             <a
@@ -151,7 +149,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       />
 
       {running && (
-        <Notice tone="info" className="no-print" title={crawlActive ? "Re-scanning your website…" : "Asking AI assistants about you…"}>
+        <Notice tone="info" className="no-print" title={crawlActive ? "Checking your website again…" : "Asking AI tools about you…"}>
           <span className="inline-flex flex-wrap items-center gap-2">
             This report updates automatically when the new results are in.
             <AutoRefresh active={running} intervalMs={3000} label="Checking for updates" />
@@ -160,9 +158,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       )}
 
       {latestCrawl && latestCrawl.status === "failed" && latestCrawl.id !== lastGoodCrawl.id && (
-        <Notice tone="warning" className="no-print" title="Your latest re-scan didn't finish">
-          {latestCrawl.error || "Something went wrong while reading your site."} This report still shows results from your previous
-          successful scan.
+        <Notice tone="warning" className="no-print" title="Your latest website check didn't finish">
+          {latestCrawl.error || "Something went wrong while reading your site."} This report still shows your last finished check. Make
+          sure your website is online, then try again.
         </Notice>
       )}
 

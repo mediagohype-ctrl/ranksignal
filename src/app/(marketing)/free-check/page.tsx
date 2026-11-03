@@ -6,9 +6,9 @@ import { IconTile, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { FreeCheckTool } from "@/components/marketing/free-check-tool";
 import { SectionHeading } from "@/components/ui";
 
-const TITLE = "Free AI-readiness check for your website";
+const TITLE = "Free website check: is your site ready for Google and AI?";
 const DESCRIPTION =
-  "Check in about 20 seconds whether search engines, answer engines and AI assistants like ChatGPT can read and understand your website. Free, no sign-up.";
+  "Free website check in about 30 seconds. See if Google and AI assistants like ChatGPT can read and understand your website — a simple SEO and GEO check in plain words. No sign-up.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -18,10 +18,10 @@ export const metadata: Metadata = {
 };
 
 const WHAT: { icon: ReactNode; title: string; body: string }[] = [
-  { icon: <Search />, title: "SEO basics", body: "Titles, descriptions, headings, HTTPS, sitemap and whether your pages can be indexed." },
-  { icon: <Sparkles />, title: "Answer-readiness (AEO)", body: "Whether your pages answer real questions clearly enough to be quoted." },
-  { icon: <Bot />, title: "AI access (GEO)", body: "Whether ChatGPT, Perplexity and Claude's crawlers are allowed in, and whether AI can tell who you are." },
-  { icon: <ShieldCheck />, title: "Trust signals", body: "Business details markup, about and contact pages, and links to your profiles." },
+  { icon: <Search />, title: "Google health", body: "Your Google headlines and summaries, main headings, secure address (https), and whether your pages can appear on Google." },
+  { icon: <Sparkles />, title: "Easy to quote", body: "Whether your pages answer real customer questions clearly enough to be quoted." },
+  { icon: <Bot />, title: "Ready for AI", body: "Whether the robots of ChatGPT, Perplexity and Claude are allowed in, and whether AI can tell who you are." },
+  { icon: <ShieldCheck />, title: "Trust signs", body: "Your business details, About and Contact pages, and links to your social profiles." },
 ];
 
 export default async function FreeCheckPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -30,7 +30,7 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: `${BRAND.name} free AI-readiness check`,
+    name: `${BRAND.name} free website check`,
     url: `${BRAND.appUrl.replace(/\/$/, "")}/free-check`,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Any",
@@ -44,11 +44,11 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
       <JsonLd data={jsonLd} />
       <PageHero
         eyebrow="Free tool"
-        title="Is your website ready for AI search?"
+        title="Is your website ready for Google and AI?"
         intro={
           <p>
-            Enter your website and we&apos;ll read your homepage and up to four key pages, then score them for SEO,
-            answer engines (AEO) and AI assistants (GEO) — with the top things to fix, in plain English.
+            Type your website. We&apos;ll read your homepage and up to four main pages, then show your score and the
+            top things to fix, in plain words.
           </p>
         }
       />
@@ -58,7 +58,7 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
       <Section labelledBy="fc-what" tone="surface">
-        <SectionHeading id="fc-what" size="lg" align="center" eyebrow="What we check" title="Four things AI tools look at" />
+        <SectionHeading id="fc-what" size="lg" align="center" eyebrow="What we check" title="What the free check looks at" />
         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {WHAT.map((w) => (
             <li key={w.title} className="rounded-2xl border border-border bg-bg p-6">
@@ -69,8 +69,9 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
           ))}
         </ul>
         <p className="mx-auto mt-10 max-w-2xl text-center text-small text-muted">
-          The free check doesn&apos;t ask AI assistants about you — that costs real money per question, so it&apos;s part
-          of the full report. We never store the pages we read for this check.
+          The free check reads your website only. It does <strong className="font-semibold text-fg">not</strong> ask
+          ChatGPT, Gemini or other AI assistants about you — the full check does that after you sign up. We never store
+          the pages we read. (Experts call this kind of check SEO and GEO.)
         </p>
       </Section>
     </>

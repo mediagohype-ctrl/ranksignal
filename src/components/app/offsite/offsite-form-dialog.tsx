@@ -98,7 +98,7 @@ export function OffsiteFormDialog({
         : await offsiteApi<{ item: OffsiteItemView }>(`/api/projects/${projectId}/offsite`, { method: "POST", body: JSON.stringify(body) });
       onSaved(res.item, !item);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save");
+      setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -111,8 +111,8 @@ export function OffsiteFormDialog({
       onClose={onClose}
       size="lg"
       icon={item ? <Pencil /> : <Globe2 />}
-      title={item ? "Edit off-site item" : "Add to off-site tracker"}
-      description="A listing, review profile, press mention, forum thread or profile you're working on."
+      title={item ? "Edit this listing" : "Add a place outside your website"}
+      description="A listing, review page, article or forum post about you on another website."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -127,12 +127,12 @@ export function OffsiteFormDialog({
       <form onSubmit={submit} className="space-y-5" noValidate>
         {!item && draft?.source === "ai_citation" && (
           <Notice tone="info" title="Suggested from AI answers">
-            AI assistants cited this site in your latest check. Being listed there is worth considering — it doesn&apos;t guarantee
-            you&apos;ll be mentioned.
+            AI answers linked to this site in your latest AI check. Being listed there is worth considering — it doesn&apos;t guarantee
+            you&apos;ll be named.
           </Notice>
         )}
         {error && (
-          <Notice tone="danger" title="Couldn't save">
+          <Notice tone="danger" title="Couldn't save. Please try again.">
             {error}
           </Notice>
         )}

@@ -1,16 +1,18 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { ArrowRight, CheckCircle2, Wrench } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2, ChevronDown, ChevronRight, FileText, Wrench } from "lucide-react";
 import type { IssueImpact, Pillar, ReportIssue } from "@/lib/report/types";
 import { EmptyState, IssueCard, LinkButton } from "@/components/ui";
 import { PILLAR_ORDER, PILLAR_SHORT } from "./pillars";
+import { issueHref } from "@/components/app/nav";
 
 type PillarFilter = Pillar | "all";
 type ImpactFilter = IssueImpact | "all";
 
 const IMPACTS: IssueImpact[] = ["high", "medium", "low"];
-const IMPACT_LABEL: Record<IssueImpact, string> = { high: "High impact", medium: "Medium impact", low: "Low impact" };
+const IMPACT_LABEL: Record<IssueImpact, string> = { high: "Urgent", medium: "Important", low: "Nice to have" };
 
 function Chip({
   active,
@@ -40,9 +42,96 @@ function Chip({
   );
 }
 
+const PRIORITY_TONE: Record<IssueImpact, string> = {
+  high: "bg-danger-soft text-danger",
+  medium: "bg-warning-soft text-warning",
+  low: "bg-surface-2 text-muted",
+};
+
+/** "https://site.com/about" → "/about"; the home page → "Home page". */
+function shortPath(url: string) {
+  try {
+    const u = new URL(url);
+    return u.pathname === "/" && !u.search ? "Home page" : `${u.pathname}${u.search}`;
+  } catch {
+    return url;
+  }
+}
+
+/** One short row per problem with a "Quick look" dropdown; the problem itself opens on its own page. */
+function IssueRow({ issue: i, href }: { issue: ReportIssue; href: string }) {
+  const [open, setOpen] = useState(false);
+  const pages = i.affectedCount;
+  const sample = i.affectedUrls.slice(0, 3);
+  const briefId = `brief-${i.id}`;
+  return (
+    <div id={i.id} className="rounded-2xl border border-border bg-surface shadow-card transition-shadow hover:shadow-card-hover">
+      <div className="flex items-center gap-2 py-4 pl-5 pr-3 sm:gap-3">
+        <Link href={href} className="focus-ring group min-w-0 flex-1 rounded-lg">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={clsx("inline-flex h-[22px] items-center rounded-full px-2 text-xs font-semibold", PRIORITY_TONE[i.impact])}>
+              {IMPACT_LABEL[i.impact]}
+            </span>
+            {pages > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted">
+                <FileText size={12} aria-hidden /> {pages} {pages === 1 ? "page" : "pages"}
+              </span>
+            )}
+          </div>
+          <h4 className="mt-1.5 text-h4 text-fg group-hover:text-primary">{i.title}</h4>
+          <p className={clsx("mt-0.5 text-small text-muted", !open && "line-clamp-1")}>{i.whatsWrong}</p>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={briefId}
+          className="focus-ring inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 text-small font-medium text-fg-soft hover:bg-surface-2"
+        >
+          <span className="hidden sm:inline">{open ? "Hide" : "Quick look"}</span>
+          <span className="sr-only sm:hidden">{open ? "Hide brief" : "Show brief"}</span>
+          <ChevronDown size={16} aria-hidden className={clsx("transition-transform", open && "rotate-180")} />
+        </button>
+        <Link href={href} className="focus-ring hidden shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-small font-medium text-primary sm:inline-flex">
+          See problem <ChevronRight size={16} aria-hidden />
+        </Link>
+      </div>
+      {open && (
+        <div id={briefId} className="space-y-3 border-t border-border px-5 py-4">
+          <div>
+            <p className="text-caption uppercase tracking-[0.06em] text-muted">Why it matters</p>
+            <p className="mt-1 text-small text-fg-soft">{i.whyItMatters}</p>
+          </div>
+          {sample.length > 0 && (
+            <div>
+              <p className="text-caption uppercase tracking-[0.06em] text-muted">For example on</p>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {sample.map((u) => (
+                  <li key={u} className="inline-flex h-7 max-w-full items-center truncate rounded-full bg-surface-2 px-2.5 text-xs font-medium text-fg-soft">
+                    {shortPath(u)}
+                  </li>
+                ))}
+                {pages > sample.length && <li className="self-center text-xs text-muted">and {pages - sample.length} more</li>}
+              </ul>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <LinkButton href={href} size="sm" iconRight={<ArrowRight />}>
+              See the full problem
+            </LinkButton>
+            <LinkButton href={`${href}/fix`} size="sm" variant="secondary" icon={<Wrench />}>
+              How to fix it
+            </LinkButton>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * Full "What's wrong & how to fix it" list with client-side pillar / impact filter chips.
- * Without `projectId` (shared client reports) no links into the app are rendered.
+ * Problem list with client-side area / priority filter chips. In the app each problem is a short row that opens
+ * its own page; without `projectId` (shared client reports) the full cards are rendered instead.
  */
 export function IssueList({
   issues,
@@ -62,6 +151,10 @@ export function IssueList({
     function openFromHash() {
       const id = decodeURIComponent(window.location.hash.slice(1));
       if (!id || !issues.some((i) => i.id === id)) return;
+      if (projectId) {
+        window.location.replace(issueHref(projectId, id));
+        return;
+      }
       setPillar("all");
       setImpact("all");
       requestAnimationFrame(() => {
@@ -73,7 +166,7 @@ export function IssueList({
     openFromHash();
     window.addEventListener("hashchange", openFromHash);
     return () => window.removeEventListener("hashchange", openFromHash);
-  }, [issues]);
+  }, [issues, projectId]);
 
   const pillarCounts = useMemo(() => {
     const base = impact === "all" ? issues : issues.filter((i) => i.impact === impact);
@@ -98,7 +191,7 @@ export function IssueList({
       <EmptyState
         icon={<CheckCircle2 />}
         title="No problems found"
-        description="We didn't find anything to fix on the pages we scanned. Re-scan after you make big changes to your site."
+        description="We didn't find anything to fix on the pages we checked. Check your website again after you make big changes."
         bordered
       />
     );
@@ -107,7 +200,7 @@ export function IssueList({
   let n = 0;
   return (
     <div className="space-y-6">
-      <div className="no-print space-y-3" role="group" aria-label="Filter issues">
+      <div className="no-print space-y-3" role="group" aria-label="Filter problems">
         <div className="flex flex-wrap items-center gap-2">
           <span className="w-16 text-caption uppercase tracking-[0.06em] text-muted">Area</span>
           <Chip active={pillar === "all"} onClick={() => setPillar("all")} count={pillarCounts.all ?? 0}>
@@ -120,7 +213,7 @@ export function IssueList({
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="w-16 text-caption uppercase tracking-[0.06em] text-muted">Impact</span>
+          <span className="w-16 text-caption uppercase tracking-[0.06em] text-muted">Priority</span>
           <Chip active={impact === "all"} onClick={() => setImpact("all")} count={impactCounts.all ?? 0}>
             All
           </Chip>
@@ -131,21 +224,22 @@ export function IssueList({
           ))}
         </div>
         <p className="text-xs text-muted" aria-live="polite">
-          Showing {shown.length} of {issues.length} {issues.length === 1 ? "issue" : "issues"}
+          Showing {shown.length} of {issues.length} {issues.length === 1 ? "problem" : "problems"}
         </p>
       </div>
 
       {groups.length === 0 ? (
-        <EmptyState title="No issues match these filters" description="Try a different area or impact level." size="sm" bordered />
+        <EmptyState title="No problems match these filters" description="Try a different area or priority." size="sm" bordered />
       ) : (
         groups.map((g) => (
           <section key={g.pillar} aria-labelledby={`issues-${g.pillar}`} className="space-y-4">
             <h3 id={`issues-${g.pillar}`} className="flex items-center gap-2 text-h4 text-fg">
-              {PILLAR_SHORT[g.pillar]} issues
+              {PILLAR_SHORT[g.pillar]} problems
               <span className="text-small font-normal tabular-nums text-muted">({g.items.length})</span>
             </h3>
             {g.items.map((i) => {
               const idx = n++;
+              if (projectId) return <IssueRow key={i.id} issue={i} href={issueHref(projectId, i.id)} />;
               return (
                 <IssueCard
                   key={i.id}
@@ -165,7 +259,7 @@ export function IssueList({
                         iconRight={<ArrowRight />}
                         className="no-print"
                       >
-                        Draft this fix in Actions
+                        Draft this fix for approval
                       </LinkButton>
                     ) : undefined
                   }

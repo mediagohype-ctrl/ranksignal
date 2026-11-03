@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import type { ExtractedPage } from "@/lib/types";
 import type { AuditPage, SiteContext } from "@/lib/audit/rules";
 import { extractPage } from "@/lib/crawler/extract";
+import { detectPlatform } from "@/lib/platform/detect";
 import { isSameSite, looksLikePage, normalizeUrl, siteHost, urlKey } from "@/lib/crawler/normalize";
 import { fetchRobots } from "@/lib/crawler/robots";
 import { analyzeAiBots } from "@/lib/audit/ai-bots";
@@ -125,6 +126,8 @@ export async function crawlSite(opts: CrawlOptions): Promise<CrawlResult> {
     let extracted: ExtractedPage | null = null;
     if (res.status === 200 && res.body && (!contentType || /html/i.test(contentType))) {
       extracted = extractPage(res.body, res.finalUrl, hosts, { brandNames: opts.brandNames });
+      const platform = detectPlatform(res.body, Object.fromEntries(res.headers.entries()));
+      if (platform) extracted.platform = platform;
     }
     return { page: { url, finalUrl: res.finalUrl, statusCode: res.status, redirectChain: res.redirectChain, contentType, extracted } as AuditPage, bytes: Buffer.byteLength(res.body) };
   };

@@ -36,7 +36,7 @@ export interface EvaluatedCheck extends CheckResult {
   facts: Record<string, number | string | boolean | null>;
 }
 
-export const MAX_AFFECTED = 20;
+export const MAX_AFFECTED = 100; // the problem page lists every affected page; cards show fewer
 
 export function statusFor(score: number): CheckResult["status"] {
   return score >= 85 ? "pass" : score >= 50 ? "warn" : "fail";
@@ -98,7 +98,7 @@ export const v2Pages = (pages: ReportPage[]) => okPages(pages).filter((p) => (p.
 
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-export const NEEDS_RESCAN = "Run a new scan to measure this (your last scan predates this check).";
+export const NEEDS_RESCAN = "Check your website again to measure this — your last website check ran before we added it.";
 
 export function hostOf(u: string): string | null {
   try {

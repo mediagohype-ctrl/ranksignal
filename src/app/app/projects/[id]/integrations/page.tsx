@@ -10,7 +10,7 @@ import type { ConnectorCapabilities } from "@/lib/types";
 import { IntegrationsPanel, type IntegrationView } from "@/components/app/integrations-panel";
 import { PageHeader } from "@/components/ui";
 
-export const metadata = { title: "Integrations" };
+export const metadata = { title: "Connect website" };
 
 export default async function IntegrationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -47,9 +47,8 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ i
   return (
     <>
       <PageHeader
-        eyebrow="Integrations"
-        title="Connect your website"
-        description="Link your website so the changes you approve can be applied for you, checked afterwards, and undone with one click. No connection? You'll get copy-ready steps instead."
+        title="Connect website"
+        description="Link your website so fixes you approve go live for you, and can be undone in one click. Not connected? You'll get copy-and-paste steps instead."
       />
       <IntegrationsPanel
         projectId={project.id}

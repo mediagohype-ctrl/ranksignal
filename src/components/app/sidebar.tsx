@@ -3,29 +3,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
-import {
-  CalendarCheck,
-  ChevronsUpDown,
-  Eye,
-  FileBarChart2,
-  FolderKanban,
-  Globe2,
-  History,
-  KanbanSquare,
-  LayoutDashboard,
-  ListChecks,
-  Menu,
-  MessageSquareText,
-  Plug,
-  Plus,
-  Settings,
-  ShieldCheck,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { ChevronsUpDown, FolderKanban, Menu, Plug, Plus, Settings, SlidersHorizontal, X } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { Avatar } from "@/components/ui";
 import { LogoLockup } from "@/components/brand/logo";
+import { APP_TABS, projectHref, tabForSection } from "@/components/app/nav";
 
 interface ProjectLite {
   id: string;
@@ -33,20 +15,7 @@ interface ProjectLite {
   websiteUrl: string;
 }
 
-const NAV = [
-  { slug: "report", label: "Report", icon: FileBarChart2 },
-  { slug: "", label: "Overview", icon: LayoutDashboard },
-  { slug: "visibility", label: "AI Visibility", icon: Eye },
-  { slug: "prompts", label: "Prompts", icon: MessageSquareText },
-  { slug: "audit", label: "Audit", icon: ListChecks },
-  { slug: "actions", label: "Actions & Approvals", icon: ShieldCheck },
-  { slug: "work", label: "Work", icon: KanbanSquare },
-  { slug: "offsite", label: "Off-site", icon: Globe2 },
-  { slug: "monthly", label: "Monthly reports", icon: CalendarCheck },
-  { slug: "integrations", label: "Integrations", icon: Plug },
-  { slug: "reports", label: "History & print", icon: History },
-  { slug: "settings", label: "Settings", icon: SlidersHorizontal },
-];
+const SETUP_ICONS = { integrations: Plug, settings: SlidersHorizontal } as const;
 
 const LAST_PROJECT_KEY = "app.lastProjectId";
 
@@ -62,11 +31,14 @@ function NavLink({
   href,
   active,
   icon: Icon,
+  hint,
   children,
 }: {
   href: string;
   active: boolean;
   icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean; className?: string }>;
+  /** The question this tab answers, under the label. */
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -80,7 +52,10 @@ function NavLink({
     >
       {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-primary" />}
       <Icon size={17} aria-hidden className={clsx(active ? "text-primary" : "text-muted group-hover:text-fg")} />
-      <span className="truncate">{children}</span>
+      <span className="min-w-0">
+        <span className="block truncate">{children}</span>
+        {hint && <span className="block truncate text-xs font-normal text-muted">{hint}</span>}
+      </span>
     </Link>
   );
 }
@@ -117,7 +92,7 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
   const nav = (
     <nav aria-label="Primary" className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-4">
-        <Link href="/app" className="flex items-center rounded-lg" aria-label={`${BRAND.name} projects`}>
+        <Link href="/app" className="flex items-center rounded-lg" aria-label={`${BRAND.name} websites`}>
           <LogoLockup size="sm" />
         </Link>
         <button
@@ -133,7 +108,7 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
       <div className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
         <div className="space-y-2 px-1">
           <label htmlFor="project-switcher" className="text-caption uppercase tracking-[0.06em] text-muted">
-            Project
+            Website
           </label>
           {projects.length > 0 && current ? (
             <div className="relative flex items-center gap-2.5 rounded-xl border border-border bg-surface-2 p-2 pr-8 transition-colors focus-within:border-primary hover:border-border-strong">
@@ -157,7 +132,7 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
                     {p.name} ({hostOf(p.websiteUrl)})
                   </option>
                 ))}
-                <option value="__new">+ New project…</option>
+                <option value="__new">+ Add another website…</option>
               </select>
             </div>
           ) : (
@@ -165,26 +140,38 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
               href="/app/onboarding"
               className="flex h-11 items-center gap-2 rounded-xl border border-dashed border-border-strong px-3 text-small font-medium text-fg-soft hover:bg-surface-2 hover:text-fg"
             >
-              <Plus size={15} aria-hidden /> Create your first project
+              <Plus size={15} aria-hidden /> Add your website
             </Link>
           )}
         </div>
 
         {current && (
           <div>
-            <div className="mb-1.5 px-3 text-caption uppercase tracking-[0.06em] text-muted">Workspace</div>
             <ul className="space-y-0.5">
-              {NAV.map((item) => {
-                const href = `/app/projects/${current.id}${item.slug ? `/${item.slug}` : ""}`;
-                const active = routeProjectId === current.id && section === item.slug;
+              {APP_TABS.map((tab) => {
+                const active = routeProjectId === current.id && tabForSection(section)?.key === tab.key;
                 return (
-                  <li key={item.slug || "overview"}>
-                    <NavLink href={href} active={active} icon={item.icon}>
-                      {item.label}
+                  <li key={tab.key}>
+                    <NavLink href={projectHref(current.id, tab.pages[0].slug)} active={active} icon={tab.icon} hint={tab.question}>
+                      {tab.label}
                     </NavLink>
                   </li>
                 );
               })}
+            </ul>
+            <div className="mb-1.5 mt-6 px-3 text-caption uppercase tracking-[0.06em] text-muted">Setup</div>
+            <ul className="space-y-0.5">
+              {(["integrations", "settings"] as const).map((slug) => (
+                <li key={slug}>
+                  <NavLink
+                    href={projectHref(current.id, slug)}
+                    active={routeProjectId === current.id && section === slug}
+                    icon={SETUP_ICONS[slug]}
+                  >
+                    {slug === "integrations" ? "Connect website" : "Project settings"}
+                  </NavLink>
+                </li>
+              ))}
             </ul>
           </div>
         )}
@@ -192,7 +179,7 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
 
       <div className="space-y-0.5 border-t border-border px-3 py-3">
         <NavLink href="/app" active={pathname === "/app"} icon={FolderKanban}>
-          All projects
+          All websites
         </NavLink>
         <NavLink href="/app/settings" active={pathname.startsWith("/app/settings")} icon={Settings}>
           Settings & billing

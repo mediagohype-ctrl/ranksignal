@@ -34,8 +34,10 @@ export interface ReportIssue {
 
 export interface PillarScore {
   pillar: Pillar;
-  label: string; // "SEO", "AEO (answer engines)", "GEO (generative AI)", "Brand"
+  label: string; // plain words: "Google health", "Easy to quote", "Ready for AI", "AI knows you"
   score: number | null; // 0-100, null when not measurable yet
+  /** True when AI answers aren't in yet and this pillar normally uses them (score covers the website only). */
+  partial?: boolean;
   grade: Grade | null;
   summary: string; // one plain sentence
   checks: CheckResult[];
@@ -67,7 +69,8 @@ export interface SiteReport {
   websiteUrl: string;
   generatedAt: string;
   crawl: { crawlRunId: string | null; pagesCrawled: number; finishedAt: string | null };
-  overall: { score: number | null; grade: Grade | null; headline: string };
+  /** partial = website checked but AI answers not in yet; show "Waiting for AI results". Optional for stored legacy reports. */
+  overall: { score: number | null; grade: Grade | null; headline: string; partial?: boolean };
   pillars: PillarScore[]; // always in order seo, aeo, geo, brand
   issues: ReportIssue[]; // sorted: impact desc, then effort asc
   quickWins: string[]; // ids of issues with high/medium impact + quick effort (max 5)

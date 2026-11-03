@@ -36,9 +36,8 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Project"
-        title="Settings"
-        description={`How we scan ${project.name}, who hears about results, and what we're allowed to change on your behalf.`}
+        title="Project settings"
+        description={`How often we check ${project.name}, who gets the results, and what we may change for you.`}
       />
       <ProjectSettingsForm
         projectId={project.id}

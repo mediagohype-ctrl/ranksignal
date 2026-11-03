@@ -3,27 +3,27 @@ import { ExternalLink } from "lucide-react";
 const LABEL: Record<string, string> = {
   url: "Page",
   error: "Error",
-  status: "Response code",
-  chain: "Redirect steps",
+  status: "Error code",
+  chain: "Forwarding steps",
   selector: "Looked for",
-  title: "Current title",
-  description: "Current description",
+  title: "Current Google headline",
+  description: "Current Google summary",
   length: "Length (characters)",
   h1: "Main headings found",
   skips: "Heading jumps",
-  canonical: "Canonical points to",
-  robotsMeta: "Robots tag",
-  count: "Images without alt text",
+  canonical: "Main version points to",
+  robotsMeta: "Hiding setting",
+  count: "Images without a description",
   examples: "Example images",
   wordCount: "Word count",
   questionHeadings: "Question headings",
-  value: "Shared value",
+  value: "Repeated text",
   others: "Also used on",
   target: "Broken page",
   linkedFrom: "Linked from",
   checked: "Checked",
-  blocked: "Blocked crawlers",
-  schemaTypes: "Markup types found",
+  blocked: "Blocked AI robots",
+  schemaTypes: "Info for Google and AI found",
   pagesChecked: "Pages checked",
 };
 
@@ -63,7 +63,7 @@ function Value({ v }: { v: unknown }) {
   return <span className="break-words">{String(v)}</span>;
 }
 
-/** Evidence recorded by an audit rule, shown as labelled rows. Crawled text is rendered as plain text only. */
+/** Details (evidence) recorded by an audit rule, shown as labelled rows. Crawled text is rendered as plain text only. */
 export function EvidenceList({ evidence, skipUrl }: { evidence: Record<string, unknown> | null; skipUrl?: string | null }) {
   const entries = Object.entries(evidence ?? {}).filter(([k, v]) => !(k === "url" && v === skipUrl));
   if (entries.length === 0) return <p className="text-small text-muted">No extra details were recorded for this check.</p>;

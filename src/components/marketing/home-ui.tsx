@@ -20,16 +20,16 @@ export function SampleTag({ className }: { className?: string }) {
 }
 
 const PILLARS = [
-  { label: "SEO", score: 78 },
-  { label: "AEO", score: 54 },
-  { label: "GEO", score: 41 },
-  { label: "Brand", score: 86 },
+  { label: "Google health", score: 78 },
+  { label: "Easy to quote", score: 54 },
+  { label: "Ready for AI", score: 41 },
+  { label: "AI knows you", score: 86 },
 ] as const;
 
 /** Hero: an AI answer card overlapping a compact report card. */
 export function HeroComposition() {
   return (
-    <figure aria-label="Sample: an AI answer that names a business, and its visibility report" className="relative">
+    <figure aria-label="Sample: an AI answer that names a business, and its full report" className="relative">
       {/* AI answer */}
       <div className="relative z-10 rounded-[22px] border border-border bg-surface p-5 pb-12 shadow-xl sm:p-7 sm:pb-12 lg:mr-[16%] lg:pb-20">
         <div className="flex items-center justify-between gap-3">
@@ -49,7 +49,7 @@ export function HeroComposition() {
           for evening delivery.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted">Sources</span>
+          <span className="text-xs text-muted">Links</span>
           {["greenleaf-bakery.example", "bangalore-eats.example"].map((s, i) => (
             <span
               key={s}
@@ -69,7 +69,7 @@ export function HeroComposition() {
       <div className="relative z-20 -mt-6 ml-6 rounded-[22px] border border-border bg-surface p-5 shadow-xl sm:ml-auto sm:w-[78%] sm:p-6 lg:-mt-14 lg:w-[62%]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs text-muted">Visibility report</p>
+            <p className="text-xs text-muted">Full report</p>
             <p className="truncate text-[0.9375rem] font-semibold text-fg">greenleaf-bakery.example</p>
           </div>
           <SampleTag />
@@ -78,7 +78,7 @@ export function HeroComposition() {
           <ScoreRing score={65} size="md" label="Sample overall score" />
           <ul className="min-w-0 flex-1 space-y-2.5">
             {PILLARS.map((p) => (
-              <li key={p.label} className="grid grid-cols-[3.25rem_1fr_1.75rem] items-center gap-2 text-xs">
+              <li key={p.label} className="grid grid-cols-[6.25rem_1fr_1.75rem] items-center gap-2 text-xs">
                 <span className="font-medium text-fg">{p.label}</span>
                 <Meter value={p.score} max={100} label={`Sample ${p.label} score`} tone="score" size="sm" />
                 <span className="text-right tabular-nums text-fg-soft">{p.score}</span>
@@ -130,20 +130,20 @@ function CellMark({ v }: { v: Cell }) {
     return (
       <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary text-primary-fg">
         <Check aria-hidden size={15} strokeWidth={2.5} />
-        <span className="sr-only">Mentioned and cited</span>
+        <span className="sr-only">Named and linked to the site</span>
       </span>
     );
   if (v === "mentioned")
     return (
       <span className="inline-flex size-7 items-center justify-center rounded-full border-[1.5px] border-primary text-primary">
         <Check aria-hidden size={14} strokeWidth={2.5} />
-        <span className="sr-only">Mentioned, not cited</span>
+        <span className="sr-only">Named, no link</span>
       </span>
     );
   return (
     <span className="inline-flex size-7 items-center justify-center text-border-strong">
       <Minus aria-hidden size={16} />
-      <span className="sr-only">Not mentioned</span>
+      <span className="sr-only">Not named</span>
     </span>
   );
 }
@@ -157,7 +157,7 @@ export function AnswersPanel() {
       </div>
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[520px] text-left">
-          <caption className="sr-only">Sample: whether each AI engine mentioned or cited the business</caption>
+          <caption className="sr-only">Sample: whether each AI assistant named the business and linked to its site</caption>
           <thead>
             <tr className="border-b border-border text-xs text-muted">
               <th scope="col" className="px-5 py-3 font-medium sm:px-6">
@@ -206,7 +206,7 @@ export function FixPanel() {
       <IssueCard
         className="!rounded-[22px] !shadow-lg"
         title="AI can't find a clear answer to “Do you deliver?”"
-        pillarLabel="AEO"
+        pillarLabel="Easy to quote"
         impact="high"
         effort="quick"
         affectedCount={6}
@@ -214,7 +214,7 @@ export function FixPanel() {
         howToFix={[
           "Add a short “Delivery” answer to your home and contact pages.",
           "Name the areas, days and minimum order in one sentence.",
-          "Mark it up as an FAQ. We can draft this for you to approve.",
+          "Add it as info for Google and AI. We can draft this for you to approve.",
         ]}
       />
     </div>
@@ -226,7 +226,7 @@ export function ApprovalPanel() {
     <div className="relative overflow-hidden rounded-[22px] border border-border bg-surface shadow-lg">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
         <div className="min-w-0">
-          <p className="text-[0.9375rem] font-semibold text-fg">Homepage · meta description</p>
+          <p className="text-[0.9375rem] font-semibold text-fg">Homepage · Google summary</p>
           <p className="text-xs text-muted">Drafted from the delivery fix</p>
         </div>
         <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ export function ApprovalPanel() {
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs text-muted sm:ml-auto">
           <RotateCcw aria-hidden size={13} />
-          Snapshot saved for rollback
+          Old version saved, so you can undo
         </span>
       </div>
     </div>

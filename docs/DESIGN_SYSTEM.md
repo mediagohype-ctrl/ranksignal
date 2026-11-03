@@ -10,7 +10,7 @@ Primitives live in `src/components/ui/*` (import from `@/components/ui`). Tokens
 - Use token utilities only: `bg-surface`, `text-muted`, `border-border`, `text-primary`, `bg-score-good-soft`…
 - Use the type classes (`text-display`, `text-h1`…`text-caption`) for headings and text sizes.
 - Give every icon-only button an `aria-label`. Pass icons through `icon` props (they get `aria-hidden`).
-- Label simulated data with `<SimulatedDataBanner />`. Write in plain English for a small-business owner.
+- Label simulated data with `<SimulatedDataBanner />`. Write in plain English for a small-business owner using the word list in `docs/PLAIN_WORDS.md`.
 - Use `tabular-nums` for numbers in tables and stats.
 
 **Don't**
@@ -33,14 +33,14 @@ All tokens have light and dark values (dark via `prefers-color-scheme`). Utility
 | Semantic | `success`, `warning`, `danger` (+ `danger-hover`, `danger-fg`), `info`, each with `-soft` |
 | Severity | `sev-critical`, `sev-high`, `sev-medium`, `sev-low`, `sev-info`, each with `-soft` |
 | Risk class | `risk-a` (green), `risk-b` (blue), `risk-c` (amber), `risk-d` (red), each with `-soft` |
-| Score bands | `score-good` (≥80), `score-ok` (50–79), `score-poor` (<50), `score-none` (not measured), each with `-soft`; `score-track` (ring/meter track) |
+| Score bands | `score-good` (≥75), `score-ok` (50–74), `score-poor` (<50), `score-none` (not measured), each with `-soft`; `score-track` (ring/meter track) |
 | Charts | `chart-1`…`chart-5`, `chart-muted`, `chart-grid`. In recharts use `stroke="var(--chart-1)"`, `fill="var(--chart-2)"`, grid `stroke="var(--chart-grid)"`, axis ticks `fill: "var(--muted)"` |
 | Diff | `diff-add`, `diff-remove` |
 | Focus | `ring` (global `:focus-visible` outline is already applied; use `focus-ring` utility for custom elements) |
 
 Pattern for tinted chips/boxes: `bg-{x}-soft text-{x}` (AA verified both themes). Text on solid fills: `bg-primary text-primary-fg`, `bg-accent text-accent-fg`, `bg-danger text-danger-fg`.
 
-Score helpers (TS): `scoreBand(score) → "good"|"ok"|"poor"|"none"`, `gradeFromScore(score)` (A≥90, B≥80, C≥65, D≥50, F) — prefer the report's own `grade`; `SCORE_BAND_CLASS[band].text|bg|soft|stroke|label`.
+Score helpers (TS): `scoreBand(score) → "good"|"ok"|"poor"|"none"`, `gradeFromScore(score)` (A≥90, B≥80, C≥65, D≥50, F) — grades are Expert-only, customers see the number + band label; `SCORE_BAND_CLASS[band].text|bg|soft|stroke|label`.
 
 **Radius:** `rounded-md` (inputs inner bits), `rounded-lg` (buttons, inputs), `rounded-xl` (notices, small panels), `rounded-2xl` (cards, dialogs), `rounded-full` (badges, chips, avatars).
 **Shadows:** cards `shadow-card` (hover `shadow-card-hover`), popovers/toasts `shadow-lg`, dialogs `shadow-xl`.

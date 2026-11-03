@@ -42,4 +42,4 @@ export interface FreeCheckResult {
 }
 
 export const AI_VISIBILITY_NOTE =
-  "AI visibility (does ChatGPT, Gemini or Claude mention you when customers ask?) is measured in the full report.";
+  "This free check reads your website only. It does not ask ChatGPT, Gemini or other AI assistants about you — the full report does that after you sign up.";

@@ -34,9 +34,9 @@ function AcceptInvite() {
       const d = res.details as { email?: string; organizationName?: string } | undefined;
       setState({ kind: "signin", email: d?.email, organizationName: d?.organizationName });
     } else if (res.code === "wrong_account") {
-      setState({ kind: "wrong_account", message: res.message ?? "This invitation was sent to a different email address." });
+      setState({ kind: "wrong_account", message: res.message ?? "This invitation was sent to a different email address. Sign out, then sign in with that email." });
     } else {
-      setState({ kind: "error", message: res.message ?? "We couldn't accept this invitation." });
+      setState({ kind: "error", message: res.message ?? "We couldn't accept this invitation. Ask the person who invited you to send a new one." });
     }
   }, [token, router]);
 
@@ -94,7 +94,7 @@ function AcceptInvite() {
 
   return (
     <>
-      <AuthHeading title="Invitation unavailable" subtitle="We couldn't use this invitation link." />
+      <AuthHeading title="This invitation doesn't work" subtitle="Ask the person who invited you to send a new one." />
       <Notice tone="danger">{state.message}</Notice>
       <div className="mt-6">
         <LinkButton href="/login" variant="secondary">

@@ -56,10 +56,10 @@ function MonthLog({ month, current, onOpenTask }: { month: WorkLogMonth; current
         title={month.label}
         description={
           month.items.length
-            ? `${month.items.length} item${month.items.length === 1 ? "" : "s"} shipped`
+            ? `${month.items.length} ${month.items.length === 1 ? "thing" : "things"} done`
             : current
-              ? "Nothing shipped yet this month."
-              : "Nothing was shipped this month."
+              ? "Nothing done yet this month."
+              : "Nothing was done this month."
         }
       />
       <CardBody className="space-y-6">
@@ -75,8 +75,8 @@ function MonthLog({ month, current, onOpenTask }: { month: WorkLogMonth; current
           <EmptyState
             size="sm"
             icon={<CheckCircle2 />}
-            title={current ? "Work shipped this month will appear here" : "No shipped work recorded"}
-            description="Finished tasks and changes applied to your site are listed with the date and who did them."
+            title={current ? "Work done this month will appear here" : "No finished work recorded"}
+            description="Finished tasks and fixes made to your site are listed with the date and who did them."
           />
         ) : (
           <ol className="space-y-6">

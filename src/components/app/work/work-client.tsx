@@ -83,7 +83,7 @@ export function WorkClient({
       if (status === "done" || t.status === "done") router.refresh(); // refresh the work log
     } catch (e) {
       upsert(t);
-      toast(e instanceof Error ? e.message : "Couldn't move the task", "error");
+      toast(e instanceof Error ? e.message : "Couldn't move the task. Please try again.", "error");
     } finally {
       setMovingId(null);
     }
@@ -114,7 +114,7 @@ export function WorkClient({
       )}
       {perms.staffMode && (
         <Notice tone="info" icon={<ShieldCheck />} title="Staff controls are on">
-          You can see internal tasks and notes, delete tasks, and mark work as internal. Clients never see internal items.
+          You can see internal tasks and notes, delete tasks, and mark work as internal. Customers never see internal items.
         </Notice>
       )}
 
@@ -123,14 +123,14 @@ export function WorkClient({
           <Stat label="Open tasks" value={stats.open} hint={`${stats.inProgress} in progress`} icon={<ClipboardList />} />
           <Stat label="Waiting on you" value={stats.waiting} hint="Needs your review or input" icon={<Columns3 />} />
           <Stat label="Overdue" value={stats.overdue} hint="Past their due date" />
-          <Stat label="Shipped this month" value={stats.shipped} hint="Tasks and applied changes" icon={<CheckCircle2 />} />
+          <Stat label="Done this month" value={stats.shipped} hint="Tasks finished and fixes made" icon={<CheckCircle2 />} />
         </div>
       )}
 
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs
-            label="Work views"
+            label="Task board views"
             idPrefix="work"
             variant="pills"
             value={view}
@@ -158,9 +158,8 @@ export function WorkClient({
               title="Your work board is empty"
               description={
                 <>
-                  This board tracks every piece of work on your site: fixes from the audit, new content, technical changes and
-                  off-site work. Each task moves from <strong>To do</strong> to <strong>In progress</strong> to <strong>Done</strong>.
-                  Anything waiting on you shows in <strong>Waiting on you</strong>, and finished work appears in the Work log.
+                  Add a task for anything you want done on your website or outside it — it moves from <strong>To do</strong> to{" "}
+                  <strong>Done</strong>.
                 </>
               }
               action={

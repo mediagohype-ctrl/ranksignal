@@ -98,17 +98,17 @@ function TierCard({ tier: t, Heading }: { tier: ServiceTier; Heading: "h2" | "h3
 const LOG = [
   { date: "3 Oct", title: "Delivery areas answered on the homepage", tag: "Page" },
   { date: "7 Oct", title: "Google Business Profile: hours, services, 12 photos", tag: "Profile" },
-  { date: "14 Oct", title: "FAQ markup on the custom-cakes page", tag: "Schema" },
+  { date: "14 Oct", title: "Questions and answers added to the custom-cakes page", tag: "Info for AI" },
   { date: "21 Oct", title: "“Eggless cakes” page refreshed", tag: "Refresh" },
 ];
 
 export function DeliveryComposition() {
   return (
-    <figure aria-label="Sample: a month of shipped fixes and the change it measured" className="relative">
+    <figure aria-label="Sample: a month of fixes and the change we measured" className="relative">
       <div className="relative z-10 rounded-[22px] border border-border bg-surface shadow-xl lg:mr-[14%]">
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-[0.9375rem] font-semibold text-fg">Shipped this month</p>
+            <p className="text-[0.9375rem] font-semibold text-fg">Done this month</p>
             <p className="text-xs text-muted">October · greenleaf-bakery.example</p>
           </div>
           <SampleTag />
@@ -141,7 +141,7 @@ export function DeliveryComposition() {
 
       <div className="relative z-20 -mt-10 ml-6 rounded-[22px] border border-border bg-surface p-5 shadow-xl sm:ml-auto sm:w-[70%] sm:p-6 lg:-mt-16 lg:w-[56%]">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted">AI mention rate, 50 questions</p>
+          <p className="text-xs text-muted">AI named you, 50 questions</p>
           <SampleTag />
         </div>
         <p className="mt-3 flex items-baseline gap-3">
@@ -153,7 +153,7 @@ export function DeliveryComposition() {
         <p className="mt-2 text-xs text-muted">vs 22% in September · from 500 saved answers</p>
         <p className="mt-4 inline-flex items-center gap-1.5 border-t border-border pt-3 text-xs text-fg-soft">
           <RotateCcw aria-hidden size={13} />
-          Every change logged; connector changes roll back in one click
+          Every change recorded; changes on your site undo in one click
         </p>
       </div>
     </figure>
@@ -163,8 +163,8 @@ export function DeliveryComposition() {
 /* ------------------------------------------------------------------ sample monthly impact report */
 
 const KPIS = [
-  { label: "Fixes shipped", value: "15/15", change: "All agreed fixes", good: true },
-  { label: "AI mention rate", value: "31%", change: "+9 pts", good: true },
+  { label: "Fixes done", value: "15/15", change: "All agreed fixes", good: true },
+  { label: "AI named you", value: "31%", change: "+9 pts", good: true },
   { label: "Questions where you’re linked", value: "12", change: "+5 of 50", good: true },
   { label: "Overall score", value: "68", change: "+7", good: true },
 ];
@@ -180,7 +180,7 @@ const ENGINES = [
 const SHIPPED = [
   { title: "Answered “Do you deliver to Domlur?” on 3 pages", tag: "Answer" },
   { title: "Google Business Profile: services and hours fixed", tag: "Profile" },
-  { title: "Bakery and FAQ schema added to 6 pages", tag: "Schema" },
+  { title: "Business info for Google and AI added to 6 pages", tag: "Info for AI" },
   { title: "“Custom wedding cakes” page rewritten", tag: "Refresh" },
 ];
 
@@ -193,13 +193,13 @@ const NEXT = [
 export function ImpactReportSample() {
   return (
     <figure
-      aria-label="Sample monthly impact report for a fictional bakery"
+      aria-label="Sample monthly report for a made-up bakery"
       className="relative overflow-hidden rounded-[28px] border border-border bg-surface shadow-xl"
     >
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-6 sm:px-9 sm:py-7">
         <div className="min-w-0">
-          <p className="mk-label">Monthly impact report</p>
+          <p className="mk-label">Monthly report</p>
           <p className="mt-2 text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-fg">
             Greenleaf Bakery · October 2026
           </p>
@@ -210,9 +210,9 @@ export function ImpactReportSample() {
 
       {/* Summary */}
       <p className="border-b border-border px-6 py-6 text-[1.0625rem] leading-relaxed text-fg sm:px-9">
-        We shipped all 15 fixes we agreed for October. Across your 50 questions, AI assistants now name you in{" "}
-        <strong className="font-semibold">31% of answers</strong>, up from 22%. The biggest gain came after we answered
-        delivery areas on your homepage.
+        We made all 15 fixes we agreed for October. Across your 50 questions, AI assistants now name you in{" "}
+        <strong className="font-semibold">31% of answers</strong>, up from 22%. The biggest change came in the same month we
+        added your delivery areas to your homepage.
       </p>
 
       {/* KPIs */}
@@ -234,7 +234,7 @@ export function ImpactReportSample() {
         {/* By engine */}
         <div className="border-b border-border px-6 py-6 sm:px-9 lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-small font-semibold text-fg">Mention rate by AI engine</p>
+            <p className="text-small font-semibold text-fg">How often each AI assistant named you</p>
             <span className="flex items-center gap-3 text-[11px] text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <span aria-hidden className="h-1.5 w-3 rounded-full bg-border-strong" />
@@ -267,7 +267,7 @@ export function ImpactReportSample() {
 
         {/* Shipped */}
         <div className="px-6 py-6 sm:px-9">
-          <p className="text-small font-semibold text-fg">What we shipped</p>
+          <p className="text-small font-semibold text-fg">What we did</p>
           <ul className="mt-3">
             {SHIPPED.map((s) => (
               <li key={s.title} className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-0">
@@ -299,8 +299,8 @@ export function ImpactReportSample() {
           </ol>
         </div>
         <p className="self-end text-xs leading-relaxed text-muted lg:text-right">
-          Based on 500 saved answers (50 questions × 5 engines, checked twice this month). Small samples move a lot, and AI
-          answers change from day to day; no ranking or mention is guaranteed.
+          Based on 500 saved answers (50 questions × 5 AI assistants, checked twice this month). Small numbers move a lot,
+          and AI answers change from day to day. Nobody can promise a Google position or an AI mention.
         </p>
       </div>
     </figure>

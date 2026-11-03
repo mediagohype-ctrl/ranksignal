@@ -7,9 +7,9 @@ import { FinalCta, IconTile, PageHero } from "@/components/marketing/ui";
 import { FEATURES } from "@/components/marketing/content";
 
 export const metadata: Metadata = {
-  title: "Features: AI visibility tracking, site audits and safe fixes",
+  title: "Features: website check, AI check and safe fixes",
   description:
-    "Prompt research, AI visibility and citation tracking, competitor share, technical and AI-readiness audits, evidence-backed recommendations and approval-gated publishing.",
+    "Everything RankSignal does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI (SEO and GEO), a clear to-do list and fixes you approve.",
   alternates: { canonical: "/features" },
 };
 
@@ -21,14 +21,14 @@ export default function FeaturesPage() {
         title="Every feature, explained"
         intro={
           <p>
-            {BRAND.name} connects research, measurement, site checks and safe publishing in one loop. Here&apos;s what
-            each part does — and what it deliberately doesn&apos;t.
+            {BRAND.name} checks your website, asks AI about you, and helps you fix what&apos;s wrong — safely. Here&apos;s
+            what each part does, and what it doesn&apos;t. (Experts call this SEO and GEO.)
           </p>
         }
       >
         <div className="flex flex-col gap-3 sm:flex-row">
           <LinkButton href="/signup" size="lg" variant="accent" iconRight={<ArrowRight />}>
-            Get your free AI visibility report
+            Start your free trial
           </LinkButton>
           <LinkButton href="/#sample" size="lg" variant="secondary">
             See a sample report
@@ -102,8 +102,8 @@ export default function FeaturesPage() {
       </div>
 
       <FinalCta
-        title="Put every feature to work on your site"
-        body={<p>All features are available during the free trial, within the trial&apos;s usage limits.</p>}
+        title="Try every feature on your website"
+        body={<p>Every feature is included in the free trial, within the trial&apos;s limits.</p>}
       />
     </>
   );

@@ -89,7 +89,7 @@ export function BrandingPanel({ eligible, canHidePoweredBy, canManage, stored, o
         ? !accent
           ? "Use a hex colour like #1f6feb."
           : ratio !== null && ratio < 4.5
-            ? `Too light to read on white (${ratio.toFixed(1)}:1). Pick a darker shade — it needs 4.5:1.`
+            ? "Too light to read on white. Pick a darker shade."
             : undefined
         : undefined,
       replyTo: f.replyTo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.replyTo.trim()) ? "Enter a valid email address." : undefined,
@@ -153,11 +153,11 @@ export function BrandingPanel({ eligible, canHidePoweredBy, canManage, stored, o
       if (!res.ok) {
         const fe = data.error?.details?.fieldErrors;
         const first = fe ? Object.entries(fe).find(([, v]) => v?.length) : undefined;
-        throw new Error(first ? first[1][0] : (data.error?.message ?? "Couldn't save branding"));
+        throw new Error(first ? first[1][0] : (data.error?.message ?? "Couldn't save branding. Please try again."));
       }
       toast("Branding saved", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save branding");
+      setError(err instanceof Error ? err.message : "Couldn't save branding. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -178,7 +178,7 @@ export function BrandingPanel({ eligible, canHidePoweredBy, canManage, stored, o
           <CardBody className="space-y-5">
             {!canManage && (
               <Notice tone="neutral" title="View only">
-                Only owners and admins can change branding.
+                Only the Owner or an Admin can change branding.
               </Notice>
             )}
             {error && (
@@ -308,7 +308,7 @@ export function BrandingPanel({ eligible, canHidePoweredBy, canManage, stored, o
               </div>
               <div className="space-y-1 px-4 py-4">
                 <p className="eyebrow" style={preview.accentColor ? { color: preview.accentColor } : undefined}>
-                  Monthly impact report
+                  Monthly report
                 </p>
                 <p className="text-h4 text-fg">October 2026 · Client website</p>
                 <div className="mt-3 h-2 w-2/3 rounded-full bg-surface-3" aria-hidden />

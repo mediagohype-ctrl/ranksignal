@@ -53,19 +53,19 @@ export function PlanBanner({ access, usage, upgradeHref = "/app/settings?tab=bil
         {label}
       </LinkButton>
     ) : null;
-  const askAdmin = canManageBilling ? null : <span>Ask a workspace owner or admin to choose a plan.</span>;
+  const askAdmin = canManageBilling ? null : <span>Ask your workspace Owner or an Admin to choose a plan.</span>;
   const notices: React.ReactNode[] = [];
 
   if (!access.active) {
     if (access.reason === "suspended") {
       notices.push(
-        <Notice key="state" tone="danger" title="This workspace is suspended" actions={<LinkButton href={`mailto:${BRAND.supportEmail}`} size="sm" variant="secondary" external>Contact support</LinkButton>}>
-          New scans and AI checks are paused. Your reports are still available.
+        <Notice key="state" tone="danger" title="This workspace is suspended" actions={<LinkButton href={`mailto:${BRAND.supportEmail}`} size="sm" variant="secondary" external>Contact us</LinkButton>}>
+          New website checks and AI checks are paused. Your reports are still here. Contact us to turn things back on.
         </Notice>,
       );
     } else if (access.reason === "past_due") {
       notices.push(
-        <Notice key="state" tone="danger" title="Scans are paused — payment needed" actions={upgrade("Update billing")}>
+        <Notice key="state" tone="danger" title="Checks are paused — payment needed" actions={upgrade("Update billing")}>
           We couldn&apos;t take your last payment, and the grace period has ended. Your reports are still available. {askAdmin}
         </Notice>,
       );
@@ -77,7 +77,7 @@ export function PlanBanner({ access, usage, upgradeHref = "/app/settings?tab=bil
           title={access.reason === "trial_expired" ? "Your free trial has ended" : "Your plan has ended"}
           actions={upgrade("Choose a plan")}
         >
-          Choose a plan to keep running scans and AI checks. Everything you&apos;ve set up and your past reports are kept. {askAdmin}
+          Choose a plan to keep running website checks and AI checks. Everything you&apos;ve set up and your past reports are kept. {askAdmin}
         </Notice>,
       );
     }
@@ -85,7 +85,7 @@ export function PlanBanner({ access, usage, upgradeHref = "/app/settings?tab=bil
     const grace = toDate(access.graceEndsAt);
     notices.push(
       <Notice key="state" tone="warning" title="Payment didn't go through" icon={<CreditCard />} actions={upgrade("Update billing")}>
-        Please update your payment details{grace ? ` before ${fmtDate(grace)}` : ""} to avoid a pause in scans. {askAdmin}
+        Please update your payment details{grace ? ` before ${fmtDate(grace)}` : ""} so your website checks don&apos;t pause. {askAdmin}
       </Notice>,
     );
   } else if (access.reason === "cancelled") {
@@ -101,7 +101,7 @@ export function PlanBanner({ access, usage, upgradeHref = "/app/settings?tab=bil
       const days = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / DAY_MS));
       notices.push(
         <Notice key="state" tone={days <= 2 ? "warning" : "tip"} title={days <= 1 ? "Your free trial ends today" : `${days} days left in your free trial`} actions={upgrade("Choose a plan")}>
-          Your trial ends on {fmtDate(end)}. Pick a plan any time to keep your scans and AI checks running.
+          Your trial ends on {fmtDate(end)}. Pick a plan any time to keep your website checks and AI checks running.
         </Notice>,
       );
     }
@@ -119,7 +119,7 @@ export function PlanBanner({ access, usage, upgradeHref = "/app/settings?tab=bil
     if (parts.length) {
       notices.push(
         <Notice key="usage" tone="warning" title="You're close to your plan limits" actions={upgrade("Upgrade")}>
-          You&apos;ve used {parts.join(" and ")}. Limits reset at the start of each month (UTC).
+          You&apos;ve used {parts.join(" and ")}. Limits reset at the start of each month. Upgrade if you need more.
         </Notice>,
       );
     }

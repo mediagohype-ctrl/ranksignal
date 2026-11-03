@@ -49,7 +49,7 @@ function ClicksChart({ data }: { data: { date: string; clicks: number; impressio
     <div
       style={{ height: 180 }}
       role="img"
-      aria-label={`Daily Google clicks and impressions, ${rows[0]?.label ?? ""} to ${rows.at(-1)?.label ?? ""}`}
+      aria-label={`Daily Google clicks and times shown, ${rows[0]?.label ?? ""} to ${rows.at(-1)?.label ?? ""}`}
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: -16 }}>
@@ -68,7 +68,7 @@ function ClicksChart({ data }: { data: { date: string; clicks: number; impressio
             yAxisId="i"
             type="monotone"
             dataKey="impressions"
-            name="Impressions"
+            name="Times shown"
             stroke="var(--chart-2)"
             strokeWidth={1.5}
             strokeDasharray="4 3"
@@ -126,7 +126,7 @@ export function SearchPerformance({
     <Card as="section" className={className} aria-labelledby="search-perf-title">
       <CardHeader
         icon={<Search />}
-        title={<span id="search-perf-title">Search performance</span>}
+        title={<span id="search-perf-title">Visits from Google</span>}
         description={
           data
             ? `Last ${data.range.days} days (${shortDate(data.range.from)} – ${shortDate(data.range.to)}) vs the ${data.range.days} days before`
@@ -135,7 +135,7 @@ export function SearchPerformance({
         actions={
           <div className="flex flex-wrap gap-1.5">
             {g && <Badge tone="neutral" size="sm">Google data via your Search Console</Badge>}
-            {a && <Badge tone="neutral" size="sm">GA4</Badge>}
+            {a && <Badge tone="neutral" size="sm">Google Analytics</Badge>}
           </div>
         }
       />
@@ -156,7 +156,7 @@ export function SearchPerformance({
             size="sm"
             icon={<Search />}
             title="See your real Google clicks here"
-            description="Connect Google Search Console and Google Analytics 4 (read-only) to track clicks, impressions and visits from AI assistants alongside the work we do."
+            description="Connect Google Search Console and Google Analytics (read-only) to track clicks from Google, how often you're shown, and visits from AI assistants alongside the work we do."
             action={<LinkButton href={integrationsHref} size="sm">Connect Google</LinkButton>}
           />
         ) : (
@@ -167,22 +167,22 @@ export function SearchPerformance({
                   <>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <Tile label="Clicks" value={int(g.current.clicks)} change={<ChangeChip c={g.deltas.clicks} />} />
-                      <Tile label="Impressions" value={int(g.current.impressions)} change={<ChangeChip c={g.deltas.impressions} />} />
+                      <Tile label="Times shown" value={int(g.current.impressions)} change={<ChangeChip c={g.deltas.impressions} />} hint="in Google results" />
                       <Tile
-                        label="Click-through"
+                        label="Clicked when shown"
                         value={pct1(g.current.ctr)}
                         hint={g.previous.ctr !== null ? `was ${pct1(g.previous.ctr)}` : undefined}
                       />
                       <Tile
-                        label="Avg. position"
+                        label="Average place in Google"
                         value={g.current.position !== null ? String(g.current.position) : "—"}
-                        hint={g.previous.position !== null ? `was ${g.previous.position} · lower is better` : "lower is better"}
+                        hint={g.previous.position !== null ? `was ${g.previous.position} · 1 is the top` : "1 is the top"}
                       />
                     </div>
                     {g.daily.length > 1 && <ClicksChart data={g.daily} />}
                     {g.topQueries.length > 0 && (
                       <div>
-                        <h3 className="text-small font-semibold text-fg">Top searches</h3>
+                        <h3 className="text-small font-semibold text-fg">Top searches bringing clicks</h3>
                         <ul className="mt-2 divide-y divide-border rounded-xl border border-border">
                           {g.topQueries.slice(0, 5).map((q) => (
                             <li key={q.key} className="flex items-center justify-between gap-3 px-3 py-2 text-small">
@@ -206,7 +206,7 @@ export function SearchPerformance({
                 ) : (
                   <p className="text-small text-muted">
                     {g.connected
-                      ? "Search Console is connected. The first data appears after the next daily sync (Google reports with a 2–3 day delay)."
+                      ? "Search Console is connected. The first numbers appear after tomorrow's update (Google reports 2–3 days late)."
                       : "Search Console isn't connected right now."}
                   </p>
                 )}
@@ -218,14 +218,14 @@ export function SearchPerformance({
                 {a.hasData ? (
                   <>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      <Tile label="Website visits" value={int(a.current.sessions)} change={<ChangeChip c={a.deltas.sessions} />} hint="GA4 sessions" />
+                      <Tile label="Website visits" value={int(a.current.sessions)} change={<ChangeChip c={a.deltas.sessions} />} hint="Google Analytics" />
                       <Tile
                         label="Visits from AI assistants"
                         value={int(a.current.aiSessions)}
                         change={<ChangeChip c={a.deltas.aiSessions} />}
-                        hint="GA4 referrals"
+                        hint="clicked a link in AI"
                       />
-                      <Tile label="Key events" value={int(a.current.conversions)} change={<ChangeChip c={a.deltas.conversions} />} hint="GA4" />
+                      <Tile label="Key actions" value={int(a.current.conversions)} change={<ChangeChip c={a.deltas.conversions} />} hint="e.g. forms sent" />
                     </div>
                     {a.aiBySource.length > 0 && (
                       <ul className="flex flex-wrap gap-2 text-small" aria-label="Visits by AI assistant">
@@ -239,13 +239,13 @@ export function SearchPerformance({
                       </ul>
                     )}
                     <p className="text-xs text-muted">
-                      GA4{a.propertyName ? ` (${a.propertyName})` : ""}. AI-assistant visits count only people who clicked a link in ChatGPT,
-                      Perplexity, Gemini, Copilot or Claude and arrived with that referrer.
+                      Google Analytics{a.propertyName ? ` (${a.propertyName})` : ""}. AI-assistant visits count only people who clicked a link in
+                      ChatGPT, Perplexity, Gemini, Copilot or Claude to reach your site.
                     </p>
                   </>
                 ) : (
                   <p className="text-small text-muted">
-                    {a.connected ? "GA4 is connected. Visits appear after the next daily sync." : "GA4 isn't connected right now."}
+                    {a.connected ? "Google Analytics is connected. Visits appear after tomorrow's update." : "Google Analytics isn't connected right now."}
                   </p>
                 )}
               </div>

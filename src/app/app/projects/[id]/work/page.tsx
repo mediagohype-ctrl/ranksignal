@@ -71,7 +71,7 @@ export default async function WorkPage({
     } catch (e) {
       prefillError =
         e instanceof HttpError && e.status === 404
-          ? `We couldn't find that ${fromFinding ? "audit finding" : "recommended change"} in this project. You can still add a task by hand.`
+          ? `We couldn't find that ${fromFinding ? "website problem" : "suggested fix"} in this project. You can still add a task by hand.`
           : "Something went wrong loading the details. You can still add a task by hand.";
     }
   }
@@ -79,9 +79,9 @@ export default async function WorkPage({
   return (
     <>
       <PageHeader
-        eyebrow="Work"
-        title="Work on your site"
-        description="Everything planned, in progress and shipped for this website, plus a log of what was delivered each month."
+        eyebrow="To-do"
+        title="Task board"
+        description="Every task for this website — planned, in progress and done — plus what was delivered each month."
       />
       <WorkClient
         projectId={project.id}

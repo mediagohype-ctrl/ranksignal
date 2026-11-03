@@ -68,7 +68,7 @@ export function HeroEyebrow({ children, icon }: { children: ReactNode; icon?: Re
 /** Text-only chips for the AI engines we measure. `onDark` for navy bands. */
 export function EngineChips({ onDark, className }: { onDark?: boolean; className?: string }) {
   return (
-    <ul className={clsx("flex flex-wrap gap-2", className)} aria-label="AI engines we measure">
+    <ul className={clsx("flex flex-wrap gap-2", className)} aria-label="AI assistants we check">
       {ENGINES.map((e) => (
         <li
           key={e}
@@ -147,7 +147,7 @@ export function FinalCta({ title, body }: { title: string; body: ReactNode }) {
         </div>
         <div className="flex flex-col gap-3 sm:flex-row lg:col-span-4 lg:justify-end">
           <Link href="/signup" className={inkPill("lg", true)}>
-            Start free
+            Start free trial
             <ArrowRight aria-hidden />
           </Link>
           <Link
@@ -158,7 +158,7 @@ export function FinalCta({ title, body }: { title: string; body: ReactNode }) {
           </Link>
         </div>
         <p className="text-small text-bg/65 lg:col-span-12">
-          {TRIAL_DAYS}-day free trial. No guaranteed rankings, just honest measurement.
+          {TRIAL_DAYS}-day free trial. We can&apos;t promise a Google position — we measure honestly.
         </p>
       </div>
     </section>

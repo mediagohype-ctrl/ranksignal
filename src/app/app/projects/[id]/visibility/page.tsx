@@ -7,7 +7,7 @@ import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { asArray, asRecord, fmtDate, isActiveStatus, pct } from "@/lib/dashboard/format";
 import { describeProviders } from "@/lib/providers/visibility/registry";
 import { AutoRefresh } from "@/components/app/auto-refresh";
-import { ProvidersStatus, type PublicProvider } from "@/components/app/providers-status";
+import { ProvidersStatus, engineName, type PublicProvider } from "@/components/app/providers-status";
 import { RunButtons } from "@/components/app/run-buttons";
 import { VisibilityTable, type ObservationRow } from "@/components/app/visibility-table";
 import {
@@ -15,7 +15,7 @@ import {
   THead, TR,
 } from "@/components/ui";
 
-export const metadata = { title: "AI Visibility" };
+export const metadata = { title: "AI answers" };
 
 export default async function VisibilityPage({
   params,
@@ -76,13 +76,14 @@ export default async function VisibilityPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        title="AI Visibility"
-        description="We ask AI assistants the questions your customers ask, then check whether they mention you, link to your site and recommend you."
+        eyebrow="AI Answers"
+        title="AI answers"
+        description="What AI tools say when your customers ask them questions — and whether they name you."
         actions={
           <>
             <AutoRefresh active={active} label="Collecting AI answers" />
             <LinkButton href={`/app/projects/${project.id}/report#ai-visibility`} variant="secondary" icon={<FileText />}>
-              See in report
+              See in full report
             </LinkButton>
             <RunButtons projectId={project.id} crawlActive={false} visibilityActive={active} canRun={hasRole(session, "member")} show={["visibility"]} />
           </>
@@ -91,16 +92,16 @@ export default async function VisibilityPage({
       {engines && <ProvidersStatus providers={engines} />}
       {simulated && (
         <SimulatedDataBanner>
-          these answers came from the built-in simulator, not real AI assistants. Add a GEMINI_API_KEY to your .env file and run the
-          check again for real answers.
+          these are sample answers, not real ones from AI tools. Real answers appear once AI checks are switched on — contact us if
+          you need help.
         </SimulatedDataBanner>
       )}
 
       {!run ? (
         <EmptyState
           icon={<MessageSquare />}
-          title="No AI visibility checks yet"
-          description="Pick the questions your customers ask, then run a check to see how AI assistants answer them."
+          title="No AI checks yet"
+          description="Pick the questions your customers ask, then run an AI check to see how AI tools answer them."
           action={<LinkButton href={`/app/projects/${project.id}/prompts`} icon={<ListChecks />}>Choose questions</LinkButton>}
           bordered
         />
@@ -133,41 +134,41 @@ export default async function VisibilityPage({
                   <span className="text-small font-normal text-muted"> / {run.sampleSize}</span>
                 </span>
               }
-              hint={run.failed ? `${run.failed} couldn't be collected` : "Every question × every AI assistant"}
+              hint={run.failed ? `${run.failed} couldn't be collected` : "Every question, asked to every AI tool"}
               footer={<StatusBadge status={run.status} />}
               icon={<ListChecks />}
             />
-            <Stat label="Mentioned" value={pct(m?.mentionRate)} hint="Answers that name your brand" footer={footer} icon={<MessageSquare />} />
-            <Stat label="Linked to your site" value={pct(m?.citationRate)} hint="Answers citing one of your pages" footer={footer} icon={<Link2 />} />
-            <Stat label="Recommended" value={pct(m?.recommendationRate)} hint="Answers suggesting you" footer={footer} icon={<ThumbsUp />} />
+            <Stat label="Named you" value={pct(m?.mentionRate)} hint="Answers that name your business" footer={footer} icon={<MessageSquare />} />
+            <Stat label="Linked to your site" value={pct(m?.citationRate)} hint="Answers that link to one of your pages" footer={footer} icon={<Link2 />} />
+            <Stat label="Recommended" value={pct(m?.recommendationRate)} hint="Answers that suggest you" footer={footer} icon={<ThumbsUp />} />
           </section>
 
           {providerRows.length > 1 && (
             <Card>
-              <CardHeader title="By AI assistant" description="Different assistants can answer the same question very differently." />
-              <Table caption="Results by AI assistant" density="compact">
+              <CardHeader title="By AI tool" description="Different AI tools can answer the same question very differently." />
+              <Table caption="Results by AI tool" density="compact">
                 <THead>
                   <tr>
-                    <TH>AI assistant</TH>
+                    <TH>AI tool</TH>
                     <TH align="right">Answers</TH>
-                    <TH>Mentioned</TH>
+                    <TH>Named you</TH>
                     <TH>Linked to your site</TH>
                   </tr>
                 </THead>
                 <tbody>
                   {providerRows.map(([p, v]) => (
                     <TR key={p}>
-                      <TD className="font-medium text-fg">{p}</TD>
+                      <TD className="font-medium text-fg">{engineName(p)}</TD>
                       <TD numeric>{v.collected}</TD>
                       <TD>
                         <div className="flex max-w-56 items-center gap-2">
-                          <Meter value={Math.round(v.mentionRate * 100)} max={100} label={`${p} mention rate`} tone="primary" />
+                          <Meter value={Math.round(v.mentionRate * 100)} max={100} label={`${engineName(p)}: answers that named you`} tone="primary" />
                           <span className="w-10 shrink-0 text-xs tabular-nums text-muted">{pct(v.mentionRate)}</span>
                         </div>
                       </TD>
                       <TD>
                         <div className="flex max-w-56 items-center gap-2">
-                          <Meter value={Math.round(v.citationRate * 100)} max={100} label={`${p} citation rate`} tone="accent" />
+                          <Meter value={Math.round(v.citationRate * 100)} max={100} label={`${engineName(p)}: answers linked to your site`} tone="accent" />
                           <span className="w-10 shrink-0 text-xs tabular-nums text-muted">{pct(v.citationRate)}</span>
                         </div>
                       </TD>
@@ -189,7 +190,7 @@ export default async function VisibilityPage({
                   <EmptyState
                     size="sm"
                     title={isActiveStatus(run.status) ? "Collecting answers…" : "No answers collected"}
-                    description={isActiveStatus(run.status) ? "This page updates by itself as answers come in." : undefined}
+                    description={isActiveStatus(run.status) ? "This page updates by itself as answers come in." : "This AI check didn't get any answers. Run the AI check again."}
                   />
                 </CardBody>
               ) : (
@@ -197,10 +198,10 @@ export default async function VisibilityPage({
               )}
             </Card>
             <Card>
-              <CardHeader title="Websites AI cites" description="Sources linked across this check. Yours are highlighted." />
+              <CardHeader title="Websites AI links to" description="Websites the answers linked to. Yours are highlighted." />
               <CardBody>
                 {sources.length === 0 ? (
-                  <p className="text-small text-muted">No websites were cited in these answers.</p>
+                  <p className="text-small text-muted">These answers didn&apos;t link to any websites.</p>
                 ) : (
                   <ul className="space-y-2">
                     {sources.map((s) => (
@@ -230,9 +231,8 @@ export default async function VisibilityPage({
             </Card>
           </div>
           <p className="text-xs text-muted">
-            AI answers change from day to day and between assistants. These numbers describe this sample of answers; they don&apos;t
-            guarantee how any assistant will answer in future.
-            {run.promptSetVersion ? ` Question set v${run.promptSetVersion}.` : ""}
+            AI answers change from day to day and between AI tools. These numbers describe these answers only; they don&apos;t
+            promise how any AI tool will answer in future.
           </p>
         </>
       )}

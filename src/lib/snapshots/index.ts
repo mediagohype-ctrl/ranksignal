@@ -209,20 +209,31 @@ async function writeVisibilitySnapshot(organizationId: string, projectId: string
     if (lastCrawl) crawl = await crawlScores(organizationId, projectId, lastCrawl.id, at);
   }
 
-  // Full report including this AI check: only when this is the newest finished visibility run (the live build
-  // reads the latest data). Older runs (backfill) store no report; getStoredReport reads the newest one.
+  // Score WITH this AI check's answers. Copying the crawl snapshot's score (made before the answers existed) is
+  // what made Home/Report and History disagree for the same check. The full report is stored only for the newest
+  // finished AI check (getStoredReport serves it); older runs (backfill) are scored but store no report.
   let report: SiteReport | null = null;
   const latestVis = await db.visibilityRun.findFirst({
     where: { organizationId, projectId, status: { in: VIS_DONE } },
     orderBy: { finishedAt: "desc" },
     select: { id: true },
   });
-  if (latestVis?.id === run.id) {
+  const isLatest = latestVis?.id === run.id;
+  let scored: SiteReport | null = null;
+  if (crawl) {
     try {
-      report = await buildSiteReport(projectId, organizationId, { llmSummary: allowLlm });
+      scored = isLatest
+        ? await buildSiteReport(projectId, organizationId, { llmSummary: allowLlm })
+        : await buildSiteReport(projectId, organizationId, { crawlRunId: crawl.crawlRunId, visibilityRunId: run.id });
+      if (isLatest) report = scored;
     } catch (err) {
       log.warn("snapshots.report_build_failed", { projectId, orgId: organizationId, visibilityRunId: run.id, err });
     }
+  }
+  if (crawl && scored) {
+    const pillarScores = Object.fromEntries(SNAPSHOT_PILLARS.map((p) => [p, null])) as SnapshotPillarScores;
+    for (const p of scored.pillars) pillarScores[p.pillar] = p.score;
+    crawl = { ...crawl, overallScore: scored.overall.score, grade: scored.overall.grade, pillarScores };
   }
 
   await db.reportSnapshot.create({

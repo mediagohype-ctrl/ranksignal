@@ -44,16 +44,16 @@ const TONE: Record<Tone, string> = {
   info: "bg-info-soft text-info",
 };
 
-const connectorName = (c: string) => (c === "wordpress" ? "WordPress" : c === "manual" ? "manual export" : c);
+const connectorName = (c: string) => (c === "wordpress" ? "WordPress" : c === "manual" ? "copy-and-paste steps" : "your connected website");
 
 export function buildTimeline(createdAt: string, approvals: ApprovalEvent[], executions: ExecutionEvent[]): TimelineItem[] {
-  const items: TimelineItem[] = [{ key: "created", at: createdAt, title: "Suggested by our analysis", tone: "neutral", icon: <Lightbulb /> }];
+  const items: TimelineItem[] = [{ key: "created", at: createdAt, title: "Suggested by us", tone: "neutral", icon: <Lightbulb /> }];
   for (const a of approvals) {
     items.push({
       key: `${a.id}-req`,
       at: a.createdAt,
-      title: "Approval requested",
-      detail: [a.requestedBy && `by ${a.requestedBy}`, `draft ${a.draftHash.slice(0, 8)}`].filter(Boolean).join(" · "),
+      title: "Asked for OK",
+      detail: [a.requestedBy && `by ${a.requestedBy}`].filter(Boolean).join(" · ") || null,
       tone: "info",
       icon: <Clock />,
     });
@@ -69,7 +69,7 @@ export function buildTimeline(createdAt: string, approvals: ApprovalEvent[], exe
     }
   }
   for (const e of executions) {
-    items.push({ key: `${e.id}-start`, at: e.startedAt, title: `Started applying via ${connectorName(e.connector)}`, tone: "info", icon: <Play /> });
+    items.push({ key: `${e.id}-start`, at: e.startedAt, title: `Started making the change using ${connectorName(e.connector)}`, tone: "info", icon: <Play /> });
     if (e.finishedAt || e.result !== "pending") {
       const v = validationLabel(e.validation);
       items.push({

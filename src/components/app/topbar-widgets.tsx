@@ -1,4 +1,5 @@
 "use client";
+import { roleLabel } from "@/components/app/role-label";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -75,7 +76,7 @@ export function UsageMeter() {
     <Link
       href="/app/settings?tab=billing"
       className="hidden w-44 flex-col gap-1.5 rounded-lg px-2 py-1 hover:bg-surface-2 md:flex"
-      title={`${usage.used.toLocaleString()} used + ${usage.reserved.toLocaleString()} reserved of ${usage.limit.toLocaleString()} credits (${usage.period})`}
+      title={`${usage.used.toLocaleString()} used and ${usage.reserved.toLocaleString()} on hold, out of ${usage.limit.toLocaleString()} credits this month`}
     >
       <span className="flex items-baseline justify-between text-xs">
         <span className="text-muted">Credits</span>
@@ -189,7 +190,7 @@ export function NotificationsBell() {
                   <BellOff size={18} aria-hidden />
                 </span>
                 <span className="text-small font-medium text-fg">You&apos;re all caught up</span>
-                <span className="text-xs text-muted">We&apos;ll let you know when a scan finishes or a fix needs your OK.</span>
+                <span className="text-xs text-muted">We&apos;ll let you know when a website check finishes or a fix needs your OK.</span>
               </li>
             )}
             {items?.map((n) => {
@@ -287,7 +288,7 @@ export function UserMenu({
         <Avatar name={display} size="sm" />
         <span className="hidden min-w-0 text-left leading-tight lg:block">
           <span className="block max-w-36 truncate text-small font-medium text-fg">{display}</span>
-          <span className="block text-xs capitalize text-muted">{role}</span>
+          <span className="block text-xs text-muted">{roleLabel(role)}</span>
         </span>
       </button>
       {open && (
@@ -298,7 +299,7 @@ export function UserMenu({
               <div className="truncate text-small font-semibold text-fg">{display}</div>
               {name && <div className="truncate text-xs text-muted">{email}</div>}
               <div className="truncate text-xs text-muted">
-                <span className="capitalize">{role}</span> · {orgName}
+                <span>{roleLabel(role)}</span> · {orgName}
               </div>
             </div>
           </div>

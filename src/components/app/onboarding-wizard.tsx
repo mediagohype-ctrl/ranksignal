@@ -31,7 +31,7 @@ const STEPS = [
   { id: "site", label: "Your website", description: "Address and brand names" },
   { id: "market", label: "Your market", description: "What you sell and where" },
   { id: "competitors", label: "Competitors", description: "Who you're compared with" },
-  { id: "automation", label: "Safety settings", description: "What we may change" },
+  { id: "automation", label: "What we may change", description: "Your safety settings" },
   { id: "review", label: "Review", description: "Check and start" },
 ] as const;
 
@@ -63,11 +63,19 @@ const LANGUAGES: [string, string][] = [
   ["ar", "Arabic"],
 ];
 
+const B_LABEL: Record<string, string> = {
+  update_meta_description: "Google summaries",
+  update_title: "Google headlines",
+  update_image_alt: "Image descriptions",
+  update_og_tags: "Share previews",
+};
+const bLabel = (t: string) => B_LABEL[t] ?? humanize(t);
+
 const B_HELP: Record<string, string> = {
-  update_meta_description: "Write or improve the short summary search engines show under your page title.",
-  update_title: "Improve page titles (the clickable headline in search results).",
+  update_meta_description: "Write or improve the short text Google shows under your link.",
+  update_title: "Improve the clickable headline Google shows for each page.",
   update_image_alt: "Add missing image descriptions, which also help visually impaired visitors.",
-  update_og_tags: "Fill in the preview title and image used when your pages are shared.",
+  update_og_tags: "Fill in the title and picture shown when someone shares your page.",
 };
 
 const DONE = ["succeeded", "succeeded_with_warnings"];
@@ -268,7 +276,7 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
           setK("visibility", { state: "error", error: errorMessage(e) });
         }
       } else {
-        setK("visibility", { state: "error", error: "Skipped because no questions were created. You can add them later on the Prompts page." });
+        setK("visibility", { state: "error", error: "Skipped because no customer questions were created. Add some on the Customer questions page, then run an AI check." });
       }
     }
     busyRef.current = false;
@@ -319,7 +327,7 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
   function liveSteps(): ProgressStep[] {
     const crawlStatus: StepStatus = crawlFailed ? "error" : crawlDone ? "done" : "active";
     const crawlDesc = createError
-      ? "We couldn't create the project."
+      ? "We couldn't create the project. Check your details and try again."
       : kick.crawl.error
         ? kick.crawl.error
         : crawlRun?.error && crawlFailed
@@ -328,15 +336,15 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
             ? `${crawlRun.progress.done} of ${crawlRun.progress.total} pages read`
             : crawlDone
               ? "Done"
-              : "Reading your public pages (we respect robots.txt)…";
+              : "Reading your public pages (we follow your site's robot rules)…";
 
     const promptsStatus: StepStatus =
       kick.prompts.state === "done" ? "done" : kick.prompts.state === "error" ? "error" : kick.prompts.state === "running" ? "active" : "pending";
     const promptsDesc =
       kick.prompts.error ??
       (kick.prompts.state === "done"
-        ? `${poll?.activePromptCount ?? "Several"} questions ready to track`
-        : "Writing the questions your buyers are likely to ask AI assistants…");
+        ? `${poll?.activePromptCount ?? "Several"} customer ${poll?.activePromptCount === 1 ? "question" : "questions"} ready`
+        : "Writing the questions your customers are likely to ask AI tools…");
 
     const visActive = visRun && !DONE.includes(visRun.status) && !FAILED.includes(visRun.status);
     const visStatus: StepStatus =
@@ -351,14 +359,14 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
       kick.visibility.error ??
       (visRun && visRun.progress.total > 0
         ? `${visRun.progress.done} of ${visRun.progress.total} answers collected${visStatus === "active" ? " — this keeps running in the background" : ""}`
-        : "Checking whether AI answers mention, recommend or cite you…");
+        : "Checking whether AI answers name you, recommend you or link to your site…");
 
     const reportStatus: StepStatus = redirecting ? "done" : crawlDone ? "active" : "pending";
-    const reportDesc = redirecting ? "Opening your report…" : crawlDone ? "Scoring your site and writing plain-English fixes…" : "Starts when the scan finishes";
+    const reportDesc = redirecting ? "Opening your report…" : crawlDone ? "Scoring your site and writing plain-English fixes…" : "Starts when the website check finishes";
 
     return [
-      { id: "scan", label: "Scanning your website", description: crawlDesc, status: createError ? "error" : crawlStatus },
-      { id: "prompts", label: "Finding the questions buyers ask AI", description: promptsDesc, status: promptsStatus },
+      { id: "scan", label: "Checking your website", description: crawlDesc, status: createError ? "error" : crawlStatus },
+      { id: "prompts", label: "Finding the questions customers ask AI", description: promptsDesc, status: promptsStatus },
       { id: "ask", label: "Asking AI engines", description: visDesc, status: visStatus },
       { id: "report", label: "Building your report", description: reportDesc, status: reportStatus },
     ];
@@ -392,11 +400,11 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
             )}
             {!createError && anyError && (
               <Notice tone="warning" title="Some steps didn't start">
-                You can retry now, or open the project and run them later. Results never depend on a single step.
+                Click “Retry failed steps” now, or open the project and run them later. The other steps still work.
               </Notice>
             )}
             <p className="text-xs text-muted">
-              Results come from sampled AI answers and a scan of your public pages. They are measurements, not ranking guarantees.
+              Results come from a sample of AI answers and a check of your public pages. They show where you stand today — they don&apos;t guarantee a place on Google or in AI answers.
             </p>
           </CardBody>
           <CardFooter className="flex flex-wrap justify-end gap-2">
@@ -475,7 +483,7 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
             }
             description={
               [
-                "We'll read your public pages, check them for problems, and see how AI assistants talk about you.",
+                "We'll read your public pages, check them for problems, and see how AI tools talk about you.",
                 "This helps us ask AI the same kinds of questions your real customers ask.",
                 "AI answers often list several businesses. We'll show how often you appear next to these.",
                 "You stay in control. Nothing is changed on your website unless you allow it here or approve it later.",
@@ -491,7 +499,7 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
                   htmlFor="ob-url"
                   required
                   error={errors.url}
-                  hint="Your home page, e.g. acme.com. We only read public pages and follow your robots.txt rules."
+                  hint="Your home page, e.g. acme.com. We only read public pages and follow your site's robot rules."
                 >
                   <div className="relative">
                     <Globe size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -702,11 +710,11 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
             {step === 3 && (
               <>
                 <fieldset className="space-y-3">
-                  <legend className="text-small font-medium text-fg">Small fixes we may apply automatically</legend>
+                  <legend className="text-small font-medium text-fg">Small fixes that can go live without asking you</legend>
                   <p className="text-xs text-muted">
-                    Only works once you connect your website platform. We save the old version first so any change can be undone. Leave
-                    these unticked and every change will wait for your approval. Bigger changes (like page content) always need your
-                    approval, and risky changes are never automated.
+                    Only works once you connect your website. We save the old version first so any change can be undone. Leave these
+                    unticked and every change waits for your OK. Bigger changes (like page text) always need your OK, and sensitive pages
+                    (like payments) are never changed for you.
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {CLASS_B_TYPES.map((t) => {
@@ -726,7 +734,7 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
                             onChange={(e) => setAllowB((xs) => (e.target.checked ? [...xs, t] : xs.filter((x) => x !== t)))}
                           />
                           <span>
-                            <span className="block text-small font-medium text-fg">{humanize(t)}</span>
+                            <span className="block text-small font-medium text-fg">{bLabel(t)}</span>
                             <span className="mt-0.5 block text-xs text-muted">{B_HELP[t] ?? ""}</span>
                           </span>
                         </label>
@@ -735,7 +743,7 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
                   </div>
                 </fieldset>
                 <Field
-                  label="How many pages should we read each scan?"
+                  label="How many pages should we read each website check?"
                   htmlFor="ob-maxPages"
                   error={errors.maxPages}
                   hint={`More pages give a fuller picture but take longer. Your plan allows up to ${maxPagesLimit}.`}
@@ -777,13 +785,14 @@ export function OnboardingWizard({ maxPagesLimit, initialWebsite = "" }: { maxPa
                           .join(", ") || "None yet",
                     },
                     { label: "Topics", value: splitList(keywords).slice(0, 8).join(", ") || "We'll suggest some" },
-                    { label: "Automatic fixes", value: allowB.map(humanize).join(", ") || "None — every change waits for you" },
-                    { label: "Pages per scan", value: `${maxPages} pages` },
+                    { label: "Fixes that go live without asking", value: allowB.map(bLabel).join(", ") || "None — every change waits for your OK" },
+                    { label: "Pages per website check", value: `${maxPages} ${Number(maxPages) === 1 ? "page" : "pages"}` },
                   ]}
                 />
                 <Notice tone="info" title="What happens next">
-                  We&apos;ll scan your website, write the questions buyers ask, ask AI assistants those questions and build your report.
-                  This uses credits from your plan. Results are measurements of sampled answers — not ranking guarantees.
+                  We&apos;ll check your website, write the questions customers ask, ask AI tools those questions and build your report.
+                  This uses credits from your plan. Results show where you stand today — they don&apos;t guarantee a place on Google or
+                  in AI answers.
                 </Notice>
               </>
             )}

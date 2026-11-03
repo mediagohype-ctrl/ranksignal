@@ -42,7 +42,7 @@ export function ConnectGeneric({
       const body: Record<string, string> = { projectId };
       for (const f of descriptor.connectFields) if (values[f.key]?.trim()) body[f.key] = values[f.key].trim();
       await api(`/api/integrations/${encodeURIComponent(descriptor.id)}/connect`, { body });
-      toast(`${descriptor.name} connected. Run a test any time to check it.`, "success");
+      toast(`${descriptor.name} connected. Click “Test connection” any time to check it.`, "success");
       setValues((v) => Object.fromEntries(Object.entries(v).map(([k, val]) => [k, descriptor.connectFields.find((f) => f.key === k)?.type === "password" ? "" : val])));
       onConnected?.();
       router.refresh();
@@ -114,17 +114,17 @@ export function ConnectGeneric({
               )}
               <div className="flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2 text-caption font-normal text-muted">
                 <ShieldCheck aria-hidden className="mt-px size-4 shrink-0 text-success" />
-                We only change what you approve, and we check the connection before saving. Secrets are encrypted and never shown again.
+                We only change what you approve, and we check the connection before saving. Passwords and keys are stored safely and never shown again.
               </div>
               <div className="flex justify-end pt-1">
                 <Button type="submit" icon={<PlugZap />} loading={busy} loadingText="Connecting…" className="w-full sm:w-auto">
-                  {connected ? "Save and re-test" : `Connect ${descriptor.name}`}
+                  {connected ? "Save and test again" : `Connect ${descriptor.name}`}
                 </Button>
               </div>
             </form>
           ) : (
-            <Notice tone="info" title="Admins only">
-              Only an organization admin can connect {descriptor.name}. Ask an admin on your team to do this step.
+            <Notice tone="info" title="Owner or Admin only">
+              Only the Owner or an Admin can connect {descriptor.name}. Ask them to do this step.
             </Notice>
           )}
         </div>

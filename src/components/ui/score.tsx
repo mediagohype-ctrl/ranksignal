@@ -3,10 +3,10 @@ import clsx from "clsx";
 export type ScoreBand = "good" | "ok" | "poor" | "none";
 export type GradeLetter = "A" | "B" | "C" | "D" | "F";
 
-/** good ≥ 80, ok 50–79, poor < 50, none = null/undefined/NaN. */
+/** One rule on every screen: good ≥ 75 (green), ok 50–74 (yellow), poor < 50 (red), none = null/undefined/NaN. */
 export function scoreBand(score: number | null | undefined): ScoreBand {
   if (score === null || score === undefined || !Number.isFinite(score)) return "none";
-  if (score >= 80) return "good";
+  if (score >= 75) return "good";
   if (score >= 50) return "ok";
   return "poor";
 }
@@ -26,7 +26,7 @@ export const SCORE_BAND_CLASS: Record<ScoreBand, { text: string; bg: string; sof
   good: { text: "text-score-good", bg: "bg-score-good", soft: "bg-score-good-soft", stroke: "stroke-score-good", label: "Good" },
   ok: { text: "text-score-ok", bg: "bg-score-ok", soft: "bg-score-ok-soft", stroke: "stroke-score-ok", label: "Needs work" },
   poor: { text: "text-score-poor", bg: "bg-score-poor", soft: "bg-score-poor-soft", stroke: "stroke-score-poor", label: "Poor" },
-  none: { text: "text-score-none", bg: "bg-score-none", soft: "bg-surface-2", stroke: "stroke-score-none", label: "Not measured" },
+  none: { text: "text-score-none", bg: "bg-score-none", soft: "bg-surface-2", stroke: "stroke-score-none", label: "Not checked yet" },
 };
 
 const RING = {
@@ -36,15 +36,17 @@ const RING = {
 } as const;
 
 /**
- * Circular 0–100 score with grade letter, coloured by band.
- * Null score renders a dashed "—" ring ("Not measured").
+ * Circular 0–100 score coloured by band, with the band label ("Needs work") under the number.
+ * Grade letters are Expert-only: pass showGrade to show one. Null score renders a dashed "—" ring.
+ * partial = website checked, AI answers not in yet.
  */
 export function ScoreRing({
   score,
   grade,
   size = "md",
   label = "Score",
-  showGrade = true,
+  showGrade = false,
+  partial = false,
   caption,
   className,
 }: {
@@ -55,6 +57,8 @@ export function ScoreRing({
   /** Accessible name, e.g. "SEO score". */
   label?: string;
   showGrade?: boolean;
+  /** Score covers the website only; AI results are still on the way. */
+  partial?: boolean;
   /** Text under the ring, e.g. "Overall". */
   caption?: React.ReactNode;
   className?: string;
@@ -67,8 +71,8 @@ export function ScoreRing({
   const c = 2 * Math.PI * r;
   const aria =
     band === "none"
-      ? `${label}: not measured yet`
-      : `${label}: ${value} out of 100${g ? `, grade ${g}` : ""} (${SCORE_BAND_CLASS[band].label.toLowerCase()})`;
+      ? `${label}: not checked yet`
+      : `${label}: ${value} out of 100 (${SCORE_BAND_CLASS[band].label.toLowerCase()})${partial ? ", waiting for AI results" : ""}`;
   return (
     <div className={clsx("inline-flex flex-col items-center gap-2", className)}>
       <div role="img" aria-label={aria} className="relative" style={{ width: cfg.px, height: cfg.px }}>
@@ -100,14 +104,15 @@ export function ScoreRing({
           <span className={clsx("font-semibold tabular-nums tracking-[-0.03em] text-fg", cfg.num)}>
             {band === "none" ? "—" : value}
           </span>
-          {showGrade && g && band !== "none" && (
-            <span className={clsx("mt-1 font-semibold uppercase tracking-wide", cfg.grade, SCORE_BAND_CLASS[band].text)}>
-              Grade {g}
+          {band !== "none" && size !== "sm" && (
+            <span className={clsx("mt-1 font-semibold", cfg.grade, SCORE_BAND_CLASS[band].text)}>
+              {showGrade && g ? `Grade ${g}` : SCORE_BAND_CLASS[band].label}
             </span>
           )}
         </div>
       </div>
       {caption && <div className="text-caption text-muted">{caption}</div>}
+      {partial && band !== "none" && size !== "sm" && <div className="text-caption text-muted">Waiting for AI results</div>}
     </div>
   );
 }

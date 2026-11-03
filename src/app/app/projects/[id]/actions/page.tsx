@@ -8,7 +8,7 @@ import { ActionCenter, type ActionView } from "@/components/app/action-center";
 import { RiskLegend } from "@/components/app/actions/risk-legend";
 import { PageHeader } from "@/components/ui";
 
-export const metadata = { title: "Actions & Approvals" };
+export const metadata = { title: "Fixes to approve" };
 
 export default async function ActionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -104,9 +104,9 @@ export default async function ActionsPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHeader
-        eyebrow="Actions & approvals"
-        title="Changes we recommend"
-        description="Review each suggested fix, see exactly what will change, and decide what goes live. Nothing risky is ever applied without your say-so."
+        eyebrow="To-do"
+        title="Fixes to approve"
+        description="Fixes we suggest for your website. Nothing that changes your site goes live until you say OK."
         actions={<AutoRefresh active={active} label="Changes being applied" />}
       />
       <div className="space-y-8">

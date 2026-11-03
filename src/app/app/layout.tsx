@@ -3,6 +3,7 @@ import { requireAppSession } from "@/lib/dashboard/server";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
 import { AppSidebar } from "@/components/app/sidebar";
+import { MobileTabBar } from "@/components/app/tab-bar";
 import { NotificationsBell, UsageMeter, UserMenu } from "@/components/app/topbar-widgets";
 import { Badge, Divider, ToastProvider } from "@/components/ui";
 import { PlanBanner } from "@/components/app/plan-banner";
@@ -21,13 +22,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       select: { id: true, name: true, websiteUrl: true },
       orderBy: { createdAt: "desc" },
     }),
-    db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true } }),
+    db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, emailVerified: true } }),
   ]);
   if (!org) redirect("/login");
   // Trial / past-due / usage banner; never block the app if billing data can't be loaded.
   const banner = await getPlanBannerData(session.organizationId).catch(() => null);
   const plan = getPlan(org.planId);
   const trial = org.planId === "trial";
+  // One banner slot (brief rule 6): a blocked account first (it's a dead end otherwise), then an unconfirmed
+  // email, then trial/usage notices.
+  const blocked = banner ? !banner.access.active : false;
+  const showVerify = !session.staffMode && user?.emailVerified === false && !blocked;
 
   return (
     <ToastProvider>
@@ -64,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               />
             </div>
           </header>
-          <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-8">
             {session.staffMode && (
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-small text-fg">
                 <span>
@@ -83,8 +88,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </span>
               </div>
             )}
-            {!session.staffMode && <VerifyEmailBanner className="mb-6" />}
-            {banner && (
+            {showVerify && <VerifyEmailBanner className="mb-6" />}
+            {banner && !showVerify && (
               <PlanBanner
                 access={banner.access}
                 usage={banner.usage}
@@ -96,6 +101,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
+      <MobileTabBar />
     </ToastProvider>
   );
 }

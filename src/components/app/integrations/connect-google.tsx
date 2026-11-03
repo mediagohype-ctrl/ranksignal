@@ -37,18 +37,18 @@ interface Option {
 
 const BLURB: Record<Product, string> = {
   gsc: "Real clicks, impressions and the searches people use to find you on Google.",
-  ga4: "Website visits, key events and visits that came from AI assistants like ChatGPT and Perplexity.",
+  ga4: "Website visits, key actions and visits that came from AI tools like ChatGPT and Perplexity.",
 };
 
 const ERRORS: Record<string, string> = {
-  access_denied: "Google access wasn't granted, so nothing was connected.",
+  access_denied: "Google access wasn't allowed, so nothing was connected. Click Connect to try again.",
   scope_missing: "The read-only data permission was unticked on Google's screen. Please connect again and leave it ticked.",
   no_refresh_token: "Google didn't give us lasting access. Remove this app under your Google account's third-party access, then connect again.",
   invalid_state: "That Google sign-in link expired or was started in another browser. Please try again.",
-  not_signed_in: "Please sign in as an admin, then connect again.",
+  not_signed_in: "Please sign in as the Owner or an Admin, then connect again.",
   exchange_failed: "We couldn't finish connecting to Google. Please try again.",
   missing_code: "Google didn't return a sign-in code. Please try again.",
-  project_not_found: "That project wasn't found.",
+  project_not_found: "We couldn't find that project. Go back to your projects and try again.",
   google_error: "Google reported a problem. Please try again.",
 };
 
@@ -58,7 +58,7 @@ const when = (iso: string | null) =>
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { cache: "no-store", ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
   const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.error?.message ?? "Something went wrong");
+  if (!r.ok) throw new Error(j?.error?.message ?? "Something went wrong. Please try again.");
   return j as T;
 }
 
@@ -100,7 +100,7 @@ function ProductRow({
       setOptions(r.items);
       setChoice(r.selected ?? r.suggested ?? r.items[0]?.id ?? "");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load your Google properties");
+      setError(e instanceof Error ? e.message : "Couldn't load your Google sites. Refresh the page to try again.");
     } finally {
       setBusy(null);
     }
@@ -122,7 +122,7 @@ function ProductRow({
       setPicking(false);
       onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save");
+      setError(e instanceof Error ? e.message : "Couldn't save. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -136,7 +136,7 @@ function ProductRow({
       await api("/api/integrations/google/disconnect", { method: "POST", body: JSON.stringify({ projectId, product: view.product }) });
       onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't disconnect");
+      setError(e instanceof Error ? e.message : "Couldn't disconnect. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -212,7 +212,7 @@ function ProductRow({
                   , then come back.
                 </>
               ) : (
-                "This Google account has no GA4 properties it can read."
+                "This Google account has no Google Analytics sites it can read. Sign in with the account that owns your Analytics, or add access for this one."
               )}
             </p>
           ) : options ? (
@@ -260,7 +260,7 @@ export function ConnectGoogle({ projectId, canAdmin }: { projectId: string; canA
       setStatus(await api<Status>(`/api/integrations/google/status?projectId=${encodeURIComponent(projectId)}`));
       setLoadError(null);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Couldn't load Google connections");
+      setLoadError(e instanceof Error ? e.message : "Couldn't load your Google connections. Refresh the page to try again.");
     }
   }, [projectId]);
 

@@ -41,22 +41,22 @@ interface Props {
 
 const AUTOMATION_HELP: Record<string, { label: string; what: string; risk: string }> = {
   update_meta_description: {
-    label: "Page summaries (meta descriptions)",
-    what: "The short text search engines and AI tools may show under your page title.",
+    label: "Google summaries",
+    what: "The short text Google and AI tools may show under your Google headline.",
     risk: "Low risk: visitors don't see it on the page itself, and the old version is saved so it can be undone.",
   },
   update_title: {
-    label: "Page titles",
-    what: "The clickable headline shown in search results and browser tabs.",
-    risk: "Low to medium risk: titles are visible in search results. Your homepage and key pages always need approval.",
+    label: "Google headlines",
+    what: "The clickable headline shown on Google and in browser tabs.",
+    risk: "Low to medium risk: headlines show on Google. Your homepage and key pages always need your OK."
   },
   update_image_alt: {
-    label: "Image descriptions (alt text)",
-    what: "Short descriptions of images, read aloud by screen readers and used by search engines.",
+    label: "Image descriptions",
+    what: "Short descriptions of images, read aloud by screen readers and used by Google.",
     risk: "Low risk: not visible to most visitors, and helps accessibility. Can be undone.",
   },
   update_og_tags: {
-    label: "Link previews (social sharing tags)",
+    label: "Share previews",
     what: "The title, text and image shown when someone shares your page in chat or social apps.",
     risk: "Low risk: only affects previews of shared links. Can be undone.",
   },
@@ -69,11 +69,11 @@ const splitList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolea
 
 function nextRunText(freq: ScheduleFrequency, minDays: number, last: string | null): string {
   const days = frequencyDays(freq);
-  if (days === null) return "Automatic runs are off.";
-  if (!last) return "The first automatic run starts within a few minutes.";
+  if (days === null) return "Automatic checks are off.";
+  if (!last) return "The first automatic check starts within a few minutes.";
   const next = new Date(new Date(last).getTime() + Math.max(days, minDays) * DAY_MS);
   if (next.getTime() <= Date.now()) return "Due now — it will start within a few minutes.";
-  return `Next automatic run around ${next.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}.`;
+  return `Next automatic check around ${next.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}.`;
 }
 
 function SaveFooter({ dirty, saving, disabled, onSave, onReset }: { dirty: boolean; saving: boolean; disabled: boolean; onSave: () => void; onReset: () => void }) {
@@ -183,7 +183,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
     <div className="space-y-8">
       {!canEdit && (
         <Notice tone="info" title="View only">
-          You have view access to this project. Ask an owner or admin if you need to change anything.
+          You can see this project but not change it. Ask the Owner or an Admin if something needs changing.
         </Notice>
       )}
 
@@ -214,7 +214,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
 
       <Card as="section">
         <CardHeader
-          title="Brand names & aliases"
+          title="Your business names"
           description="Every name people use for your business — we look for these in AI answers. Include short forms and common misspellings."
           icon={<Tag />}
         />
@@ -223,7 +223,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
             {brands.map((b, i) => (
               <li key={i} className="flex items-center gap-2">
                 <Input
-                  aria-label={`Brand name ${i + 1}`}
+                  aria-label={`Business name ${i + 1}`}
                   value={b}
                   maxLength={120}
                   disabled={!canEdit}
@@ -233,7 +233,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`Remove brand name ${b || i + 1}`}
+                  aria-label={`Remove business name ${b || i + 1}`}
                   disabled={!canEdit || brands.length <= 1}
                   onClick={() => setBrands((xs) => xs.filter((_, j) => j !== i))}
                 >
@@ -312,7 +312,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
       </Card>
 
       <Card as="section">
-        <CardHeader title="Markets" description="Where your customers are and which languages they use. We ask AI assistants with these in mind." icon={<Globe2 />} />
+        <CardHeader title="Markets" description="Where your customers are and which languages they use. We ask AI tools with these in mind." icon={<Globe2 />} />
         <CardBody className="grid gap-5 sm:grid-cols-2">
           <Field label="Countries" htmlFor="ps-countries" hint="2-letter codes, comma separated — e.g. IN, US, GB">
             <Input id="ps-countries" value={countries} disabled={!canEdit} aria-describedby={fieldDescribedBy("ps-countries", { hint: true })} onChange={(e) => setCountries(e.target.value)} />
@@ -337,7 +337,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
       <Card as="section">
         <CardHeader
           title="Schedule"
-          description="Run checks automatically so you can see how things change over time. Each run uses credits from your plan."
+          description="Run checks automatically so you can see how things change over time. Each check uses credits from your plan."
           icon={<CalendarClock />}
         />
         <CardBody>
@@ -345,8 +345,8 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
           <div className="grid gap-5 sm:grid-cols-2">
             {(
               [
-                ["crawl", "Website scan", "Reads your pages and checks for problems."],
-                ["visibility", "AI visibility check", "Asks AI assistants your tracked questions."],
+                ["crawl", "Website check", "Reads your pages and checks for problems."],
+                ["visibility", "AI check", "Asks AI tools your customer questions."],
               ] as const
             ).map(([kind, label, help]) => (
               <Field key={kind} label={label} htmlFor={`ps-sched-${kind}`} hint={`${help} ${nextRunText(saved.schedule[kind], plan.minScanIntervalDays, lastRuns[kind])}`}>
@@ -369,7 +369,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
           </div>
           <p className="mt-4 text-small text-muted">
             Your {plan.name} plan runs automatic checks at most every {plan.minScanIntervalDays === 1 ? "day" : `${plan.minScanIntervalDays} days`}.
-            Automatic runs pause if your plan isn&apos;t active. You can always start a check by hand from the project overview.
+            Automatic checks pause if your plan isn&apos;t active. You can always start a check yourself from the Home page.
           </p>
           {errors.schedule && <p className="mt-2 text-small text-danger" role="alert">{errors.schedule}</p>}
         </CardBody>
@@ -384,8 +384,8 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
 
       <Card as="section">
         <CardHeader
-          title="Automatic fixes"
-          description="Small, low-risk edits we may publish without asking first — only on pages that aren't your homepage or key pages, and only through a connected platform that lets us undo the change."
+          title="Small changes that can go live without asking"
+          description="Small, low-risk edits we may put live without asking first — never on your homepage or key pages, and only when your connected website lets us undo the change."
           icon={<Wand2 />}
         />
         <CardBody className="space-y-4">
@@ -424,8 +424,8 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
             })}
           </fieldset>
           <Notice tone="tip" icon={<Sparkles />} title="Everything else waits for you">
-            Content, structured data and anything on important pages always need your approval of the exact wording. Risky
-            changes (like deleting pages or redirects) are never automated. Every automatic change is logged and can be rolled back.
+            Page text, info for Google and AI, and anything on important pages always need your OK on the exact wording. Risky
+            changes (like deleting pages or changing web addresses) are never made for you. Every change is recorded and can be undone.
           </Notice>
           {errors.automation && <p className="text-small text-danger" role="alert">{errors.automation}</p>}
         </CardBody>
@@ -439,7 +439,7 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
       </Card>
 
       <Card as="section">
-        <CardHeader title="Notifications" description="In-app notifications are always on. Choose whether owners and admins also get emails." icon={<Bell />} />
+        <CardHeader title="Notifications" description="Notifications in the app are always on. Choose whether the Owner and Admins also get emails." icon={<Bell />} />
         <CardBody>
           <label className={clsx("flex items-start gap-3", canEdit ? "cursor-pointer" : "cursor-not-allowed")}>
             <input
@@ -450,9 +450,9 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
               onChange={(e) => setEmailOn(e.target.checked)}
             />
             <span>
-              <span className="block text-small font-medium text-fg">Email owners and admins about this project</span>
+              <span className="block text-small font-medium text-fg">Email the Owner and Admins about this project</span>
               <span className="block text-small text-muted">
-                When a report is ready, an AI visibility check finishes, a scan fails, or changes need approval.
+                When a report is ready, an AI check finishes, a website check fails, or fixes need your OK.
               </span>
             </span>
           </label>

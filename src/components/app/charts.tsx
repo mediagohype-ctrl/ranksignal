@@ -49,7 +49,7 @@ export function TrendChart({
             formatter={(v) => [format(Number(v)), name]}
             labelFormatter={(l, payload) => {
               const p = payload?.[0]?.payload as TrendPoint | undefined;
-              return p?.promptSetVersion ? `${l} · prompt set v${p.promptSetVersion}` : String(l);
+              return p?.promptSetVersion ? `${l} · customer questions list v${p.promptSetVersion}` : String(l);
             }}
           />
           {data
@@ -83,7 +83,7 @@ export function TrendChart({
 export function ShareBarChart({
   data,
   brand,
-  label = "Share of mentions",
+  label = "How often each is named",
 }: {
   data: { name: string; share: number }[];
   brand: string[];
@@ -144,10 +144,10 @@ export interface ShippedMarker {
 
 const SCORE_SERIES: { key: keyof Omit<ScoreHistoryPoint, "t">; name: string; color: string; width: number }[] = [
   { key: "overall", name: "Overall", color: "var(--chart-1)", width: 3 },
-  { key: "seo", name: "SEO", color: "var(--chart-2)", width: 2 },
-  { key: "aeo", name: "AEO", color: "var(--chart-3)", width: 2 },
-  { key: "geo", name: "GEO", color: "var(--chart-4)", width: 2 },
-  { key: "brand", name: "Brand", color: "var(--chart-5)", width: 2 },
+  { key: "seo", name: "Google health", color: "var(--chart-2)", width: 2 },
+  { key: "aeo", name: "Easy to quote", color: "var(--chart-3)", width: 2 },
+  { key: "geo", name: "Ready for AI", color: "var(--chart-4)", width: 2 },
+  { key: "brand", name: "AI knows you", color: "var(--chart-5)", width: 2 },
 ];
 
 const shortDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
@@ -170,8 +170,8 @@ export function ScoreHistoryChart({
   const pad = Math.max(86_400_000, (max - min) * 0.03);
   const last = data[data.length - 1];
   const summary = last
-    ? `Score history, ${data.length} measurements. Latest ${longDate(last.t)}: ${SCORE_SERIES.map((s) => `${s.name} ${last[s.key] ?? "not measured"}`).join(", ")}.`
-    : "Score history: no measurements.";
+    ? `Score history, ${data.length} ${data.length === 1 ? "check" : "checks"}. Latest ${longDate(last.t)}: ${SCORE_SERIES.map((s) => `${s.name} ${last[s.key] ?? "not checked yet"}`).join(", ")}.`
+    : "Score history: no checks yet.";
   return (
     <div style={{ height }} role="img" aria-label={summary}>
       <ResponsiveContainer width="100%" height="100%">

@@ -17,7 +17,7 @@ describe("composeReport", () => {
     expect(r.overall.score).toBeNull();
     expect(r.overall.grade).toBeNull();
     expect(r.issues).toEqual([]);
-    expect(r.overall.headline).toMatch(/run a scan/i);
+    expect(r.overall.headline).toMatch(/run a website check/i);
     expect(r.pillars.map((p) => p.pillar)).toEqual(["seo", "aeo", "geo", "brand"]);
     expect(r.pillars.every((p) => p.score === null)).toBe(true);
     expect(r.executiveSummarySource).toBe("template");

@@ -1,4 +1,4 @@
-import { AlertOctagon, AlertTriangle, CalendarClock, FileSearch, Info, ScanSearch, TriangleAlert } from "lucide-react";
+import { AlertOctagon, CalendarClock, FileSearch, Info, ScanSearch, TriangleAlert } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { asRecord, fmtDate, fmtRelative, isActiveStatus } from "@/lib/dashboard/format";
@@ -8,7 +8,7 @@ import { FindingsTable, type FindingRow } from "@/components/app/findings-table"
 import { CrawlHistory, type CrawlRunView } from "@/components/app/audit/crawl-history";
 import { EmptyState, Meter, Notice, PageHeader, SectionHeading, Stat, StatusBadge } from "@/components/ui";
 
-export const metadata = { title: "Audit" };
+export const metadata = { title: "Website problems" };
 
 export default async function AuditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,20 +51,20 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <PageHeader
-        eyebrow="Site audit"
-        title="What's holding your site back"
-        description="We read your pages the way search engines and AI assistants do, then list the problems in plain English — most serious first."
+        eyebrow="To-do"
+        title="Website problems"
+        description="Things on your website that stop Google and AI tools from understanding it."
         meta={
           lastAt ? (
             <>
               <StatusBadge status={lastDone!.status} />
-              <span>Last crawl {fmtRelative(lastAt)}</span>
+              <span>Last checked {fmtRelative(lastAt)}</span>
             </>
           ) : undefined
         }
         actions={
           <>
-            <AutoRefresh active={!!activeRun} label="Crawl in progress" />
+            <AutoRefresh active={!!activeRun} label="Checking your website" />
             <RunButtons projectId={project.id} crawlActive={!!activeRun} visibilityActive={false} canRun={canRun} show={["audit"]} />
           </>
         }
@@ -72,8 +72,8 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
 
       <div className="space-y-8">
         {activeRun && (
-          <Notice tone="info" title="Crawl in progress">
-            <p>We’re reading your pages now. This page refreshes automatically; new problems appear when the crawl finishes.</p>
+          <Notice tone="info" title="Checking your website">
+            <p>We’re reading your pages now. This page refreshes automatically; new problems appear when the check finishes.</p>
             {activeRun.pagesFound > 0 && (
               <Meter
                 className="mt-3 max-w-md"
@@ -87,31 +87,30 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           </Notice>
         )}
         {!activeRun && latest && (latest.status === "failed" || latest.status === "cancelled") && (
-          <Notice tone="danger" title="The last crawl didn't finish">
-            {latest.error ?? "Something stopped the crawl."} Check that your site is online and try again. Results below are from your last
-            successful crawl.
+          <Notice tone="danger" title="The last website check didn't finish">
+            {latest.error ?? "Something stopped the check."} Make sure your website is online, then click “Check website” to try again.
+            Results below are from your last finished check.
           </Notice>
         )}
 
         <section aria-labelledby="audit-summary">
-          <SectionHeading id="audit-summary" title="Summary" description="Open problems by how much they're likely to matter." />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <SectionHeading id="audit-summary" title="Summary" description="Problems still to fix, by how much they matter." />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <Stat
               size="sm"
-              label="Pages crawled"
+              label="Pages checked"
               value={lastDone?.pagesCrawled ?? "—"}
-              hint={lastDone ? `of ${lastDone.pagesFound || lastDone.pagesCrawled} found` : "No finished crawl yet"}
+              hint={lastDone ? `of ${lastDone.pagesFound || lastDone.pagesCrawled} found` : "No finished check yet"}
               icon={<FileSearch />}
             />
-            <Stat size="sm" label="Critical" value={sev("critical")} hint="Fix these first" icon={<AlertOctagon />} />
-            <Stat size="sm" label="High" value={sev("high")} hint="Big effect on visibility" icon={<AlertTriangle />} />
-            <Stat size="sm" label="Medium" value={sev("medium")} hint="Worth fixing soon" icon={<TriangleAlert />} />
-            <Stat size="sm" label="Low & info" value={sev("low") + sev("info")} hint="Nice to have" icon={<Info />} />
+            <Stat size="sm" label="Urgent" value={sev("critical") + sev("high")} hint="Fix these first" icon={<AlertOctagon />} />
+            <Stat size="sm" label="Important" value={sev("medium")} hint="Worth fixing soon" icon={<TriangleAlert />} />
+            <Stat size="sm" label="Nice to have" value={sev("low") + sev("info")} hint="Fix when you have time" icon={<Info />} />
             <Stat
               size="sm"
-              label="Last crawl"
+              label="Last checked"
               value={<span className="text-lg">{lastAt ? fmtDate(lastAt) : "—"}</span>}
-              hint={lastAt ? fmtRelative(lastAt) : "Run an audit to start"}
+              hint={lastAt ? fmtRelative(lastAt) : "Check your website to start"}
               icon={<CalendarClock />}
             />
           </div>
@@ -121,15 +120,15 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           <SectionHeading
             id="audit-findings"
             title="Problems we found"
-            description="Grouped by problem. Open one to see why it matters, how to fix it and which pages are affected."
+            description="Open a problem to see why it matters, how to fix it and which pages have it."
           />
           {rows.length === 0 && crawlRuns.length === 0 ? (
             <EmptyState
               bordered
               size="lg"
               icon={<ScanSearch />}
-              title="No audit yet"
-              description="Run your first audit to check titles, descriptions, broken links, structured data and whether AI assistants can read your site."
+              title="Your website hasn't been checked yet"
+              description="Check your website to find problems that stop Google and AI tools from understanding it."
               action={canRun ? <RunButtons projectId={project.id} crawlActive={false} visibilityActive={false} canRun show={["audit"]} /> : undefined}
             />
           ) : (

@@ -1,4 +1,5 @@
 // Print-ready monthly impact report (server-compatible: no hooks). Used by the client page and the staff preview.
+import { engineName } from "@/components/app/providers-status";
 import clsx from "clsx";
 import {
   AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarCheck, CheckCircle2, ClipboardList, Globe, Info, ListChecks,
@@ -157,14 +158,14 @@ function SearchCard({ s }: { s: SearchSection }) {
       <CardHeader
         icon={<Search />}
         title="Google search and website visits"
-        description="Last month vs this month, from your own Google Search Console and Google Analytics 4 accounts."
+        description="Last month vs this month, from your own Google Search Console and Google Analytics accounts."
       />
       <CardBody className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {g && <CountTile label="Clicks from Google" source="Search Console" c={g.clicks} />}
           {g && <CountTile label="Times shown in Google" source="Search Console" c={g.impressions} />}
-          {a && <CountTile label="Website visits" source="GA4" c={a.sessions} />}
-          {a && <CountTile label="Visits from AI assistants" source="GA4" c={a.aiSessions} />}
+          {a && <CountTile label="Website visits" source="Google Analytics" c={a.sessions} />}
+          {a && <CountTile label="Visits from AI tools" source="Google Analytics" c={a.aiSessions} />}
         </div>
         {g && (g.position.current !== null || g.ctr.current !== null) && (
           <p className="text-small text-muted">
@@ -195,7 +196,7 @@ function SearchCard({ s }: { s: SearchSection }) {
           {a && (
             <div className="mr-avoid rounded-xl bg-surface-2 p-4">
               <h3 className="flex items-center gap-2 text-small font-semibold text-fg">
-                <Bot aria-hidden className="size-4 text-primary" /> Visits by AI assistant
+                <Bot aria-hidden className="size-4 text-primary" /> Visits from AI tools
               </h3>
               {a.aiBySource.length ? (
                 <ul className="mt-3 space-y-1.5 text-small text-fg-soft">
@@ -209,7 +210,7 @@ function SearchCard({ s }: { s: SearchSection }) {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-small text-muted">No visits from AI assistants were recorded.</p>
+                <p className="mt-3 text-small text-muted">No visits from AI tools were recorded.</p>
               )}
             </div>
           )}
@@ -244,6 +245,7 @@ function SearchCard({ s }: { s: SearchSection }) {
   );
 }
 
+const PILLAR_NAME: Record<string, string> = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" };
 const PERFORMER: Record<string, string> = { agency: "By our team", client: "By you", system: "Automatic" };
 
 /** Optional white-label branding (from getBranding(orgId) via toPublicBranding). Omitted = default look. */
@@ -307,9 +309,9 @@ export function MonthlyReportView({
           </div>
           <p className="mt-5 max-w-3xl text-body text-fg-soft">{summary}</p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <HeadlineList title="Gains" tone="success" icon={<TrendingUp />} items={p.headline.gains} empty="No measured gains this month." />
-            <HeadlineList title="Risks" tone="warning" icon={<AlertTriangle />} items={p.headline.risks} empty="No new risks spotted." />
-            <HeadlineList title="Next actions" tone="primary" icon={<ListChecks />} items={p.headline.nextActions} empty="Plan to be agreed." />
+            <HeadlineList title="What got better" tone="success" icon={<TrendingUp />} items={p.headline.gains} empty="Nothing measurably better this month." />
+            <HeadlineList title="What to watch" tone="warning" icon={<AlertTriangle />} items={p.headline.risks} empty="Nothing new to watch." />
+            <HeadlineList title="Next steps" tone="primary" icon={<ListChecks />} items={p.headline.nextActions} empty="We'll agree the plan with you." />
           </div>
         </div>
 
@@ -323,7 +325,7 @@ export function MonthlyReportView({
             hint="out of 100"
           />
           <BeforeAfter
-            label="Mentioned in AI answers"
+            label="Named in AI answers"
             start={pct(cmpStart?.mentionRate)}
             end={pct(cmpEnd?.mentionRate)}
             deltaValue={cmpStart?.mentionRate != null && cmpEnd?.mentionRate != null ? cmpEnd.mentionRate - cmpStart.mentionRate : null}
@@ -331,14 +333,14 @@ export function MonthlyReportView({
             hint={v.likeForLike ? `same ${v.likeForLike.prompts} questions` : undefined}
           />
           <BeforeAfter
-            label="Your site cited by AI"
+            label="AI answers linked to your site"
             start={pct(cmpStart?.citationRate)}
             end={pct(cmpEnd?.citationRate)}
             deltaValue={cmpStart?.citationRate != null && cmpEnd?.citationRate != null ? cmpEnd.citationRate - cmpStart.citationRate : null}
             kind="rate"
           />
           <div className="mr-avoid rounded-2xl border border-border bg-surface p-5">
-            <div className="text-caption uppercase tracking-[0.06em] text-muted">Website issues</div>
+            <div className="text-caption uppercase tracking-[0.06em] text-muted">Website problems</div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums text-success">{p.issues.fixed.total}</span>
               <span className="text-small text-muted">fixed</span>
@@ -355,7 +357,7 @@ export function MonthlyReportView({
         <CardHeader
           icon={<Scale />}
           title="Scores: start vs end of month"
-          description={`Start: ${day(p.scores.start.at)}${p.scores.baselineFromPreviousPeriod ? " (last scan before this month)" : ""} · End: ${day(p.scores.end.at)}`}
+          description={`Start: ${day(p.scores.start.at)}${p.scores.baselineFromPreviousPeriod ? " (last website check before this month)" : ""} · End: ${day(p.scores.end.at)}`}
         />
         <Table caption="Scores at the start and end of the month">
           <THead>
@@ -375,7 +377,7 @@ export function MonthlyReportView({
             </TR>
             {p.scores.pillars.map((x) => (
               <TR key={x.pillar}>
-                <TD>{x.label}</TD>
+                <TD>{PILLAR_NAME[x.pillar] ?? x.label}</TD>
                 <TD numeric>{num(x.start)}</TD>
                 <TD numeric>{num(x.end)}</TD>
                 <TD numeric><DeltaChip value={x.delta} /></TD>
@@ -389,28 +391,28 @@ export function MonthlyReportView({
       <Card as="section" className="mr-break">
         <CardHeader
           icon={<Bot />}
-          title="AI visibility"
+          title="AI mentions"
           description={
             v.measured
-              ? `Checks on ${day(v.startRunAt)} and ${day(v.endRunAt)}. ${v.likeForLike ? `Compared on the ${v.likeForLike.prompts} questions asked in both checks (${v.likeForLike.start.answers} → ${v.likeForLike.end.answers} answers).` : `${v.end?.answers ?? 0} answers at the end of the month.`}`
-              : "No AI visibility check with real answers ran this month."
+              ? `Checks on ${day(v.startRunAt)} and ${day(v.endRunAt)}. ${v.likeForLike ? `Compared on the ${v.likeForLike.prompts} questions asked in both checks (${v.likeForLike.start.answers} → ${v.likeForLike.end.answers} answers).` : `${v.end?.answers ?? 0} ${v.end?.answers === 1 ? "answer" : "answers"} at the end of the month.`}`
+              : "No AI check with real answers ran this month."
           }
         />
         {v.measured ? (
           <CardBody className="space-y-6">
             <div className="overflow-hidden rounded-xl border border-border">
-              <Table caption="AI visibility rates, start vs end">
+              <Table caption="AI mentions, start vs end of month">
                 <THead>
                   <tr>
-                    <TH>Measure</TH>
+                    <TH>What we counted</TH>
                     <TH align="right">Start</TH>
                     <TH align="right">End</TH>
                     <TH align="right">Change</TH>
                   </tr>
                 </THead>
                 <tbody>
-                  <TR><TD>Mentioned by name</TD><RateCells s={cmpStart} e={cmpEnd} k="mentionRate" /></TR>
-                  <TR><TD>Your website cited as a source</TD><RateCells s={cmpStart} e={cmpEnd} k="citationRate" /></TR>
+                  <TR><TD>Named you</TD><RateCells s={cmpStart} e={cmpEnd} k="mentionRate" /></TR>
+                  <TR><TD>Linked to your site</TD><RateCells s={cmpStart} e={cmpEnd} k="citationRate" /></TR>
                   <TR><TD>Recommended</TD><RateCells s={cmpStart} e={cmpEnd} k="recommendationRate" /></TR>
                 </tbody>
               </Table>
@@ -420,12 +422,12 @@ export function MonthlyReportView({
               <div className="mr-avoid">
                 <h3 className="mb-2 text-h4 text-fg">Engine by engine</h3>
                 <div className="overflow-hidden rounded-xl border border-border">
-                  <Table caption="AI visibility by engine" density="compact">
+                  <Table caption="AI mentions by AI tool" density="compact">
                     <THead>
                       <tr>
-                        <TH>Engine</TH>
-                        <TH align="right">Mentioned</TH>
-                        <TH align="right">Cited</TH>
+                        <TH>AI tool</TH>
+                        <TH align="right">Named you</TH>
+                        <TH align="right">Linked to your site</TH>
                         <TH align="right">Recommended</TH>
                         <TH align="right">Answers</TH>
                       </tr>
@@ -433,7 +435,7 @@ export function MonthlyReportView({
                     <tbody>
                       {v.engines.map((r) => (
                         <TR key={r.engine}>
-                          <TD className="font-medium text-fg">{r.engine}</TD>
+                          <TD className="font-medium text-fg">{engineName(r.engine)}</TD>
                           {(["mentionRate", "citationRate", "recommendationRate"] as const).map((k) => (
                             <TD key={k} numeric>
                               <span className="text-muted">{pct(r.start?.[k])}</span> → <span className="font-semibold text-fg">{pct(r.end?.[k])}</span>{" "}
@@ -508,7 +510,7 @@ export function MonthlyReportView({
           </CardBody>
         ) : (
           <CardBody>
-            <EmptyState size="sm" icon={<Bot />} title="Not measured this month" description="Once an AI visibility check runs, next month's report will compare AI answers." />
+            <EmptyState size="sm" icon={<Bot />} title="Not measured this month" description="Once an AI check runs, next month's report will compare AI answers." />
           </CardBody>
         )}
       </Card>
@@ -518,7 +520,7 @@ export function MonthlyReportView({
 
       {/* ---- issues ---- */}
       <Card as="section" className="mr-break mr-avoid">
-        <CardHeader icon={<ClipboardList />} title="Website issues" description="From automatic scans of your site." />
+        <CardHeader icon={<ClipboardList />} title="Website problems" description="From our automatic checks of your website." />
         <CardBody className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-success-soft p-4">
@@ -530,10 +532,10 @@ export function MonthlyReportView({
               <div className="mt-1 text-3xl font-semibold tabular-nums text-fg">{p.issues.new.total}</div>
             </div>
             <div className="rounded-xl bg-surface-2 p-4">
-              <div className="text-caption uppercase tracking-[0.06em] text-muted">Still open</div>
+              <div className="text-caption uppercase tracking-[0.06em] text-muted">Still to fix</div>
               <div className="mt-1 text-3xl font-semibold tabular-nums text-fg">{open.total}</div>
               <div className="mt-1 text-xs text-muted tabular-nums">
-                {open.critical} critical · {open.high} high · {open.medium} medium · {open.low} low
+                {open.critical + open.high} urgent · {open.medium} important · {open.low} nice to have
               </div>
             </div>
           </div>
@@ -564,7 +566,7 @@ export function MonthlyReportView({
 
       {/* ---- work shipped ---- */}
       <Card as="section" className="mr-break">
-        <CardHeader icon={<Wrench />} title="Work shipped" description={`${p.work.byPerformer.agency} by our team · ${p.work.byPerformer.client} by you · ${p.work.byPerformer.system} automatic`} />
+        <CardHeader icon={<Wrench />} title="Work done" description={`${p.work.byPerformer.agency} by our team · ${p.work.byPerformer.client} by you · ${p.work.byPerformer.system} automatic`} />
         <CardBody>
           {p.work.shipped.length ? (
             <ol className="relative space-y-4 border-l border-border pl-5">
@@ -584,13 +586,13 @@ export function MonthlyReportView({
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     <Badge size="sm" tone="neutral" className="capitalize">{w.category}</Badge>
                     <Badge size="sm" tone={w.performedBy === "agency" ? "primary" : "neutral"}>{PERFORMER[w.performedBy] ?? w.performedBy}</Badge>
-                    {w.kind === "change" && <Badge size="sm" tone="accent">Published change</Badge>}
+                    {w.kind === "change" && <Badge size="sm" tone="accent">Change made on your site</Badge>}
                   </div>
                 </li>
               ))}
             </ol>
           ) : (
-            <EmptyState size="sm" icon={<Wrench />} title="Nothing marked as shipped this month" />
+            <EmptyState size="sm" icon={<Wrench />} title="No work marked as done this month" />
           )}
         </CardBody>
       </Card>
@@ -600,7 +602,7 @@ export function MonthlyReportView({
         <Card as="section" className="mr-avoid">
           <CardHeader
             icon={<Globe />}
-            title="Off-site work"
+            title="Outside your website"
             description={`${p.offsite.count} ${p.offsite.count === 1 ? "listing, profile or mention" : "listings, profiles or mentions"} went live this month`}
           />
           <CardBody>
@@ -635,7 +637,7 @@ export function MonthlyReportView({
                   <span className="text-fg">{n.title}</span>
                   <span className="flex items-center gap-2 text-xs text-muted">
                     {n.source === "report" ? (
-                      <Badge size="sm" tone="info">From your site report</Badge>
+                      <Badge size="sm" tone="info">From your full report</Badge>
                     ) : (
                       <Badge size="sm" tone="neutral" className="capitalize">{(n.status ?? "planned").replace(/_/g, " ")}</Badge>
                     )}
@@ -655,7 +657,7 @@ export function MonthlyReportView({
         <Card as="section" className="mr-avoid">
           <CardHeader
             icon={<MessageSquareWarning />}
-            title="Wrong things AI assistants said about you"
+            title="Wrong things AI tools said about you"
             description="Statements from AI answers this month that don't match the facts on your website."
           />
           <CardBody>
@@ -687,9 +689,9 @@ export function MonthlyReportView({
           </div>
         )}
         <p className="text-xs text-muted">
-          Generated {day(p.generatedAt)} · {p.dataSources.crawlSnapshots} website scan{p.dataSources.crawlSnapshots === 1 ? "" : "s"} and{" "}
-          {p.dataSources.visibilityRuns} AI check{p.dataSources.visibilityRuns === 1 ? "" : "s"} this month
-          {p.dataSources.providers.length > 0 && ` · Engines: ${p.dataSources.providers.join(", ")}`}
+          Made {day(p.generatedAt)} · {p.dataSources.crawlSnapshots} website {p.dataSources.crawlSnapshots === 1 ? "check" : "checks"} and{" "}
+          {p.dataSources.visibilityRuns} AI {p.dataSources.visibilityRuns === 1 ? "check" : "checks"} this month
+          {p.dataSources.providers.length > 0 && ` · AI tools: ${[...new Set(p.dataSources.providers.map(engineName))].join(", ")}`}
         </p>
         {brand && (
           <p className="border-t border-border pt-3 text-xs text-muted">

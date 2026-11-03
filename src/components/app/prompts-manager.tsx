@@ -20,6 +20,16 @@ const INTENT_HELP: Record<string, string> = {
   transactional: "Ready to buy: “buy …”, “book …”",
 };
 
+/** Short plain name for each intent (the stored value stays the same). */
+const INTENT_LABEL: Record<string, string> = {
+  informational: "Learning",
+  commercial: "Shopping around",
+  comparison: "Comparing",
+  navigational: "Looking for you",
+  transactional: "Ready to buy",
+};
+const intentLabel = (i: string) => INTENT_LABEL[i] ?? i;
+
 const PRIORITY_LABEL: Record<number, string> = { 1: "High", 2: "Normal", 3: "Low" };
 
 export interface PromptRow {
@@ -119,7 +129,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
         const r = await api<{ discontinuity?: boolean }>(`/api/projects/${projectId}/prompts/${editing.id}`, { method: "PATCH", body });
         toast(
           r.discontinuity
-            ? "Question updated. A new question-set version starts, and trend charts will mark the change."
+            ? "Question updated. Charts will mark the change so old and new results aren't mixed up."
             : "Question updated.",
           "success",
         );
@@ -154,7 +164,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
       });
       setCandidates(r.items);
       setSelected(new Set(r.items.map((_, i) => i)));
-      if (r.items.length === 0) toast("No new suggestions. You already track questions like these.", "info");
+      if (r.items.length === 0) toast("No new suggestions. You already have questions like these — add your own instead.", "info");
     } catch (e) {
       toast(errorMessage(e), "error");
     } finally {
@@ -189,8 +199,8 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
       <Card>
         <CardHeader
           icon={<ListChecks />}
-          title={`Questions we ask AI (${activeCount} active)`}
-          description="Each AI visibility check sends every active question to every AI assistant. Rewording a question starts a new question-set version so your trend stays honest."
+          title={`Questions we ask AI tools (${activeCount} switched on)`}
+          description="Each AI check asks every switched-on question to every AI tool. If you reword a question, charts mark the change so results stay fair."
           actions={
             canEdit ? (
               <>
@@ -228,15 +238,15 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
                   onChange={(e) => setShowInactive(e.target.checked)}
                   className="size-4 accent-primary"
                 />
-                Show paused questions
+                Show switched-off questions
               </label>
               <span className="ml-auto text-xs tabular-nums text-muted" aria-live="polite">
                 {shown.length} of {visible.length} shown
               </span>
             </div>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by intent">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by what the customer wants">
               <button type="button" aria-pressed={intent === "all"} onClick={() => setIntent("all")} className={chipCls(intent === "all")}>
-                All intents <span className="text-xs tabular-nums opacity-80">{visible.length}</span>
+                All types <span className="text-xs tabular-nums opacity-80">{visible.length}</span>
               </button>
               {INTENTS.filter((i) => (intentCounts[i] ?? 0) > 0).map((i) => (
                 <button
@@ -247,7 +257,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
                   title={INTENT_HELP[i]}
                   className={chipCls(intent === i)}
                 >
-                  {i} <span className="text-xs tabular-nums opacity-80">{intentCounts[i]}</span>
+                  {intentLabel(i)} <span className="text-xs tabular-nums opacity-80">{intentCounts[i]}</span>
                 </button>
               ))}
             </div>
@@ -259,8 +269,8 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
             title={prompts.length === 0 ? "No questions yet" : "No questions match"}
             description={
               prompts.length === 0
-                ? "Add the questions your customers would ask an AI assistant, or let us suggest some from your brand, products and keywords."
-                : "Try a different search or intent filter."
+                ? "Add the questions your customers would ask an AI tool, or let us suggest some for you."
+                : "Try a different search or filter."
             }
             action={
               prompts.length === 0 && canEdit ? (
@@ -271,14 +281,14 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
             }
           />
         ) : (
-          <Table caption="Tracked questions" zebra>
+          <Table caption="Customer questions" zebra>
             <THead>
               <tr>
                 <TH>Question</TH>
-                <HelpTH help="What the person asking is trying to do: learn, compare or buy.">Intent</HelpTH>
+                <HelpTH help="What the person asking is trying to do: learn, compare or buy.">Type</HelpTH>
                 <HelpTH help="Optional label to group related questions.">Topic</HelpTH>
-                <HelpTH help="Language and region the question is asked in.">Locale</HelpTH>
-                <HelpTH help="High-priority questions are included first when a check has a limited budget.">Priority</HelpTH>
+                <HelpTH help="Language and country the question is asked in.">Language</HelpTH>
+                <HelpTH help="High-priority questions are asked first when your plan limits how many questions each AI check can ask.">Priority</HelpTH>
                 <TH>Status</TH>
                 {canEdit && (
                   <TH>
@@ -292,8 +302,8 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
                 <TR key={p.id} className={p.active ? undefined : "opacity-60"}>
                   <TD className="max-w-md font-medium text-fg">{p.text}</TD>
                   <TD>
-                    <Badge tone="primary" className="capitalize" title={INTENT_HELP[p.intent]}>
-                      {p.intent}
+                    <Badge tone="primary" title={INTENT_HELP[p.intent]}>
+                      {intentLabel(p.intent)}
                     </Badge>
                   </TD>
                   <TD className="text-muted">{p.topic ?? "—"}</TD>
@@ -306,10 +316,10 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
                   <TD>
                     {p.active ? (
                       <Badge tone="success" variant="dot">
-                        Active
+                        On
                       </Badge>
                     ) : (
-                      <Badge variant="dot">Paused</Badge>
+                      <Badge variant="dot">Off</Badge>
                     )}
                   </TD>
                   {canEdit && (
@@ -334,7 +344,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
           <CardHeader
             icon={<Sparkles />}
             title="Suggested questions"
-            description="Tick the ones your customers would really ask. We removed near-duplicates of questions you already track."
+            description="Tick the ones your customers would really ask. We left out ones that are almost the same as questions you already have."
             actions={
               <>
                 <Button
@@ -371,10 +381,10 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
                     }
                   />
                   <span className="min-w-0 flex-1 text-small text-fg">{c.text}</span>
-                  <Badge tone="primary" className="capitalize" title={INTENT_HELP[c.intent]}>
-                    {c.intent}
+                  <Badge tone="primary" title={INTENT_HELP[c.intent]}>
+                    {intentLabel(c.intent)}
                   </Badge>
-                  {c.source && <Badge>{c.source === "llm" ? "AI-suggested" : "From template"}</Badge>}
+                  {c.source && <Badge>{c.source === "llm" ? "Suggested by AI" : "Common question"}</Badge>}
                 </label>
               </li>
             ))}
@@ -388,7 +398,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
         title={editing === "new" ? "Add a question" : "Edit question"}
         description={
           editing !== "new"
-            ? "Rewording a question starts a new question-set version, so before/after trends aren't mixed up."
+            ? "If you reword a question, charts mark the change so before and after results aren't mixed up."
             : "Write it the way a customer would type it into ChatGPT or Gemini."
         }
         footer={
@@ -414,16 +424,15 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Intent" htmlFor="pm-intent" hint={INTENT_HELP[form.intent]}>
+            <Field label="Type of question" htmlFor="pm-intent" hint={INTENT_HELP[form.intent]}>
               <Select
                 id="pm-intent"
                 value={form.intent}
                 onChange={(e) => setForm({ ...form, intent: e.target.value })}
-                className="capitalize"
               >
                 {INTENTS.map((i) => (
                   <option key={i} value={i}>
-                    {i}
+                    {intentLabel(i)}
                   </option>
                 ))}
               </Select>

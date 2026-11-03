@@ -3,6 +3,7 @@ import { Fragment, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Check, ChevronDown, ExternalLink, Info, Minus, Search } from "lucide-react";
 import { Badge, Button, EmptyState, Input, Select, Table, TD, TH, THead, TR, Tooltip } from "@/components/ui";
+import { engineName } from "./providers-status";
 
 export interface ObservationRow {
   id: string;
@@ -25,8 +26,8 @@ export interface ObservationRow {
 type ResultFilter = "all" | "mentioned" | "not_mentioned" | "cited" | "recommended";
 const FILTERS: { id: ResultFilter; label: string }[] = [
   { id: "all", label: "All answers" },
-  { id: "mentioned", label: "Mentions you" },
-  { id: "not_mentioned", label: "Doesn't mention you" },
+  { id: "mentioned", label: "Names you" },
+  { id: "not_mentioned", label: "Doesn't name you" },
   { id: "cited", label: "Links to your site" },
   { id: "recommended", label: "Recommends you" },
 ];
@@ -68,7 +69,7 @@ function Citations({ title, items, owned }: { title: string; items: ObservationR
         {title} <span className="tabular-nums">({items.length})</span>
       </h5>
       {items.length === 0 ? (
-        <p className="text-xs text-muted">{owned ? "No pages from your site were cited." : "No other websites were cited."}</p>
+        <p className="text-xs text-muted">{owned ? "The answer didn't link to your site." : "The answer didn't link to other websites."}</p>
       ) : (
         <ul className="space-y-1.5">
           {items.map((c, i) => (
@@ -97,9 +98,9 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
   const [q, setQ] = useState("");
   const [provider, setProvider] = useState("all");
   const [filter, setFilter] = useState<ResultFilter>("all");
-  const providers = useMemo(() => Array.from(new Set(rows.map((r) => r.platformLabel))), [rows]);
+  const providers = useMemo(() => Array.from(new Set(rows.map((r) => engineName(r.platformLabel)))), [rows]);
   const counts = useMemo(() => {
-    const base = rows.filter((r) => provider === "all" || r.platformLabel === provider);
+    const base = rows.filter((r) => provider === "all" || engineName(r.platformLabel) === provider);
     return {
       all: base.length,
       mentioned: base.filter((r) => r.brandMentioned).length,
@@ -111,7 +112,7 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
   const needle = q.trim().toLowerCase();
   const shown = rows.filter(
     (r) =>
-      (provider === "all" || r.platformLabel === provider) &&
+      (provider === "all" || engineName(r.platformLabel) === provider) &&
       (filter === "all" ||
         (filter === "mentioned" && r.brandMentioned) ||
         (filter === "not_mentioned" && !r.brandMentioned) ||
@@ -139,9 +140,9 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
           </div>
           {providers.length > 1 && (
             <>
-              <label className="sr-only" htmlFor="vt-p">AI assistant</label>
+              <label className="sr-only" htmlFor="vt-p">AI tool</label>
               <Select id="vt-p" inputSize="sm" value={provider} onChange={(e) => setProvider(e.target.value)} className="max-w-56">
-                <option value="all">All AI assistants</option>
+                <option value="all">All AI tools</option>
                 {providers.map((p) => (
                   <option key={p} value={p}>
                     {p}
@@ -173,17 +174,17 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
         </div>
       </div>
       {shown.length === 0 ? (
-        <EmptyState size="sm" title="No answers match" description="Try a different filter or search." />
+        <EmptyState size="sm" title="No answers match" description="Try a different filter or search." action={<Button size="sm" variant="secondary" onClick={() => { setQ(""); setFilter("all"); setProvider("all"); }}>Show all answers</Button>} />
       ) : (
-        <Table caption="AI answers to your tracked questions">
+        <Table caption="AI answers to your customer questions">
           <THead>
             <tr>
               <TH>Question asked</TH>
-              <TH>AI assistant</TH>
-              <HelpTH help="The answer named your brand." align="center">Mentioned</HelpTH>
-              <HelpTH help="The answer linked to a page on your website as a source." align="center">Linked</HelpTH>
+              <TH>AI tool</TH>
+              <HelpTH help="The answer named your business." align="center">Named you</HelpTH>
+              <HelpTH help="The answer linked to a page on your website as a source." align="center">Linked to you</HelpTH>
               <HelpTH help="The answer actively suggested you as a good choice." align="center">Recommended</HelpTH>
-              <HelpTH help="Competitors from your project that the answer named.">Competitors</HelpTH>
+              <HelpTH help="Competitors you listed that the answer named.">Competitors</HelpTH>
               <TH>
                 <span className="sr-only">Show answer</span>
               </TH>
@@ -200,14 +201,14 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
                   <TR className={isOpen ? "bg-surface-2" : undefined}>
                     <TD className="max-w-md font-medium text-fg">{r.prompt}</TD>
                     <TD>
-                      <div className="text-xs text-fg-soft">{r.platformLabel}</div>
+                      <div className="text-xs text-fg-soft">{engineName(r.platformLabel)}</div>
                       {r.simulated && (
                         <Badge tone="warning" size="sm" className="mt-1">
-                          Simulated
+                          Sample
                         </Badge>
                       )}
                     </TD>
-                    <TD align="center"><YesNo v={r.brandMentioned} label="mentioned" /></TD>
+                    <TD align="center"><YesNo v={r.brandMentioned} label="named you" /></TD>
                     <TD align="center"><YesNo v={r.brandCited} label="linked to your site" /></TD>
                     <TD align="center"><YesNo v={r.brandRecommended} label="recommended" /></TD>
                     <TD className="text-xs">
@@ -243,8 +244,7 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
                         <div className="grid gap-6 lg:grid-cols-5">
                           <div className="lg:col-span-3">
                             <h4 className="mb-1.5 text-caption uppercase tracking-[0.06em] text-muted">
-                              What {r.platformLabel} answered
-                              {r.model && <span className="font-normal normal-case tracking-normal"> · {r.model}</span>}
+                              What {engineName(r.platformLabel)} answered
                             </h4>
                             {/* Untrusted provider text: rendered as plain text only. */}
                             <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-surface p-4 text-small leading-relaxed text-fg-soft">
@@ -252,8 +252,11 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
                             </div>
                             <p className="mt-2 text-xs text-muted">
                               {r.sentiment && <>Tone towards you: <span className="capitalize">{r.sentiment}</span> · </>}
-                              How sure we are about this reading: {Math.round(r.parseConfidence * 100)}%
-                              {r.parseConfidence < 0.6 && <span className="text-warning"> (low — double-check the answer)</span>}
+                              {r.parseConfidence < 0.6 ? (
+                                <span className="text-warning">We&apos;re not sure we read this answer right — please read it yourself.</span>
+                              ) : (
+                                "Read by our AI analysis."
+                              )}
                             </p>
                             {r.limitations && <p className="mt-1 text-xs text-muted">Note: {r.limitations}</p>}
                           </div>

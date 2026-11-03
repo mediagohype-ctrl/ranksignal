@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ period: string }> }) {
   const { period } = await params;
-  return { title: `${periodLabel(period)} impact report` };
+  return { title: `${periodLabel(period)} monthly report` };
 }
 
 export default async function MonthlyReportPage({ params }: { params: Promise<{ id: string; period: string }> }) {
@@ -32,13 +32,13 @@ export default async function MonthlyReportPage({ params }: { params: Promise<{ 
         <div className="flex flex-wrap gap-2">
           <a href={`/api/projects/${project.id}/monthly-reports/${period}?format=markdown`} download className={buttonClass("secondary")}>
             <Download aria-hidden className="size-4" />
-            Download Markdown
+            Download text file
           </a>
           <PrintButton label="Download PDF" />
         </div>
       </div>
       {report.status !== "sent" && (
-        <Notice tone="warning" title="Draft — not visible to the client" className="no-print mb-6">
+        <Notice tone="warning" title="Draft — your customer can't see this yet" className="no-print mb-6">
           This report is waiting for staff review. Approve and send it from the staff review queue.
         </Notice>
       )}

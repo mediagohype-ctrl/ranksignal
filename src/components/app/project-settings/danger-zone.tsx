@@ -50,8 +50,8 @@ export function DangerZone({ projectId, projectName }: { projectId: string; proj
           <div>
             <h3 className="text-small font-semibold text-fg">Delete this project</h3>
             <p className="text-small text-muted">
-              Removes all scans, reports, AI visibility results, questions and drafted changes for {projectName}. Changes already
-              published to your website stay as they are.
+              Removes all website checks, reports, AI answers, customer questions and suggested fixes for {projectName}. Changes already
+              live on your website stay as they are.
             </p>
           </div>
           <Button variant="danger" icon={<Trash2 />} onClick={() => setOpen(true)} className="shrink-0">

@@ -79,7 +79,7 @@ export function ShareReportButton({ projectId, canManage }: { projectId: string;
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Share this report"
+        title="Share this full report"
         description="Anyone with the link can view a read-only copy of this report — no sign-in needed. It always shows your latest results."
         icon={<Share2 />}
         footer={
@@ -93,8 +93,8 @@ export function ShareReportButton({ projectId, canManage }: { projectId: string;
           {!state && !error && <Spinner label="Loading sharing settings…" />}
 
           {state && !canManage && (
-            <Notice tone="info" title={state.enabled ? "Sharing is on for this project" : "Sharing is off"}>
-              Only admins and owners can create, copy or turn off share links. Ask an admin in your team if you need one.
+            <Notice tone="info" title={state.enabled ? "Sharing is on for this website" : "Sharing is off"}>
+              Only Admins and Owners can create, copy or turn off share links. Ask an Admin in your team if you need one.
             </Notice>
           )}
 
@@ -126,7 +126,7 @@ export function ShareReportButton({ projectId, canManage }: { projectId: string;
 
               {state.enabled && state.url && (
                 <>
-                  <Field label="Share link" htmlFor="share-url" hint="Send this to your client. The page is hidden from search engines.">
+                  <Field label="Share link" htmlFor="share-url" hint="Send this to your client. The page is hidden from Google.">
                     <div className="flex gap-2">
                       <Input id="share-url" readOnly value={state.url} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
                       <Button icon={<Copy />} onClick={copy} disabled={busy !== null}>
@@ -160,8 +160,8 @@ export function ShareReportButton({ projectId, canManage }: { projectId: string;
                 </>
               )}
               <p className="text-xs text-muted">
-                Shared reports show scores, issues and fixes, and AI visibility numbers. They never show your team, settings, raw AI answers
-                or the Actions center. Turning sharing off and on again re-activates the same link; replace it to cut off old copies for good.
+                Shared reports show scores, problems and fixes, and AI mentions. They never show your team, settings, full AI answers
+                or Fixes to approve. Turning sharing off and on again re-activates the same link; replace it to cut off old copies for good.
               </p>
             </>
           )}

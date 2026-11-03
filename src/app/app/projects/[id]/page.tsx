@@ -1,29 +1,34 @@
 import Link from "next/link";
-import { ArrowRight, FileText, Link2, MessageSquare, Radar, ThumbsUp, TriangleAlert } from "lucide-react";
+import { ArrowRight, Clock, FileText, Sparkles } from "lucide-react";
+import { db } from "@/lib/db";
 import { getProjectDashboard } from "@/lib/dashboard/data";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
-import { asArray, fmtDate, fmtRelative, humanize, pct } from "@/lib/dashboard/format";
+import { fmtDate } from "@/lib/dashboard/format";
+import { readSchedule } from "@/lib/dashboard/project-schema";
+import { getPlan } from "@/lib/billing/plans";
+import { effectiveIntervalDays } from "@/lib/jobs/scheduler";
 import { getStoredReport } from "@/lib/report/stored";
+import { scoreLabel } from "@/lib/report/score";
 import { log } from "@/lib/log";
-import type { SiteReport } from "@/lib/report/types";
+import type { IssueEffort, IssueImpact, SiteReport } from "@/lib/report/types";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { RunButtons } from "@/components/app/run-buttons";
-import { ShareBarChart, TrendChart } from "@/components/app/charts";
-import { SinceLastMonth } from "@/components/app/history/since-last-month";
-import { backfillSnapshots, getPeriodComparison } from "@/lib/snapshots";
-import { PILLAR_SHORT } from "@/components/app/report/pillars";
-import { SearchPerformance } from "@/components/app/report/search-performance";
-import {
-  Badge, Card, CardBody, CardHeader, EffortChip, EmptyState, ImpactChip, LinkButton, Meter, PageHeader, RiskBadge, ScoreRing,
-  SeverityBadge, SimulatedDataBanner, Stat, StatusBadge, Table, TD, TH, THead, TR,
-} from "@/components/ui";
+import { Card, CardHeader, EmptyState, LinkButton, PageHeader, SCORE_BAND_CLASS, ScoreRing, SimulatedDataBanner, scoreBand } from "@/components/ui";
 
-export const metadata = { title: "Overview" };
+export const metadata = { title: "Home" };
 
-export default async function OverviewPage({ params }: { params: Promise<{ id: string }> }) {
+const DAY_MS = 86_400_000;
+const EFFORT_TIME: Record<IssueEffort, string> = { quick: "About 15 min", moderate: "About 1 hour", involved: "Half a day or more" };
+const IMPACT_TEXT: Record<IssueImpact, string> = { high: "Big win", medium: "Good win", low: "Small win" };
+
+// Home (brief 5.4): one score, two small numbers, the next 3 fixes, one primary button, last/next check.
+export default async function HomePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { session, project } = await requireAppProject(id);
-  const d = await getProjectDashboard(session.organizationId, project.id);
+  const [d, org] = await Promise.all([
+    getProjectDashboard(session.organizationId, project.id),
+    db.organization.findUnique({ where: { id: session.organizationId }, select: { planId: true } }),
+  ]);
   let report: SiteReport | null = null;
   if (d.findings.crawledAt) {
     try {
@@ -33,330 +38,150 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
       log.error("overview.report_failed", { projectId: project.id, orgId: session.organizationId, err: e });
     }
   }
-  const since = await loadSinceLastMonth(project.id, session.organizationId, d.recentRuns.length > 0);
+
   const m = d.latest?.metrics ?? null;
-  const brandNames = asArray<string>(project.brandNames);
   const crawlActive = d.activeRuns.some((r) => r.kind === "crawl");
   const visActive = d.activeRuns.some((r) => r.kind === "visibility");
-  const providerLabel = d.latest?.providers.length ? d.latest.providers.join(", ") : null;
-  const hasDiscontinuity = d.history.some((h) => h.discontinuity);
-  const sampleFooter = m ? `${m.collected} of ${m.sampleSize} answers${providerLabel ? ` · ${providerLabel}` : ""}` : undefined;
-  const reportHref = `/app/projects/${project.id}/report`;
-  const topIssues = report?.issues.slice(0, 5) ?? [];
+  const base = `/app/projects/${project.id}`;
+  const fixes = report?.issues.slice(0, 3) ?? [];
+  const firstFixHref = fixes[0] ? `${base}/report/issues/${encodeURIComponent(fixes[0].id)}` : `${base}/audit`;
+
+  const score = report?.overall.score ?? null;
+  const partial = report?.overall.partial === true;
+  const google = report?.pillars.find((p) => p.pillar === "seo")?.score ?? null;
+  const answers = m && !m.simulated ? m.collected : 0;
+  const named = m && !m.simulated ? Math.round(m.mentionRate * m.collected) : 0;
+  const aiLine = visActive
+    ? "We're asking AI tools about you now. Your score updates when the answers arrive."
+    : answers === 0
+      ? "AI tools haven't been asked about you yet. Run an AI check to finish your score."
+      : named === 0
+        ? "AI tools don't mention you yet."
+        : `AI tools named you in ${named} of ${answers} answers.`;
+
+  const lastChecked = report?.crawl.finishedAt ?? d.findings.crawledAt ?? null;
+  const intervalDays = effectiveIntervalDays(readSchedule(project.settings).crawl, getPlan(org?.planId ?? "trial").minScanIntervalDays);
+  const nextCheck = lastChecked && intervalDays ? new Date(new Date(lastChecked).getTime() + intervalDays * DAY_MS) : null;
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-[960px] space-y-6">
       <PageHeader
-        title="Overview"
-        description={`How ${project.name} shows up in Google and AI assistants, at a glance.`}
+        title="Home"
+        description={`How ${project.name} shows up on Google and in AI answers.`}
         actions={
           <>
-            <AutoRefresh active={d.activeRuns.length > 0} label={`${d.activeRuns.length} check${d.activeRuns.length === 1 ? "" : "s"} running`} />
-            <RunButtons projectId={project.id} crawlActive={crawlActive} visibilityActive={visActive} canRun={hasRole(session, "member")} />
+            <AutoRefresh active={d.activeRuns.length > 0} label={crawlActive ? "Checking your website…" : "Asking AI tools…"} />
+            <RunButtons
+              projectId={project.id}
+              crawlActive={crawlActive}
+              visibilityActive={visActive}
+              canRun={hasRole(session, "member")}
+              primary={report ? "none" : "audit"}
+              size="sm"
+            />
           </>
         }
       />
 
       {m?.simulated && (
         <SimulatedDataBanner>
-          the AI answers behind these numbers came from the built-in simulator. Add a GEMINI_API_KEY to your .env file for real answers.
+          the AI answers behind these numbers came from the built-in simulator, so they don&apos;t count towards your score.
         </SimulatedDataBanner>
       )}
 
-      {/* Score teaser */}
-      <Card as="section" aria-label="Report summary" padding="md">
-        {report ? (
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
-            <div className="flex items-center gap-5">
-              <ScoreRing score={report.overall.score} grade={report.overall.grade} size="md" label="Overall score" />
-              <div className="min-w-0">
-                <p className="eyebrow">Your site report</p>
-                <h2 className="mt-1 text-h3 text-balance text-fg">{report.overall.headline}</h2>
-                <p className="mt-1 text-small text-muted">
-                  {report.issues.length} {report.issues.length === 1 ? "issue" : "issues"} found · {report.quickWins.length} quick{" "}
-                  {report.quickWins.length === 1 ? "win" : "wins"} · {report.crawl.pagesCrawled} pages scanned
-                </p>
+      {report && score !== null ? (
+        <>
+          <Card as="section" aria-label="Your score" padding="md">
+            <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:text-left">
+              <ScoreRing score={score} size="lg" label="Your score" partial={partial} />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-h2 text-fg">
+                  {score} / 100 · <span className={SCORE_BAND_CLASS[scoreBand(score)].text}>{scoreLabel(score)}</span>
+                </h2>
+                <p className="mt-1 text-body text-fg-soft">{aiLine}</p>
+                <dl className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-small sm:justify-start">
+                  <div className="flex gap-1.5">
+                    <dt className="text-muted">Google health</dt>
+                    <dd className="font-semibold tabular-nums text-fg">{google === null ? "—" : `${google} / 100`}</dd>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <dt className="text-muted">AI mentions</dt>
+                    <dd className="font-semibold tabular-nums text-fg">
+                      <Link href={`${base}/visibility`} className="hover:underline underline-offset-4">
+                        {answers ? `${named} of ${answers}` : "Not checked yet"}
+                      </Link>
+                    </dd>
+                  </div>
+                </dl>
               </div>
+              <LinkButton href={firstFixHref} size="lg" iconRight={<ArrowRight />} className="w-full sm:w-auto">
+                Start fixing
+              </LinkButton>
             </div>
-            <ul className="flex flex-wrap gap-5 lg:ml-auto" aria-label="Pillar scores">
-              {report.pillars.map((p) => (
-                <li key={p.pillar} className="flex flex-col items-center gap-1">
-                  <ScoreRing score={p.score} grade={p.grade} size="sm" label={`${p.label} score`} />
-                  <span className="text-caption text-muted">{PILLAR_SHORT[p.pillar]}</span>
-                </li>
-              ))}
-            </ul>
-            <LinkButton href={reportHref} icon={<FileText />} iconRight={<ArrowRight />} className="lg:ml-4">
-              Open full report
-            </LinkButton>
-          </div>
-        ) : (
-          <EmptyState
-            size="sm"
-            icon={<FileText />}
-            title={crawlActive ? "Your first scan is running" : "No report yet"}
-            description={
-              crawlActive
-                ? "We're reading your pages now. Your SEO, AEO and GEO scores appear here when it finishes."
-                : "Scan your website to get SEO, AEO and GEO scores with plain-English fixes."
-            }
-            action={<LinkButton href={reportHref} variant="secondary">Go to report</LinkButton>}
-          />
-        )}
-      </Card>
+          </Card>
 
-      {since && (since.comparison.after || since.preparing) && (
-        <SinceLastMonth
-          delta={since.comparison.delta}
-          baselineIsFirst={since.comparison.baselineIsFirst}
-          historyHref={`/app/projects/${project.id}/reports`}
-          preparing={since.preparing}
-        />
-      )}
-
-      <SearchPerformance projectId={project.id} />
-
-      {/* Stats */}
-      <section aria-label="AI visibility metrics" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Visibility index"
-          icon={<Radar />}
-          value={m ? <>{Math.round(m.visibilityIndex)}<span className="text-small font-normal text-muted"> / 100</span></> : "—"}
-          hint={m ? "One number combining the three rates" : "Run an AI visibility check to measure"}
-          footer={sampleFooter}
-        />
-        <Stat label="Mentioned" icon={<MessageSquare />} value={pct(m?.mentionRate)} hint="AI answers that name your brand" footer={sampleFooter} />
-        <Stat label="Linked to your site" icon={<Link2 />} value={pct(m?.citationRate)} hint="AI answers citing one of your pages" footer={sampleFooter} />
-        <Stat label="Recommended" icon={<ThumbsUp />} value={pct(m?.recommendationRate)} hint="AI answers suggesting you" footer={sampleFooter} />
-      </section>
-
-      {/* Trend + share */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader
-            title="Visibility over time"
-            description="One point per completed AI visibility check."
-            actions={hasDiscontinuity ? <Badge tone="warning">Questions changed</Badge> : undefined}
-          />
-          <CardBody>
-            {d.history.length === 0 ? (
-              <EmptyState size="sm" title="No measurements yet" description="Run an AI visibility check to start your trend line." />
+          <Card as="section" aria-labelledby="next-fixes">
+            <CardHeader
+              title={<span id="next-fixes">Your next 3 fixes</span>}
+              description="The changes that help most for the least work."
+              actions={
+                <LinkButton href={`${base}/audit`} variant="ghost" size="sm" iconRight={<ArrowRight />}>
+                  See all
+                </LinkButton>
+              }
+            />
+            {fixes.length === 0 ? (
+              <div className="px-5 pb-5 sm:px-6">
+                <EmptyState size="sm" icon={<Sparkles />} title="Nothing to fix right now" description="We didn't find problems on the pages we checked." />
+              </div>
             ) : (
-              <>
-                <TrendChart
-                  name="Visibility index"
-                  data={d.history.map((h) => ({
-                    label: fmtDate(h.at),
-                    value: h.visibilityIndex,
-                    discontinuity: h.discontinuity,
-                    promptSetVersion: h.promptSetVersion,
-                  }))}
-                />
-                {hasDiscontinuity && (
-                  <p className="mt-2 flex items-start gap-1.5 text-xs text-warning">
-                    <TriangleAlert size={14} className="mt-px shrink-0" aria-hidden />
-                    Dashed lines mark where the questions we ask changed, so values before and after aren&apos;t directly comparable.
-                  </p>
-                )}
-              </>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader title="You vs competitors" description="Share of brand mentions in AI answers." />
-          <CardBody>
-            {m && Object.keys(m.competitorShare).length > 0 ? (
-              <ShareBarChart brand={brandNames} data={Object.entries(m.competitorShare).map(([name, share]) => ({ name, share }))} />
-            ) : (
-              <EmptyState size="sm" title="No competitor data" description="Add competitors to the project and run an AI visibility check." />
-            )}
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Top issues + actions */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader
-            title="Top issues"
-            description={report ? "The most important things to fix, from your latest scan." : "Open problems from your latest scan."}
-            actions={<LinkButton href={`${reportHref}#issues`} variant="ghost" size="sm" iconRight={<ArrowRight />}>All issues</LinkButton>}
-          />
-          {topIssues.length > 0 ? (
-            <ul className="divide-y divide-border">
-              {topIssues.map((i) => (
-                <li key={i.id}>
-                  <Link
-                    href={`${reportHref}#${encodeURIComponent(i.id)}`}
-                    className="focus-ring flex items-start gap-3 px-5 py-3.5 hover:bg-surface-2 sm:px-6"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="text-small font-medium text-fg">{i.title}</div>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <ImpactChip impact={i.impact} />
-                        <EffortChip effort={i.effort} />
-                        <span className="inline-flex h-[22px] items-center rounded-full border border-border px-2 text-xs font-medium text-muted">
-                          {PILLAR_SHORT[i.pillar]}
+              <ol className="divide-y divide-border">
+                {fixes.map((f) => (
+                  <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-4 sm:flex-nowrap sm:px-6">
+                    <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+                      <div className="text-small font-medium text-fg">{f.title}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={12} aria-hidden /> {EFFORT_TIME[f.effort]}
                         </span>
+                        <span>{IMPACT_TEXT[f.impact]}</span>
                       </div>
                     </div>
-                    <ArrowRight size={16} aria-hidden className="mt-1 shrink-0 text-muted" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : d.findings.totalOpen > 0 ? (
-            <CardBody>
-              <ul className="space-y-2.5">
-                {Object.entries(d.findings.bySeverity).map(([sev, n]) => (
-                  <li key={sev} className="flex items-center justify-between text-small">
-                    <SeverityBadge severity={sev} />
-                    <span className="tabular-nums">
-                      {n} <span className="text-muted">open</span>
-                    </span>
+                    <LinkButton href={`${base}/report/issues/${encodeURIComponent(f.id)}`} variant="secondary" size="sm">
+                      Start
+                    </LinkButton>
                   </li>
                 ))}
-              </ul>
-            </CardBody>
-          ) : (
-            <CardBody>
-              <EmptyState
-                size="sm"
-                title={d.findings.crawledAt ? "Nothing to fix right now" : "Not scanned yet"}
-                description={d.findings.crawledAt ? "We didn't find problems in your latest scan." : "Scan your website to find problems worth fixing."}
-              />
-            </CardBody>
-          )}
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="Suggested changes"
-            description={`${d.actions.byStatus.awaiting_approval ?? 0} waiting for your approval · ${d.actions.applied} applied`}
-            actions={
-              <LinkButton href={`/app/projects/${project.id}/actions`} variant="ghost" size="sm" iconRight={<ArrowRight />}>
-                Actions center
-              </LinkButton>
+              </ol>
+            )}
+          </Card>
+        </>
+      ) : (
+        <Card padding="md">
+          <EmptyState
+            icon={<FileText />}
+            title={crawlActive ? "Reading your website…" : "Let's check your website"}
+            description={
+              crawlActive
+                ? "This takes a few minutes. Your score and first fixes appear here when it's done."
+                : "Use the Check website button above. In a few minutes you'll get one score and the first things to fix."
             }
           />
-          {d.actions.top.length === 0 ? (
-            <CardBody>
-              <EmptyState size="sm" title="No suggested changes yet" description="Suggestions appear after a scan or AI visibility check is analysed." />
-            </CardBody>
-          ) : (
-            <ul className="divide-y divide-border">
-              {d.actions.top.map((a) => {
-                const target = (a.target as { url?: string } | null)?.url;
-                return (
-                  <li key={a.id}>
-                    <Link
-                      href={`/app/projects/${project.id}/actions`}
-                      className="focus-ring flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-surface-2 sm:px-6"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-small font-medium text-fg">{humanize(a.type)}</div>
-                        <div className="truncate text-xs text-muted">{target ?? a.rationale}</div>
-                      </div>
-                      <RiskBadge riskClass={a.riskClass} compact />
-                      <StatusBadge status={a.status} />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
         </Card>
-      </div>
-
-      {/* Recent runs */}
-      <Card>
-        <CardHeader title="Recent checks" description="Website scans and AI visibility checks, newest first." />
-        {d.recentRuns.length === 0 ? (
-          <CardBody>
-            <EmptyState
-              size="sm"
-              title="No checks yet"
-              description="Start a website scan or an AI visibility check to see progress here."
-              action={<LinkButton href={`/app/projects/${project.id}/prompts`} variant="secondary">Choose AI questions</LinkButton>}
-            />
-          </CardBody>
-        ) : (
-          <Table caption="Recent checks">
-            <THead>
-              <tr>
-                <TH>Check</TH>
-                <TH>Status</TH>
-                <TH>Progress</TH>
-                <TH>Started</TH>
-                <TH>Finished</TH>
-              </tr>
-            </THead>
-            <tbody>
-              {d.recentRuns.map((r) => {
-                const unit = r.kind === "crawl" ? "pages" : "answers";
-                return (
-                  <TR key={r.id}>
-                    <TD className="font-medium text-fg">{r.kind === "crawl" ? "Website scan" : "AI visibility check"}</TD>
-                    <TD>
-                      <StatusBadge status={r.status} />
-                      {r.error && (
-                        <div className="mt-1 max-w-xs truncate text-xs text-danger" title={r.error}>
-                          {r.error}
-                        </div>
-                      )}
-                    </TD>
-                    <TD>
-                      <div className="flex items-center gap-2">
-                        <div className="w-24">
-                          <Meter
-                            value={r.progress.done}
-                            max={Math.max(1, r.progress.total)}
-                            label={`${r.kind === "crawl" ? "Scan" : "Check"} progress`}
-                            tone="accent"
-                            size="xs"
-                          />
-                        </div>
-                        <span className="text-xs tabular-nums text-muted">
-                          {r.progress.done}/{r.progress.total || "?"} {unit}
-                        </span>
-                      </div>
-                    </TD>
-                    <TD className="text-muted">{fmtRelative(r.createdAt)}</TD>
-                    <TD className="text-muted">{r.finishedAt ? fmtDate(r.finishedAt, true) : "—"}</TD>
-                  </TR>
-                );
-              })}
-            </tbody>
-          </Table>
-        )}
-      </Card>
-
-      {d.activePromptCount === 0 && (
-        <p className="text-small text-muted">
-          You aren&apos;t tracking any AI questions yet.{" "}
-          <Link href={`/app/projects/${project.id}/prompts`} className="font-medium text-primary hover:underline">
-            Add or generate questions
-          </Link>{" "}
-          before running an AI visibility check.
-        </p>
       )}
+
+      <p className="text-center text-small text-muted sm:text-left">
+        {lastChecked ? `Last checked ${fmtDate(lastChecked)}` : "Not checked yet"}
+        {nextCheck
+          ? ` · Next automatic check ${nextCheck.getTime() <= Date.now() ? "due now" : fmtDate(nextCheck)}`
+          : lastChecked
+            ? " · Automatic checks are off"
+            : ""}
+        {" · "}
+        <Link href={`${base}/report`} className="font-medium text-primary hover:underline">
+          Full report
+        </Link>
+      </p>
     </div>
   );
-}
-
-/** Period comparison for the strip. With no snapshots yet, starts a background backfill of past runs. */
-async function loadSinceLastMonth(projectId: string, organizationId: string, hasRuns: boolean) {
-  try {
-    const comparison = await getPeriodComparison(projectId, organizationId);
-    let preparing = false;
-    if (!comparison.after && hasRuns) {
-      preparing = true;
-      void backfillSnapshots(projectId, organizationId).catch((e) => console.error("[overview] snapshot backfill failed", e instanceof Error ? e.message : e));
-    }
-    return { comparison, preparing };
-  } catch (e) {
-    console.error("[overview] since-last-month unavailable", e instanceof Error ? e.message : e);
-    return null;
-  }
 }

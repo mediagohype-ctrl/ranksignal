@@ -8,8 +8,8 @@ import { Button, useToast, type ButtonSize, type ButtonVariant } from "@/compone
 type Kind = "audit" | "visibility";
 
 const DEFAULT_LABELS: Record<Kind, { idle: string; running: string; queued: string }> = {
-  audit: { idle: "Scan website", running: "Scanning…", queued: "Website scan started. This usually takes a minute or two." },
-  visibility: { idle: "Check AI visibility", running: "Checking AI…", queued: "AI visibility check started." },
+  audit: { idle: "Check website", running: "Checking website…", queued: "Website check started. This usually takes a minute or two." },
+  visibility: { idle: "Run AI check", running: "Running AI check…", queued: "AI check started. Results appear in a few minutes." },
 };
 
 export function RunButtons({
@@ -27,7 +27,7 @@ export function RunButtons({
   visibilityActive: boolean;
   canRun: boolean;
   show?: Kind[];
-  /** Override button text, e.g. { audit: "Re-scan website" }. */
+  /** Override button text, e.g. { audit: "Check website again" }. */
   labels?: Partial<Record<Kind, string>>;
   size?: ButtonSize;
   /** Which button gets the primary style (default: the only one shown, else visibility). */
@@ -50,7 +50,7 @@ export function RunButtons({
     }
   }
 
-  const title = canRun ? undefined : "Your role can view results but not start new checks";
+  const title = canRun ? undefined : "You can see results, but only an Owner, Admin or Member can start new checks";
   const primaryKind = primary ?? (show.length === 1 ? show[0] : "visibility");
   const variant = (k: Kind): ButtonVariant => (primaryKind === k ? "primary" : "secondary");
   return (

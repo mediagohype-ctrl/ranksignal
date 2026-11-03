@@ -26,7 +26,7 @@ export async function postJson<T = unknown>(url: string, body: unknown): Promise
       ok: false,
       status: res.status,
       code: data?.error?.code,
-      message: data?.error?.message ?? (res.status === 429 ? "Too many attempts. Please wait a minute and try again." : "Something went wrong. Please try again."),
+      message: data?.error?.message ?? (res.status === 429 ? "Too many attempts. Please wait a minute and try again." : "Something went wrong on our side. Please try again in a minute."),
       fieldErrors: data?.error?.details?.fieldErrors,
       details: data?.error?.details,
     };

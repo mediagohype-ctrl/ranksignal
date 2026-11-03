@@ -9,12 +9,12 @@ import {
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate } from "@/lib/dashboard/format";
 import {
-  Badge, Button, Card, Dialog, EmptyState, Field, Input, Meter, Notice, RiskBadge, StatusBadge, TabPanel, Tabs, Textarea, useToast,
+  Badge, Button, Card, Dialog, EmptyState, Field, Input, LinkButton, Notice, RiskBadge, StatusBadge, TabPanel, Tabs, Textarea, useToast,
 } from "@/components/ui";
 import { DiffView, fieldLabel } from "./diff-view";
 import { CopyBlock } from "./actions/copy-block";
 import { ActionTimeline, buildTimeline, type ApprovalEvent, type ExecutionEvent } from "./actions/action-timeline";
-import { PRIORITY_TONE, actionSummary, actionTitle, policyInPlainWords } from "./actions/action-copy";
+import { PRIORITY_TONE, actionSummary, actionTitle, policyInPlainWords, priorityLabel } from "./actions/action-copy";
 import { findingCopy } from "./audit/finding-copy";
 
 export interface ActionView {
@@ -47,16 +47,16 @@ export interface ActionView {
 }
 
 const TABS = [
-  { id: "awaiting", label: "Needs approval", statuses: ["awaiting_approval"], empty: "Nothing is waiting for your approval right now." },
-  { id: "ready", label: "Ready", statuses: ["proposed", "approved"], empty: "No suggestions are waiting to be applied." },
-  { id: "running", label: "In progress", statuses: ["executing", "rollback_pending"], empty: "Nothing is being applied at the moment." },
-  { id: "done", label: "Done", statuses: ["succeeded", "succeeded_with_warnings", "completed_manually"], empty: "Applied changes will show up here." },
-  { id: "manual", label: "Do by hand", statuses: ["blocked"], empty: "No changes need to be done by hand." },
+  { id: "awaiting", label: "Needs your OK", statuses: ["awaiting_approval"], empty: "Nothing is waiting for your OK right now." },
+  { id: "ready", label: "Ready", statuses: ["proposed", "approved"], empty: "No fixes are waiting to go live." },
+  { id: "running", label: "In progress", statuses: ["executing", "rollback_pending"], empty: "No fixes are going live right now." },
+  { id: "done", label: "Done", statuses: ["succeeded", "succeeded_with_warnings", "completed_manually"], empty: "Fixes that are live will show up here." },
+  { id: "manual", label: "Do by hand", statuses: ["blocked"], empty: "No fixes need to be done by hand." },
   {
     id: "closed",
-    label: "Not applied",
+    label: "Not done",
     statuses: ["failed", "rolled_back", "rollback_failed", "rejected", "expired", "cancelled"],
-    empty: "Rejected, failed and undone changes will show up here.",
+    empty: "Fixes you turned down, that failed, or that were undone show up here.",
   },
 ];
 
@@ -85,12 +85,10 @@ export function ActionCenter({
         bordered
         size="lg"
         icon={<Inbox />}
-        title="No recommendations yet"
-        description="Run an audit and an AI visibility check from the project overview. We'll turn what we find into suggested fixes here."
+        title="No fixes to approve yet"
+        description="Check your website first. We'll turn the problems we find into fixes here."
         action={
-          <Link href={`/app/projects/${projectId}/audit`} className="text-small font-medium text-primary hover:underline">
-            Go to the audit
-          </Link>
+          <LinkButton href={`/app/projects/${projectId}/audit`}>Go to website problems</LinkButton>
         }
       />
     );
@@ -99,7 +97,7 @@ export function ActionCenter({
   return (
     <div>
       <Tabs
-        label="Actions by status"
+        label="Fixes by status"
         idPrefix="ac"
         value={tab}
         onChange={setTab}
@@ -129,13 +127,13 @@ function evidenceLink(e: unknown, projectId: string): { label: string; href: str
     const kind = String(o.kind ?? o.type ?? "");
     if (kind === "finding") {
       const code = typeof o.code === "string" ? o.code : "";
-      return { label: `Audit finding: ${findingCopy(code, code.replace(/_/g, " ")).title}`, href: `/app/projects/${projectId}/audit` };
+      return { label: `Website problem: ${findingCopy(code, code.replace(/_/g, " ")).title}`, href: `/app/projects/${projectId}/audit` };
     }
-    if (kind === "visibility_run") return { label: "AI visibility check results", href: `/app/projects/${projectId}/visibility` };
-    if (kind === "prompt") return { label: "Tracked AI question", href: `/app/projects/${projectId}/prompts` };
+    if (kind === "visibility_run") return { label: "AI check results", href: `/app/projects/${projectId}/visibility` };
+    if (kind === "prompt") return { label: "Customer question", href: `/app/projects/${projectId}/prompts` };
     const url = typeof o.url === "string" ? o.url : typeof o.pageUrl === "string" ? o.pageUrl : null;
     if (url) return { label: url, href: url };
-    return { label: [kind, o.code ?? o.id].filter(Boolean).join(" · ") || "Evidence", href: null };
+    return { label: [kind, o.code ?? o.id].filter(Boolean).join(" · ") || "Supporting detail", href: null };
   }
   return { label: String(e), href: null };
 }
@@ -186,12 +184,12 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
     run(
       "approve",
       () => api(`/api/actions/${a.id}/approve`, { body: { draftHash: a.draftHash, comments: comment.trim() || undefined } }),
-      "Approved. The approval is locked to this exact text.",
+      "Approved. Your OK applies to this exact text.",
     );
   const reject = () =>
-    run("reject", () => api(`/api/actions/${a.id}/reject`, { body: { reason: reason.trim() || undefined } }), "Rejected. Nothing on your site was changed.");
-  const execute = () => run("execute", () => api(`/api/actions/${a.id}/execute`, { body: {} }), "Applying the change now. We'll re-check the page when it's done.");
-  const rollback = () => run("rollback", () => api(`/api/actions/${a.id}/rollback`, { body: {} }), "Undo started. We'll restore the previous version.");
+    run("reject", () => api(`/api/actions/${a.id}/reject`, { body: { reason: reason.trim() || undefined } }), "Turned down. Nothing on your site was changed.");
+  const execute = () => run("execute", () => api(`/api/actions/${a.id}/execute`, { body: {} }), "Making the change now. We'll check the page again when it's done.");
+  const rollback = () => run("rollback", () => api(`/api/actions/${a.id}/rollback`, { body: {} }), "Undo started. We'll put the old version back.");
 
   async function saveDraft() {
     if (!draft.trim()) {
@@ -202,7 +200,7 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
     setEditError(null);
     try {
       await api(`/api/actions/${a.id}`, { method: "PATCH", body: { after: draft } });
-      toast("Draft saved. It now needs a fresh approval.", "success");
+      toast("Saved. It now needs your OK again.", "success");
       setDialog(null);
       router.refresh();
     } catch (e) {
@@ -219,7 +217,7 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         method: "POST",
         body: { ...(manualNote.trim() ? { note: manualNote.trim() } : {}), ...(manualUrl.trim() ? { url: manualUrl.trim() } : {}) },
       });
-      toast("Marked as done. It now counts as shipped work.", "success");
+      toast("Marked as done. It now counts as finished work.", "success");
       setDialog(null);
       router.refresh();
     } catch (e) {
@@ -262,10 +260,8 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <StatusBadge status={a.status} />
-              <Badge tone={PRIORITY_TONE[a.priority] ?? "neutral"} className="capitalize">
-                {a.priority} priority
-              </Badge>
-              {!a.integrationId && a.change && !advisory && <Badge icon={<Hand />}>Apply by hand</Badge>}
+              <Badge tone={PRIORITY_TONE[a.priority] ?? "neutral"}>{priorityLabel(a.priority)}</Badge>
+              {!a.integrationId && a.change && !advisory && <Badge icon={<Hand />}>Do by hand</Badge>}
             </div>
             <h3 id={`act-${a.id}-title`} className="text-h4 text-fg">
               {actionTitle(a.type)}
@@ -299,36 +295,20 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
           <RiskBadge riskClass={a.riskClass} className="shrink-0 self-start" />
           <div className="min-w-0">
             <p className="text-small text-fg-soft">{policyInPlainWords(a.policyDecision, a.riskClass, a.policyReason)}</p>
-            {a.policyReason && (
-              <details className="mt-1 text-caption text-muted">
-                <summary className="cursor-pointer font-normal hover:text-fg">Technical reason</summary>
-                <p className="mt-1 break-words font-normal">{a.policyReason}</p>
-              </details>
-            )}
           </div>
         </div>
 
-        <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <div>
-            <dt className="text-caption uppercase tracking-[0.06em] text-muted">Priority</dt>
-            <dd className="mt-1 text-small font-medium capitalize text-fg">
-              {a.priority}
-              <span className="ml-1 font-normal text-muted tabular-nums">· score {Math.round(a.priorityScore)}</span>
-            </dd>
+            <dt className="text-caption uppercase tracking-[0.06em] text-muted">How urgent</dt>
+            <dd className="mt-1 text-small font-medium text-fg">{priorityLabel(a.priority)}</dd>
           </div>
           <div>
-            <dt className="text-caption uppercase tracking-[0.06em] text-muted">Expected impact</dt>
+            <dt className="text-caption uppercase tracking-[0.06em] text-muted">What it should help</dt>
             <dd className="mt-1 text-small text-fg">{a.expectedImpact ?? "Not estimated"}</dd>
           </div>
           <div>
-            <dt className="text-caption uppercase tracking-[0.06em] text-muted">How sure we are</dt>
-            <dd className="mt-1">
-              <Meter value={Math.round(a.confidence * 100)} max={100} label="Confidence" tone="primary" size="xs" />
-              <span className="mt-1 block text-small tabular-nums text-fg">{Math.round(a.confidence * 100)}%</span>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-caption uppercase tracking-[0.06em] text-muted">Effort</dt>
+            <dt className="text-caption uppercase tracking-[0.06em] text-muted">How much work</dt>
             <dd className="mt-1 text-small capitalize text-fg">{a.effort}</dd>
           </div>
         </dl>
@@ -346,20 +326,19 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         )}
 
         {locked && a.change && (
-          <Notice tone="neutral" icon={<Lock />} title="Approval is locked to this exact text — editing it needs a new approval.">
-            <span className="text-caption">
-              Draft fingerprint <code className="font-mono">{a.draftHash.slice(0, 12)}</code>
-              {a.approval?.decision === "pending" && ` · request expires ${fmtDate(a.approval.expiresAt, true)}`}
-            </span>
+          <Notice tone="neutral" icon={<Lock />} title="Your OK applies to this exact text — if it's edited, it needs your OK again.">
+            {a.approval?.decision === "pending" && (
+              <span className="text-caption">This request expires {fmtDate(a.approval.expiresAt, true)}.</span>
+            )}
           </Notice>
         )}
 
         {a.manualInstructions && (
-          <Notice tone="tip" icon={<Hand />} title="Apply this change by hand">
+          <Notice tone="tip" icon={<Hand />} title="Make this change by hand">
             <p className="mb-3">
-              We can’t make this change automatically
-              {a.integrationId ? "" : " because no website is connected"}. Copy the steps below into your website editor, then run a new audit
-              so we can confirm it worked.
+              We can’t make this change for you
+              {a.integrationId ? "" : " because your website isn’t connected"}. Copy the steps below into your website editor, then check
+              your website again so we can confirm it worked.
             </p>
             <CopyBlock label="Step-by-step instructions" text={a.manualInstructions} />
           </Notice>
@@ -367,14 +346,14 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
 
         {a.approval?.decision === "rejected" && a.approval.comments && (
           <p className="text-small text-muted">
-            <span className="font-medium text-fg">Rejected because:</span> {a.approval.comments}
+            <span className="font-medium text-fg">Turned down because:</span> {a.approval.comments}
           </p>
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <Disclosure icon={<FileText />} label="Evidence" count={a.evidenceRefs.length}>
+          <Disclosure icon={<FileText />} label="What we found" count={a.evidenceRefs.length}>
             {a.evidenceRefs.length === 0 ? (
-              <p className="text-small text-muted">No linked evidence.</p>
+              <p className="text-small text-muted">Nothing linked.</p>
             ) : (
               <ul className="space-y-1.5 text-small">
                 {a.evidenceRefs.slice(0, 10).map((e, i) => {
@@ -421,18 +400,18 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
                 setDialog("edit");
               }}
             >
-              Edit draft
+              Edit text
             </Button>
           )}
           {canApprove && canRollback && (
             <Button variant="secondary" size="sm" icon={<RotateCcw />} onClick={() => setDialog("rollback")}>
-              Roll back
+              Undo
             </Button>
           )}
           {showApprove && (
             <>
               <Button variant="secondary" size="sm" icon={<XCircle />} onClick={() => setDialog("reject")}>
-                Reject
+                Turn down
               </Button>
               <Button variant="accent" size="sm" icon={<CheckCircle2 />} onClick={() => setDialog("approve")}>
                 Approve
@@ -441,12 +420,12 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
           )}
           {canApprove && canExecute && (
             <Button size="sm" icon={<Play />} onClick={() => setDialog("execute")}>
-              Apply change
+              Make change
             </Button>
           )}
           {canCompleteManually && (
             <Button variant="secondary" size="sm" icon={<CheckCircle2 />} onClick={() => setDialog("manual")}>
-              Mark as done manually
+              I did it by hand
             </Button>
           )}
         </div>
@@ -459,7 +438,7 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         size="lg"
         icon={<CheckCircle2 />}
         title="Approve this exact text?"
-        description="Your approval is locked to the text below. If anyone edits it later, it will need a new approval before it can go live."
+        description="Your OK applies to the text below. If anyone edits it later, it needs your OK again before it can go live."
         footer={
           <>
             <Button variant="secondary" onClick={close}>Cancel</Button>
@@ -482,7 +461,7 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         onClose={close}
         icon={<XCircle />}
         tone="danger"
-        title="Reject this change?"
+        title="Turn down this fix?"
         description="Nothing will change on your site. Adding a reason helps your team and improves future suggestions."
         footer={
           <>
@@ -503,17 +482,17 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         onClose={close}
         icon={<Play />}
         tone="warning"
-        title="Apply this change to your website?"
+        title="Make this change on your website?"
         description={
           <>
-            We’ll save the current version first, publish the new text{a.targetUrl ? <> on <span className="break-all font-medium text-fg">{a.targetUrl}</span></> : null}, then re-check the page. You can roll it back afterwards.
+            We’ll save the current version first, put the new text live{a.targetUrl ? <> on <span className="break-all font-medium text-fg">{a.targetUrl}</span></> : null}, then check the page again. You can undo it afterwards.
           </>
         }
         footer={
           <>
             <Button variant="secondary" onClick={close}>Cancel</Button>
             <Button loading={busy === "execute"} loadingText="Starting…" onClick={execute}>
-              Apply change
+              Make change
             </Button>
           </>
         }
@@ -524,7 +503,7 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         onClose={close}
         icon={<CheckCircle2 />}
         title="Mark this as done by hand?"
-        description="Use this when the change was made outside RankSignal (for example edited directly in your CMS). It will count as shipped work in reports."
+        description="Use this when you made the change yourself (for example, in your website editor). It will count as finished work in reports."
         footer={
           <>
             <Button variant="secondary" onClick={close}>Cancel</Button>
@@ -549,13 +528,13 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         onClose={close}
         icon={<RotateCcw />}
         tone="warning"
-        title="Roll back this change?"
-        description="We'll restore the version that was live before this change was applied."
+        title="Undo this change?"
+        description="We'll put back the version that was live before this change."
         footer={
           <>
             <Button variant="secondary" onClick={close}>Cancel</Button>
             <Button variant="danger" loading={busy === "rollback"} loadingText="Starting…" onClick={rollback}>
-              Roll back
+              Undo
             </Button>
           </>
         }
@@ -566,13 +545,13 @@ function ActionCard({ projectId, action: a, canEdit, canApprove }: { projectId: 
         onClose={close}
         size="xl"
         icon={<Pencil />}
-        title="Edit draft"
-        description="Approval is locked to this exact text — editing it needs a new approval. Saving also re-checks the change against your safety rules."
+        title="Edit text"
+        description="Editing the text means it needs your OK again. Saving also checks the change against your safety rules."
         footer={
           <>
             <Button variant="secondary" onClick={close}>Cancel</Button>
             <Button loading={busy === "edit"} loadingText="Saving…" onClick={saveDraft} disabled={!!a.change && draft === a.change.after}>
-              Save new draft
+              Save text
             </Button>
           </>
         }

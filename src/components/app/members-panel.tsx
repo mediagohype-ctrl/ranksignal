@@ -1,4 +1,5 @@
 "use client";
+import { roleLabel } from "@/components/app/role-label";
 import { useCallback, useEffect, useState } from "react";
 import { MailPlus, RefreshCw, UserMinus, UserPlus, Users } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
@@ -40,8 +41,8 @@ const ROLES = ["owner", "admin", "member", "viewer"] as const;
 const ROLE_HELP: Record<string, string> = {
   owner: "Owner — full control, including billing",
   admin: "Admin — manage team, billing and settings",
-  member: "Member — run scans and draft fixes",
-  viewer: "Viewer — read-only access",
+  member: "Member — check the website, run AI checks and suggest fixes",
+  viewer: "Viewer — can see everything but not change anything",
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -92,8 +93,8 @@ export function MembersPanel({
       else
         toast(
           r.emailSkipped
-            ? `${addr} was added as invited. Email isn't set up, so ask them to sign up with this address.`
-            : `${addr} was added as invited, but the email didn't send. Use "Resend" to try again.`,
+            ? `${addr} was invited, but we couldn't email them. Ask them to sign up with this email address.`
+            : `${addr} was invited, but the email didn't send. Click "Resend" to try again.`,
           "warning",
         );
       setEmail("");
@@ -109,7 +110,7 @@ export function MembersPanel({
     setBusy(m.id);
     try {
       await api(`/api/org/members/${m.id}`, { method: "PATCH", body: { role: next } });
-      toast(`${m.user.name ?? m.user.email} is now ${next}.`, "success");
+      toast(`${m.user.name ?? m.user.email} is now ${next === "admin" ? "an" : "a"} ${roleLabel(next)}.`, "success");
       await load();
     } catch (err) {
       toast(errorMessage(err), "error");
@@ -206,7 +207,7 @@ export function MembersPanel({
         <CardHeader
           icon={<Users />}
           title="Team members"
-          description={canManage ? "Change roles or remove access. You can't change your own role." : "Only owners and admins can invite people or change roles."}
+          description={canManage ? "Change roles or remove access. You can't change your own role." : "Only the Owner or an Admin can invite people or change roles."}
           actions={
             <Button variant="ghost" size="icon-sm" aria-label="Refresh member list" onClick={load}>
               <RefreshCw />
@@ -233,7 +234,7 @@ export function MembersPanel({
             ))}
           </CardBody>
         ) : active.length === 0 ? (
-          <EmptyState size="sm" icon={<Users />} title="No members yet" description="Invite a teammate to share this workspace." />
+          <EmptyState size="sm" icon={<Users />} title="No members yet" description="Invite a teammate to share this workspace." action={canManage ? <Button size="sm" onClick={() => document.getElementById("inv-email")?.focus()}>Invite a teammate</Button> : undefined} />
         ) : (
           <Table caption="Workspace members">
             <THead>
@@ -288,7 +289,7 @@ export function MembersPanel({
                           </Select>
                         </>
                       ) : (
-                        <span className="capitalize text-fg-soft">{m.role}</span>
+                        <span className="text-fg-soft">{roleLabel(m.role)}</span>
                       )}
                     </TD>
                     <TD>

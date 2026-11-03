@@ -1,5 +1,6 @@
 import { Bot, CheckCircle2, CircleHelp, Link2, MessageSquare, Radar, ThumbsUp, TriangleAlert } from "lucide-react";
 import type { AiVisibilitySummary } from "@/lib/report/types";
+import { productNames } from "@/lib/report/checks/geo";
 import { fmtDate, pct } from "@/lib/dashboard/format";
 import { ShareBarChart } from "@/components/app/charts";
 import { RunButtons } from "@/components/app/run-buttons";
@@ -8,7 +9,7 @@ import {
 } from "@/components/ui";
 
 /**
- * AI visibility block of the site report: rates, competitor share, cited domains, missing prompts, brand knowledge.
+ * AI mentions block of the full report: rates, competitor share, linked domains, missing questions, brand knowledge.
  * `readOnly` (shared client reports): no run buttons or app links, no setup hints, and no AI answer text.
  */
 export function AiVisibilitySection({
@@ -34,8 +35,8 @@ export function AiVisibilitySection({
       return (
         <EmptyState
           icon={<Radar />}
-          title="AI answers not measured yet"
-          description="This report doesn't include an AI visibility check yet. It covers the website scan only."
+          title="AI answers not checked yet"
+          description="This report doesn't include an AI check yet. It covers the website check only."
           bordered
         />
       );
@@ -46,8 +47,8 @@ export function AiVisibilitySection({
         title={visibilityActive ? "Asking AI assistants about you…" : "We haven't asked AI assistants about you yet"}
         description={
           visibilityActive
-            ? "We're sending your tracked questions to AI assistants. This section fills in automatically when the answers are in."
-            : "Run an AI visibility check to see whether assistants like ChatGPT and Gemini mention, cite and recommend your business."
+            ? "We're asking AI assistants your customer questions. This section fills in by itself when the answers are in."
+            : "Run an AI check to see whether assistants like ChatGPT and Gemini name your business, link to your site and recommend you."
         }
         action={
           <span className="no-print inline-flex">
@@ -66,7 +67,7 @@ export function AiVisibilitySection({
 
   const n = ai.collected ?? ai.sampleSize;
   const sampleHint = `Out of ${n} AI ${n === 1 ? "answer" : "answers"}`;
-  const providers = ai.providers.length ? ai.providers.join(", ") : "—";
+  const providers = ai.providers.length ? productNames(ai.providers) : "—";
   const footer = `${providers}${ai.measuredAt ? ` · ${fmtDate(ai.measuredAt)}` : ""}`;
   const shareData = [
     ...(ai.brandShare !== undefined && ai.brandShare !== null ? [{ name: brand, share: ai.brandShare }] : []),
@@ -80,41 +81,40 @@ export function AiVisibilitySection({
       {measuredWith}
       {ai.simulated && readOnly && (
         <SimulatedDataBanner>
-          these AI answers came from a built-in simulator, not from real AI assistants, so treat the numbers as a demo only.
+          these are made-up demo AI answers, not answers from real AI assistants, so treat the numbers as a demo only.
         </SimulatedDataBanner>
       )}
       {ai.simulated && !readOnly && (
         <SimulatedDataBanner>
-          these AI answers came from the built-in simulator, not from real AI assistants, so treat the numbers as a demo. To get
-          real answers, add a <code className="font-mono text-xs">GEMINI_API_KEY</code> to your <code className="font-mono text-xs">.env</code>{" "}
-          file, restart the app and run &ldquo;Check AI visibility&rdquo; again.
+          these are made-up demo AI answers, not answers from real AI assistants, so treat the numbers as a demo. Real answers
+          appear once AI assistants are connected — contact us if this message doesn&apos;t go away.
         </SimulatedDataBanner>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
-          label="Mentioned"
+          label="Named"
           value={pct(ai.mentionRate)}
-          hint={`${sampleHint} named your brand`}
+          hint={`${sampleHint} named your business`}
           footer={footer}
           icon={<MessageSquare />}
         />
         <Stat
           label="Linked to your site"
           value={pct(ai.citationRate)}
-          hint={`${sampleHint} cited a page on your website`}
+          hint={`${sampleHint} linked to a page on your website`}
           footer={footer}
           icon={<Link2 />}
         />
         <Stat
           label="Recommended"
           value={pct(ai.recommendationRate)}
-          hint={`${sampleHint} actively suggested you`}
+          hint={`${sampleHint} recommended you`}
           footer={footer}
           icon={<ThumbsUp />}
         />
         <Stat
-          label="Visibility index"
+          label="AI mentions score"
           value={
             ai.visibilityIndex === null ? (
               "—"
@@ -125,8 +125,8 @@ export function AiVisibilitySection({
               </>
             )
           }
-          hint="One number combining the three rates"
-          footer={`${ai.sampleSize} questions asked`}
+          hint="One number combining the three above"
+          footer={`${ai.sampleSize} ${ai.sampleSize === 1 ? "question" : "questions"} asked`}
           icon={<Radar />}
         />
       </div>
@@ -135,7 +135,7 @@ export function AiVisibilitySection({
         <Card className="break-inside-avoid">
           <CardHeader
             title="You vs competitors"
-            description="Share of all brand mentions in the AI answers we collected. Your brand is shown in teal."
+            description="How often you're named vs competitors in the AI answers we collected. You're shown in teal."
           />
           <CardBody>
             {shareData.length > 0 ? (
@@ -144,7 +144,7 @@ export function AiVisibilitySection({
               <EmptyState
                 size="sm"
                 title="No competitor data yet"
-                description="Add competitors to your project so we can compare how often AI mentions them."
+                description="Add competitors in your website settings so we can compare how often AI names them."
               />
             )}
           </CardBody>
@@ -152,12 +152,12 @@ export function AiVisibilitySection({
 
         <Card className="break-inside-avoid">
           <CardHeader
-            title="Websites AI cites most"
-            description="Sources AI assistants linked to when answering. Pages on your own site are highlighted."
+            title="Websites AI links to most"
+            description="Websites AI assistants linked to in their answers. Your own site is highlighted."
           />
           <CardBody>
             {domains.length === 0 ? (
-              <p className="text-small text-muted">The AI answers we collected didn&apos;t cite any websites.</p>
+              <p className="text-small text-muted">The AI answers we collected didn&apos;t link to any websites.</p>
             ) : (
               <ul className="space-y-2">
                 {domains.map((d) => (
@@ -174,7 +174,7 @@ export function AiVisibilitySection({
                           </Badge>
                         )}
                         <span className="tabular-nums text-muted">
-                          {d.count} {d.count === 1 ? "cite" : "cites"}
+                          {d.count} {d.count === 1 ? "link" : "links"}
                         </span>
                       </span>
                     </div>
@@ -195,14 +195,14 @@ export function AiVisibilitySection({
       <Card className="break-inside-avoid">
         <CardHeader
           icon={<CircleHelp />}
-          title="Questions where AI doesn't mention you"
-          description="Real questions we asked. These are your biggest openings — especially where a competitor was named instead."
+          title="Customer questions where AI doesn't name you"
+          description="Real questions we asked. These are your biggest chances — especially where a competitor was named instead."
         />
         {ai.promptsWhereMissing.length === 0 ? (
           <CardBody>
             <p className="flex items-center gap-2 text-small text-fg-soft">
               <CheckCircle2 aria-hidden size={16} className="text-success" />
-              You were mentioned in at least one answer to every question we asked.
+              You were named in at least one answer to every question we asked.
             </p>
           </CardBody>
         ) : (
@@ -213,7 +213,7 @@ export function AiVisibilitySection({
                 <p className="mt-1 text-xs text-muted">
                   {p.competitorsMentioned.length > 0 ? (
                     <>
-                      Mentioned instead:{" "}
+                      Named instead:{" "}
                       {p.competitorsMentioned.map((c) => (
                         <Badge key={c} tone="warning" size="sm" className="mr-1">
                           {c}
@@ -221,7 +221,7 @@ export function AiVisibilitySection({
                       ))}
                     </>
                   ) : (
-                    "No tracked competitor was mentioned either."
+                    "None of your competitors were named either."
                   )}
                 </p>
               </li>
@@ -232,7 +232,7 @@ export function AiVisibilitySection({
 
       {ai.brandKnowledge && ai.brandKnowledge.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-h4 text-fg">{readOnly ? "Does AI know your brand?" : "What AI says about your brand"}</h3>
+          <h3 className="text-h4 text-fg">{readOnly ? "Does AI know your business?" : "What AI says about your business"}</h3>
           <p className="-mt-2 text-small text-muted">
             We asked each assistant what it knows about {brand}.
             {readOnly ? "" : " Wrong facts here are worth correcting on your site and profiles."}
@@ -243,11 +243,11 @@ export function AiVisibilitySection({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-2 text-h4 text-fg">
                     <Bot aria-hidden size={18} className="text-primary" />
-                    {k.provider}
+                    {productNames([k.provider])}
                   </span>
                   {k.knowsBrand ? (
                     <Badge tone="success" icon={<CheckCircle2 />}>
-                      Knows your brand
+                      Knows your business
                     </Badge>
                   ) : (
                     <Badge tone="warning" icon={<TriangleAlert />}>
@@ -261,7 +261,7 @@ export function AiVisibilitySection({
                 )}
                 {k.inaccuracies.length > 0 && (
                   <div className="mt-4 rounded-xl bg-danger-soft px-4 py-3">
-                    <h4 className="text-caption uppercase tracking-[0.06em] text-danger">Possible inaccuracies</h4>
+                    <h4 className="text-caption uppercase tracking-[0.06em] text-danger">Possibly wrong</h4>
                     <ul className="mt-1.5 list-disc space-y-1 pl-4 text-small text-fg-soft">
                       {k.inaccuracies.map((x, j) => (
                         <li key={j}>{x}</li>

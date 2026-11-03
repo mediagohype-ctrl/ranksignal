@@ -24,7 +24,7 @@ function ForgotForm() {
     const res = await postJson("/api/auth/forgot-password", { email: addr });
     setLoading(false);
     if (res.ok) setSentTo(addr);
-    else setError(res.message ?? "Something went wrong. Please try again.");
+    else setError(res.message ?? "Something went wrong on our side. Please try again in a minute.");
   }
 
   if (sentTo) {

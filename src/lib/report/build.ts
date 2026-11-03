@@ -31,6 +31,8 @@ const OBSERVATION_SELECT = {
 export interface BuildReportOptions {
   /** Build as of this (older) succeeded crawl: findings open when it finished and the AI check finished by then. */
   crawlRunId?: string;
+  /** Score with this finished AI check instead of the latest one (snapshot of an older AI check). */
+  visibilityRunId?: string;
   /**
    * Generate the paid LLM executive summary (and record its usage). ONLY the snapshot writer passes this,
    * once per finished run; request-time callers (pages, APIs, share links) never do — they read the stored
@@ -69,7 +71,7 @@ export async function buildSiteReport(projectId: string, organizationId: string,
         organizationId,
         projectId,
         status: { in: ["succeeded", "succeeded_with_warnings"] },
-        ...(cutoff ? { finishedAt: { lte: cutoff } } : {}),
+        ...(o.visibilityRunId ? { id: o.visibilityRunId } : cutoff ? { finishedAt: { lte: cutoff } } : {}),
       },
       orderBy: { createdAt: "desc" },
     }),

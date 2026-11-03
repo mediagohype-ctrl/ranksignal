@@ -25,8 +25,8 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
       summary:
         p.score === null
           ? p.pillar === "brand" || p.pillar === "geo"
-            ? "Needs the full report — we measure this with AI answer checks."
-            : "We couldn't measure this from the pages we checked."
+            ? "Shown in the full report — we ask ChatGPT, Gemini and others about you after you sign up."
+            : "We couldn't measure this from the pages we read."
           : p.summary,
       checks: p.checks
         .filter((c) => c.status !== "not_measured")
@@ -48,8 +48,8 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
     strengths: report.strengths.slice(0, FREE_MAX_STRENGTHS),
     notes: [
       AI_VISIBILITY_NOTE,
-      `This free check reads ${o.pagesChecked.length} page${o.pagesChecked.length === 1 ? "" : "s"} (your homepage and key pages). The full report checks up to hundreds of pages.`,
-      "Scores summarise what we observed. They are not a prediction of rankings or of being included in AI answers.",
+      `This free check read ${o.pagesChecked.length} page${o.pagesChecked.length === 1 ? "" : "s"} (your homepage and main pages). The full report can read hundreds of pages.`,
+      "Scores show what we found today. They don't predict your Google position or whether AI will name you.",
     ],
   };
 }

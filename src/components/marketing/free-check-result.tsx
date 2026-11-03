@@ -6,6 +6,9 @@ import { TRIAL_DAYS } from "./plans";
 
 const PILLAR_ICON = { seo: <Search />, aeo: <Sparkles />, geo: <Bot />, brand: <Fingerprint /> } as const;
 
+/** Plain names for the four scores (docs/PLAIN_WORDS.md). */
+const PILLAR_NAME = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" } as const;
+
 export function signupHref(url: string) {
   return `/signup?website=${encodeURIComponent(url)}`;
 }
@@ -24,9 +27,9 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
     <div className="animate-fade-in space-y-12" aria-live="polite">
       <Card variant="elevated" padding="lg">
         <div className="flex flex-col items-center gap-8 text-center sm:flex-row sm:text-left">
-          <ScoreRing score={result.overall.score} grade={result.overall.grade} size="lg" label="Overall AI-readiness score" caption="Overall" />
+          <ScoreRing score={result.overall.score} grade={result.overall.grade} size="lg" label="Your overall score" caption="Overall" />
           <div className="min-w-0 flex-1">
-            <p className="eyebrow">AI-readiness check · {host}</p>
+            <p className="eyebrow">Free website check · {host}</p>
             <h2 className="mt-2 text-balance text-h2 text-fg">{result.overall.headline}</h2>
             <p className="mt-3 text-small text-muted">
               Based on {result.pagesChecked.length} page{result.pagesChecked.length === 1 ? "" : "s"} we read just now
@@ -37,10 +40,10 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
       </Card>
 
       <section aria-labelledby="fc-pillars">
-        <SectionHeading id="fc-pillars" title="Your four scores" description="SEO is how search engines read you; AEO is how answer boxes quote you; GEO is how AI assistants understand you; Brand is how clearly you present your business." />
+        <SectionHeading id="fc-pillars" title="Your four scores" description="Each score is out of 100. Some scores need us to ask AI assistants about you, which only the full check does." />
         <div className="grid gap-6 md:grid-cols-2">
           {result.pillars.map((p) => (
-            <PillarCard key={p.pillar} {...p} icon={PILLAR_ICON[p.pillar]} maxChecks={3} />
+            <PillarCard key={p.pillar} {...p} label={PILLAR_NAME[p.pillar] ?? p.label} icon={PILLAR_ICON[p.pillar]} maxChecks={3} />
           ))}
         </div>
       </section>
@@ -51,8 +54,8 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
           title={result.issues.length ? "Top things to fix" : "No major problems found"}
           description={
             result.issues.length
-              ? `The ${result.issues.length} highest-impact problems, with the first steps to fix each one.${hidden ? ` The full report explains ${hidden} more.` : ""}`
-              : "Nice work — the pages we checked cover the basics. The full report checks many more pages and measures AI answers."
+              ? `${result.issues.length === 1 ? "The most important problem, with the first steps to fix it." : `The ${result.issues.length} most important problems, with the first steps to fix each one.`}${hidden ? ` The full report shows ${hidden} more.` : ""}`
+              : "Nice work — the pages we read cover the basics. The full check reads many more pages and asks AI assistants about you."
           }
         />
         <div className="space-y-4">
@@ -66,7 +69,7 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
               impact={i.impact}
               effort={i.effort}
               affectedCount={i.affectedCount}
-              pillarLabel={i.pillarLabel}
+              pillarLabel={PILLAR_NAME[i.pillar] ?? i.pillarLabel}
               collapsible
               defaultOpen={n < 2}
             />
@@ -97,17 +100,17 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
       </Notice>
 
       <div className="bg-hero relative overflow-hidden rounded-2xl px-6 py-12 text-center shadow-lg sm:px-12">
-        <h2 className="mx-auto max-w-2xl text-balance text-h2 text-navy-fg">See whether ChatGPT and Gemini mention {result.brand ?? host}</h2>
+        <h2 className="mx-auto max-w-2xl text-balance text-h2 text-navy-fg">Find out what ChatGPT and Gemini say about {result.brand ?? host}</h2>
         <p className="mx-auto mt-3 max-w-xl text-lead text-navy-fg/80">
-          The full report checks your whole site, asks AI assistants the questions your customers ask, and gives you
-          a step-by-step fix list.
+          This free check only read your website. The full check reads your whole site, asks ChatGPT, Gemini and
+          others the questions your customers ask, and gives you a step-by-step to-do list.
         </p>
         <div className="mt-8 flex justify-center">
           <LinkButton href={signupHref(result.url)} size="lg" variant="accent" iconRight={<ArrowRight />}>
-            Get the full report free for {TRIAL_DAYS} days
+            Try the full check free for {TRIAL_DAYS} days
           </LinkButton>
         </div>
-        <p className="mt-4 text-small text-navy-fg/70">No guaranteed rankings — just honest measurement.</p>
+        <p className="mt-4 text-small text-navy-fg/70">Nobody can promise a Google position or an AI mention. We measure honestly.</p>
       </div>
     </div>
   );

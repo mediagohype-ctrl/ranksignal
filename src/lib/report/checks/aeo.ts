@@ -32,7 +32,7 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const share = withQ.length / base.length;
     out.push(makeCheck(P, "aeo.question_headings", "Headings that ask real questions", 2, {
       score: targetScore(share, QUESTION_PAGE_TARGET),
-      detail: `${withQ.length} of ${base.length} content pages use question-style headings (e.g. "How much does … cost?"); aim for at least ${pct(QUESTION_PAGE_TARGET)}.`,
+      detail: `${withQ.length} of ${base.length} content pages have headings written as questions (e.g. "How much does … cost?"); aim for at least ${pct(QUESTION_PAGE_TARGET)}.`,
       affected: base.filter((p) => !withQ.includes(p)).map(urlOf),
       evidence: withQ[0]?.extracted?.questionHeadings?.[0] ? `Example: "${withQ[0].extracted.questionHeadings[0].slice(0, 100)}"` : undefined,
       facts: { withQuestions: withQ.length, total: base.length },
@@ -45,7 +45,7 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
       ? makeCheck(P, "aeo.direct_answers", "Short, direct answers", 2.5, {
           score: 40,
           status: "warn",
-          detail: "No question headings were found, so there are no ready-made answers for answer engines to quote.",
+          detail: "No question headings were found, so there are no ready-made answers for Google and AI assistants to quote.",
           facts: { questions: 0, answered: 0 },
         })
       : makeCheck(P, "aeo.direct_answers", "Short, direct answers", 2.5, {
@@ -65,16 +65,16 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const hasSchema = (p: ReportPage) => p.extracted!.schemaTypes.some((t) => ANSWER_SCHEMA.includes(t));
     const anySchema = ok.some(hasSchema);
     if (qPages.length === 0) {
-      out.push(makeCheck(P, "aeo.faq_schema", "FAQ / How-to markup", 1.5, {
+      out.push(makeCheck(P, "aeo.faq_schema", "Questions labelled for Google and AI", 1.5, {
         score: anySchema ? 100 : 55,
-        detail: anySchema ? "FAQ or How-to markup is in use on your site." : "No pages have question-and-answer sections, and no FAQ or How-to markup was found.",
+        detail: anySchema ? "Your questions and answers are labelled for Google and AI." : "No pages have question-and-answer sections, and none are labelled for Google and AI.",
         facts: { questionPages: 0, anySchema },
       }));
     } else {
       const missing = qPages.filter((p) => !hasSchema(p));
-      out.push(makeCheck(P, "aeo.faq_schema", "FAQ / How-to markup", 1.5, {
+      out.push(makeCheck(P, "aeo.faq_schema", "Questions labelled for Google and AI", 1.5, {
         score: ratioScore(missing.length, qPages.length),
-        detail: missing.length ? `${missing.length} of ${qPages.length} pages with several questions have no FAQ/How-to markup.` : `All ${qPages.length} question-and-answer pages carry FAQ/How-to markup.`,
+        detail: missing.length ? `${missing.length} of ${qPages.length} pages with several questions don't label them for Google and AI.` : `All ${qPages.length} question-and-answer pages label them for Google and AI.`,
         affected: missing.map(urlOf),
         facts: { questionPages: qPages.length, missing: missing.length },
       }));
@@ -100,7 +100,7 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
   {
     const scored = v2.filter((p) => typeof p.extracted!.readingEase === "number");
     if (scored.length === 0) {
-      out.push(notMeasured(P, "aeo.readability", "Easy-to-read writing", 1.5, v2.length ? "Not enough English body text to score readability." : NEEDS_RESCAN));
+      out.push(notMeasured(P, "aeo.readability", "Easy-to-read writing", 1.5, v2.length ? "Not enough English text to score how easy it is to read." : NEEDS_RESCAN));
     } else {
       const avg = scored.reduce((a, p) => a + (p.extracted!.readingEase as number), 0) / scored.length;
       const hard = scored.filter((p) => (p.extracted!.readingEase as number) < 40);
@@ -119,9 +119,9 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const valid = ok.filter((p) => p.extracted!.jsonLd.some((j) => !isInvalidLd(j)));
     const coverage = valid.length / ok.length;
     const score = Math.max(0, targetScore(coverage, 0.8) - invalid.length * 10);
-    out.push(makeCheck(P, "aeo.structured_data", "Structured data (schema)", 2, {
+    out.push(makeCheck(P, "aeo.structured_data", "Info for Google and AI", 2, {
       score,
-      detail: `${valid.length} of ${ok.length} pages include structured data${invalid.length ? `; ${plural(invalid.length, "page")} ${invalid.length === 1 ? "has" : "have"} broken markup that can't be read` : ""}.`,
+      detail: `${valid.length} of ${ok.length} pages include info for Google and AI${invalid.length ? `; ${plural(invalid.length, "page")} ${invalid.length === 1 ? "has" : "have"} broken info that can't be read` : ""}.`,
       affected: [...invalid.map(urlOf), ...ok.filter((p) => !valid.includes(p)).map(urlOf)],
       facts: { valid: valid.length, invalid: invalid.length, total: ok.length },
     }));

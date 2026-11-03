@@ -6,6 +6,7 @@ import { getUsageSummary } from "@/lib/billing/usage";
 import { requireAppSession, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, humanize } from "@/lib/dashboard/format";
 import { MembersPanel } from "@/components/app/members-panel";
+import { roleLabel } from "@/components/app/role-label";
 import { BillingPlans } from "@/components/app/billing-panel";
 import { BrandingPanel } from "@/components/app/settings/branding-panel";
 import { canHidePoweredBy, isBrandingEligible, readStoredBranding } from "@/lib/branding";
@@ -16,6 +17,7 @@ import {
   CardHeader,
   EmptyState,
   KeyValueList,
+  LinkButton,
   Meter,
   Notice,
   PageHeader,
@@ -32,6 +34,14 @@ import { SettingsTabs } from "./settings-tabs";
 import { AccountPanel } from "./account-panel";
 
 export const metadata = { title: "Settings" };
+
+const TASK_LABEL: Record<string, string> = {
+  crawl_page: "Website checks",
+  visibility_prompt: "AI checks",
+  brand_probe: "AI knows you checks",
+  content_generation: "Writing suggested fixes",
+  llm_analysis: "AI analysis",
+};
 
 const REGION_LABEL: Record<string, string> = { IN: "India", US: "United States", EU: "European Union", GB: "United Kingdom" };
 
@@ -81,26 +91,26 @@ export default async function SettingsPage() {
                   </Badge>
                 ),
               },
-              { label: "Your role", value: <span className="capitalize">{s.role}</span> },
+              { label: "Your role", value: roleLabel(s.role) },
             ]}
           />
         </CardBody>
       </Card>
       <Card>
-        <CardHeader icon={<ShieldCheck />} title="Website changes" description="Our safety switch for publishing." />
+        <CardHeader icon={<ShieldCheck />} title="Website changes" description="Whether approved fixes can go live on your website." />
         <CardBody className="space-y-3">
           <Badge tone={org.publishingEnabled ? "success" : "danger"} variant="dot">
-            {org.publishingEnabled ? "Publishing allowed" : "Publishing paused"}
+            {org.publishingEnabled ? "Fixes can go live" : "Fixes paused"}
           </Badge>
           <p className="text-small text-fg-soft">
             {org.publishingEnabled
-              ? "Approved fixes can be published to connected websites. Every change is logged and can be rolled back."
-              : "No changes will be published to your websites right now. Contact support if you didn't expect this."}
+              ? "Fixes you approve can go live on your connected websites. Every change is recorded and can be undone."
+              : "No fixes will go live on your websites right now. Contact us if you didn't expect this."}
           </p>
         </CardBody>
       </Card>
       <div className="grid gap-4 sm:grid-cols-3 lg:col-span-3">
-        <Stat label="Projects" value={`${projectCount} / ${plan.maxProjects}`} icon={<FolderKanban />} hint="Websites you're tracking" />
+        <Stat label="Projects" value={`${projectCount} / ${plan.maxProjects}`} icon={<FolderKanban />} hint="Websites you're following" />
         <Stat label="Team seats" value={`${memberCount} / ${plan.seats}`} icon={<Users />} hint="People with access" />
         <Stat label="Plan" value={plan.name} icon={<Globe2 />} hint={planHint ?? "Change it under Billing & usage"} />
       </div>
@@ -110,7 +120,7 @@ export default async function SettingsPage() {
   const billing = (
     <div className="space-y-10">
       <section aria-labelledby="usage-h" className="space-y-5">
-        <SectionHeading id="usage-h" title="This month's usage" description={`Billing period ${usage.period}. Credits are used when we scan your site or ask AI engines.`} />
+        <SectionHeading id="usage-h" title="This month's usage" description={`Billing period ${usage.period}. Credits are used when we check your website or ask AI tools.`} />
         {org.status !== "active" && (
           <Notice tone="danger" title={`Your account is ${humanize(org.status).toLowerCase()}`}>
             New scans may be paused until billing is sorted out.
@@ -143,7 +153,9 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader title="Where your credits went" description="Grouped by type of work." />
           {byType.length === 0 ? (
-            <EmptyState size="sm" icon={<Coins />} title="No credits used yet this month" description="Run a scan or an AI visibility check to see usage here." />
+            <EmptyState size="sm" icon={<Coins />} title="No credits used yet this month" description="Check a website or run an AI check to see usage here."
+              action={<LinkButton href="/app" variant="secondary">Go to your projects</LinkButton>}
+            />
           ) : (
             <Table caption="Credits by task type" zebra>
               <THead>
@@ -156,7 +168,7 @@ export default async function SettingsPage() {
               <tbody>
                 {byType.map(([t, n]) => (
                   <TR key={t}>
-                    <TD className="font-medium text-fg">{humanize(t)}</TD>
+                    <TD className="font-medium text-fg">{TASK_LABEL[t] ?? humanize(t)}</TD>
                     <TD numeric>{n.toLocaleString()}</TD>
                     <TD numeric className="text-muted">
                       {usage.used ? `${Math.round((n / usage.used) * 100)}%` : "—"}

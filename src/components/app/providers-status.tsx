@@ -1,4 +1,4 @@
-// Transparency about which AI engines our visibility checks use. Presentational only (server or client safe):
+// Transparency about which AI engines our visibility checks use (shown as product names). Presentational only (server or client safe):
 // pages pass in describeProviders() output (or GET /api/providers) or the labels stored on a run.
 import { Bot, CircleSlash, FlaskConical, Info } from "lucide-react";
 import { SIMULATED_LABEL } from "@/lib/providers/visibility/simulated";
@@ -14,41 +14,42 @@ export interface PublicProvider {
 }
 
 export const API_LIMITATION =
-  "We ask through each company's developer API. Answers there can differ from what someone sees in the consumer apps (ChatGPT, Claude.ai, Gemini), which personalise results and change often.";
+  "Answers can differ a little from what someone sees in the ChatGPT, Gemini or Claude apps, which personalise results and change often.";
 
-/** Plain-English engine name from a provider label (as stored on observations) or id. */
+const PRODUCTS: [RegExp, string][] = [
+  [/openai|gpt|chatgpt|dataforseo/i, "ChatGPT"],
+  [/anthropic|claude/i, "Claude"],
+  [/gemini|google/i, "Gemini"],
+  [/perplexity|sonar/i, "Perplexity"],
+  [/x-ai|xai|grok/i, "Grok"],
+  [/copilot|microsoft/i, "Copilot"],
+];
+
+/** Product name (ChatGPT, Gemini, Claude, Perplexity, Grok) from a provider label or id. Never shows model ids. */
 export function engineName(labelOrId: string): string {
   const s = labelOrId.trim();
-  const style = /^(\w[\w ]*?)-style answer\b/i.exec(s);
-  if (style && /openrouter/i.test(s)) return `${style[1]}-style via OpenRouter`;
-  if (s.startsWith("openrouter:")) {
-    const vendor = s.slice("openrouter:".length).split("/")[0];
-    const v: Record<string, string> = { openai: "ChatGPT", anthropic: "Claude", google: "Gemini", perplexity: "Perplexity" };
-    return `${v[vendor] ?? "AI"}-style via OpenRouter`;
-  }
-  if (s === SIMULATED_LABEL || s === "simulated") return "Simulated demo data";
-  if (/^openai\b/i.test(s)) return "ChatGPT-style via OpenAI API";
-  if (/^gemini\b/i.test(s)) return "Gemini via Google API";
-  if (/^perplexity\b/i.test(s)) return "Perplexity via Sonar API";
-  if (/^dataforseo\b/i.test(s)) return "ChatGPT results via DataForSEO";
-  return s;
+  if (s === SIMULATED_LABEL || /^simulated/i.test(s)) return "Sample answers (not real)";
+  // OpenRouter ids look like "openrouter:openai/gpt-4o"; the vendor part names the product.
+  const key = s.startsWith("openrouter:") ? s.slice("openrouter:".length) : s;
+  for (const [re, name] of PRODUCTS) if (re.test(key)) return name;
+  return "Other AI tool";
 }
 
 function engineNote(p: PublicProvider): string {
   const id = p.id.split(":")[0];
   if (p.simulated) {
     return p.active
-      ? "No real AI engine is connected, so checks use made-up demo answers. They are always labelled and never count as real results."
-      : "Demo answers for product tours. Switched off automatically because real AI engines are connected.";
+      ? "No real AI tool is switched on, so checks use made-up sample answers. They are always labelled and never count as real results."
+      : "Sample answers for demos. Switched off because real AI tools are on.";
   }
   const base: Record<string, string> = {
-    openrouter: "Asks the model through OpenRouter with web search turned on, so answers can cite live websites.",
-    openai: "Asks OpenAI's models directly with web search.",
-    gemini: "Asks Google's Gemini with Google Search grounding.",
-    perplexity: "Asks Perplexity's Sonar model, which always searches the web.",
-    dataforseo: "Collects ChatGPT answers through the DataForSEO data service.",
+    openrouter: "Searches the web before answering, so it can link to real websites.",
+    openai: "Searches the web before answering, so it can link to real websites.",
+    gemini: "Uses Google Search before answering.",
+    perplexity: "Always searches the web before answering.",
+    dataforseo: "Collects real ChatGPT answers.",
   };
-  return base[id] ?? "Asks this AI engine the same questions your customers ask.";
+  return base[id] ?? "Asks this AI tool the same questions your customers ask.";
 }
 
 function statusBadge(p: PublicProvider) {
@@ -66,18 +67,18 @@ export function ProvidersStatus({ providers, className }: { providers: PublicPro
     <Card className={className}>
       <CardHeader
         icon={<Bot />}
-        title="AI engines we ask"
+        title="AI tools we ask"
         description={
           realActive
-            ? "Every check sends your questions to each active engine below."
-            : "No real AI engine is connected right now."
+            ? "Every AI check asks your questions to each AI tool below."
+            : "No real AI tool is switched on right now."
         }
       />
       <CardBody className="space-y-4">
         {active.length === 0 ? (
           <p className="flex items-center gap-2 text-small text-fg-soft">
             <CircleSlash aria-hidden size={16} className="text-muted" />
-            No AI engines are available, so AI visibility checks can&apos;t run at the moment.
+            No AI tools are available, so AI checks can&apos;t run right now. Please try again later or contact us.
           </p>
         ) : (
           <ul className="grid gap-3 md:grid-cols-2">
@@ -102,7 +103,7 @@ export function ProvidersStatus({ providers, className }: { providers: PublicPro
               <span key={p.id}>
                 {i > 0 && ", "}
                 {engineName(p.label)}
-                {p.simulated ? " (only used when no real engine is connected)" : p.configured && !p.enabled ? " (turned off)" : ""}
+                {p.simulated ? " (only used when no real AI tool is on)" : p.configured && !p.enabled ? " (turned off)" : ""}
               </span>
             ))}
             .
@@ -126,7 +127,7 @@ export function MeasuredWith({ labels, className }: { labels: string[]; classNam
       <p className="flex flex-wrap items-center gap-1.5 text-small text-fg-soft">
         <span className="font-medium text-fg">Measured with:</span>
         {names.map((n) => (
-          <Badge key={n} tone={n === "Simulated demo data" ? "warning" : "primary"} size="sm" icon={<Bot />}>
+          <Badge key={n} tone={n === "Sample answers (not real)" ? "warning" : "primary"} size="sm" icon={<Bot />}>
             {n}
           </Badge>
         ))}

@@ -111,68 +111,68 @@ export function classifyAction(input: PolicyInput): PolicyResult {
 
   // ---- Class D: hard blocks (checked first; nothing overrides them) ----
   if (has(CLASS_D_TYPES, type) || type.startsWith("delete_") || type.startsWith("sitewide_")) {
-    return result("D", "blocked", `Action type "${type}" is class D (destructive, URL/redirect, robots, checkout, access or site-wide) and is never automated; handle manually.`);
+    return result("D", "blocked", "This kind of change can delete pages, change web addresses or robot rules, or affect your whole site, so we never make it for you. Make it by hand if you need it.");
   }
   if (target?.resourceType === "site" || target?.resourceType === "sitewide") {
-    return result("D", "blocked", "Site-wide changes are class D and are never automated.");
+    return result("D", "blocked", "Changes to your whole site are never made for you. Make them by hand if you need them.");
   }
   if (ACCESS_CONTROL_TYPE.test(type) && !has(CLASS_A_TYPES, type)) {
-    return result("D", "blocked", "Access-control related changes are class D.");
+    return result("D", "blocked", "Changes to who can log in or see pages are never made for you. Make them by hand if you need them.");
   }
   if (proposedChange && (proposedChange.field === "slug" || proposedChange.field === "url" || proposedChange.field === "status_delete")) {
-    return result("D", "blocked", `Changing "${proposedChange.field}" alters URLs/availability and is class D.`);
+    return result("D", "blocked", "This would change a web address or remove a page, so we never do it for you. Make it by hand if you need it.");
   }
   const isWrite = !has(CLASS_A_TYPES, type);
   if (isWrite && url && CRITICAL_URL.test(safePath(url))) {
-    return result("D", "blocked", "Target is a checkout/payment/account/legal page; changes are class D.");
+    return result("D", "blocked", "This is a checkout, payment, account or legal page. We never change those for you. Make the change by hand.");
   }
   // Claim screening applies to text that would be written to the customer's site. Class A briefs
   // are internal documents (and carry their own "no guaranteed outcome" disclaimers).
   const claims = isWrite ? detectRegulatedClaims(proposedChange?.after) : [];
   if (claims.length) {
-    return result("D", "blocked", `Proposed text contains regulated or guarantee-style claims (${claims.slice(0, 3).join(", ")}); requires manual legal/compliance review.`);
+    return result("D", "blocked", `The new text makes promises or regulated claims (${claims.slice(0, 3).join(", ")}) that need a legal check. Check it, then make the change by hand.`);
   }
 
   // ---- Class A: observe / prepare ----
   if (has(CLASS_A_TYPES, type)) {
-    return result("A", "auto_execute", "Class A: prepares a brief or internal task; no change to the customer site.");
+    return result("A", "auto_execute", "Safe: this only prepares a plan or a task. Nothing on your website changes.");
   }
 
   // Unknown types fail closed.
   if (!has(CLASS_B_TYPES, type) && !has(CLASS_C_TYPES, type)) {
-    return result("D", "blocked", `Unknown action type "${type}" — blocked by default (fail closed).`);
+    return result("D", "blocked", "We don't recognise this kind of change, so we stopped it to be safe. Contact us if you need it.");
   }
 
   // ---- Capability check (when a connector is known) ----
   const cap = REQUIRED_CAPABILITY[type];
   if (connector === null) {
-    return result(has(CLASS_B_TYPES, type) ? "B" : "C", "blocked", "No connected integration can write this change; use the manual export instructions.");
+    return result(has(CLASS_B_TYPES, type) ? "B" : "C", "blocked", "Your website isn't connected in a way that can make this change. Follow the copy-and-paste steps instead.");
   }
   if (connector && cap && !connector[cap]) {
     const rc: RiskClass = has(CLASS_B_TYPES, type) && !isCriticalPage(page) ? "B" : "C";
-    return result(rc, "blocked", `Connector lacks the "${cap}" capability; use the manual export instructions.`);
+    return result(rc, "blocked", "Your connected website can't make this kind of change for us. Follow the copy-and-paste steps instead.");
   }
 
   // ---- Class C: material content, or metadata on critical pages ----
   if (has(CLASS_C_TYPES, type)) {
-    return result("C", "approval_required", "Class C: material content, structured data or publishing change requires approval of the exact draft.");
+    return result("C", "approval_required", "This changes what visitors or Google read, so it needs your OK on the exact text first.");
   }
   if (isCriticalPage(page)) {
-    return result("C", "approval_required", "Metadata change on the homepage, a key landing page or a high-traffic page is class C and requires approval.");
+    return result("C", "approval_required", "This is your homepage or one of your busiest pages, so it needs your OK on the exact text first.");
   }
 
   // ---- Class B: allowed metadata on non-critical pages ----
   if (connector && !connector.rollback) {
-    return result("B", "blocked", "Class B changes require connector rollback support, which this connector lacks.");
+    return result("B", "blocked", "Your connected website can't undo this kind of change, so we won't make it for you. Follow the copy-and-paste steps instead.");
   }
   const allowed = automation?.allowClassB ?? [];
   if (!allowed.includes(type)) {
-    return result("B", "approval_required", `Class B: "${type}" is not in this project's automation allow-list; approval required.`);
+    return result("B", "approval_required", "A small change. It needs your OK first, because you haven't let this kind of change go live without asking.");
   }
   if (!connector) {
-    return result("B", "approval_required", "Class B allow-listed, but no connector with rollback is attached yet; approval required.");
+    return result("B", "approval_required", "A small change, but your website isn't connected in a way we can undo, so it needs your OK.");
   }
-  return result("B", "auto_execute", `Class B: "${type}" is allow-listed for this project on a non-critical page with rollback support.`);
+  return result("B", "auto_execute", "A small change you said can go live without asking. It can be undone with one click.");
 }
 
 function isCriticalPage(page: PageSignals | null | undefined) {

@@ -7,9 +7,9 @@ import { Button, Card, CardBody, CardFooter, CardHeader, Dialog, Field, Input, S
 
 type Headline = { gains: string[]; risks: string[]; nextActions: string[] };
 const KEYS: { key: keyof Headline; label: string }[] = [
-  { key: "gains", label: "Gains" },
-  { key: "risks", label: "Risks" },
-  { key: "nextActions", label: "Next actions" },
+  { key: "gains", label: "What got better" },
+  { key: "risks", label: "What to watch" },
+  { key: "nextActions", label: "Next steps" },
 ];
 
 const pad3 = (a: string[]) => [...a, "", "", ""].slice(0, 3);
@@ -21,7 +21,7 @@ async function call(url: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message ?? "Request failed");
+  if (!res.ok) throw new Error(data?.error?.message ?? "Something went wrong. Please try again.");
   return data;
 }
 
@@ -137,7 +137,7 @@ export function ReviewEditor({
         open={confirm === "send"}
         onClose={() => setConfirm(null)}
         title="Approve and send this report?"
-        description={`It will appear in ${clientLabel}'s report archive and owners/admins will be emailed (if email is on for this project).${dirty ? " Your unsaved edits will be saved first." : ""}`}
+        description={`It will appear in ${clientLabel}'s report archive and the Owner and Admins will be emailed (if email is on for this project).${dirty ? " Your unsaved edits will be saved first." : ""}`}
         icon={<Send />}
         footer={
           <>

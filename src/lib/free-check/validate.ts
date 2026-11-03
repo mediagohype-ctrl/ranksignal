@@ -38,6 +38,6 @@ export async function validateFreeCheckUrl(raw: unknown): Promise<UrlValidation>
     if (e instanceof SafeFetchError && e.code === "invalid_url") {
       return { ok: false, code: "invalid_url", message: "Enter a website address like example.com." };
     }
-    return { ok: false, code: "blocked_url", message: "That address isn't a public website we can check." };
+    return { ok: false, code: "blocked_url", message: "That address isn't a public website we can check. Try your main website address." };
   }
 }

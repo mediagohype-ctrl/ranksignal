@@ -12,10 +12,10 @@ import { SERVICE_FROM_PRICE, inr } from "./plans";
 /* ------------------------------------------------------------------ sample data */
 
 const PILLAR_DELTAS = [
-  { label: "SEO", end: 78, delta: 4 },
-  { label: "AEO", end: 54, delta: 9 },
-  { label: "GEO", end: 41, delta: 6 },
-  { label: "Brand", end: 86, delta: 1 },
+  { label: "Google health", end: 78, delta: 4 },
+  { label: "Easy to quote", end: 54, delta: 9 },
+  { label: "Ready for AI", end: 41, delta: 6 },
+  { label: "AI knows you", end: 86, delta: 1 },
 ] as const;
 
 /** Overall score, May → October. `shipped` = fixes went live that month; `method` = question set changed. */
@@ -33,7 +33,7 @@ const LOST = "Best bakery for a custom wedding cake";
 
 type Who = "Our team" | "You" | "Automated";
 const WORK: { title: string; who: Who; note?: string; undo?: boolean }[] = [
-  { title: "Meta description updated on the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
+  { title: "Google summary updated on the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
   { title: "Delivery areas answered on the homepage", who: "Our team" },
   { title: "Opening hours fixed on Google Business Profile", who: "You", note: "Marked done by hand" },
 ];
@@ -95,12 +95,12 @@ const WHO_STYLE: Record<Who, string> = {
 /** A monthly impact report card overlapped by a week of the client work log. */
 export function MonthlyProofComposition() {
   return (
-    <figure aria-label="Sample: a monthly impact report and a week of the work log for a fictional bakery" className="relative">
+    <figure aria-label="Sample: a monthly report and a week of the task board for a fictional bakery" className="relative">
       {/* Monthly report */}
       <div className="relative z-10 overflow-hidden rounded-[22px] border border-border bg-surface shadow-xl lg:mr-[10%]">
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-[0.9375rem] font-semibold text-fg">October impact report</p>
+            <p className="text-[0.9375rem] font-semibold text-fg">October report</p>
             <p className="truncate text-xs text-muted">Emailed 1 Nov · greenleaf-bakery.example</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -192,7 +192,7 @@ export function MonthlyProofComposition() {
       <div className="relative z-20 -mt-10 ml-4 rounded-[22px] border border-border bg-surface p-5 shadow-xl sm:-mt-12 sm:ml-auto sm:w-[80%] sm:p-6 lg:w-[66%]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs text-muted">Work log</p>
+            <p className="text-xs text-muted">Task board</p>
             <p className="text-[0.9375rem] font-semibold text-fg">Week of 20 October</p>
           </div>
           <SampleTag />
@@ -208,7 +208,7 @@ export function MonthlyProofComposition() {
                     {w.undo && (
                       <span className="inline-flex items-center gap-1 font-medium text-fg underline decoration-border-strong underline-offset-4">
                         <RotateCcw aria-hidden size={12} />
-                        Roll back
+                        Undo
                       </span>
                     )}
                   </span>
@@ -229,12 +229,12 @@ export function MonthlyProofComposition() {
 
 const ALWAYS_ON = [
   {
-    title: "Re-checked on its own",
-    body: "By default we re-read your site every week and ask AI your questions every month, then email you when the new report is ready.",
+    title: "Checked again on its own",
+    body: "We read your website again every week and ask AI your customer questions every month, then email you when the new report is ready.",
   },
   {
-    title: "History that compares fairly",
-    body: "Every score is kept over time. “Since last month” compares the same questions, and the chart marks when fixes went live.",
+    title: "Score history you can trust",
+    body: "Every score is kept. “Since last month” compares the same questions, and the chart shows when fixes went live.",
   },
   {
     title: "A link you can share",
@@ -251,11 +251,11 @@ export function MonthlyProofSection() {
             See what changed. Every month.
           </h2>
           <p className="mk-lead mt-8 max-w-[34rem] text-fg-soft">
-            Early each month, a short report lands in your inbox, which you can save as a PDF to pass on: your scores then and now, the AI
-            questions you won and lost, anything AI got wrong about you, and every fix that went live.
+            Early each month, a short report lands in your inbox (save it as a PDF to share): your scores then and now, the
+            customer questions where AI named you or didn&apos;t, anything AI got wrong about you, and every fix that went live.
           </p>
           <p className="mk-body mt-5 max-w-[34rem] text-fg-soft">
-            Every change is logged with who made it, and changes made through a connector roll back in one click. The report shows what
+            Every change shows who made it, and changes we made on your site can be undone in one click. The report shows what
             we measured next to the work done. It doesn&apos;t claim one caused the other.
           </p>
         </div>
@@ -278,9 +278,9 @@ export function MonthlyProofSection() {
 /* ------------------------------------------------------------------ section: DIY or done for you */
 
 const DONE_FOR_YOU = [
-  "Our team ships the fixes on your site each month, after you approve them",
-  "Google Business Profile and key pages kept up to date",
-  "A monthly impact report we check by hand, and a call to walk you through it",
+  "Our team makes the fixes on your site each month, after you say OK",
+  "Your Google Business Profile and main pages kept up to date",
+  "A monthly report we check by hand, and a call to walk you through it",
 ];
 
 export function DoneForYouSection() {
@@ -293,7 +293,7 @@ export function DoneForYouSection() {
               Do it yourself, or let us do it.
             </h2>
             <p className="mk-body mt-5 max-w-md text-fg-soft">
-              {BRAND.name} on its own gives you the scores, the fix list and drafted changes to approve. If you&apos;d
+              {BRAND.name} on its own gives you the scores, the to-do list and ready-made fixes to approve. If you&apos;d
               rather not do the work yourself, our team can do it for you.
             </p>
           </div>
@@ -319,7 +319,7 @@ export function DoneForYouSection() {
                   <ArrowRight aria-hidden />
                 </Link>
                 <p className="text-small text-bg/65 sm:max-w-[16rem] sm:text-right">
-                  Plus GST and setup. We promise the work, not rankings.
+                  Plus GST and setup. We promise the work, not a Google position.
                 </p>
               </div>
             </div>

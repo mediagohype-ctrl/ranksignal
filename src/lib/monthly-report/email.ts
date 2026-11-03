@@ -29,15 +29,15 @@ export function monthlyReportEmail(p: MonthlyReportPayload, summary: string, app
   if (p.aiVisibility.end) {
     const s = p.aiVisibility.likeForLike?.start ?? p.aiVisibility.start;
     const e = p.aiVisibility.likeForLike?.end ?? p.aiVisibility.end;
-    facts.push(s ? `Mentioned in AI answers: ${pct(s.mentionRate)} → ${pct(e.mentionRate)}.` : `Mentioned in ${pct(e.mentionRate)} of AI answers.`);
+    facts.push(s ? `Named in AI answers: ${pct(s.mentionRate)} → ${pct(e.mentionRate)}.` : `Named in ${pct(e.mentionRate)} of AI answers.`);
   }
-  facts.push(`Work shipped: ${p.work.shipped.length}. Issues fixed: ${p.issues.fixed.total}.`);
+  facts.push(`Work done: ${p.work.shipped.length}. Problems fixed: ${p.issues.fixed.total}.`);
   const { html, text } = renderEmail({
     title: `${p.periodLabel} impact report for ${p.project.name}`,
     preheader: facts[0] ?? `Your ${p.periodLabel} report is ready.`,
-    paragraphs: [summary, ...facts, "Changes are measured, not guaranteed, and AI answers vary between checks — the report explains what we can and can't conclude."],
+    paragraphs: [summary, ...facts, "We measure changes but can't promise them, and AI answers vary from one check to the next — the report explains what we can and can't tell."],
     cta: { label: "Open the full report", url: new URL(monthlyReportLink(p.project.id, p.period), appUrl).toString() },
-    footer: `You're getting this because you're an owner or admin on ${sender}. To stop these emails for this project, open Project settings → Notifications.`,
+    footer: `You're getting this because you're an Owner or Admin on ${sender}. To stop these emails for this website, open Settings → Notifications.`,
     branding: eb,
   });
   return { subject, html, text, replyTo: (eb && branding?.replyTo) || undefined };
@@ -47,7 +47,7 @@ export function monthlyReportNotice(p: MonthlyReportPayload) {
   return {
     type: "monthly_report" as const,
     title: `${p.periodLabel} impact report is ready — ${p.project.name}`,
-    body: `${p.work.shipped.length} item${p.work.shipped.length === 1 ? "" : "s"} shipped, ${p.issues.fixed.total} issue${p.issues.fixed.total === 1 ? "" : "s"} fixed. See what changed and what's next.`,
+    body: `${p.work.shipped.length} ${p.work.shipped.length === 1 ? "item" : "items"} done, ${p.issues.fixed.total} ${p.issues.fixed.total === 1 ? "problem" : "problems"} fixed. See what changed and what's next.`,
     link: monthlyReportLink(p.project.id, p.period),
   };
 }

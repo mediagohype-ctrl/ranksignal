@@ -1,6 +1,7 @@
 // Executive summary: a deterministic template, optionally rewritten by the LLM from computed facts only.
 import { z } from "zod";
 import type { SiteReport } from "@/lib/report/types";
+import { plural } from "@/lib/report/inputs";
 import { generateStructured, isLlmConfigured } from "@/lib/providers/llm";
 
 const pctOf = (n: number | null) => `${Math.round((n ?? 0) * 100)}%`;
@@ -9,30 +10,30 @@ export const FORBIDDEN_CLAIMS = /\b(guarantee[sd]?|guaranteeing|promise[sd]?|wil
 
 export function templateSummary(r: SiteReport): string {
   if (!r.crawl.crawlRunId) {
-    return `We haven't scanned ${r.websiteUrl} yet. Start a scan and we'll check how well search engines, answer engines and AI assistants can find, understand and recommend ${r.brand}. The report will explain each problem in plain language with step-by-step fixes.`;
+    return `We haven't checked ${r.websiteUrl} yet. Check your website and we'll see how well Google and AI assistants like ChatGPT can find, understand and recommend ${r.brand}. The report explains each problem in plain words, with step-by-step fixes.`;
   }
   const s: string[] = [];
   const scored = r.pillars.filter((p) => p.score !== null);
   if (r.overall.score === null) {
-    s.push(`We scanned ${r.crawl.pagesCrawled} pages of ${r.websiteUrl} but couldn't read enough of them to score the site.`);
+    s.push(`We checked ${plural(r.crawl.pagesCrawled, "page")} of ${r.websiteUrl} but couldn't read enough of them to score the site.`);
   } else {
-    s.push(`We checked ${r.crawl.pagesCrawled} pages of ${r.websiteUrl}, and the site scores ${r.overall.score}/100 overall (grade ${r.overall.grade}).`);
+    s.push(`We checked ${plural(r.crawl.pagesCrawled, "page")} of ${r.websiteUrl}, and the site scores ${r.overall.score} out of 100 overall.`);
     if (scored.length > 1) {
       const best = [...scored].sort((a, b) => b.score! - a.score!)[0];
       const worst = [...scored].sort((a, b) => a.score! - b.score!)[0];
-      s.push(`Your strongest area is ${best.label} (${best.score}/100) and the weakest is ${worst.label} (${worst.score}/100).`);
+      s.push(`Your strongest area is ${best.label} (${best.score} out of 100) and the weakest is ${worst.label} (${worst.score} out of 100).`);
     }
   }
   const high = r.issues.filter((i) => i.impact === "high");
   if (r.issues.length) {
-    s.push(`We found ${r.issues.length} things to improve${high.length ? `, ${high.length} of them important` : ""}; the first to tackle is “${r.issues[0].title.replace(/\.$/, "")}”.`);
+    s.push(`We found ${plural(r.issues.length, "thing")} to improve${high.length ? `, ${high.length} of them urgent` : ""}; start with “${r.issues[0].title.replace(/\.$/, "")}”.`);
   }
-  if (r.quickWins.length) s.push(`${r.quickWins.length} of these are quick fixes you can do in under an hour each.`);
+  if (r.quickWins.length) s.push(r.quickWins.length === 1 ? "One of these is a quick fix you can do in under an hour." : `${r.quickWins.length} of these are quick fixes you can do in under an hour each.`);
   const ai = r.aiVisibility;
   if (ai.measured && !ai.simulated) {
-    s.push(`In ${ai.sampleSize} AI answers we sampled, ${r.brand} was mentioned ${pctOf(ai.mentionRate)} of the time and your site was cited ${pctOf(ai.citationRate)} of the time.`);
+    s.push(`In ${ai.sampleSize} AI answers we collected, ${r.brand} was named ${pctOf(ai.mentionRate)} of the time and your site was linked ${pctOf(ai.citationRate)} of the time.`);
   } else {
-    s.push(`AI visibility hasn't been measured with real AI answers yet — run an AI visibility check to see how often assistants mention ${r.brand}.`);
+    s.push(`We haven't asked real AI assistants about you yet — run an AI check to see how often they name ${r.brand}.`);
   }
   return s.slice(0, 5).join(" ");
 }

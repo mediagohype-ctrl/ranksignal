@@ -2,5 +2,5 @@
 import { RouteError } from "@/components/app/audit/route-states";
 
 export default function OffsiteError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  return <RouteError error={error} reset={reset} what="the off-site tracker" />;
+  return <RouteError error={error} reset={reset} what="places outside your website" />;
 }

@@ -9,12 +9,12 @@ import { FAQS } from "@/components/marketing/content";
 import { DoneForYouSection, MonthlyProofSection } from "@/components/marketing/home-proof";
 import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
 
-const TITLE = `${BRAND.name} — Get found and cited in AI answers`;
+const TITLE = `${BRAND.name} — Check how Google and AI see your business`;
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description:
-    "Measure how ChatGPT, Gemini, Perplexity, Claude and Grok mention and cite your brand, audit your site for AI readiness, and ship approved fixes safely.",
+    "Free website check for small businesses. See how Google and AI assistants like ChatGPT and Gemini see your business, get a plain to-do list, and fix it with your OK. Simple SEO and AI search (GEO) in plain words.",
   alternates: { canonical: "/" },
   openGraph: {
     title: TITLE,
@@ -30,28 +30,28 @@ const SITE = BRAND.appUrl.replace(/\/$/, "");
 const PAINS = [
   "Customers ask ChatGPT or Gemini for a recommendation, and you aren't in the answer.",
   "When AI does mention you, it gets your prices, areas or hours wrong.",
-  "Your SEO report says “all good”, but it never checks what AI tools say.",
+  "Your old website report says “all good”, but it never checks what AI tools say.",
 ];
 
 const SOLUTION = [
-  "Checks what AI assistants say about you, question by question",
+  "Checks what AI assistants say about you, one customer question at a time",
   "Finds the gaps on your website that keep you out of answers",
-  "Explains each fix in plain English, step by step",
-  "Drafts the change, and waits for your approval before anything goes live",
+  "Explains each fix in plain words, step by step",
+  "Drafts the change and waits for your OK before anything goes live",
 ];
 
 const SCORES = [
-  { term: "SEO", name: "Search engines", line: "Can Google and Bing find, read and trust your pages?" },
-  { term: "AEO", name: "Answer engines", line: "Do your pages give short, direct answers worth quoting?" },
-  { term: "GEO", name: "Generative AI", line: "Do ChatGPT, Gemini and others name you and link to you?" },
-  { term: "Brand", name: "Brand facts", line: "When AI describes your business, does it get it right?" },
+  { term: "Google health", name: "Google", line: "Can Google find, read and trust your pages?" },
+  { term: "Easy to quote", name: "Clear answers", line: "Do your pages answer customer questions in short, clear lines?" },
+  { term: "Ready for AI", name: "AI assistants", line: "Can ChatGPT, Gemini and others read your site and link to it?" },
+  { term: "AI knows you", name: "Your business facts", line: "When AI describes your business, does it get the facts right?" },
 ];
 
 const STEPS = [
-  { title: "Add your website", body: "Enter your address and pick the questions your customers ask. Nothing on your site changes." },
-  { title: "We read and ask", body: "We read your key pages and put every question you track to each AI assistant on every check." },
-  { title: "Get your fix list", body: "Four scores and a short list of fixes, most useful first, each with clear steps." },
-  { title: "Approve and re-check", body: "Approve the changes you want, publish them, and we measure again next cycle." },
+  { title: "Add your website", body: "Type your website address and the questions your customers ask. Nothing on your site changes." },
+  { title: "We check", body: "We read your main pages and ask ChatGPT, Gemini and others your customer questions." },
+  { title: "You fix", body: "You get a score and a short to-do list, most useful first, each with clear steps." },
+  { title: "You grow", body: "Approve the fixes you want. We check again every cycle so you can see what changed." },
 ];
 
 const HONEST = [
@@ -60,8 +60,8 @@ const HONEST = [
     body: "AI answers are written by other companies' systems. Nobody can promise you a mention, and we won't.",
   },
   {
-    title: "Sample size on every number",
-    body: "Each figure says how many answers it comes from, so you know how far to trust it.",
+    title: "Every number shows its count",
+    body: "Each number says how many AI answers it comes from, so you know how much to trust it.",
   },
   {
     title: "Every answer saved",
@@ -123,15 +123,15 @@ export default function HomePage() {
       <section aria-labelledby="hero-title" className="relative overflow-hidden">
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-24">
           <h1 id="hero-title" className="mk-hero mk-rise max-w-[13ch] text-fg lg:max-w-none">
-            When people ask AI,
-            <br className="hidden lg:block" /> <span className="text-primary">be the answer.</span>
+            Check. Fix.
+            <br className="hidden lg:block" /> <span className="text-primary">Grow.</span>
           </h1>
 
           <div className="mt-10 grid gap-14 lg:mt-14 lg:grid-cols-12 lg:gap-10">
             <div className="mk-rise mk-delay-1 min-w-0 lg:col-span-5 lg:pt-4">
               <p className="mk-lead max-w-[34rem] text-fg-soft">
-                {BRAND.name} shows you what ChatGPT, Gemini and Google&apos;s AI say about your business, then tells
-                you, in plain English, what to fix on your website so they get it right.
+                See how Google and AI assistants like ChatGPT see your business. Get a short to-do list in plain
+                words. Fix it, so customers can find you more easily.
               </p>
               <FreeCheckLauncher id="hero-url" className="mt-9 max-w-[34rem]" />
               <p className="mt-7">
@@ -201,8 +201,9 @@ export default function HomePage() {
               Four scores.
             </h2>
             <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              SEO, AEO and GEO are three names for one goal: when someone looks for what you sell, they find you.
-              Each score runs from 0 to 100.
+              Four simple scores, each out of 100. Together they show how easily customers find you on Google and
+              in AI answers.
+              <span className="mt-3 block text-small text-muted">(This is what experts call SEO, AEO and GEO.)</span>
             </p>
           </div>
           <dl className="mt-16 grid border-t border-fg sm:grid-cols-2 lg:mt-24 lg:grid-cols-4">
@@ -217,7 +218,7 @@ export default function HomePage() {
                 }
               >
                 <dt>
-                  <span className="block text-[clamp(3.5rem,2.5rem+3vw,6rem)] font-semibold leading-none tracking-[-0.05em] text-fg">
+                  <span className="block text-[clamp(2.25rem,1.75rem+1.6vw,3.25rem)] font-semibold leading-none tracking-[-0.04em] text-fg">
                     {s.term}
                   </span>
                   <span className="mt-4 block text-small font-medium text-primary">{s.name}</span>
@@ -245,20 +246,20 @@ export default function HomePage() {
             <TourRow
               index="01"
               title="See what AI says about you"
-              body="On every scheduled check we ask each AI tool the questions your customers ask, and record whether each AI tool named you and linked to your site."
+              body="Each time we check, we ask ChatGPT, Gemini and others the questions your customers ask, and note whether they named you and linked to your site."
               ui={<AnswersPanel />}
             />
             <TourRow
               index="02"
               flip
               title="Know exactly what to fix"
-              body="Every problem comes with what's wrong, why it matters and the steps to fix it. No jargon, no 80-page audit."
+              body="Every problem says what's wrong, why it matters and how to fix it. No jargon, no 80-page report."
               ui={<FixPanel />}
             />
             <TourRow
               index="03"
-              title="Approve changes before anything goes live"
-              body="We draft the exact change. You read it, approve it or edit it. Every page is saved before a connector changes it, so those changes can be undone."
+              title="Nothing changes without your OK"
+              body="We draft the exact change. You read it, edit it or approve it. If we change your site for you, we save the old page first so you can undo it."
               ui={<ApprovalPanel />}
             />
           </div>
@@ -404,11 +405,12 @@ export default function HomePage() {
       <section aria-labelledby="final-cta" className="bg-fg text-bg">
         <div className="container-marketing grid gap-12 py-24 sm:py-32 lg:grid-cols-12 lg:items-end lg:gap-10">
           <h2 id="final-cta" className="mk-statement max-w-[13ch] text-bg lg:col-span-7">
-            Find out what AI says about you.
+            Check your website free.
           </h2>
           <div className="lg:col-span-5">
             <p className="mk-lead max-w-md text-bg/75">
-              Your free check reads your homepage and key pages and shows your scores and top fixes.
+              The free check reads your homepage and key pages and shows your score and top fixes. It doesn&apos;t ask
+              ChatGPT — the full check does that after you sign up.
             </p>
             <FreeCheckLauncher id="cta-url" onDark className="mt-8" />
           </div>

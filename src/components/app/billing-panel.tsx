@@ -120,11 +120,11 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
     <div className="space-y-4">
       {usage && <SubscriptionSummary usage={usage} canManage={canManage} onChanged={() => void loadUsage()} />}
       {usage && !usage.access.active && (
-        <Notice tone="danger" title="Scans are paused">
+        <Notice tone="danger" title="Checks are paused">
           {usage.access.message}
         </Notice>
       )}
-      {!canManage && <Notice tone="neutral">Only workspace owners and admins can change the plan.</Notice>}
+      {!canManage && <Notice tone="neutral">Only the Owner or an Admin can change the plan. Ask them if you need more.</Notice>}
       {activating && (
         <Notice tone="success" title="Payment received — activating" icon={<Spinner />}>
           <span role="status">We&apos;re waiting for the payment provider to confirm. This usually takes a few seconds — you can stay on this page.</span>
@@ -157,16 +157,16 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
           const upgrade = currentIdx >= 0 && i > currentIdx;
           const features = [
             `${p.maxProjects} website${p.maxProjects === 1 ? "" : "s"}`,
-            `${p.maxTrackedPrompts} tracked questions`,
+            `${p.maxTrackedPrompts} customer ${p.maxTrackedPrompts === 1 ? "question" : "questions"}`,
             ...(p.maxVisibilityRunsPerMonth
-              ? [`${p.maxVisibilityRunsPerMonth} AI visibility checks a month${p.maxPromptsPerRun ? ` (up to ${p.maxPromptsPerRun} questions each)` : ""}`]
+              ? [`${p.maxVisibilityRunsPerMonth} AI ${p.maxVisibilityRunsPerMonth === 1 ? "check" : "checks"} a month${p.maxPromptsPerRun ? ` (up to ${p.maxPromptsPerRun} questions each)` : ""}`]
               : []),
-            `${p.maxPagesPerCrawl.toLocaleString()} pages per scan`,
+            `${p.maxPagesPerCrawl.toLocaleString()} pages per website check`,
             `${p.monthlyCredits.toLocaleString()} credits a month`,
             `${p.seats} team seat${p.seats === 1 ? "" : "s"}`,
-            `Rescan every ${p.minScanIntervalDays === 1 ? "day" : `${p.minScanIntervalDays} days`}`,
-            ...(p.competitorTracking ? ["Competitor comparison"] : []),
-            ...(p.approvalPublishing ? ["Publish approved fixes to your site"] : []),
+            `Check your website again every ${p.minScanIntervalDays === 1 ? "day" : `${p.minScanIntervalDays} days`}`,
+            ...(p.competitorTracking ? ["Compare with competitors"] : []),
+            ...(p.approvalPublishing ? ["Approved fixes go live on your site for you"] : []),
           ];
           return (
             <li

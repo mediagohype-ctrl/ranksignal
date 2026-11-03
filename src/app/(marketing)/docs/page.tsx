@@ -8,19 +8,19 @@ import { RISK_CLASSES } from "@/components/marketing/content";
 
 export const metadata: Metadata = {
   title: { absolute: `Getting started — ${BRAND.name} Docs` },
-  description: `Set up ${BRAND.name}: onboarding, connecting WordPress, GitHub and other platforms, how the approval policy works, white-label branding, the off-site tracker and known limitations.`,
+  description: `Set up ${BRAND.name}: getting started, connecting WordPress, GitHub and other platforms, how approvals work, reading your numbers, white-label branding and known limits.`,
   alternates: { canonical: "/docs" },
 };
 
 const TOC = [
-  { id: "onboarding", label: "Onboarding" },
+  { id: "onboarding", label: "Getting started" },
   { id: "wordpress", label: "Connect WordPress" },
   { id: "git", label: "GitHub and other platforms" },
-  { id: "approval-policy", label: "Approval policy" },
-  { id: "reading-metrics", label: "Reading the metrics" },
-  { id: "offsite", label: "Off-site tracker" },
+  { id: "approval-policy", label: "What needs your OK" },
+  { id: "reading-metrics", label: "Reading your numbers" },
+  { id: "offsite", label: "Outside your website" },
   { id: "branding", label: "White-label branding" },
-  { id: "limitations", label: "Known limitations" },
+  { id: "limitations", label: "Known limits" },
 ];
 
 export default function DocsPage() {
@@ -68,30 +68,30 @@ export default function DocsPage() {
           <article className="min-w-0 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-10">
             <Prose>
             <section id="onboarding" aria-labelledby="onboarding-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
-              <h2 id="onboarding-h">Onboarding</h2>
+              <h2 id="onboarding-h">Getting started</h2>
               <ol>
                 <li>
-                  <Link href="/signup">Create an account</Link> and a workspace. Your free trial starts immediately.
+                  <Link href="/signup">Create an account</Link>. Your free trial starts straight away.
                 </li>
                 <li>
-                  <strong>Create a project</strong> for your site: enter the domain, your brand name (plus common
-                  variants and product names) and the main country and language you want to track.
+                  <strong>Add your website</strong>: type the address, your business name (plus other names people
+                  use for you and your products) and the country and language you sell in.
                 </li>
                 <li>
-                  <strong>Add competitors</strong> you want to benchmark against. You can add or remove them later.
+                  <strong>Add competitors</strong> you want to compare with. You can add or remove them later.
                 </li>
                 <li>
-                  <strong>Review your prompts.</strong> We suggest prompts based on your site and category; keep the ones
-                  that reflect how real buyers ask, and add your own.
+                  <strong>Check your customer questions.</strong> We suggest questions based on your website; keep the
+                  ones your customers really ask, and add your own.
                 </li>
                 <li>
-                  <strong>Run your first audit and visibility scan.</strong> Results appear as jobs complete; larger
-                  sites and prompt sets take longer.
+                  <strong>Run your first website check and AI check.</strong> Results appear as each one finishes;
+                  bigger websites and more questions take longer.
                 </li>
               </ol>
               <p>
-                Until you connect a CMS, {BRAND.name} is read-only: it crawls public pages and queries answer engines,
-                and every fix can be exported for manual application.
+                Until you connect your website, {BRAND.name} only reads: it reads your public pages and asks AI
+                assistants your questions. You can copy every fix and make the change by hand.
               </p>
             </section>
 
@@ -112,7 +112,7 @@ export default function DocsPage() {
                 </li>
                 <li>Copy the generated password. WordPress shows it only once.</li>
                 <li>
-                  In {BRAND.name}, open your project → <em>Integrations</em> → <em>WordPress</em>, and enter your site
+                  In {BRAND.name}, open your website → <em>Connect website</em> → <em>WordPress</em>, and enter your site
                   URL, the WordPress username and the application password.
                 </li>
                 <li>
@@ -136,8 +136,8 @@ export default function DocsPage() {
               </p>
               <p>
                 <strong>Shopify, Webflow, Contentful, Sanity and Wix:</strong> connect from your project&apos;s{" "}
-                <em>Integrations</em> page with an API token for that platform. We write drafts and SEO fields (titles,
-                descriptions and similar) where each platform&apos;s API allows it; what each connector can and can&apos;t
+                <em>Connect website</em> page with an API token for that platform. We write drafts and Google headlines
+                and summaries where each platform&apos;s API allows it; what each connector can and can&apos;t
                 do is shown before you connect it.
               </p>
               <p>
@@ -146,8 +146,8 @@ export default function DocsPage() {
             </section>
 
             <section id="approval-policy" aria-labelledby="policy-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
-              <h2 id="policy-h">Approval policy explained</h2>
-              <p>Every recommended change is assigned a risk class:</p>
+              <h2 id="policy-h">What needs your OK</h2>
+              <p>Every suggested change gets one of four types:</p>
               <ul className="!list-none space-y-3 !pl-0">
                 {RISK_CLASSES.map((r) => (
                   <li key={r.cls} className="flex flex-col items-start gap-2 rounded-xl bg-surface-2 p-4 !pl-4 sm:flex-row sm:gap-3">
@@ -166,63 +166,63 @@ export default function DocsPage() {
               </p>
               <h3>Auto-apply (optional)</h3>
               <p>
-                Class A work (audits, briefs, internal tasks) never changes your site, so it runs on its own. Owners can
-                allow specific class B change types (small, reversible edits on non-critical pages) to apply without
-                manual approval for a project. This is off by default. Class D changes are never executed by the system,
-                whatever the policy.
+                Safe work (website checks, briefs, to-dos) never changes your site, so it runs on its own. Owners can
+                let certain small edits you can undo (on less important pages) go live without asking each time. This is
+                off by default. Advice-only changes are never made by us, whatever the settings.
               </p>
-              <h3>Rollback and kill switch</h3>
+              <h3>Undo and the stop switch</h3>
               <p>
-                A snapshot is stored before each change made through a connector; roll it back from the change log.
-                Fixes you apply by hand can&apos;t be rolled back for you. The publishing kill switch pauses all executions
-                for your workspace immediately (email support and we&apos;ll switch it on); queued changes wait until it is
-                turned off.
-                Approvals, executions, rollbacks and credential changes are recorded in the audit log.
+                We save the page before each change we make on your connected website; undo it from the change list.
+                Fixes you make by hand can&apos;t be undone for you. The stop switch pauses all changes for your account
+                at once (email support and we&apos;ll switch it on); waiting changes stay paused until it is turned off.
+                Every OK, change, undo and password change is recorded in your history.
               </p>
             </section>
 
             <section id="reading-metrics" aria-labelledby="metrics-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
-              <h2 id="metrics-h">Reading the metrics</h2>
+              <h2 id="metrics-h">Reading your numbers</h2>
               <ul>
                 <li>
-                  <strong>Mention rate</strong> — share of sampled answers that mention your brand.
+                  <strong>Named in X of Y answers</strong> — how many of the AI answers we collected name your business.
                 </li>
                 <li>
-                  <strong>Citation rate</strong> — share of sampled answers that cite or link one of your URLs.
+                  <strong>Linked to your site</strong> — how many answers link to one of your pages.
                 </li>
                 <li>
-                  <strong>Visibility index</strong> — a 0–100 summary combining mention, citation and recommendation rates.
+                  <strong>AI mentions score</strong> — one number from 0 to 100 that sums up how often you&apos;re named,
+                  linked and recommended.
                 </li>
                 <li>
-                  <strong>Share of voice</strong> — your mentions relative to the competitors you track.
+                  <strong>You vs competitors</strong> — how often you&apos;re named compared with the competitors you
+                  chose.
                 </li>
               </ul>
               <p>
-                Every metric shows the number of answers it is based on. Small samples are noisy — treat a change of a
-                few points on a small sample as noise, not a trend.
+                Every number shows how many answers it is based on. Small numbers jump around — a change of a few points
+                from a few answers isn&apos;t a trend yet.
               </p>
             </section>
 
             <section id="offsite" aria-labelledby="offsite-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
-              <h2 id="offsite-h">Off-site tracker</h2>
+              <h2 id="offsite-h">Outside your website</h2>
               <p>
                 AI assistants also learn about you from other sites: directories, review platforms, press, forums and
-                company profiles. Open your project → <em>Off-site</em> to track that work through{" "}
+                company profiles. Open your website → <em>Outside your website</em> to track that work through{" "}
                 <strong>To do → Submitted → Live</strong> (or Rejected), and note whether each listing&apos;s name, address
                 and phone match your website.
               </p>
               <p>
-                <strong>Suggestions</strong> come from two places: third-party sites cited in your latest AI visibility
-                check that aren&apos;t in your tracker yet, and a starter list of common Indian listings (Google Business
+                <strong>Suggestions</strong> come from two places: other websites that AI linked to in your latest AI
+                check that aren&apos;t in your list yet, and a starter list of common Indian listings (Google Business
                 Profile, Justdial, IndiaMART, Sulekha, Bing Places, Apple Business Connect, LinkedIn, Crunchbase, G2,
-                Capterra, Trustpilot). They are places worth considering, not a promise that a listing will be cited.
+                Capterra, Trustpilot). They are places worth considering, not a promise that AI will link to a listing.
               </p>
             </section>
 
             <section id="branding" aria-labelledby="branding-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
               <h2 id="branding-h">White-label branding</h2>
               <p>
-                On the Agency plan (and for done-for-you clients), owners and admins can open{" "}
+                On the Agency plan (and for done-for-you clients), Owners and Admins can open{" "}
                 <em>Settings → Branding</em> to set the name, logo (an https:// image link), accent colour, reply-to
                 email and a short footer line used on shared report links, monthly reports and monthly report emails. A
                 live preview shows the report header and email before you save.
@@ -234,34 +234,35 @@ export default function DocsPage() {
             </section>
 
             <section id="limitations" aria-labelledby="limits-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
-              <h2 id="limits-h">Known limitations</h2>
+              <h2 id="limits-h">Known limits</h2>
               <ul>
                 <li>
-                  AI answers are non-deterministic and personalised; our samples approximate, but cannot exactly
-                  reproduce, what any individual user sees.
+                  AI answers change from one try to the next and from person to person. Our answers come close to,
+                  but can&apos;t exactly match, what any one person sees.
                 </li>
                 <li>
-                  Engines change models and sources without notice, which can shift metrics independently of anything
-                  you changed.
+                  AI companies change their assistants without notice, which can move your numbers even when you
+                  changed nothing.
                 </li>
                 <li>
-                  Some engines are measured through their APIs rather than consumer apps, and API answers can differ
-                  from in-app answers.
+                  We ask some AI assistants through their developer access rather than their apps, and those answers
+                  can differ from what you see in the app.
                 </li>
                 <li>
-                  We report measured changes after a fix, not proof that the fix caused them. No plan guarantees
-                  rankings, mentions or citations.
+                  We report what changed after a fix, not proof that the fix caused it. No plan promises a Google
+                  position, AI mentions or links.
                 </li>
                 <li>
-                  Crawling respects robots.txt and plan page limits; pages behind logins or heavy client-side rendering
-                  may be partially audited.
+                  Website checks follow your site&apos;s robot rules file and your plan&apos;s page limit. Pages behind a
+                  login, or built mostly in the browser, may only be partly checked.
                 </li>
                 <li>
-                  Publishing connectors cover WordPress, GitHub, Shopify, Webflow, Contentful, Sanity and Wix, each
-                  limited to what its API allows. Other platforms use export-and-apply.
+                  We can publish to WordPress, GitHub, Shopify, Webflow, Contentful, Sanity and Wix, each limited to
+                  what that platform allows. For other websites, copy the fix and make the change by hand.
                 </li>
                 <li>
-                  Each project tracks one main country and language. To track another market, add a separate project.
+                  Each website is checked for one country and language. To check another country, add it as a separate
+                  website.
                 </li>
               </ul>
               <p>

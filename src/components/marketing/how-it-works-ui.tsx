@@ -59,7 +59,7 @@ function Chip({ children, tone = "plain" }: { children: React.ReactNode; tone?: 
 export function SetupVignette() {
   const rows: { label: string; value: React.ReactNode }[] = [
     { label: "Website", value: <span className="font-medium text-fg">{DOMAIN}</span> },
-    { label: "Brand name", value: <span className="font-medium text-fg">Greenleaf Bakery</span> },
+    { label: "Business name", value: <span className="font-medium text-fg">Greenleaf Bakery</span> },
     {
       label: "Market",
       value: (
@@ -83,7 +83,7 @@ export function SetupVignette() {
     },
   ];
   return (
-    <Panel title="Set up your project" sub="Takes a couple of minutes">
+    <Panel title="Add your website" sub="Takes a couple of minutes">
       <dl className="px-5 sm:px-6">
         {rows.map((r) => (
           <div key={r.label} className="grid gap-1.5 border-b border-border py-3.5 text-small sm:grid-cols-[7.5rem_1fr] sm:items-center sm:gap-4">
@@ -95,7 +95,7 @@ export function SetupVignette() {
       <div className="flex flex-wrap items-center justify-between gap-4 bg-surface-2/60 px-5 py-4 sm:px-6">
         <div className="min-w-0">
           <p className="text-small font-medium text-fg">WordPress connected</p>
-          <p className="text-xs text-muted">Nothing changes until you approve it.</p>
+          <p className="text-xs text-muted">Nothing changes until you say OK.</p>
         </div>
         <p className="flex items-center gap-2.5 text-small text-fg-soft">
           Auto-apply
@@ -112,15 +112,15 @@ export function SetupVignette() {
 /* ------------------------------------------------------------------ 02 · audit and measure */
 
 const BASELINE_PILLARS = [
-  { label: "SEO", score: 66 },
-  { label: "AEO", score: 31 },
-  { label: "GEO", score: 24 },
-  { label: "Brand", score: 72 },
+  { label: "Google health", score: 66 },
+  { label: "Easy to quote", score: 31 },
+  { label: "Ready for AI", score: 24 },
+  { label: "AI knows you", score: 72 },
 ] as const;
 
 export function BaselineVignette() {
   return (
-    <Panel title="Your first baseline" sub={`28 May · ${DOMAIN}`}>
+    <Panel title="Your first check" sub={`28 May · ${DOMAIN}`}>
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-5 py-3 text-xs text-muted sm:px-6">
         <span className="inline-flex items-center gap-1.5">
           <Check aria-hidden size={13} strokeWidth={2.5} className="text-success" />
@@ -128,7 +128,7 @@ export function BaselineVignette() {
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Check aria-hidden size={13} strokeWidth={2.5} className="text-success" />
-          robots.txt respected
+          Robot rules followed
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Check aria-hidden size={13} strokeWidth={2.5} className="text-success" />
@@ -138,7 +138,7 @@ export function BaselineVignette() {
       <div className="grid sm:grid-cols-2">
         <ul className="space-y-3 border-b border-border px-5 py-5 sm:border-b-0 sm:border-r sm:px-6">
           {BASELINE_PILLARS.map((p) => (
-            <li key={p.label} className="grid grid-cols-[3.25rem_1fr_1.75rem] items-center gap-2 text-xs">
+            <li key={p.label} className="grid grid-cols-[6.25rem_1fr_1.75rem] items-center gap-2 text-xs">
               <span className="font-medium text-fg">{p.label}</span>
               <Meter value={p.score} max={100} label={`Sample ${p.label} score`} tone="score" size="sm" />
               <span className="text-right tabular-nums text-fg-soft">{p.score}</span>
@@ -147,8 +147,8 @@ export function BaselineVignette() {
         </ul>
         <dl className="grid grid-cols-2">
           {[
-            { label: "Mention rate", value: "14%", range: "named in 28" },
-            { label: "Citation rate", value: "6%", range: "linked in 12" },
+            { label: "AI named you", value: "14%", range: "named in 28" },
+            { label: "AI linked to you", value: "6%", range: "linked in 12" },
           ].map((s, i) => (
             <div key={s.label} className={clsx("px-5 py-5 sm:px-6", i > 0 && "border-l border-border")}>
               <dt className="text-xs text-muted">{s.label}</dt>
@@ -175,14 +175,14 @@ export function BaselineVignette() {
 
 const QUEUE: { title: string; impact: string; effort: string; risk: "A" | "B" | "C" | "D" }[] = [
   { title: "Answer “Do you deliver?” on the homepage", impact: "High impact", effort: "Quick fix", risk: "C" },
-  { title: "Add FAQ markup to the custom-cakes page", impact: "High impact", effort: "Quick fix", risk: "C" },
+  { title: "Add info for Google and AI to the custom-cakes page", impact: "High impact", effort: "Quick fix", risk: "C" },
   { title: "Write a page for the sugar-free range", impact: "Medium impact", effort: "Bigger job", risk: "C" },
   { title: "Redirect the old menu PDF to the menu page", impact: "Low impact", effort: "Quick fix", risk: "D" },
 ];
 
 export function FixQueueVignette() {
   return (
-    <Panel title="Fix list" sub="12 fixes · most useful first">
+    <Panel title="To-do list" sub="12 fixes · most useful first">
       <ol>
         {QUEUE.map((q, i) => (
           <li key={q.title} className="grid grid-cols-[1.5rem_1fr] gap-3 border-b border-border px-5 py-4 sm:grid-cols-[1.5rem_1fr_auto] sm:items-center sm:px-6">
@@ -202,7 +202,7 @@ export function FixQueueVignette() {
       <p className="flex items-start gap-2.5 bg-surface-2/60 px-5 py-3.5 text-xs leading-relaxed text-fg-soft sm:px-6">
         <Pencil aria-hidden size={13} className="mt-0.5 shrink-0 text-muted" />
         <span>
-          <span className="font-semibold text-fg">You edited fix 1.</span> Its earlier approval was cleared, so you approve the
+          <span className="font-semibold text-fg">You edited fix 1.</span> Its earlier OK was cleared, so you approve the
           new wording.
         </span>
       </p>
@@ -214,7 +214,7 @@ export function FixQueueVignette() {
 
 export function ShipComposition() {
   return (
-    <figure aria-label="Sample: approving an exact change, then the follow-up measurement" className="relative">
+    <figure aria-label="Sample: approving an exact change, then the next check" className="relative">
       <div className="relative z-10 lg:mr-[12%]">
         <ApprovalPanel />
       </div>
@@ -230,7 +230,7 @@ export function ShipComposition() {
           <span className="text-[2.25rem] font-semibold leading-none tracking-[-0.04em] tabular-nums text-fg">3 of 4</span>
         </p>
         <p className="mt-2 text-xs text-muted">AI assistants that named you, before and after</p>
-        <p className="mt-4 border-t border-border pt-3 text-xs text-fg-soft">Observed change, not proven cause.</p>
+        <p className="mt-4 border-t border-border pt-3 text-xs text-fg-soft">What we saw — not proof the fix caused it.</p>
       </div>
     </figure>
   );
@@ -251,7 +251,7 @@ function WhoChip({ who }: { who: Who }) {
 export function ImpactReportVignette() {
   return (
     <Panel
-      title="October impact report"
+      title="October report"
       sub={`Emailed 1 Nov · ${DOMAIN}`}
       aside={
         <span aria-hidden className="hidden h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-xs font-medium text-fg-soft sm:inline-flex">
@@ -302,12 +302,12 @@ export function ImpactReportVignette() {
         </div>
         {/* Shipped */}
         <div className="px-5 py-5 sm:px-6">
-          <p className="text-small font-semibold text-fg">What shipped</p>
+          <p className="text-small font-semibold text-fg">What went live</p>
           <ul className="mt-2">
             {(
               [
                 { t: "Delivery areas answered on the homepage", who: "Automated" },
-                { t: "Meta description updated on the custom-cakes page", who: "Automated" },
+                { t: "Google summary updated on the custom-cakes page", who: "Automated" },
                 { t: "Opening hours fixed on Google Business Profile", who: "You" },
                 { t: "“Eggless cakes” page refreshed", who: "Our team" },
               ] as { t: string; who: Who }[]
@@ -324,8 +324,8 @@ export function ImpactReportVignette() {
         </div>
       </div>
       <p className="border-t border-border bg-surface-2/60 px-5 py-3.5 text-xs leading-relaxed text-muted sm:px-6">
-        How to read this: the changes were measured in the same month as the work listed. That is correlation, not proof that
-        one caused the other.
+        How to read this: the changes happened in the same month as the work listed. That doesn&apos;t prove one caused
+        the other.
       </p>
     </Panel>
   );
@@ -344,9 +344,9 @@ const HISTORY = [
 
 export function ScheduleVignette() {
   const rows = [
-    { what: "Site re-scan", how: "Weekly", next: "Next: Mon 3 Nov" },
+    { what: "Website check", how: "Weekly", next: "Next: Mon 3 Nov" },
     { what: "AI check", how: "Monthly", next: "Next: Sat 1 Nov" },
-    { what: "“Report ready” email", how: "On", next: "Owners and admins" },
+    { what: "“Report ready” email", how: "On", next: "Owners and Admins" },
   ];
   return (
     <Panel title="Schedule" sub={DOMAIN}>
@@ -389,7 +389,7 @@ export function ScheduleVignette() {
 /* ------------------------------------------------------------------ work you can see */
 
 const LOG: { date: string; title: string; who: Who; note?: string; undo?: boolean }[] = [
-  { date: "21 Oct", title: "Meta description updated on the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
+  { date: "21 Oct", title: "Google summary updated on the custom-cakes page", who: "Automated", note: "Approved by you", undo: true },
   { date: "17 Oct", title: "Opening hours fixed on Google Business Profile", who: "You", note: "Done by hand, marked done" },
   { date: "14 Oct", title: "Delivery areas answered on the homepage", who: "Automated", note: "Approved by you", undo: true },
   { date: "9 Oct", title: "“Eggless cakes” page refreshed", who: "Our team" },
@@ -397,7 +397,7 @@ const LOG: { date: string; title: string; who: Who; note?: string; undo?: boolea
 
 export function WorkLogVignette() {
   return (
-    <Panel title="Work log" sub={`October · ${DOMAIN}`} className="shadow-xl">
+    <Panel title="Task board" sub={`October · ${DOMAIN}`} className="shadow-xl">
       <dl className="grid grid-cols-3 border-b border-border">
         {(
           [
@@ -425,7 +425,7 @@ export function WorkLogVignette() {
                     {l.undo && (
                       <span className="inline-flex items-center gap-1 font-medium text-fg underline decoration-border-strong underline-offset-4">
                         <RotateCcw aria-hidden size={12} />
-                        Roll back
+                        Undo
                       </span>
                     )}
                   </span>
@@ -438,7 +438,7 @@ export function WorkLogVignette() {
       </ol>
       <p className="flex items-center gap-2 border-t border-border bg-surface-2/60 px-5 py-3 text-xs text-muted sm:px-6">
         <RotateCcw aria-hidden size={13} className="shrink-0" />
-        The page is saved before every change made through a connector, so it can be put back.
+        We save the page before every change we make on your site, so it can be put back.
       </p>
     </Panel>
   );

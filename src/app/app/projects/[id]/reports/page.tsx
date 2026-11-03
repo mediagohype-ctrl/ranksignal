@@ -5,7 +5,8 @@ import { requireAppProject } from "@/lib/dashboard/server";
 import { fmtDate, humanize, pct } from "@/lib/dashboard/format";
 import { BRAND } from "@/lib/brand";
 import { appliedChangeWhere, APPLIED_STATUSES } from "@/lib/actions/service";
-import { backfillSnapshots, listSnapshots, type SnapshotView } from "@/lib/snapshots";
+import { backfillSnapshots, getPeriodComparison, listSnapshots, type SnapshotView } from "@/lib/snapshots";
+import { SinceLastMonth } from "@/components/app/history/since-last-month";
 import { TrendChart } from "@/components/app/charts";
 import { HistoryExplorer, type HistorySnapshotRow, type ShippedChange } from "@/components/app/history/history-explorer";
 import { PrintButton } from "@/components/app/print-button";
@@ -14,7 +15,7 @@ import {
   THead, TR,
 } from "@/components/ui";
 
-export const metadata = { title: "Reports" };
+export const metadata = { title: "Score history" };
 
 export default async function ReportsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -43,6 +44,8 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
     }),
     loadSnapshots(project.id, orgId),
   ]);
+  // After loadSnapshots (which backfills past runs), so the comparison sees them.
+  const comparison = snapshots.length ? await getPeriodComparison(project.id, orgId).catch(() => null) : null;
   const s = d.actions.byStatus;
   const applied = d.actions.applied;
   const validated = appliedValidated;
@@ -60,17 +63,26 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
     <div className="space-y-8">
       <PageHeader
         icon={<History />}
-        title="History & changes"
-        description={`${project.name} · progress over time and the changes made · prepared ${fmtDate(new Date(), true)} by ${BRAND.name}`}
+        eyebrow="Progress"
+        title="Score history"
+        description={`How ${project.name}'s scores have changed over time, and the fixes made · prepared ${fmtDate(new Date(), true)} by ${BRAND.name}`}
         actions={
           <div className="no-print flex flex-wrap gap-2">
             <PrintButton />
             <LinkButton href={reportHref} icon={<FileText />} iconRight={<ArrowRight />}>
-              Open SEO/AEO/GEO report
+              Open full report
             </LinkButton>
           </div>
         }
       />
+
+      {comparison?.after && (
+        <SinceLastMonth
+          delta={comparison.delta}
+          baselineIsFirst={comparison.baselineIsFirst}
+          historyHref={`/app/projects/${project.id}/reports`}
+        />
+      )}
 
       <Card variant="subtle" padding="md" className="no-print">
         <div className="flex flex-wrap items-center gap-4">
@@ -78,45 +90,47 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
           <div className="min-w-0 flex-1">
             <h2 className="text-h4 text-fg">Looking for your scores and what to fix?</h2>
             <p className="text-small text-muted">
-              The full report explains your SEO, AEO and GEO scores in plain English, with step-by-step fixes. This page tracks history.
+              The full report explains your scores in plain English, with step-by-step fixes. This page shows how they changed.
             </p>
           </div>
           <LinkButton href={reportHref} variant="secondary" iconRight={<ArrowRight />}>
-            Go to report
+            Go to full report
           </LinkButton>
         </div>
       </Card>
 
       {anySimulated && (
         <SimulatedDataBanner>
-          some checks below used the built-in simulator rather than real AI assistants. Those rows are marked &ldquo;simulated&rdquo;.
+          some checks below used sample answers, not real AI tools. Those rows are marked &ldquo;sample&rdquo;.
         </SimulatedDataBanner>
       )}
-      <Notice tone="warning" title="Changes in numbers aren't proof of cause">
-        AI answers vary between checks, assistants and over time. A metric moving after a change doesn&apos;t prove the change caused it.
+      <Notice tone="warning" title="A number going up or down doesn't prove why">
+        AI answers vary between checks, AI tools and over time. A number moving after a fix doesn&apos;t prove the fix caused it.
       </Notice>
 
       <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
-          label="Visibility index"
+          label="AI mentions score"
           value={last ? Math.round(last.visibilityIndex) : "—"}
           delta={delta}
           deltaLabel={first ? `since ${fmtDate(first.at)}` : undefined}
-          hint={last ? `Latest check ${fmtDate(last.at)}` : "No checks yet"}
+          hint={last ? `Latest check ${fmtDate(last.at)}` : "No AI checks yet"}
         />
-        <Stat label="Mentioned" value={pct(last?.mentionRate)} hint={last ? `Out of ${last.sampleSize} answers` : undefined} />
-        <Stat label="Changes applied" value={applied} hint={`${validated} confirmed live after applying`} />
-        <Stat label="Failed / rolled back" value={`${failed} / ${rolledBack}`} hint="Changes that didn't stick or were undone" />
+        <Stat label="Named you" value={pct(last?.mentionRate)} hint={last ? `Out of ${last.sampleSize} ${last.sampleSize === 1 ? "answer" : "answers"}` : undefined} />
+        <Stat label="Fixes made" value={applied} hint={`${validated} confirmed live on your website`} />
+        <Stat label="Failed / undone" value={`${failed} / ${rolledBack}`} hint="Fixes that didn't work or were undone" />
       </section>
 
       <Card className="break-inside-avoid">
         <CardHeader
           title="Score history"
-          description="Overall score and the four pillars after each check. Dots mark changes shipped to your site; dashed lines mark where the questions or our scoring method changed."
+          description="Your overall score and the four parts of it after each check. Dots mark fixes made to your site; dashed lines mark where the questions or how we score changed."
         />
         {historyRows.length === 0 ? (
           <CardBody>
-            <EmptyState size="sm" title="No history yet" description="Run a website scan to record your first scores. Each later scan adds a point." />
+            <EmptyState size="sm" title="No history yet" description="Check your website to record your first scores. Each later check adds a point."
+              action={<LinkButton href={`/app/projects/${project.id}/audit`} variant="secondary" className="no-print">Go to website problems</LinkButton>}
+            />
           </CardBody>
         ) : (
           <HistoryExplorer snapshots={historyRows} shipped={shipped} />
@@ -124,13 +138,15 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <Card className="break-inside-avoid">
-        <CardHeader title="AI visibility over time" description="Dashed lines mark where the questions changed, so compare like with like." />
+        <CardHeader title="AI mentions over time" description="Dashed lines mark where your customer questions changed, so compare like with like." />
         <CardBody>
           {d.history.length === 0 ? (
-            <EmptyState size="sm" title="No measurements yet" description="Run an AI visibility check to start tracking." />
+            <EmptyState size="sm" title="No AI checks yet" description="Run an AI check to start tracking how often AI tools name you."
+              action={<LinkButton href={`/app/projects/${project.id}/visibility`} variant="secondary" className="no-print">Go to AI answers</LinkButton>}
+            />
           ) : (
             <TrendChart
-              name="Visibility index"
+              name="AI mentions score"
               data={d.history.map((h) => ({
                 label: fmtDate(h.at),
                 value: h.visibilityIndex,
@@ -141,16 +157,16 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
           )}
         </CardBody>
         {d.history.length > 0 && (
-          <Table caption="Results of each AI visibility check" zebra>
+          <Table caption="Results of each AI check" zebra>
             <THead>
               <tr>
                 <TH>Date</TH>
-                <TH align="right">Index</TH>
-                <TH align="right">Mentioned</TH>
-                <TH align="right">Linked</TH>
+                <TH align="right">Score</TH>
+                <TH align="right">Named you</TH>
+                <TH align="right">Linked to your site</TH>
                 <TH align="right">Recommended</TH>
                 <TH align="right">Answers</TH>
-                <TH>Questions</TH>
+                <TH>Question list</TH>
               </tr>
             </THead>
             <tbody>
@@ -167,12 +183,12 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
                       v{h.promptSetVersion}
                       {h.discontinuity && (
                         <Badge tone="warning" size="sm">
-                          changed
+                          questions changed
                         </Badge>
                       )}
                       {h.simulated && (
                         <Badge tone="warning" size="sm">
-                          simulated
+                          sample
                         </Badge>
                       )}
                     </span>
@@ -185,29 +201,29 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       </Card>
 
       <Card className="break-inside-avoid">
-        <CardHeader title="Changes made" description="The 50 most recent changes made to your site, whether applied automatically or done by hand, and how they went." />
+        <CardHeader title="Fixes made" description="The 50 most recent fixes made to your site, by us or by hand, and how they went." />
         {executed.length === 0 ? (
           <CardBody>
             <EmptyState
               size="sm"
-              title="No changes made yet"
-              description="Approve a suggested change in the Actions center and it will show up here."
+              title="No fixes made yet"
+              description="Approve a suggested fix and it will show up here."
               action={
                 <LinkButton href={`/app/projects/${project.id}/actions`} variant="secondary" className="no-print">
-                  Open Actions center
+                  Go to fixes to approve
                 </LinkButton>
               }
             />
           </CardBody>
         ) : (
-          <Table caption="Changes made">
+          <Table caption="Fixes made">
             <THead>
               <tr>
                 <TH>Date</TH>
-                <TH>Change</TH>
+                <TH>Fix</TH>
                 <TH>Page</TH>
-                <TH>Outcome</TH>
-                <TH>Checked live</TH>
+                <TH>Result</TH>
+                <TH>Checked on your site</TH>
               </tr>
             </THead>
             <tbody>
@@ -222,7 +238,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
                   <TD>
                     <StatusBadge status={a.status} />
                   </TD>
-                  <TD className="capitalize">{a.executions[0]?.validation ?? "—"}</TD>
+                  <TD>{VALIDATION_LABEL[a.executions[0]?.validation ?? ""] ?? "Not yet"}</TD>
                 </TR>
               ))}
             </tbody>
@@ -230,12 +246,15 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
         )}
       </Card>
       <p className="text-xs text-muted">
-        {d.findings.totalOpen} open problems across {d.findings.pagesCrawled} scanned pages (scan {fmtDate(d.findings.crawledAt)}). AI
-        visibility is measured from sampled answers and doesn&apos;t guarantee rankings or placements.
+        {d.findings.totalOpen} {d.findings.totalOpen === 1 ? "problem" : "problems"} to fix across {d.findings.pagesCrawled}{" "}
+        {d.findings.pagesCrawled === 1 ? "page" : "pages"} checked (website check {fmtDate(d.findings.crawledAt)}). AI mentions are measured
+        from a sample of answers and don&apos;t guarantee a place on Google or in AI answers.
       </p>
     </div>
   );
 }
+
+const VALIDATION_LABEL: Record<string, string> = { passed: "Yes", warning: "Partly", failed: "No" };
 
 /** Snapshots incl. simulated (the explorer toggles them). Lazily backfills past runs the first time. */
 async function loadSnapshots(projectId: string, organizationId: string): Promise<SnapshotView[]> {

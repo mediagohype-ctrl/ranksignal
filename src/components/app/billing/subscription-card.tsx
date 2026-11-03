@@ -74,7 +74,7 @@ export function SubscriptionSummary({ usage, canManage, onChanged }: { usage: Us
           )}
           {sub?.cancelAtPeriodEnd && (
             <Badge tone="warning" size="sm">
-              Cancels at period end
+              Ends at the end of this billing period
             </Badge>
           )}
         </span>
@@ -105,7 +105,7 @@ export function SubscriptionSummary({ usage, canManage, onChanged }: { usage: Us
         <h3 className="flex items-center gap-2 text-h4 text-fg">
           <CalendarClock size={18} aria-hidden className="text-muted" /> AI checks this month
         </h3>
-        <Meter value={usage.aiChecks.used} max={Math.max(1, usage.aiChecks.limit)} label="AI visibility checks used" showValue />
+        <Meter value={usage.aiChecks.used} max={Math.max(1, usage.aiChecks.limit)} label="AI checks used" showValue />
         <p className="text-small text-muted">
           {usage.aiChecks.used} of {usage.aiChecks.limit} checks used · up to {usage.aiChecks.maxPromptsPerRun} questions per check.
         </p>
@@ -118,8 +118,8 @@ export function SubscriptionSummary({ usage, canManage, onChanged }: { usage: Us
         icon={<XCircle />}
         description={
           periodEnd
-            ? `You won't be charged again. Everything keeps working until ${periodEnd}, then scans and AI checks pause. Your reports are kept.`
-            : "You won't be charged again. Everything keeps working until the end of this billing period, then scans and AI checks pause."
+            ? `You won't be charged again. Everything keeps working until ${periodEnd}, then website checks and AI checks pause. Your reports are kept.`
+            : "You won't be charged again. Everything keeps working until the end of this billing period, then website checks and AI checks pause. Your reports are kept."
         }
         footer={
           <>
@@ -127,7 +127,7 @@ export function SubscriptionSummary({ usage, canManage, onChanged }: { usage: Us
               Keep my plan
             </Button>
             <Button variant="danger" loading={busy} loadingText="Cancelling…" onClick={cancel}>
-              Cancel at period end
+              Cancel at end of billing period
             </Button>
           </>
         }

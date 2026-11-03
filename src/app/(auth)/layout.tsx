@@ -7,17 +7,17 @@ const VALUES = [
   {
     icon: Eye,
     title: "See what AI says about you",
-    body: "We ask AI assistants the questions your buyers ask and show whether your brand is mentioned, recommended or cited.",
+    body: "We ask ChatGPT, Gemini and others the questions your customers ask, and show whether they name you, recommend you or link to you.",
   },
   {
     icon: Wrench,
-    title: "Get plain-English fixes",
+    title: "Get a plain to-do list",
     body: "A clear report on what's holding your website back — what's wrong, why it matters and how to fix it.",
   },
   {
     icon: ShieldCheck,
     title: "Stay in control",
-    body: "Nothing changes on your site without your OK. Every edit is logged and can be rolled back.",
+    body: "Nothing changes on your site without your OK. Every edit is recorded and can be undone.",
   },
 ];
 
@@ -32,8 +32,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </Link>
 
         <div className="relative max-w-lg">
-          <p className="eyebrow text-navy-fg/75">AI search visibility</p>
-          <h2 className="mt-3 text-h1 text-balance text-navy-fg">Know how AI answers talk about your business.</h2>
+          <p className="eyebrow text-navy-fg/75">Check · Fix · Grow</p>
+          <h2 className="mt-3 text-h1 text-balance text-navy-fg">See how Google and AI see your business.</h2>
           <ul className="mt-10 space-y-6">
             {VALUES.map(({ icon: Icon, title, body }) => (
               <li key={title} className="flex gap-4">
@@ -54,7 +54,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <p className="relative flex items-center gap-2 text-xs text-navy-fg/75">
           <CheckCircle2 size={14} aria-hidden />
-          We measure and report. We never promise rankings or placements.
+          We measure honestly. We never promise a Google position or AI mention.
         </p>
       </aside>
 

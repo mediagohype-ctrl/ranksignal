@@ -50,7 +50,7 @@ export function PriorityBadge({ priority, hideMedium }: { priority: TaskPriority
   if (hideMedium && priority === "medium") return null;
   return (
     <Badge tone={PRIORITY_TONE[priority]} variant="outline">
-      {PRIORITY_LABEL[priority]} priority
+      {PRIORITY_LABEL[priority]}
     </Badge>
   );
 }
@@ -67,7 +67,7 @@ export function PerformerBadge({ performedBy }: { performedBy: TaskPerformer }) 
 
 export function InternalBadge() {
   return (
-    <Badge tone="warning" icon={<EyeOff />} title="Only visible to admins and our team">
+    <Badge tone="warning" icon={<EyeOff />} title="Only the Owner, Admins and our team can see this">
       Internal
     </Badge>
   );
@@ -99,7 +99,7 @@ export async function api<T>(url: string, init?: RequestInit & { body?: string }
   if (!res.ok) {
     const fieldErrors = (data.error?.details as { fieldErrors?: Record<string, string[]> } | undefined)?.fieldErrors;
     const first = fieldErrors ? Object.entries(fieldErrors).find(([, v]) => v?.length) : undefined;
-    throw new Error(first ? `${first[0]}: ${first[1][0]}` : (data.error?.message ?? "Something went wrong"));
+    throw new Error(first ? `${first[0]}: ${first[1][0]}` : (data.error?.message ?? "Something went wrong. Please try again."));
   }
   return data as T;
 }

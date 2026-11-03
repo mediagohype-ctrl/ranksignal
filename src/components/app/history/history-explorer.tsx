@@ -50,7 +50,7 @@ export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnap
       if (prevMethod !== null && s.methodologyVersion !== prevMethod) mks.push({ t, kind: "methodology", label: "Scoring method changed" });
       prevMethod = s.methodologyVersion;
       if (s.promptSetVersion !== null) {
-        if (prevPromptSet !== null && s.promptSetVersion !== prevPromptSet) mks.push({ t, kind: "prompt_set", label: `Questions changed (v${s.promptSetVersion})` });
+        if (prevPromptSet !== null && s.promptSetVersion !== prevPromptSet) mks.push({ t, kind: "prompt_set", label: "Customer questions changed" });
         prevPromptSet = s.promptSetVersion;
       }
       // One point per website scan: visibility snapshots carry copied crawl scores, so skip repeats.
@@ -96,34 +96,34 @@ export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnap
             aria-pressed={showSimulated}
             onClick={() => setShowSimulated((v) => !v)}
           >
-            {showSimulated ? "Hide simulated checks" : `Show simulated checks (${simulatedCount})`}
+            {showSimulated ? "Hide sample checks" : `Show sample checks (${simulatedCount})`}
           </Button>
         )}
       </div>
 
       <div className="px-5 sm:px-6">
         {points.length === 0 ? (
-          <EmptyState size="sm" title="No scores yet" description="Scores appear here after your first completed website scan." />
+          <EmptyState size="sm" title="No scores yet" description="Scores appear here after your first finished website check." />
         ) : (
           <ScoreHistoryChart data={points} markers={markers} shipped={shippedMarkers} />
         )}
-        {points.length === 1 && <p className="mt-2 text-caption font-normal text-muted">One scan so far — the lines start after your next scan.</p>}
+        {points.length === 1 && <p className="mt-2 text-caption font-normal text-muted">One check so far — the lines start after your next check.</p>}
       </div>
 
       {rows.length > 0 && (
-        <Table caption="Measurement snapshots, newest first" zebra maxHeight="28rem" stickyHeader>
+        <Table caption="Scores after each check, newest first" zebra maxHeight="28rem" stickyHeader>
           <THead>
             <tr>
               <TH>Date</TH>
-              <TH>Measured</TH>
+              <TH>Check</TH>
               <TH align="right">Overall</TH>
-              <TH align="right">SEO</TH>
-              <TH align="right">AEO</TH>
-              <TH align="right">GEO</TH>
-              <TH align="right">Brand</TH>
-              <TH align="right">Open issues</TH>
-              <TH align="right">Mentioned</TH>
-              <TH align="right">Linked</TH>
+              <TH align="right">Google health</TH>
+              <TH align="right">Easy to quote</TH>
+              <TH align="right">Ready for AI</TH>
+              <TH align="right">AI knows you</TH>
+              <TH align="right">Problems to fix</TH>
+              <TH align="right">Named you</TH>
+              <TH align="right">Linked to your site</TH>
               <TH>Notes</TH>
             </tr>
           </THead>
@@ -131,7 +131,7 @@ export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnap
             {[...rows].reverse().map((s) => (
               <TR key={s.id}>
                 <TD className="whitespace-nowrap">{day(s.at)}</TD>
-                <TD className="whitespace-nowrap">{s.kind === "crawl" ? "Website scan" : "AI check"}</TD>
+                <TD className="whitespace-nowrap">{s.kind === "crawl" ? "Website check" : "AI check"}</TD>
                 <TD numeric className="font-medium text-fg">
                   {s.overall ?? "—"}
                   {s.grade ? <span className="text-muted"> {s.grade}</span> : null}
@@ -145,11 +145,11 @@ export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnap
                 <TD numeric>{pct(s.citationRate)}</TD>
                 <TD>
                   <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                    {s.promptSetVersion !== null && <span>questions v{s.promptSetVersion}</span>}
-                    {s.sampleSize ? <span>· {s.sampleSize} answers</span> : null}
+                    {s.promptSetVersion !== null && <span>question list v{s.promptSetVersion}</span>}
+                    {s.sampleSize ? <span>· {s.sampleSize} {s.sampleSize === 1 ? "answer" : "answers"}</span> : null}
                     {s.simulated && (
                       <Badge tone="warning" size="sm">
-                        simulated
+                        sample
                       </Badge>
                     )}
                   </span>

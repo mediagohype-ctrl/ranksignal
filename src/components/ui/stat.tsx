@@ -89,7 +89,7 @@ const toneClass: Record<Exclude<MeterTone, "auto" | "usage" | "score">, string> 
 
 /**
  * Horizontal bar. Default tone "usage" (back-compat): accent → warning at 75% → danger at 90%.
- * tone="score": colours by score band of value/max×100 (good ≥80, ok ≥50, poor <50).
+ * tone="score": colours by score band of value/max×100 (good ≥75, ok ≥50, poor <50).
  */
 export function Meter({
   value,
@@ -113,7 +113,7 @@ export function Meter({
   const pct = ratio * 100;
   let bar: string;
   if (tone === "usage" || tone === "auto") bar = ratio >= 0.9 ? "bg-danger" : ratio >= 0.75 ? "bg-warning" : "bg-accent";
-  else if (tone === "score") bar = pct >= 80 ? "bg-score-good" : pct >= 50 ? "bg-score-ok" : "bg-score-poor";
+  else if (tone === "score") bar = pct >= 75 ? "bg-score-good" : pct >= 50 ? "bg-score-ok" : "bg-score-poor";
   else bar = toneClass[tone];
   const meter = (
     <div

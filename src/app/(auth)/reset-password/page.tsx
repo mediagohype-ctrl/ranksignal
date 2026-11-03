@@ -45,7 +45,7 @@ function ResetForm() {
     }
     const fe = res.fieldErrors?.password?.[0];
     if (fe) setErrors({ password: fe });
-    else setError(res.message ?? "Something went wrong. Please try again.");
+    else setError(res.message ?? "Something went wrong on our side. Please try again in a minute.");
   }
 
   if (invalidLink) {
@@ -53,7 +53,7 @@ function ResetForm() {
       <>
         <AuthHeading title="This link has expired" subtitle="Reset links work for 60 minutes and only once." />
         <Notice tone="warning" title="Request a new link">
-          This password reset link is invalid, has expired or has already been used. Ask for a fresh one and use it within the hour.
+          This link has expired or was already used. Ask for a new one and use it within an hour.
         </Notice>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <LinkButton href="/forgot-password">Send a new link</LinkButton>

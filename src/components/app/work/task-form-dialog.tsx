@@ -110,8 +110,8 @@ export function TaskFormDialog({
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!f.title.trim()) return setError("Add a short title so everyone knows what this is.");
-    if (badShipped) return setError("The shipped URL must start with http:// or https://");
-    if (badLink) return setError(`"${badLink}" doesn't look like a web link.`);
+    if (badShipped) return setError("The link to the live page must start with http:// or https://");
+    if (badLink) return setError(`"${badLink}" doesn't look like a web link. Check it and try again.`);
     setBusy(true);
     setError(null);
     const body = {
@@ -135,7 +135,7 @@ export function TaskFormDialog({
         : await api<{ item: TaskView }>(`/api/projects/${projectId}/tasks`, { method: "POST", body: JSON.stringify(body) });
       onSaved(res.item, !task);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save the task");
+      setError(err instanceof Error ? err.message : "Couldn't save the task. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -163,7 +163,7 @@ export function TaskFormDialog({
     >
       <form onSubmit={submit} className="space-y-5" noValidate>
         {!task && (draft?.findingId || draft?.actionId) && (
-          <Notice tone="info" icon={<Link2 />} title={draft.findingId ? "Linked to an audit finding" : "Linked to a recommended change"}>
+          <Notice tone="info" icon={<Link2 />} title={draft.findingId ? "Linked to a website problem" : "Linked to a suggested fix"}>
             We filled in the details from it. Adjust anything before creating the task.
           </Notice>
         )}
@@ -236,7 +236,7 @@ export function TaskFormDialog({
             <Input id={id("due")} type="date" value={f.dueAt} onChange={(e) => set("dueAt", e.target.value)} />
           </Field>
         </div>
-        <Field label="Shipped URL" htmlFor={id("url")} optional hint="The live page where this work can be seen.">
+        <Field label="Link to the live page" htmlFor={id("url")} optional hint="The live page where this work can be seen.">
           <Input
             id={id("url")}
             type="url"

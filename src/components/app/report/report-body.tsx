@@ -5,9 +5,10 @@ import type { SiteReport } from "@/lib/report/types";
 import { fmtDate } from "@/lib/dashboard/format";
 import { AiVisibilitySection } from "@/components/app/report/ai-visibility-section";
 import { IssueList } from "@/components/app/report/issue-list";
+import { issueHref } from "@/components/app/nav";
 import { PILLAR_EXPLAINER, PILLAR_ICON } from "@/components/app/report/pillars";
 import { QuickWins } from "@/components/app/report/quick-wins";
-import { Badge, Card, CheckList, GradeBadge, Notice, PillarCard, SCORE_BAND_CLASS, ScoreRing, SectionHeading, scoreBand } from "@/components/ui";
+import { Badge, Card, CheckList, Notice, PillarCard, ScoreRing, SectionHeading } from "@/components/ui";
 
 export function ReportBody({
   report: r,
@@ -34,15 +35,7 @@ export function ReportBody({
       <Card as="section" padding="lg" aria-labelledby="report-hero" className="break-inside-avoid">
         <div className="flex flex-col gap-8 md:flex-row md:items-center">
           <div className="flex shrink-0 flex-col items-center gap-3">
-            <ScoreRing score={r.overall.score} grade={null} size="lg" label="Overall score" caption="Overall score" />
-            {r.overall.grade && (
-              <span className="inline-flex items-center gap-2">
-                <GradeBadge grade={r.overall.grade} label="Overall grade" size="sm" />
-                <span className={`text-small font-medium ${SCORE_BAND_CLASS[scoreBand(r.overall.score)].text}`}>
-                  {SCORE_BAND_CLASS[scoreBand(r.overall.score)].label}
-                </span>
-              </span>
-            )}
+            <ScoreRing score={r.overall.score} size="lg" label="Your score" caption="Your score" partial={r.overall.partial === true} />
           </div>
           <div className="min-w-0 flex-1">
             <h2 id="report-hero" className="text-h2 text-balance text-fg">
@@ -68,8 +61,8 @@ export function ReportBody({
       <section aria-labelledby="pillars" className="space-y-4">
         <SectionHeading
           id="pillars"
-          title="Your four scores"
-          description="Each score is out of 100 and comes from real checks on your pages and real AI answers."
+          title="What makes up your score"
+          description="Four parts, each out of 100, from real checks on your pages and real AI answers."
         />
         <div className="grid gap-6 md:grid-cols-2">
           {r.pillars.map((p) => (
@@ -99,7 +92,7 @@ export function ReportBody({
             title="Fix these first"
             description="High-value fixes that are quick to do. Click one to see the step-by-step instructions."
           />
-          <QuickWins issues={quickWins} />
+          <QuickWins issues={quickWins} hrefFor={!readOnly && projectId ? (id) => issueHref(projectId, id) : undefined} />
         </section>
       )}
 

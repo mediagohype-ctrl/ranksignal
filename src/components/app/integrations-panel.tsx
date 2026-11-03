@@ -35,7 +35,7 @@ export interface IntegrationView {
 const HEALTH: Record<string, { tone: Tone; label: string; help: string }> = {
   healthy: { tone: "success", label: "Working", help: "Our last test reached your site successfully." },
   degraded: { tone: "warning", label: "Having trouble", help: "Some requests failed recently. Try testing again." },
-  failed: { tone: "danger", label: "Not working", help: "We couldn't sign in. The password may have been revoked or the site is down." },
+  failed: { tone: "danger", label: "Not working", help: "We couldn't sign in. The password may have been removed or the site is down. Reconnect, or test again later." },
   unknown: { tone: "neutral", label: "Not tested yet", help: "Run a test to check the connection." },
 };
 
@@ -51,7 +51,7 @@ function HealthBadge({ health }: { health: string }) {
 
 const PROVIDER_NAME: Record<string, string> = {
   wordpress: "WordPress",
-  manual: "Manual export",
+  manual: "Copy-and-paste steps",
   github: "GitHub",
   shopify: "Shopify",
   webflow: "Webflow",
@@ -111,7 +111,7 @@ export function IntegrationsPanel({
     setFormError(null);
     try {
       await api("/api/integrations/wordpress/connect", { body: { projectId, ...form } });
-      toast("WordPress connected. Run a test any time to check it.", "success");
+      toast("WordPress connected. Click “Test connection” any time to check it.", "success");
       setForm((f) => ({ ...f, applicationPassword: "" }));
       router.refresh();
     } catch (err) {
@@ -131,7 +131,7 @@ export function IntegrationsPanel({
         setTestResult((s) => ({ ...s, [i.id]: { ok: true, text } }));
         toast(text, "success");
       } else {
-        const text = `Test failed: ${t?.error ?? "we couldn't reach your site"}.`;
+        const text = `Test failed: ${t?.error ?? "we couldn't reach your site"}. Check your website is online, then test again.`;
         setTestResult((s) => ({ ...s, [i.id]: { ok: false, text } }));
         toast(text, "error");
       }
@@ -183,7 +183,7 @@ export function IntegrationsPanel({
       icon: PROVIDER_ICON[d.id] ?? <Blocks />,
       connected: integrations.some((i) => i.provider === d.id),
     })),
-    { id: "manual", name: "Manual export", family: "Any platform", blurb: catalogBlurb("manual"), icon: <FileDown />, connected: true },
+    { id: "manual", name: "Copy-and-paste steps", family: "Any platform", blurb: catalogBlurb("manual"), icon: <FileDown />, connected: true },
     ...planned.map((c) => ({ id: c.id, name: c.name, family: c.family, blurb: c.description, icon: <Blocks />, connected: false, planned: true })),
   ];
 
@@ -264,8 +264,8 @@ export function IntegrationsPanel({
               </div>
             </form>
           ) : (
-            <Notice tone="info" title="Admins only">
-              Only an organization admin can connect a website. Ask an admin on your team to do this step.
+            <Notice tone="info" title="Owner or Admin only">
+              Only the Owner or an Admin can connect a website. Ask them to do this step.
             </Notice>
           )}
         </div>
@@ -283,14 +283,14 @@ export function IntegrationsPanel({
         <SectionHeading
           id="int-connected"
           title="Your connections"
-          description="Connected sites let approved changes be applied, checked and undone automatically. Passwords are encrypted and never shown again."
+          description="A connected website lets fixes you approve go live for you, get checked and be undone in one click. Passwords are stored safely and never shown again."
         />
         {integrations.length === 0 ? (
           <EmptyState
             bordered
             icon={<Plug />}
             title="Nothing connected yet"
-            description="That's fine — without a connection, every approved change comes with copy-ready steps you can paste into your website editor."
+            description="That's fine — without a connection, every approved fix comes with copy-and-paste steps for your website editor. Pick your platform below to connect."
           />
         ) : (
           <ul className="grid gap-4 lg:grid-cols-2">
@@ -358,7 +358,7 @@ export function IntegrationsPanel({
       <section aria-labelledby="int-connect">
         <SectionHeading
           id="int-connect"
-          title="Connect a platform"
+          title="Where is your website built?"
           description="Choose where your website lives. We'll show the setup steps for just that platform."
         />
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -433,8 +433,8 @@ export function IntegrationsPanel({
                     <div>
                       <h3 className="text-h4 text-fg">No setup needed</h3>
                       <p className="mt-1 max-w-2xl text-small text-fg-soft">
-                        Manual export is always on. Every approved change comes with copy-ready steps you can paste into any website editor. Nothing is
-                        written to your site automatically.
+                        Copy-and-paste steps are always on. Every approved fix comes with steps you can paste into any website editor. Nothing is
+                        changed on your site for you.
                       </p>
                     </div>
                   </div>
@@ -467,7 +467,7 @@ export function IntegrationsPanel({
         <SectionHeading
           id="int-matrix"
           title="What each connection can do"
-          description="A tick means we can do it for you (after your approval where needed). Planned connections don't have confirmed features yet."
+          description="A tick means we can do it for you (after your OK where needed). Platforms marked “Planned” aren't ready yet."
         />
         <Card className="overflow-hidden">
           <CapabilityMatrix catalog={catalog} capabilityMap={capabilityMap} />
@@ -483,7 +483,7 @@ export function IntegrationsPanel({
         description={
           <>
             We’ll delete the saved password{confirm?.siteUrl ? <> for <span className="font-medium text-fg">{hostOf(confirm.siteUrl)}</span></> : null}.
-            Changes waiting to be applied will switch to copy-ready manual steps. Changes already made stay on your site. You may also want to
+            Fixes waiting to go live will switch to copy-and-paste steps. Changes already made stay on your site. You may also want to
             revoke the Application Password in WordPress.
           </>
         }

@@ -3,15 +3,15 @@ import type { ReportIssue } from "@/lib/report/types";
 import { EffortChip, ImpactChip } from "@/components/ui";
 import { PILLAR_SHORT } from "./pillars";
 
-/** "Fix these first" strip: compact links that jump to (and open) the full issue below. */
-export function QuickWins({ issues }: { issues: ReportIssue[] }) {
+/** "Fix these first" strip: compact links to each problem's page (in the app) or to its card below (shared reports). */
+export function QuickWins({ issues, hrefFor }: { issues: ReportIssue[]; hrefFor?: (id: string) => string }) {
   if (issues.length === 0) return null;
   return (
     <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {issues.map((i, n) => (
         <li key={i.id} className="break-inside-avoid">
           <a
-            href={`#${encodeURIComponent(i.id)}`}
+            href={hrefFor ? hrefFor(i.id) : `#${encodeURIComponent(i.id)}`}
             className="focus-ring group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-shadow hover:shadow-card-hover"
           >
             <div className="flex items-center gap-2">
@@ -26,7 +26,7 @@ export function QuickWins({ issues }: { issues: ReportIssue[] }) {
               </span>
             </div>
             <h3 className="mt-3 text-h4 text-fg">{i.title}</h3>
-            <p className="mt-1 line-clamp-2 text-small text-muted">{i.howToFix[0] ?? i.whatsWrong}</p>
+            <p className="mt-1 line-clamp-2 text-small text-muted">{i.whatsWrong}</p>
             <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
               <ImpactChip impact={i.impact} />
               <EffortChip effort={i.effort} />

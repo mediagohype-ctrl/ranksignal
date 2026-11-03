@@ -45,10 +45,10 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const bad = [...errors.map(urlOf), ...noindex.map(urlOf)];
     const parts = [] as string[];
     if (errors.length) parts.push(`${plural(errors.length, "page")} returned an error or could not be loaded`);
-    if (noindex.length) parts.push(`${plural(noindex.length, "page")} ${noindex.length === 1 ? "tells" : "tell"} search engines not to index ${noindex.length === 1 ? "it" : "them"} (noindex)`);
-    out.push(makeCheck(P, "seo.indexability", "Pages search engines can index", 3, {
+    if (noindex.length) parts.push(`${plural(noindex.length, "page")} ${noindex.length === 1 ? "is" : "are"} hidden from Google`);
+    out.push(makeCheck(P, "seo.indexability", "Pages that can appear on Google", 3, {
       score: ratioScore(bad.length, all.length),
-      detail: parts.length ? `${parts.join("; ")} — out of ${all.length} pages checked.` : `All ${all.length} pages checked load correctly and allow indexing.`,
+      detail: parts.length ? `${parts.join("; ")} — out of ${all.length} pages checked.` : `All ${all.length} pages checked load correctly and can appear on Google.`,
       affected: bad,
       facts: { errors: errors.length, noindex: noindex.length, total: all.length },
     }));
@@ -57,9 +57,9 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   // Redirect chains.
   {
     const chains = all.filter((p) => p.redirectChain.length > 1);
-    out.push(makeCheck(P, "seo.redirects", "Redirect chains", 1, {
+    out.push(makeCheck(P, "seo.redirects", "Pages that load in one hop", 1, {
       score: ratioScore(chains.length * 2, all.length),
-      detail: chains.length ? `${plural(chains.length, "page")} can only be reached through 2 or more redirects.` : "No pages sit behind chains of redirects.",
+      detail: chains.length ? `${plural(chains.length, "page")} can only be reached after being forwarded 2 or more times.` : "No pages are forwarded more than once before they load.",
       affected: chains.map((p) => p.url),
       facts: { chains: chains.length },
     }));
@@ -80,12 +80,12 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     if (dupUrls.size) parts.push(`${dupUrls.size} duplicated`);
     if (long.length) parts.push(`${long.length} too long (over ${TITLE_MAX} characters)`);
     if (short.length) parts.push(`${short.length} too short`);
-    out.push(makeCheck(P, "seo.titles", "Page titles", 3, {
+    out.push(makeCheck(P, "seo.titles", "Google headlines", 3, {
       score,
-      detail: parts.length ? `Of ${ok.length} pages, titles are ${parts.join(", ")}.` : `All ${ok.length} pages have a unique title of a sensible length.`,
+      detail: parts.length ? `Of ${ok.length} pages, Google headlines are ${parts.join(", ")}.` : `All ${ok.length} pages have their own Google headline of a sensible length.`,
       affected: [...missing.map(urlOf), ...Array.from(dupUrls), ...short.map(urlOf), ...long.map(urlOf)],
       affectedCount: new Set([...badSet, ...long.map((p) => keyOf(urlOf(p)))]).size,
-      evidence: long[0]?.extracted?.title ? `Example long title (${long[0].extracted.title.length} chars): "${long[0].extracted.title.slice(0, 90)}"` : undefined,
+      evidence: long[0]?.extracted?.title ? `Example long Google headline (${long[0].extracted.title.length} characters): "${long[0].extracted.title.slice(0, 90)}"` : undefined,
       facts: { missing: missing.length, duplicate: dupUrls.size, duplicateGroups: groups, long: long.length, short: short.length, total: ok.length },
     }));
   }
@@ -98,12 +98,12 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const badSet = new Set([...missing.map(urlOf).map(keyOf), ...Array.from(dupUrls)]);
     const parts: string[] = [];
     const verb = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
-    if (missing.length) parts.push(verb(missing.length, "has no description", "have no description"));
-    if (dupUrls.size) parts.push(verb(dupUrls.size, "shares a description with another page", "share a description with another page"));
+    if (missing.length) parts.push(verb(missing.length, "has no Google summary", "have no Google summary"));
+    if (dupUrls.size) parts.push(verb(dupUrls.size, "shares its Google summary with another page", "share their Google summary with another page"));
     if (long.length) parts.push(verb(long.length, `is longer than ${DESCRIPTION_MAX} characters`, `are longer than ${DESCRIPTION_MAX} characters`));
-    out.push(makeCheck(P, "seo.meta_description", "Meta descriptions", 2, {
+    out.push(makeCheck(P, "seo.meta_description", "Google summaries", 2, {
       score: ratioScore(badSet.size + long.length * 0.3, ok.length),
-      detail: parts.length ? `Of ${ok.length} pages, ${parts.join(", ")}.` : `All ${ok.length} pages have their own description.`,
+      detail: parts.length ? `Of ${ok.length} pages, ${parts.join(", ")}.` : `All ${ok.length} pages have their own Google summary.`,
       affected: [...missing.map(urlOf), ...Array.from(dupUrls), ...long.map(urlOf)],
       affectedCount: new Set([...badSet, ...long.map((p) => keyOf(urlOf(p)))]).size,
       facts: { missing: missing.length, duplicate: dupUrls.size, long: long.length, total: ok.length },
@@ -114,7 +114,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   {
     const missing = ok.filter((p) => p.extracted!.h1.length === 0);
     const multiple = ok.filter((p) => p.extracted!.h1.length > 1);
-    out.push(makeCheck(P, "seo.h1", "Main headings (H1)", 2, {
+    out.push(makeCheck(P, "seo.h1", "Main headings", 2, {
       score: ratioScore(missing.length + multiple.length * 0.4, ok.length),
       detail: missing.length || multiple.length
         ? `Of ${ok.length} pages, ${[
@@ -138,11 +138,11 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
       }
     };
     const offsite = ok.filter((p) => p.extracted!.canonical && homeHost(p.extracted!.canonical) !== homeHost(urlOf(p)));
-    out.push(makeCheck(P, "seo.canonical", "Canonical tags", 1.5, {
+    out.push(makeCheck(P, "seo.canonical", "Main version of each page", 1.5, {
       score: ratioScore(missing.length * 0.5 + offsite.length * 2, ok.length),
       detail: missing.length || offsite.length
-        ? `${plural(missing.length, "page")} without a canonical tag${offsite.length ? `; ${offsite.length} point${offsite.length === 1 ? "s" : ""} to a different website` : ""} (of ${ok.length}).`
-        : `All ${ok.length} pages declare their preferred address (canonical).`,
+        ? `${plural(missing.length, "page")} out of ${ok.length} ${missing.length === 1 ? "doesn't" : "don't"} say which version is the main one${offsite.length ? `; ${offsite.length} point${offsite.length === 1 ? "s" : ""} Google to a different website` : ""}.`
+        : `All ${ok.length} pages say which version is the main one.`,
       affected: [...offsite.map(urlOf), ...missing.map(urlOf)],
       facts: { missing: missing.length, offsite: offsite.length, total: ok.length },
     }));
@@ -165,7 +165,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const fromFindings = ctx.findings.filter((f) => f.code === "broken_internal_link").length;
     const n = Math.max(broken.size, fromFindings);
     const sources = new Set(Array.from(broken.values()).flatMap((s) => Array.from(s)));
-    out.push(makeCheck(P, "seo.broken_links", "Broken internal links", 2, {
+    out.push(makeCheck(P, "seo.broken_links", "Broken links between your pages", 2, {
       score: n === 0 ? 100 : Math.max(0, 85 - n * 10),
       detail: n ? `${plural(n, "link")} inside your site lead${n === 1 ? "s" : ""} to an error page, found on ${plural(sources.size, "page")}.` : "No broken links found between the pages we checked.",
       affected: Array.from(sources),
@@ -179,9 +179,9 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const linked = new Set<string>();
     for (const p of ok) for (const l of p.extracted!.internalLinks) if (keyOf(l) !== keyOf(urlOf(p))) linked.add(keyOf(l));
     const orphans = ok.filter((p) => !isHomeUrl(urlOf(p)) && !linked.has(keyOf(urlOf(p))) && !linked.has(keyOf(p.url)));
-    out.push(makeCheck(P, "seo.internal_links", "Internal linking", 1, {
+    out.push(makeCheck(P, "seo.internal_links", "Links between your pages", 1, {
       score: ratioScore(orphans.length, ok.length),
-      detail: orphans.length ? `${plural(orphans.length, "page")} ${orphans.length === 1 ? "is" : "are"} not linked from any other page we checked (found only via the sitemap).` : "Every page we checked is linked from at least one other page.",
+      detail: orphans.length ? `${plural(orphans.length, "page")} ${orphans.length === 1 ? "is" : "are"} not linked from any other page we checked (we found ${orphans.length === 1 ? "it" : "them"} only in your page list).` : "Every page we checked is linked from at least one other page.",
       affected: orphans.map(urlOf),
       facts: { orphans: orphans.length, total: ok.length },
     }));
@@ -199,10 +199,10 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
       if (m) pagesWith.push(urlOf(p));
     }
     out.push(images === 0
-      ? notMeasured(P, "seo.image_alt", "Image descriptions (alt text)", 1, "No images were found on the pages we checked.")
-      : makeCheck(P, "seo.image_alt", "Image descriptions (alt text)", 1, {
+      ? notMeasured(P, "seo.image_alt", "Image descriptions", 1, "No images were found on the pages we checked.")
+      : makeCheck(P, "seo.image_alt", "Image descriptions", 1, {
           score: ratioScore(missing, images),
-          detail: missing ? `${missing} of ${images} images have no alt text, across ${plural(pagesWith.length, "page")}.` : `All ${images} images have alt text.`,
+          detail: missing ? `${missing} of ${images} images have no image description, across ${plural(pagesWith.length, "page")}.` : `All ${images} images have an image description.`,
           affected: pagesWith,
           facts: { missing, images },
         }));
@@ -233,9 +233,9 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
       groups.set(p.extracted!.contentFingerprint, arr);
     }
     const dups = Array.from(groups.values()).filter((g) => g.length > 1).flat();
-    out.push(makeCheck(P, "seo.duplicate_content", "Duplicate pages", 1.5, {
+    out.push(makeCheck(P, "seo.duplicate_content", "Copied pages", 1.5, {
       score: ratioScore(dups.length, ok.length),
-      detail: dups.length ? `${dups.length} pages have exactly the same text as another page.` : "No pages have identical text.",
+      detail: dups.length ? `${plural(dups.length, "page")} ${dups.length === 1 ? "has" : "have"} exactly the same text as another page.` : "No pages have identical text.",
       affected: dups,
       facts: { duplicates: dups.length },
     }));
@@ -245,11 +245,11 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   {
     const site = ctx.site;
     const found = site ? site.sitemapsFound.length > 0 : !ctx.findings.some((f) => f.code === "no_sitemap");
-    out.push(makeCheck(P, "seo.sitemap", "XML sitemap", 1.5, {
+    out.push(makeCheck(P, "seo.sitemap", "Page list for Google (sitemap)", 1.5, {
       score: found ? 100 : 20,
       detail: found
-        ? `A sitemap was found${site?.sitemapUrlCount ? ` listing ${site.sitemapUrlCount} pages` : ""}.`
-        : "No XML sitemap was found (checked robots.txt and /sitemap.xml).",
+        ? `We found your page list for Google${site?.sitemapUrlCount ? ` with ${plural(site.sitemapUrlCount, "page")}` : ""}.`
+        : "We couldn't find a page list for Google (we looked in the usual places).",
       affected: found ? [] : [site?.homepageUrl ?? ctx.websiteUrl],
       facts: { found },
     }));
@@ -263,15 +263,15 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     let score = ratioScore(insecure.length, all.length);
     if (homeHttps === false) score = 0;
     else if (redirects === false) score = Math.min(score, 60);
-    out.push(makeCheck(P, "seo.https", "Secure connection (HTTPS)", 2, {
+    out.push(makeCheck(P, "seo.https", "Secure connection (padlock)", 2, {
       score,
       detail: homeHttps === false
-        ? "Your homepage is not served over a secure (https) connection."
+        ? "Your homepage doesn't use a secure connection, so browsers show no padlock."
         : insecure.length
-          ? `${plural(insecure.length, "page")} still load over insecure http.`
+          ? `${plural(insecure.length, "page")} still ${insecure.length === 1 ? "loads" : "load"} without a secure connection.`
           : redirects === false
-            ? "Pages use https, but the http:// address does not redirect to the secure version."
-            : "All pages load over a secure https connection.",
+            ? "Your pages are secure, but the old unsecured address doesn't send visitors to the secure one."
+            : "All pages load over a secure connection.",
       affected: insecure.map(urlOf),
       facts: { insecure: insecure.length, homeHttps, httpRedirectsToHttps: redirects },
     }));
@@ -285,7 +285,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     const missing = v2.filter((p) => !/width\s*=\s*device-width/i.test(p.extracted!.viewport ?? ""));
     out.push(makeCheck(P, "seo.mobile_viewport", "Mobile-friendly setup", 1.5, {
       score: ratioScore(missing.length, v2.length),
-      detail: missing.length ? `${missing.length} of ${v2.length} pages lack the mobile "viewport" setting, so phones may show a shrunken desktop page.` : `All ${v2.length} pages are set up to scale on phones (viewport tag).`,
+      detail: missing.length ? `${missing.length} of ${v2.length} pages are missing the phone setting, so phones may show a shrunken desktop page.` : `All ${v2.length} pages are set up to fit on phones.`,
       affected: missing.map(urlOf),
       facts: { missing: missing.length, total: v2.length },
     }));
@@ -295,15 +295,15 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   {
     const sized = ok.filter((p) => typeof p.responseBytes === "number");
     if (sized.length === 0 && v2.length === 0) {
-      out.push(notMeasured(P, "seo.page_speed_proxy", "Page weight (speed proxy)", 1, NEEDS_RESCAN));
+      out.push(notMeasured(P, "seo.page_speed_proxy", "Page size (speed estimate)", 1, NEEDS_RESCAN));
     } else {
       const heavy = sized.filter((p) => (p.responseBytes ?? 0) > HTML_HEAVY_BYTES);
       const blocking = v2.filter((p) => (p.extracted!.renderBlockingScripts ?? 0) > RENDER_BLOCKING_MAX);
       const bad = new Set([...heavy, ...blocking].map(urlOf));
       const avgKb = sized.length ? Math.round(sized.reduce((a, p) => a + (p.responseBytes ?? 0), 0) / sized.length / 1024) : null;
-      out.push(makeCheck(P, "seo.page_speed_proxy", "Page weight (speed proxy)", 1, {
+      out.push(makeCheck(P, "seo.page_speed_proxy", "Page size (speed estimate)", 1, {
         score: ratioScore(bad.size, Math.max(sized.length, v2.length)),
-        detail: `Proxy, not a speed test: ${heavy.length} pages have HTML over ${HTML_HEAVY_BYTES / 1024} KB and ${blocking.length} load more than ${RENDER_BLOCKING_MAX} blocking scripts before showing content${avgKb !== null ? ` (average HTML ${avgKb} KB)` : ""}.`,
+        detail: `Estimate, not a speed test: ${plural(heavy.length, "page")} ${heavy.length === 1 ? "is" : "are"} very large (over ${HTML_HEAVY_BYTES / 1024} KB) and ${plural(blocking.length, "page")} ${blocking.length === 1 ? "loads" : "load"} more than ${RENDER_BLOCKING_MAX} scripts before showing anything${avgKb !== null ? ` (average page size ${avgKb} KB)` : ""}.`,
         affected: Array.from(bad),
         facts: { heavy: heavy.length, blocking: blocking.length, avgKb },
       }));
@@ -312,12 +312,12 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
 
   // Open Graph (link previews).
   if (v2.length === 0) {
-    out.push(notMeasured(P, "seo.open_graph", "Social sharing previews", 1, NEEDS_RESCAN));
+    out.push(notMeasured(P, "seo.open_graph", "Share previews", 1, NEEDS_RESCAN));
   } else {
     const missing = v2.filter((p) => !p.extracted!.openGraph?.title || !p.extracted!.openGraph?.image);
-    out.push(makeCheck(P, "seo.open_graph", "Social sharing previews", 1, {
+    out.push(makeCheck(P, "seo.open_graph", "Share previews", 1, {
       score: ratioScore(missing.length, v2.length),
-      detail: missing.length ? `${missing.length} of ${v2.length} pages lack a sharing title or image (Open Graph tags).` : `All ${v2.length} pages have sharing previews set up.`,
+      detail: missing.length ? `${missing.length} of ${v2.length} pages have no share preview (title and picture for WhatsApp and social media).` : `All ${v2.length} pages have a share preview set up.`,
       affected: missing.map(urlOf),
       facts: { missing: missing.length, total: v2.length },
     }));

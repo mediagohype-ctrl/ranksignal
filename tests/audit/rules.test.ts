@@ -121,7 +121,7 @@ describe("auditSite", () => {
     expect(f.find((x) => x.code === "ai_crawler_access")!.severity).toBe("medium");
     const llms = f.find((x) => x.code === "no_llms_txt")!;
     expect(llms.severity).toBe("info");
-    expect(llms.message).toMatch(/emerging convention/);
+    expect(llms.message).toMatch(/optional/);
   });
 
   it("rates training-only AI crawler blocks as info", () => {

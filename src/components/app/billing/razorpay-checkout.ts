@@ -29,7 +29,7 @@ export function loadRazorpay(): Promise<RazorpayCtor> {
     const s = document.createElement("script");
     s.src = SCRIPT_SRC;
     s.async = true;
-    s.onload = () => (w.Razorpay ? resolve(w.Razorpay) : reject(new Error("Razorpay failed to load")));
+    s.onload = () => (w.Razorpay ? resolve(w.Razorpay) : reject(new Error("Couldn't load the payment window. Refresh the page and try again.")));
     s.onerror = () => {
       s.remove();
       reject(new Error("Couldn't load the payment window. Check your connection or ad blocker and try again."));
@@ -71,7 +71,7 @@ export async function openRazorpaySubscription(o: {
   });
   rzp.on("payment.failed", (resp) => {
     const desc = (resp as { error?: { description?: string } })?.error?.description;
-    o.onFailure(desc ? `Payment failed: ${desc}` : "Payment failed. No money was taken — please try again.");
+    o.onFailure(desc ? `Payment failed: ${desc}. No money was taken — please try again.` : "Payment failed. No money was taken — please try again.");
   });
   rzp.open();
 }

@@ -17,7 +17,7 @@ import {
 import { FaqList, ServiceTierCards, ServicesCta } from "@/components/marketing/services-ui";
 
 const SOFTWARE_FROM = Math.min(...MARKETING_PLANS.map((p) => p.price));
-const DESCRIPTION = `Two ways to get found in AI answers: self-serve software from ${inr(SOFTWARE_FROM)}/mo with a ${TRIAL_DAYS}-day free trial, or done-for-you service from ${inr(SERVICE_FROM_PRICE)}/mo where our team ships the fixes. Prices in INR, excluding GST.`;
+const DESCRIPTION = `Two ways to get found on Google and in AI answers (SEO and GEO): do it yourself from ${inr(SOFTWARE_FROM)}/mo with a ${TRIAL_DAYS}-day free trial, or done for you from ${inr(SERVICE_FROM_PRICE)}/mo where our team makes the fixes. Prices in INR, excluding GST.`;
 
 export const metadata: Metadata = {
   title: "Pricing: self-serve software and done-for-you plans",
@@ -33,20 +33,20 @@ type Cell = string | boolean;
 const ROWS: { label: string; hint?: string; values: Cell[] }[] = [
   { label: "Websites", values: MARKETING_PLANS.map((p) => num(p.limits.maxProjects)) },
   {
-    label: "Tracked AI questions",
-    hint: "Questions we ask AI assistants about your category",
+    label: "Customer questions",
+    hint: "Questions we ask AI assistants about what you sell",
     values: MARKETING_PLANS.map((p) => num(p.limits.maxTrackedPrompts)),
   },
   { label: "Questions asked per AI check", values: MARKETING_PLANS.map((p) => num(p.ai.questionsPerCheck)) },
   { label: "AI checks per month", values: MARKETING_PLANS.map((p) => num(p.ai.checksPerMonth)) },
-  { label: "AI engines per check", hint: "ChatGPT, Gemini, Perplexity, Claude and more", values: MARKETING_PLANS.map((p) => `Up to ${p.ai.engines}`) },
-  { label: "Automatic website scans", hint: "On a schedule you choose: weekly, monthly or off", values: MARKETING_PLANS.map(() => "Weekly") },
-  { label: "Pages per site check", values: MARKETING_PLANS.map((p) => num(p.limits.maxPagesPerCrawl)) },
+  { label: "AI assistants per check", hint: "ChatGPT, Gemini, Perplexity, Claude and more", values: MARKETING_PLANS.map((p) => `Up to ${p.ai.engines}`) },
+  { label: "Automatic website checks", hint: "On a schedule you choose: weekly, monthly or off", values: MARKETING_PLANS.map(() => "Weekly") },
+  { label: "Pages per website check", values: MARKETING_PLANS.map((p) => num(p.limits.maxPagesPerCrawl)) },
   { label: "Monthly usage credits", values: MARKETING_PLANS.map((p) => num(p.limits.monthlyCredits)) },
   { label: "Competitor comparison", values: MARKETING_PLANS.map((p) => p.limits.competitorTracking) },
-  { label: "Approve-before-publish fixes", values: MARKETING_PLANS.map((p) => p.limits.approvalPublishing) },
-  { label: "Rollback & audit log", values: MARKETING_PLANS.map(() => true) },
-  { label: "Team seats", values: MARKETING_PLANS.map((p) => num(p.limits.seats)) },
+  { label: "Fixes go live only with your OK", values: MARKETING_PLANS.map((p) => p.limits.approvalPublishing) },
+  { label: "Undo and change history", values: MARKETING_PLANS.map(() => true) },
+  { label: "Team members", values: MARKETING_PLANS.map((p) => num(p.limits.seats)) },
   {
     label: "White-label reports",
     hint: "Your name, logo and colour on shared reports, monthly reports and report emails",
@@ -58,7 +58,7 @@ const WHICH: { label: string; diy: string; dfy: string }[] = [
   {
     label: "Who does the work",
     diy: "You or your team. We find the problems, explain them and draft the fixes.",
-    dfy: "Our team. We plan, write and ship the fixes on your site, profile and listings.",
+    dfy: "Our team. We plan, write and make the fixes on your site, profile and listings.",
   },
   {
     label: "Your time each month",
@@ -67,8 +67,8 @@ const WHICH: { label: string; diy: string; dfy: string }[] = [
   },
   {
     label: "What you get",
-    diy: "Scores, AI answer tracking, a fix list and approve-before-publish changes.",
-    dfy: "All of the software, plus shipped fixes, new pages, listings and a monthly impact report.",
+    diy: "Scores, AI checks, a to-do list and fixes that go live only with your OK.",
+    dfy: "All of the software, plus fixes made for you, new pages, listings and a monthly report.",
   },
   {
     label: "Commitment",
@@ -82,7 +82,7 @@ const WHICH: { label: string; diy: string; dfy: string }[] = [
   },
   {
     label: "Best for",
-    diy: "Marketers, agencies and owners who like to do it themselves.",
+    diy: "Owners, marketers and agencies who like to do it themselves.",
     dfy: "Busy owners who want it handled, and the proof each month.",
   },
 ];
@@ -90,7 +90,7 @@ const WHICH: { label: string; diy: string; dfy: string }[] = [
 const PRICING_FAQ = [
   {
     q: "What happens after the free trial?",
-    a: `Your ${TRIAL_DAYS}-day trial gives you a full report and a first AI visibility baseline. It only turns into a paid plan if you choose one and add payment details.`,
+    a: `Your ${TRIAL_DAYS}-day trial gives you a full report and your first AI check. It only turns into a paid plan if you choose one and add payment details.`,
   },
   {
     q: "What are usage credits?",
@@ -98,11 +98,11 @@ const PRICING_FAQ = [
   },
   {
     q: "Can I start with the software and switch to done-for-you later?",
-    a: "Yes. Your history, questions and reports carry over, so our team starts from your existing baseline. The one-time setup fee still applies.",
+    a: "Yes. Your history, questions and reports carry over, so our team starts from your existing scores. The one-time setup fee still applies.",
   },
   {
     q: "Do any plans guarantee results?",
-    a: "No. Software plans cover measurement, auditing and workflow tools. Done-for-you plans guarantee delivery of the agreed fixes, not rankings, AI mentions or citations. Nobody can honestly promise those.",
+    a: "No. Software plans give you the checks, the to-do list and the tools to fix things. Done-for-you plans guarantee the agreed fixes get done — not a Google position, AI mentions or links. Nobody can honestly promise those.",
   },
   {
     q: "Are prices inclusive of GST?",
@@ -156,7 +156,7 @@ export default function PricingPage() {
   const serviceLd = {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: "Done-for-you AI visibility",
+    name: "Done-for-you website fixes for Google and AI",
     url: `${SITE}/services`,
     provider: { "@type": "Organization", name: BRAND.name, url: SITE },
     offers: SERVICE_TIERS.map((t) => ({
@@ -188,7 +188,7 @@ export default function PricingPage() {
               Do it yourself, <span className="text-primary">or let us do it.</span>
             </h1>
             <p className="mk-lead mk-rise mk-delay-2 max-w-md text-fg-soft lg:col-span-4">
-              Use the software and make the fixes yourself, or hand the work to our team and get a report on what it moved.
+              Use the software and make the fixes yourself, or hand the work to our team and get a report on what changed.
               Prices in Indian rupees, excluding GST.
             </p>
           </div>
@@ -214,7 +214,7 @@ export default function PricingPage() {
                     <span className="mt-1 block text-[1.375rem] font-semibold tracking-[-0.02em] text-bg">
                       From {inr(SERVICE_FROM_PRICE)}/mo
                     </span>
-                    <span className="mt-1 block text-small text-bg/80">Our team ships the fixes · monthly impact report</span>
+                    <span className="mt-1 block text-small text-bg/80">Our team makes the fixes · monthly report</span>
                   </span>
                   <ArrowRight aria-hidden size={22} className="shrink-0 rotate-90 transition-transform group-hover:translate-y-0.5" />
                 </a>
@@ -349,7 +349,7 @@ export default function PricingPage() {
             </div>
             <div className="max-w-md lg:col-span-4 lg:col-start-9">
               <p className="mk-lead text-fg-soft">
-                Our team ships agreed fixes every month and reports what they moved. Includes the software.
+                Our team makes the agreed fixes every month and reports what changed. Includes the software.
               </p>
               <Link
                 href="/services"
@@ -363,8 +363,8 @@ export default function PricingPage() {
           <ServiceTierCards className="mt-16 lg:mt-20" />
           <p className="mt-8 max-w-3xl text-small text-muted">
             Prices exclude GST. Setup is charged once; minimum terms then month to month with 30 days&apos; notice. If we
-            don&apos;t ship the fixes promised for a month, you get 25% of that month&apos;s fee back. We never guarantee
-            rankings or placements.
+            don&apos;t make the fixes promised for a month, you get 25% of that month&apos;s fee back. We never promise a
+            Google or AI position.
           </p>
         </div>
       </section>
@@ -402,10 +402,10 @@ export default function PricingPage() {
 
       <ServicesCta
         title="Not sure yet? Start with the free check."
-        body={<p>It reads your homepage and key pages and shows your scores and top fixes. Then decide who does them.</p>}
+        body={<p>It reads your homepage and main pages and shows your score and top fixes. Then decide who does them.</p>}
         primary={{ href: "/free-check", label: "Run the free check" }}
         secondary={{ href: servicesContactHref(), label: "Book a strategy call" }}
-        footnote={`${TRIAL_DAYS}-day free trial on software. Prices in INR, excluding GST. No guaranteed rankings, ever.`}
+        footnote={`${TRIAL_DAYS}-day free trial on software. Prices in INR, excluding GST. We never promise a Google position.`}
       />
     </>
   );

@@ -19,7 +19,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [error, setError] = useState<string | null>(
-    params.get("verify_error") ? "That verification link is invalid or has expired. Sign in and we'll send a new one." : null,
+    params.get("verify_error") ? "That email link has expired or was already used. Sign in and we'll send you a new one." : null,
   );
   const [notice] = useState<string | null>(
     params.get("reset") ? "Your password has been changed. Sign in with your new password." : params.get("deleted") ? "Your account has been deleted." : null,
@@ -59,7 +59,7 @@ function LoginForm() {
       setCaptchaToken("");
       setCaptchaKey((k) => k + 1);
     }
-    setError(res.status === 401 ? "That email and password don't match. Please try again." : (res.message ?? "Sign-in failed."));
+    setError(res.status === 401 ? "That email and password don't match. Try again, or reset your password below." : (res.message ?? "We couldn't sign you in. Please try again in a minute."));
     setLoading(false);
   }
 
@@ -85,14 +85,14 @@ function LoginForm() {
           </Notice>
         )}
         <FormError message={error} />
-        <Field label="Work email" htmlFor="login-email" error={errors.email}>
+        <Field label="Email" htmlFor="login-email" error={errors.email}>
           <Input
             ref={emailRef}
             id="login-email"
             type="email"
             inputSize="lg"
             autoComplete="email"
-            placeholder="you@company.com"
+            placeholder="you@yourbusiness.com"
             required
             autoFocus
             value={email}
@@ -142,7 +142,7 @@ function LoginForm() {
         <Link href="/forgot-password" className="font-medium text-primary hover:underline">
           Reset your password
         </Link>
-        , ask your workspace owner to re-invite you, or contact support.
+        , ask the Owner of your account to invite you again, or contact us.
       </p>
     </>
   );

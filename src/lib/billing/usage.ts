@@ -59,12 +59,17 @@ export async function reserveCredits(
     if (typeof tx.$executeRaw === "function") await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${orgId}))`;
     const { org, plan } = await loadOrgPlan(tx, orgId);
     if (org.status === "suspended" || org.status === "cancelled") {
-      throw new JobError(`Organization billing status is ${org.status}`, "quota");
+      throw new JobError(
+        org.status === "suspended"
+          ? "Your workspace is paused, so new checks can't start. Contact us to turn it back on."
+          : "Your plan is cancelled, so new checks can't start. Choose a plan to start again.",
+        "quota",
+      );
     }
     const { used, reserved } = await periodTotals(tx, orgId, period);
     if (used + reserved + o.credits > plan.monthlyCredits) {
       throw new JobError(
-        `Monthly credit limit reached (${used} used + ${reserved} reserved + ${o.credits} requested > ${plan.monthlyCredits})`,
+        `You've used this month's ${plan.monthlyCredits.toLocaleString()} credits (${used} used, ${reserved} on hold, ${o.credits} needed). Upgrade your plan, or wait until next month.`,
         "quota",
       );
     }
@@ -146,11 +151,11 @@ async function maybeNotifyThreshold(orgId: string, period: string, usedBefore: n
         data: {
           organizationId: orgId,
           type: "usage_threshold",
-          title: pct >= 100 ? `Monthly credits exhausted (${period})` : `${pct}% of monthly credits used (${period})`,
+          title: pct >= 100 ? `You've used all your credits for ${period}` : `You've used ${pct}% of your credits for ${period}`,
           body:
             pct >= 100
-              ? `Your organization has used all ${limit} credits for ${period}. New scans will pause until the next period or an upgrade.`
-              : `Your organization has used ${usedAfter} of ${limit} credits for ${period}.`,
+              ? `Your workspace has used all ${limit} credits for ${period}. New website checks and AI checks are paused until next month. Upgrade to keep going.`
+              : `Your workspace has used ${usedAfter} of ${limit} credits for ${period}. Upgrade if you need more.`,
           link: "/app/settings/billing",
         },
       });
@@ -170,7 +175,7 @@ export async function assertProjectLimit(orgId: string): Promise<void> {
   const plan = await orgPlanForHttp(orgId);
   const count = await db.project.count({ where: { organizationId: orgId } });
   if (count >= plan.maxProjects) {
-    throw new HttpError(402, "plan_limit", `Your ${plan.name} plan allows ${plan.maxProjects} project(s). Upgrade to add more.`, {
+    throw new HttpError(402, "plan_limit", `Your ${plan.name} plan includes ${plan.maxProjects} ${plan.maxProjects === 1 ? "website" : "websites"}. Upgrade to add another.`, {
       limit: plan.maxProjects,
       current: count,
     });
@@ -185,7 +190,7 @@ export async function assertPromptLimit(orgId: string, projectId: string, adding
     throw new HttpError(
       402,
       "plan_limit",
-      `Your ${plan.name} plan allows ${plan.maxTrackedPrompts} active tracked prompts (currently ${count}).`,
+      `Your ${plan.name} plan includes ${plan.maxTrackedPrompts} customer ${plan.maxTrackedPrompts === 1 ? "question" : "questions"}, and you have ${count}. Turn some off, or upgrade to add more.`,
       { limit: plan.maxTrackedPrompts, current: count, adding, projectId },
     );
   }

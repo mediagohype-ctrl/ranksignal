@@ -9,9 +9,9 @@ import { FreeCheckResultView } from "./free-check-result";
 
 const STEPS = [
   { id: "home", label: "Read your homepage", after: 0 },
-  { id: "robots", label: "Check AI crawler access", after: 4_000 },
-  { id: "pages", label: "Read key pages", after: 8_000 },
-  { id: "score", label: "Score SEO, AEO, GEO", after: 15_000 },
+  { id: "robots", label: "Check that AI robots can get in", after: 4_000 },
+  { id: "pages", label: "Read your main pages", after: 8_000 },
+  { id: "score", label: "Work out your scores", after: 15_000 },
 ];
 
 export function FreeCheckTool({ initialUrl = "" }: { initialUrl?: string }) {
@@ -29,11 +29,11 @@ export function FreeCheckTool({ initialUrl = "" }: { initialUrl?: string }) {
   const run = useCallback(
     async (target: string) => {
       if (!target.trim()) {
-        setError("Enter your website address.");
+        setError("Type your website address, like yourbusiness.com.");
         return;
       }
       if (captcha && !token) {
-        setError("Please complete the security check first.");
+        setError("Tick the security check above the button, then try again.");
         return;
       }
       setBusy(true);
@@ -50,7 +50,7 @@ export function FreeCheckTool({ initialUrl = "" }: { initialUrl?: string }) {
         });
         const data = (await res.json().catch(() => null)) as { item?: FreeCheckResult; error?: { message?: string } } | null;
         if (!res.ok || !data?.item) {
-          setError(data?.error?.message ?? "Something went wrong. Please try again.");
+          setError(data?.error?.message ?? "Something went wrong on our side. Please try again in a minute.");
         } else {
           setResult(data.item);
           requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -109,7 +109,7 @@ export function FreeCheckTool({ initialUrl = "" }: { initialUrl?: string }) {
           </Field>
           <Turnstile key={widgetKey} onToken={setToken} action="free_check" />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted">Free · no sign-up · we only read public pages.</p>
+            <p className="text-xs text-muted">Free · no sign-up · we only read your public pages.</p>
             <Button
               type="submit"
               size="lg"

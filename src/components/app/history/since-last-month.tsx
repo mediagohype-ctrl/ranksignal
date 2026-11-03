@@ -5,7 +5,7 @@ import type { SnapshotDelta, SnapshotPillar } from "@/lib/snapshots/types";
 import { Card, LinkButton } from "@/components/ui";
 import { DeltaChip } from "./delta-chip";
 
-const PILLAR_NAMES: Record<SnapshotPillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", brand: "Brand" };
+const PILLAR_NAMES: Record<SnapshotPillar, string> = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" };
 const pctText = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
 const dayText = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -32,11 +32,11 @@ export function SinceLastMonth({
   historyHref: string;
   preparing?: boolean;
 }) {
-  const title = baselineIsFirst ? "Since your first measurement" : "Since last month";
+  const title = baselineIsFirst ? "Since your first check" : "Since last month";
   const lfl = delta.visibility.likeForLike;
   const hasVis = delta.visibility.mentionRate.after !== null;
   const notes = [...delta.notes];
-  if (preparing && !delta.to) notes.push("We're preparing your measurement history from past checks — refresh in a minute.");
+  if (preparing && !delta.to) notes.push("We're building your score history from past checks — refresh the page in a minute.");
   return (
     <Card as="section" aria-label={title} padding="md">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -44,12 +44,12 @@ export function SinceLastMonth({
           <h2 className="text-h4 text-fg">{title}</h2>
           <p className="text-small text-muted">
             {delta.from && delta.to
-              ? `Comparing ${dayText(delta.from.at)} with ${dayText(delta.to.at)}. Measured changes, not proof of cause.`
-              : "Changes show up once there are two measurements to compare."}
+              ? `Comparing ${dayText(delta.from.at)} with ${dayText(delta.to.at)}. A change in a number doesn't prove what caused it.`
+              : "Changes show up once there are two checks to compare."}
           </p>
         </div>
         <LinkButton href={historyHref} variant="ghost" size="sm" icon={<History />}>
-          Full history
+          Score history
         </LinkButton>
       </div>
       {delta.to && (
@@ -62,14 +62,14 @@ export function SinceLastMonth({
               <DeltaChip delta={delta.pillars[p].delta} />
             </Tile>
           ))}
-          <Tile label={lfl ? "Mentioned (same questions)" : "Mentioned"} value={hasVis ? pctText(delta.visibility.mentionRate.after) : "—"}>
+          <Tile label={lfl ? "Named you (same questions)" : "Named you"} value={hasVis ? pctText(delta.visibility.mentionRate.after) : "—"}>
             {hasVis && <DeltaChip delta={delta.visibility.mentionRate.delta} unit="pp" />}
           </Tile>
-          <Tile label={lfl ? "Linked (same questions)" : "Linked to your site"} value={hasVis ? pctText(delta.visibility.citationRate.after) : "—"}>
+          <Tile label={lfl ? "Linked to your site (same questions)" : "Linked to your site"} value={hasVis ? pctText(delta.visibility.citationRate.after) : "—"}>
             {hasVis && <DeltaChip delta={delta.visibility.citationRate.delta} unit="pp" />}
           </Tile>
           <Tile
-            label="Issues fixed / new"
+            label="Problems fixed / new"
             value={
               delta.issues.fixed === null && delta.issues.new === null ? (
                 "—"
@@ -82,14 +82,14 @@ export function SinceLastMonth({
               )
             }
           >
-            {delta.issues.total.after !== null && <span className="text-caption text-muted">{delta.issues.total.after} open</span>}
+            {delta.issues.total.after !== null && <span className="text-caption text-muted">{delta.issues.total.after} to fix</span>}
           </Tile>
         </ul>
       )}
       {notes.length > 0 && (
         <p className="mt-3 text-caption font-normal text-muted">
           {notes.join(" ")}
-          {lfl && ` Like-for-like sample: ${lfl.before.sampleSize} → ${lfl.after.sampleSize} answers.`}
+          {lfl && ` Compared using the same questions: ${lfl.before.sampleSize} → ${lfl.after.sampleSize} answers.`}
         </p>
       )}
     </Card>

@@ -32,8 +32,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         className="mx-auto max-w-3xl"
         breadcrumbs={projectCount > 0 ? [{ label: "Projects", href: "/app" }, { label: "New project" }] : undefined}
         eyebrow={projectCount === 0 ? "Welcome" : "New project"}
-        title={projectCount === 0 ? "Let's set up your first project" : "Set up a project"}
-        description="Answer a few quick questions. We'll scan your website, ask AI assistants what your buyers ask, and build a plain-English report."
+        title={projectCount === 0 ? "Let's add your website" : "Add another website"}
+        description="Answer a few quick questions. We'll check your website, ask AI tools what your customers ask, and build a plain-English report."
       />
       <OnboardingWizard maxPagesLimit={plan.maxPagesPerCrawl} initialWebsite={safeWebsite(website)} />
     </>

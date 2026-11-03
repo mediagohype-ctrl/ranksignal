@@ -18,31 +18,31 @@ import {
 } from "@/components/marketing/how-it-works-ui";
 
 export const metadata: Metadata = {
-  title: "How it works: audit, fix, approve and re-measure",
-  description: `How ${BRAND.name} works: connect your site, audit and measure AI visibility, review prioritised fixes, then approve, publish and re-measure — with rollback.`,
+  title: "How it works: check, fix and grow",
+  description: `How ${BRAND.name} works: add your website, we check it for Google and AI (SEO and GEO), you get a plain to-do list, approve fixes, and we check again — with undo.`,
   alternates: { canonical: "/how-it-works" },
 };
 
 const STEP_DETAILS: string[][] = [
   [
-    "Add your website, brand name and the main country and language you sell in.",
-    "Pick the competitors you want to compare against — you can add more later.",
-    "Optionally connect WordPress or a Git repository. A connection never changes your site until you approve a change.",
+    "Add your website, your business name and the country and language you sell in.",
+    "Pick the competitors you want to compare with — you can add more later.",
+    "If you like, connect WordPress or GitHub. Connecting never changes your site until you say OK to a change.",
   ],
   [
-    "A polite crawler (it respects robots.txt and rate limits) checks your pages for SEO, AEO and GEO problems.",
-    "Each tracked question is put to every AI assistant on your plan to build a baseline.",
-    "You get scores, a mention rate and a citation rate — each with the number of answers behind it.",
+    "We read your pages gently (following your site's robot rules file) and look for problems that matter to Google and AI. Experts call this SEO, AEO and GEO.",
+    "We ask each AI assistant on your plan your customer questions, so you have a starting point.",
+    "You get your scores, how often AI names you and how often it links to you — each with the number of answers behind it.",
   ],
   [
-    "Findings become a fix list, ranked by likely impact and effort, each explained in plain English.",
-    "Every fix shows its evidence, its risk class and a draft or exact change ready for review.",
-    "Edit drafts freely. Editing cancels any earlier approval, so you always approve exactly what ships.",
+    "Problems become a to-do list, most useful first, each explained in plain words.",
+    "Every fix shows why it's there, whether it needs your OK, and a draft ready to review.",
+    "Edit drafts freely. Editing cancels any earlier OK, so you always approve exactly what goes live.",
   ],
   [
-    "Approve the exact change. It's published through your connector, or exported for you to apply by hand.",
-    "We snapshot the page before every change made through a connector, so you can roll it back from the change log.",
-    "Follow-up checks show what moved afterwards — reported as observed change, not proven cause.",
+    "Approve the exact change. We publish it through your connected website, or you copy it in by hand.",
+    "We save the page before every change we make, so you can undo it from the change list.",
+    "Later checks show what changed afterwards. We report what we saw — we never claim the fix caused it.",
   ],
 ];
 
@@ -51,55 +51,55 @@ const STEP_UI = [<SetupVignette key="1" />, <BaselineVignette key="2" />, <FixQu
 /** What happens to each risk class under the default project policy. */
 const RISK_DEFAULT: Record<string, string> = {
   A: "Runs on its own. Nothing on your site changes",
-  B: "Waits for your approval, unless you switch on auto-apply for that type",
-  C: "Always waits for your approval of the exact draft",
-  D: "Never run by the system. Advice only",
+  B: "Waits for your OK, unless you let that type of edit go live on its own",
+  C: "Always waits for your OK on the exact draft",
+  D: "We never make these. Advice only",
 };
 
 const REPORT_PARTS = [
-  { title: "Scores, before and after", body: "Your overall, SEO, AEO, GEO and brand scores at the start and end of the month." },
-  { title: "Questions won and lost", body: "Which AI questions started or stopped naming you, and which competitor they name instead." },
+  { title: "Scores, before and after", body: "Your overall score and your four scores at the start and end of the month." },
+  { title: "Questions won and lost", body: "Which customer questions started or stopped naming you in AI answers, and which competitor is named instead." },
   { title: "Wrong answers caught", body: "Where an AI assistant says something about you that your own site contradicts." },
-  { title: "What shipped", body: "Every fix that went live, and who did it." },
+  { title: "What went live", body: "Every fix that went live, and who did it." },
 ];
 
 const AUTOMATIC = [
   {
-    title: "A weekly site re-scan",
-    body: "By default we re-read your site every week, so new problems show up and fixed ones drop off.",
+    title: "A weekly website check",
+    body: "We read your website again every week, so new problems show up and fixed ones drop off.",
   },
   {
     title: "A monthly AI check",
-    body: "Once a month your tracked questions go back to the AI assistants. Change either schedule, or switch it off, per project.",
+    body: "Once a month we ask the AI assistants your customer questions again. You can change either schedule, or switch it off, for each website.",
   },
   {
     title: "“Report ready” emails",
-    body: "When a scan or AI check finishes, owners and admins get an email with the headline and a link. Turn them off per project.",
+    body: "When a website check or AI check is done, Owners and Admins get an email with the main result and a link. Turn them off for each website.",
   },
   {
-    title: "History that compares fairly",
-    body: "Every result is kept. “Since last time” compares only the questions asked both times, and flags when the question list or our method changed.",
+    title: "Score history you can trust",
+    body: "Every result is kept. “Since last time” compares only the questions asked both times, and shows when the question list or our method changed.",
   },
 ];
 
 const WORK_POINTS = [
   {
     title: "Who did what",
-    body: "Every finished task and every change to your site, labelled Our team, You or Automated.",
+    body: "Every finished task and every change to your site, marked Our team, You or Automated.",
   },
   {
     title: "One click to undo",
-    body: "Each change made through a connector is logged with the page as it was before, so you can roll it back from the change log.",
+    body: "For each change we make on your site, we save the page as it was before, so you can undo it from the change list.",
   },
   {
     title: "Done by hand still counts",
-    body: "Made a fix yourself? Mark it done and it's counted in the log and in your monthly report.",
+    body: "Made a fix yourself? Mark it done and it counts on your task board and in your monthly report.",
   },
 ];
 
 const LOOP_INDEX = [...HOW_STEPS.map((s, i) => ({ n: String(i + 1).padStart(2, "0"), title: s.title, href: `#step-${i + 1}` })), {
   n: "05",
-  title: "Every month: the impact report",
+  title: "Every month: your report",
   href: "#monthly-report",
 }];
 
@@ -116,15 +116,15 @@ export default function HowItWorksPage() {
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-24">
           <p className="mk-label mk-rise">How it works</p>
           <h1 id="hiw-title" className="mk-hero mk-rise mt-6 max-w-[11ch] text-fg lg:max-w-none">
-            A measured loop,
-            <br className="hidden lg:block" /> <span className="text-primary">not a magic button.</span>
+            Check. Fix. Grow.
+            <br className="hidden lg:block" /> <span className="text-primary">Then again.</span>
           </h1>
 
           <div className="mt-10 grid gap-14 lg:mt-16 lg:grid-cols-12 lg:gap-10">
             <div className="mk-rise mk-delay-1 min-w-0 lg:col-span-5">
               <p className="mk-lead max-w-[34rem] text-fg-soft">
-                {BRAND.name} runs a simple, repeatable cycle: measure, fix what the evidence supports, ship only what
-                you&apos;ve approved, and measure again.
+                {BRAND.name} repeats a simple cycle: check your website and AI answers, fix what matters, publish only
+                what you&apos;ve approved, and check again. No magic button.
               </p>
               <div className="mt-9 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
                 <Link href="/signup" className={inkPill("lg")}>
@@ -162,7 +162,7 @@ export default function HowItWorksPage() {
               Four steps, on repeat.
             </h2>
             <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              Each cycle starts from evidence and ends with a fresh measurement, so you can see what moved.
+              Each cycle starts with a check and ends with a new one, so you can see what changed.
             </p>
           </div>
 
@@ -216,7 +216,7 @@ export default function HowItWorksPage() {
             </span>
             <p className="mt-6 text-small font-medium text-primary">Then it repeats, every month</p>
             <h2 id="report-title" className="mk-statement mt-3 max-w-[11ch] text-fg">
-              The impact report.
+              Your monthly report.
             </h2>
             <p className="mk-lead mt-8 max-w-[34rem] text-fg-soft">
               Early each month, last month&apos;s report is emailed to you and opens as a page you can save as a PDF.
@@ -231,7 +231,7 @@ export default function HowItWorksPage() {
               ))}
             </dl>
             <p className="mk-body mt-8 max-w-[34rem] text-fg-soft">
-              <strong className="font-semibold text-fg">Honest attribution.</strong> The report shows what moved next to
+              <strong className="font-semibold text-fg">Honest reporting.</strong> The report shows what changed next to
               the work done. It doesn&apos;t claim one caused the other.
             </p>
           </div>
@@ -249,7 +249,7 @@ export default function HowItWorksPage() {
               Runs on its own.
             </h2>
             <p className="mk-body mt-5 max-w-md text-fg-soft">
-              Once a project is set up, the measuring side of the loop doesn&apos;t wait for you to remember it.
+              Once your website is set up, the checks run on their own. You don&apos;t have to remember.
             </p>
             <div className="mt-10">
               <ScheduleVignette />
@@ -274,7 +274,7 @@ export default function HowItWorksPage() {
               Work you can see.
             </h2>
             <p className="mk-body mt-5 max-w-md text-fg-soft">
-              The work log is a plain record of what was delivered. It doesn&apos;t claim any ranking or traffic result.
+              The task board is a plain record of the work done. It doesn&apos;t claim any Google position or visitor numbers.
             </p>
             <ul className="mt-10 max-w-md border-t border-fg">
               {WORK_POINTS.map((w) => (
@@ -296,17 +296,17 @@ export default function HowItWorksPage() {
         <div className="container-marketing">
           <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
             <h2 id="risk-title" className="mk-statement max-w-[13ch] text-fg lg:col-span-7">
-              Risk classes decide what needs a person.
+              Nothing risky happens without your OK.
             </h2>
             <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              You set the policy per project. The default is careful: every change to your website needs approval, and class D is never
-              run automatically.
+              You choose the rules for each website. By default every change to your website needs your OK, and risky changes are
+              never made by us.
             </p>
           </div>
 
           <div className="mt-16 lg:mt-24">
             <div aria-hidden className="hidden grid-cols-12 gap-10 border-b border-fg pb-3 text-xs font-medium text-muted lg:grid">
-              <span className="col-span-3">Class</span>
+              <span className="col-span-3">Type</span>
               <span className="col-span-5">What it covers</span>
               <span className="col-span-4">By default</span>
             </div>
@@ -341,7 +341,7 @@ export default function HowItWorksPage() {
       <section id="two-ways" aria-labelledby="ways-title" className="scroll-mt-20 py-24 sm:py-32">
         <div className="container-marketing">
           <h2 id="ways-title" className="mk-reveal mk-title max-w-[16ch] text-fg">
-            Two ways to run the loop.
+            Do it yourself, or let us do it.
           </h2>
           <div className="mk-reveal mt-12 grid overflow-hidden rounded-[28px] border border-border lg:mt-16 lg:grid-cols-2">
             <div className="flex flex-col p-8 sm:p-12">
@@ -350,8 +350,8 @@ export default function HowItWorksPage() {
                 From <span className="tabular-nums">{inr(selfServeFrom)}</span> a month.
               </p>
               <p className="mk-body mt-5 max-w-md flex-1 text-fg-soft">
-                You run the loop in {BRAND.name}: the scores, the fix list and drafted changes to approve. Publish through
-                WordPress or Git, or apply fixes by hand.
+                You use {BRAND.name} yourself: the scores, the to-do list and ready-made fixes to approve. Publish through
+                WordPress or GitHub, or make the fixes by hand.
               </p>
               <p className="mt-4 text-small text-muted">Every plan starts with a {TRIAL_DAYS}-day free trial. Plus GST.</p>
               <Link href="/pricing" className={inkPill("lg", false, "mt-9 self-start")}>
@@ -365,10 +365,10 @@ export default function HowItWorksPage() {
                 From <span className="tabular-nums">{inr(SERVICE_FROM_PRICE)}</span> a month.
               </p>
               <p className="mk-body mt-5 max-w-md flex-1 text-bg/80">
-                Our team runs the loop with you: we ship the fixes you approve each month and walk you through the impact
-                report.
+                Our team does the work with you: we make the fixes you approve each month and walk you through your
+                monthly report.
               </p>
-              <p className="mt-4 text-small text-bg/70">Plus GST and setup. We promise the work, not rankings.</p>
+              <p className="mt-4 text-small text-bg/70">Plus GST and setup. We promise the work, not a Google position.</p>
               <Link href="/services" className={inkPill("lg", true, "mt-9 self-start")}>
                 See done-for-you plans
                 <ArrowRight aria-hidden />
@@ -382,11 +382,12 @@ export default function HowItWorksPage() {
       <section aria-labelledby="final-cta" className="bg-fg text-bg">
         <div className="container-marketing grid gap-12 py-24 sm:py-32 lg:grid-cols-12 lg:items-end lg:gap-10">
           <h2 id="final-cta" className="mk-statement max-w-[13ch] text-bg lg:col-span-7">
-            Start your first measurement cycle.
+            Start with a free website check.
           </h2>
           <div className="lg:col-span-5">
             <p className="mk-lead max-w-md text-bg/75">
-              Connect a site in minutes and get a baseline during the free trial. Or check your site for free first.
+              The free check reads your website in about 30 seconds. To ask ChatGPT and Gemini about you, start the
+              free trial.
             </p>
             <FreeCheckLauncher id="hiw-cta-url" onDark className="mt-8" />
             <p className="mt-6">

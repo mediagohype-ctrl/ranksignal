@@ -12,10 +12,10 @@ export interface CatalogEntry {
 
 export const CAP_COLUMNS: { key: keyof ConnectorCapabilities; label: string; help: string }[] = [
   { key: "readPages", label: "Read pages", help: "Look up your pages and posts" },
-  { key: "updateMetadata", label: "Titles & descriptions", help: "Change page titles and search snippets" },
+  { key: "updateMetadata", label: "Google headline & summary", help: "Change the headline and summary Google shows for a page" },
   { key: "updateContent", label: "Page text", help: "Edit the main content of a page" },
-  { key: "updateSchema", label: "Structured data", help: "Add machine-readable markup (e.g. FAQ)" },
-  { key: "createDraft", label: "Drafts", help: "Save changes as drafts for review" },
+  { key: "updateSchema", label: "Info for Google and AI", help: "Add hidden info that helps Google and AI tools (e.g. questions and answers)" },
+  { key: "createDraft", label: "Drafts", help: "Save changes as drafts for you to check" },
   { key: "publish", label: "Publish", help: "Make changes live" },
   { key: "rollback", label: "Undo", help: "Restore the previous version" },
 ];

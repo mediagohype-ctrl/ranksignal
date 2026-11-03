@@ -7,10 +7,10 @@ import { Badge, IssueCard, Meter, ScoreRing } from "@/components/ui";
  */
 
 export const SAMPLE_PILLARS = [
-  { key: "seo", label: "SEO", name: "Search engines", score: 78, hint: "Google can read most pages" },
-  { key: "aeo", label: "AEO", name: "Answer engines", score: 54, hint: "Few direct, quotable answers" },
-  { key: "geo", label: "GEO", name: "Generative AI", score: 41, hint: "Rarely named in AI answers" },
-  { key: "brand", label: "Brand", name: "Brand facts", score: 86, hint: "AI describes you accurately" },
+  { key: "seo", label: "Google health", name: "Google", score: 78, hint: "Google can read most pages" },
+  { key: "aeo", label: "Easy to quote", name: "Clear answers", score: 54, hint: "Few short, clear answers" },
+  { key: "geo", label: "Ready for AI", name: "AI assistants", score: 41, hint: "Rarely named in AI answers" },
+  { key: "brand", label: "AI knows you", name: "Business facts", score: 86, hint: "AI describes you correctly" },
 ] as const;
 
 const SAMPLE_OVERALL = 65;
@@ -21,7 +21,7 @@ export function SampleReportPeek() {
     <div className="relative rounded-2xl border border-border/70 bg-surface p-5 text-fg shadow-xl sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-caption uppercase tracking-[0.06em] text-muted">AI visibility report</p>
+          <p className="text-caption uppercase tracking-[0.06em] text-muted">Full report</p>
           <p className="mt-0.5 truncate text-h4 text-fg">greenleaf-bakery.example</p>
         </div>
         <Badge tone="warning" icon={<FlaskConical />}>
@@ -76,7 +76,7 @@ export function SampleReport() {
       <div className="lg:col-span-3">
         <IssueCard
           title="AI assistants can't find a clear answer to “Do you deliver?”"
-          pillarLabel="AEO"
+          pillarLabel="Easy to quote"
           impact="high"
           effort="quick"
           quickWin
@@ -86,9 +86,9 @@ export function SampleReport() {
           howToFix={[
             "Add a “Delivery” question and a one- or two-sentence answer to your home and contact pages.",
             "Say the areas, days and minimum order in plain words, e.g. “We deliver across Indiranagar, Tuesday to Sunday.”",
-            "Mark it up as an FAQ so search engines can read it. We can draft this for you to approve.",
+            "Add it as info for Google and AI so they can read it. We can draft this for you to approve.",
           ]}
-          evidence="0 of 6 sampled pages contain a direct answer about delivery."
+          evidence="0 of 6 pages we read give a direct answer about delivery."
         />
       </div>
     </div>

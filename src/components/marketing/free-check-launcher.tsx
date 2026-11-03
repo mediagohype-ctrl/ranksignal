@@ -7,8 +7,8 @@ export function FreeCheckLauncher({
   id = "free-check-url",
   onDark,
   className,
-  buttonLabel = "Check my site",
-  hint = "Free · No card · Results in about a minute",
+  buttonLabel = "Check my website",
+  hint = "Free · No sign-up · Takes about 30 seconds",
 }: {
   id?: string;
   /** Ink (dark) bands: inverted colours. */
@@ -18,7 +18,7 @@ export function FreeCheckLauncher({
   hint?: string | null;
 }) {
   return (
-    <form action="/free-check" method="get" role="search" aria-label="Free AI-readiness check" className={clsx("w-full", className)}>
+    <form action="/free-check" method="get" role="search" aria-label="Free website check" className={clsx("w-full", className)}>
       <label htmlFor={id} className="sr-only">
         Your website address
       </label>

@@ -26,7 +26,7 @@ describe("templates", () => {
     const n = reportReadyNotice({ ...base, crawlRunId: "c1", pagesCrawled: 1, openBySeverity: { critical: 1, low: 3 } });
     expect(n.link).toBe("/app/projects/p1/report?run=c1");
     expect(n.body).toContain("1 page");
-    expect(n.body).toContain("4 open issues: 1 critical, 3 low");
+    expect(n.body).toContain("4 problems to fix: 1 urgent, 3 nice to have");
   });
   it("visibility notice shows rates and labels simulated data", () => {
     const n = visibilityReadyNotice({

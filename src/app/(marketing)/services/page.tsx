@@ -12,8 +12,8 @@ import {
   ServicesCta,
 } from "@/components/marketing/services-ui";
 
-const TITLE = "Done-for-you AI visibility services";
-const DESCRIPTION = `We fix your website, Google Business Profile and listings every month so AI assistants can find and quote you, and send a monthly impact report with the evidence. Plans from ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
+const TITLE = "Done-for-you: we fix your website for Google and AI";
+const DESCRIPTION = `Our team fixes your website, Google Business Profile and listings every month so Google and AI assistants can find and quote you (SEO and GEO, done for you), and sends a monthly report with the evidence. Plans from ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -33,38 +33,38 @@ const SITE = BRAND.appUrl.replace(/\/$/, "");
 const STEPS = [
   {
     when: "Week 1",
-    title: "Baseline audit",
-    body: "We read your site, check your Google Business Profile and ask AI assistants about your business. That becomes the “before” every report compares against.",
+    title: "First check",
+    body: "We read your website, check your Google Business Profile and ask AI assistants about your business. That becomes the “before” every report compares against.",
   },
   {
     when: "Week 1–2",
-    title: "Agree the buyer questions",
+    title: "Agree the customer questions",
     body: "Together we choose the questions your customers really ask, like “best eggless bakery near me”. You approve the list and the first month’s fix plan.",
   },
   {
     when: "Every month",
-    title: "We ship the fixes",
-    body: "Our team makes the agreed changes on your site, profile and listings. Each one is logged, and changes made through a connected site can be rolled back in one click.",
+    title: "We make the fixes",
+    body: "Our team makes the agreed changes on your site, profile and listings. Each one is recorded, and changes on your connected website can be undone in one click.",
   },
   {
     when: "Month end",
-    title: "Monthly impact report",
-    body: "What we shipped, what moved, what didn’t, and what’s next. In plain English, with the saved AI answers as evidence.",
+    title: "Monthly report",
+    body: "What we did, what changed, what didn’t, and what’s next. In plain words, with the saved AI answers as proof.",
   },
 ];
 
 const REPORT_PARTS = [
   {
     title: "Delivery against the plan",
-    body: "Every fix we agreed, and whether it shipped. No vague “ongoing optimisation”.",
+    body: "Every fix we agreed, and whether it went live. No vague “ongoing work”.",
   },
   {
     title: "What changed in AI answers",
-    body: "Mention and link rates per engine, compared with last month, with the sample size.",
+    body: "How often each AI assistant named you and linked to you, compared with last month, and how many answers that's based on.",
   },
   {
     title: "Scores before and after",
-    body: "Your SEO, AEO, GEO and brand scores from the same checks we ran at the start.",
+    body: "Your four scores, from the same checks we ran at the start.",
   },
   {
     title: "What didn’t work",
@@ -83,7 +83,7 @@ const PROMISES = [
   },
   {
     title: "Nothing happens in the dark",
-    body: "You get a live dashboard and a change log of every edit we make, with one-click rollback for site changes made through a connector.",
+    body: "You get a live dashboard and a list of every edit we make, with one-click undo for changes on your connected website.",
   },
   {
     title: "Short minimums, then 30 days’ notice",
@@ -94,7 +94,7 @@ const PROMISES = [
     body: "If we don’t ship the fixes we promised for a month, you get 25% of that month’s fee back. Delays caused by waiting on access or approvals don’t count.",
   },
   {
-    title: "No ranking or placement guarantees. Ever.",
+    title: "No promises about Google or AI positions. Ever.",
     body: "AI answers are written by other companies’ systems. Anyone who guarantees you a spot is guessing. We guarantee the work, and show you honestly what it moved.",
   },
 ];
@@ -102,19 +102,19 @@ const PROMISES = [
 const FAQ = [
   {
     q: "How is this different from the self-serve software?",
-    a: `With the software, ${BRAND.name} finds the problems and drafts the fixes, and your team does the work. With done-for-you, our team does the work: we agree a plan with you, ship the fixes every month and report on the impact. You still get the live dashboard.`,
+    a: `With the software, ${BRAND.name} finds the problems and drafts the fixes, and your team does the work. With done-for-you, our team does the work: we agree a plan with you, make the fixes every month and report on what changed. You still get the live dashboard.`,
   },
   {
-    q: "Do you guarantee rankings or mentions in ChatGPT?",
-    a: "No. Nobody controls what AI assistants say, and anyone who promises a ranking or a placement is guessing. We guarantee delivery: if we don't ship the fixes promised for a month, you get 25% of that month's fee back.",
+    q: "Do you promise a top Google spot or mentions in ChatGPT?",
+    a: "No. Nobody controls what Google or AI assistants show, and anyone who promises a position is guessing. We guarantee the work: if we don't make the fixes promised for a month, you get 25% of that month's fee back.",
   },
   {
     q: "What do you need from me?",
-    a: "Access to your website and a manager role on your Google Business Profile, about an hour in the first two weeks to agree the buyer questions, and quick approvals for anything that changes what your business says publicly.",
+    a: "Access to your website and a manager role on your Google Business Profile, about an hour in the first two weeks to agree the customer questions, and quick approvals for anything that changes what your business says publicly.",
   },
   {
     q: "What does the setup fee cover?",
-    a: "The baseline audit, research into the questions your buyers ask, setting up tracking across five AI engines, and the first month's fix plan. It is charged once.",
+    a: "The first check, research into the questions your customers ask, setting up AI checks on five AI assistants, and the first month's fix plan. It is charged once.",
   },
   {
     q: "What happens after the minimum term?",
@@ -188,7 +188,7 @@ export default function ServicesPage() {
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="services-title" className="relative overflow-hidden">
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-24">
-          <p className="mk-label mk-rise">Done-for-you AI visibility</p>
+          <p className="mk-label mk-rise">Done for you</p>
           <div className="mt-6 grid gap-14 lg:grid-cols-12 lg:gap-10">
             <div className="mk-rise mk-delay-1 min-w-0 lg:col-span-7">
               <h1 id="services-title" className="mk-hero max-w-[14ch] lg:text-[clamp(4rem,1.2rem+4.2vw,6.25rem)] text-fg">
@@ -197,7 +197,7 @@ export default function ServicesPage() {
               </h1>
               <p className="mk-lead mt-9 max-w-[34rem] text-fg-soft">
                 Our team makes the changes that help ChatGPT, Gemini and Google&apos;s AI find, trust and quote your business.
-                Every month you get a report showing exactly what we shipped and what it moved.
+                Every month you get a report showing exactly what we did and what changed.
               </p>
               <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
                 <Link href={servicesContactHref()} className={inkPill("lg")}>
@@ -235,7 +235,7 @@ export default function ServicesPage() {
               A clear plan. Then the work, every month.
             </h2>
             <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              No 80-page audit that sits in a drawer. Small, agreed fixes, shipped on a schedule you can check.
+              No 80-page report that sits in a drawer. Small, agreed fixes, made on a schedule you can check.
             </p>
           </div>
           <ol className="mt-16 grid gap-12 sm:grid-cols-2 sm:gap-x-10 lg:mt-24 lg:grid-cols-4 lg:gap-10">
@@ -267,7 +267,7 @@ export default function ServicesPage() {
               </h2>
             </div>
             <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              Every plan includes the live dashboard, a change log of every edit and a monthly impact report.
+              Every plan includes the live dashboard, a list of every edit and a monthly report.
             </p>
           </div>
           <ServiceTierCards className="mt-16 lg:mt-20" />
@@ -295,7 +295,7 @@ export default function ServicesPage() {
           <div className="mk-reveal lg:col-span-4">
             <div className="lg:sticky lg:top-28">
               <h2 id="report-title" className="mk-title max-w-[14ch] text-fg">
-                What&apos;s in your monthly impact report
+                What&apos;s in your monthly report
               </h2>
               <ol className="mt-10 border-t border-fg">
                 {REPORT_PARTS.map((r, i) => (
@@ -387,7 +387,7 @@ export default function ServicesPage() {
           label: "Book a free strategy call",
         }}
         secondary={{ href: "/free-check", label: "Start with a free check" }}
-        footnote="Prices in Indian rupees, excluding GST. We promise delivery, never rankings or placements."
+        footnote="Prices in Indian rupees, excluding GST. We promise the work, never a Google or AI position."
       />
     </>
   );

@@ -3,13 +3,13 @@ import { ArrowRight, ArrowDown } from "lucide-react";
 import { diffWords } from "@/lib/dashboard/diff";
 
 const FIELD_LABEL: Record<string, string> = {
-  meta_description: "Meta description",
-  title: "Page title",
-  excerpt: "Excerpt",
+  meta_description: "Google summary",
+  title: "Google headline",
+  excerpt: "Short intro",
   content: "Page content",
-  schema: "Structured data",
-  brief: "Content brief",
-  robots: "robots.txt",
+  schema: "Info for Google and AI",
+  brief: "Page plan",
+  robots: "Robot rules file",
 };
 
 /** Recommended length ranges shown under the "after" text (guidance, not hard rules). */

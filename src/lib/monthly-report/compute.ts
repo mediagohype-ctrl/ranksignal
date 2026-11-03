@@ -6,10 +6,10 @@ import type {
 } from "./types";
 
 export const PILLARS = [
-  { pillar: "seo", label: "SEO" },
-  { pillar: "aeo", label: "AEO (answer engines)" },
-  { pillar: "geo", label: "GEO (generative AI)" },
-  { pillar: "brand", label: "Brand" },
+  { pillar: "seo", label: "Google health" },
+  { pillar: "aeo", label: "Easy to quote" },
+  { pillar: "geo", label: "Ready for AI" },
+  { pillar: "brand", label: "AI knows you" },
 ] as const;
 type PillarKey = (typeof PILLARS)[number]["pillar"];
 

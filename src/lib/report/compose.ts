@@ -2,7 +2,7 @@
 import type { CheckResult, PillarScore, SiteReport } from "@/lib/report/types";
 import { runAllChecks } from "@/lib/report/checks";
 import { buildIssues, quickWins, strengths } from "@/lib/report/issues";
-import { gradeFor, METHODOLOGY_VERSION, overallScore, PILLAR_LABELS, PILLAR_ORDER, pillarScore, pillarSummary } from "@/lib/report/score";
+import { AI_PILLARS, gradeFor, METHODOLOGY_VERSION, overallScore, PILLAR_LABELS, PILLAR_ORDER, pillarScore, pillarSummary, scoreLabel } from "@/lib/report/score";
 import { v2Pages, okPages, pct, type CheckContext, type EvaluatedCheck } from "@/lib/report/inputs";
 import { templateSummary } from "@/lib/report/summary";
 
@@ -31,7 +31,7 @@ export function composeReport(input: ComposeInput): SiteReport {
       websiteUrl: input.websiteUrl,
       generatedAt: input.generatedAt.toISOString(),
       crawl: { crawlRunId: null, pagesCrawled: 0, finishedAt: null },
-      overall: { score: null, grade: null, headline: "We haven't scanned your website yet. Run a scan to get your SEO, AEO, GEO and brand report." },
+      overall: { score: null, grade: null, headline: "We haven't checked your website yet. Run a website check to get your score." },
       pillars,
       issues: [],
       quickWins: [],
@@ -42,25 +42,28 @@ export function composeReport(input: ComposeInput): SiteReport {
       limitations: ["No completed website scan yet, so nothing has been scored."],
       methodologyVersion: METHODOLOGY_VERSION,
     };
-    if (ai.measured) report.limitations.push(ai.simulated ? "AI answers on file are simulated demo data and are not used for scoring." : "AI visibility was measured, but scores wait for a website scan.");
+    if (ai.measured) report.limitations.push(ai.simulated ? "AI answers on file are simulated demo data and are not used for scoring." : "AI answers are in, but the score waits for a website check.");
     report.executiveSummary = templateSummary(report);
     return report;
   }
 
   const byPillar = runAllChecks(ctx);
   const allChecks = PILLAR_ORDER.flatMap((p) => byPillar[p]);
+  // Simulated answers never count, so they leave the score just as partial as no answers.
+  const aiIn = ai.measured && !ai.simulated;
   const pillars: PillarScore[] = PILLAR_ORDER.map((p) => {
     const checks = byPillar[p].map(toResult);
     const score = pillarScore(checks);
-    return { pillar: p, label: PILLAR_LABELS[p], score, grade: gradeFor(score), summary: pillarSummary(p, score, checks), checks };
+    const partial = !aiIn && score !== null && AI_PILLARS.includes(p);
+    return { pillar: p, label: PILLAR_LABELS[p], score, grade: gradeFor(score), summary: pillarSummary(p, score, checks, aiIn), ...(partial ? { partial } : {}), checks };
   });
   const overall = overallScore(Object.fromEntries(pillars.map((p) => [p.pillar, p.score])));
   const issues = buildIssues(allChecks, ctx.findings);
   const top = issues[0];
   const headline =
     overall === null
-      ? "We couldn't score your site from the last scan — the pages may not have loaded. Try running a new scan."
-      : `Your website scores ${overall}/100 (${gradeFor(overall)}). ${top ? `Biggest opportunity: ${top.title.replace(/\.$/, "")}.` : "No significant problems found in the pages we checked."}`;
+      ? "We couldn't score your site from the last check — the pages may not have loaded. Try checking your website again."
+      : `${overall} / 100 · ${scoreLabel(overall)}. ${top ? `Biggest fix: ${top.title.replace(/\.$/, "")}.` : "No big problems found on the pages we checked."}`;
 
   const report: SiteReport = {
     projectId: input.projectId,
@@ -68,7 +71,7 @@ export function composeReport(input: ComposeInput): SiteReport {
     websiteUrl: input.websiteUrl,
     generatedAt: input.generatedAt.toISOString(),
     crawl: { crawlRunId: input.crawl.crawlRunId, pagesCrawled: input.crawl.pagesCrawled, finishedAt: input.crawl.finishedAt?.toISOString() ?? null },
-    overall: { score: overall, grade: gradeFor(overall), headline },
+    overall: { score: overall, grade: gradeFor(overall), headline, ...(overall !== null && !aiIn ? { partial: true } : {}) },
     pillars,
     issues,
     quickWins: quickWins(issues),

@@ -69,8 +69,8 @@ describe("monthly report off-site work", () => {
     });
 
     const md = monthlyReportToMarkdown(p, "Summary.");
-    expect(md).toContain("## Off-site work");
-    expect(md).toContain("2 off-site items went live this month.");
+    expect(md).toContain("## Work outside your website");
+    expect(md).toContain("2 items outside your website went live this month.");
     expect(md).toContain("- Justdial listing (Directory listing) — https://justdial.example/acme");
     expect(md).toContain("- Local news feature (PR / press mention)");
   });
@@ -78,7 +78,7 @@ describe("monthly report off-site work", () => {
   it("is null when nothing went live, and the export omits the section", async () => {
     const p = await buildMonthlyPayload("p1", "o1", "2026-10", NOW);
     expect(p.offsite).toBeNull();
-    expect(monthlyReportToMarkdown(p, "Summary.")).not.toContain("Off-site work");
+    expect(monthlyReportToMarkdown(p, "Summary.")).not.toContain("Work outside your website");
   });
 
   it("never breaks the report when the lookup fails", async () => {
@@ -91,6 +91,6 @@ describe("monthly report off-site work", () => {
   it("renders older payloads without an offsite field", async () => {
     const p = await buildMonthlyPayload("p1", "o1", "2026-10", NOW);
     delete (p as { offsite?: unknown }).offsite;
-    expect(monthlyReportToMarkdown(p, "Summary.")).not.toContain("Off-site work");
+    expect(monthlyReportToMarkdown(p, "Summary.")).not.toContain("Work outside your website");
   });
 });

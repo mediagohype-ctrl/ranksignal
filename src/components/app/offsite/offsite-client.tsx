@@ -4,7 +4,7 @@ import {
   BadgeCheck, CalendarCheck, ExternalLink, Globe2, Hourglass, Lightbulb, ListPlus, MapPinOff, Pencil, Plus, Quote, Search, Sparkles, Trash2,
 } from "lucide-react";
 import {
-  Badge, Button, Card, CardBody, CardHeader, Dialog, EmptyState, Input, Notice, Select, SectionHeading, Stat, Table, TD, TH, THead, TR, Tabs,
+  Badge, Button, Card, CardBody, CardHeader, Dialog, EmptyState, Input, LinkButton, Notice, Select, SectionHeading, Stat, Table, TD, TH, THead, TR, Tabs,
   useToast, type Tone,
 } from "@/components/ui";
 import {
@@ -94,7 +94,7 @@ export function OffsiteClient({
   function onSaved(item: OffsiteItemView, created: boolean) {
     setItems((prev) => (created ? [item, ...prev] : prev.map((p) => (p.id === item.id ? item : p))));
     setFormOpen(false);
-    toast(created ? "Added to the tracker" : "Saved", "success");
+    toast(created ? "Added to your list" : "Saved", "success");
   }
 
   async function quickAdd(key: string, body: { type: OffsiteType; name: string; url: string; source: "manual" | "ai_citation"; notes?: string }) {
@@ -103,9 +103,9 @@ export function OffsiteClient({
       const res = await offsiteApi<{ item: OffsiteItemView }>(`/api/projects/${projectId}/offsite`, { method: "POST", body: JSON.stringify(body) });
       setItems((prev) => [res.item, ...prev]);
       setAddedKeys((prev) => new Set(prev).add(key));
-      toast(`${body.name} added to the tracker`, "success");
+      toast(`${body.name} added to your list`, "success");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Couldn't add it", "error");
+      toast(e instanceof Error ? e.message : "Couldn't add it. Please try again.", "error");
     } finally {
       setBusyId(null);
     }
@@ -120,7 +120,7 @@ export function OffsiteClient({
       });
       setItems((prev) => prev.map((p) => (p.id === item.id ? res.item : p)));
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Couldn't update", "error");
+      toast(e instanceof Error ? e.message : "Couldn't update it. Please try again.", "error");
     } finally {
       setBusyId(null);
     }
@@ -134,7 +134,7 @@ export function OffsiteClient({
       setConfirmDelete(null);
       toast("Removed", "success");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Couldn't remove it", "error");
+      toast(e instanceof Error ? e.message : "Couldn't remove it. Please try again.", "error");
     } finally {
       setBusyId(null);
     }
@@ -148,7 +148,7 @@ export function OffsiteClient({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Live this month" value={<span className="tabular-nums">{counts.liveThisMonth}</span>} icon={<CalendarCheck />} hint="Listings, reviews and mentions that went live" />
         <Stat label="Live in total" value={<span className="tabular-nums">{counts.live}</span>} icon={<BadgeCheck />} hint={`of ${counts.all} tracked`} />
-        <Stat label="Waiting on the site" value={<span className="tabular-nums">{counts.submitted}</span>} icon={<Hourglass />} hint="Submitted, not live yet" />
+        <Stat label="Waiting on the site" value={<span className="tabular-nums">{counts.submitted}</span>} icon={<Hourglass />} hint="Sent in, not live yet" />
         <Stat label="Details don't match" value={<span className="tabular-nums">{counts.napIssues}</span>} icon={<MapPinOff />} hint="Name, address or phone differs from your site" />
       </div>
 
@@ -156,7 +156,7 @@ export function OffsiteClient({
         <SectionHeading
           id="offsite-list-h"
           title="Tracker"
-          description="Everything we're doing off your website: directory listings, review profiles, press, forums and company profiles."
+          description="Listings, review pages, articles and forum posts about you on other websites."
           actions={canEdit ? <Button icon={<Plus />} onClick={() => openNew()}>Add item</Button> : undefined}
         />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -197,7 +197,7 @@ export function OffsiteClient({
           ) : shown.length === 0 ? (
             <EmptyState size="sm" icon={<Search />} title="No items match these filters" />
           ) : (
-            <Table caption="Off-site items" zebra>
+            <Table caption="Outside your website" zebra>
               <THead>
                 <tr>
                   <TH>Where</TH>
@@ -222,7 +222,7 @@ export function OffsiteClient({
                         )}
                         {i.source === "ai_citation" && (
                           <Badge size="sm" tone="accent" icon={<Quote />}>
-                            Cited by AI
+                            Linked in AI answers
                           </Badge>
                         )}
                       </div>
@@ -292,26 +292,26 @@ export function OffsiteClient({
         <SectionHeading
           id="offsite-suggest-h"
           title="Suggestions"
-          description="Places worth considering. Being listed somewhere doesn't guarantee AI assistants will mention you — but these are the sites they already look at."
+          description="Places worth considering. Being listed somewhere doesn't guarantee AI tools will name you — but these are the sites they already look at."
         />
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader
               icon={<Sparkles />}
-              title="Sites AI already cites"
+              title="Sites AI answers already link to"
               description={
                 suggestions?.measuredAt
-                  ? `Third-party sites cited in your latest AI check (${day(suggestions.measuredAt)}) that aren't in your tracker yet.`
-                  : "Third-party sites cited in your AI checks that aren't in your tracker yet."
+                  ? `Other websites linked in your latest AI check (${day(suggestions.measuredAt)}) that aren't on your list yet.`
+                  : "Other websites linked in your AI checks that aren't on your list yet."
               }
             />
             <CardBody>
               {!suggestions ? (
                 <Notice tone="warning" title="Couldn't load suggestions">Refresh the page to try again.</Notice>
               ) : !suggestions.measuredAt ? (
-                <EmptyState size="sm" icon={<Lightbulb />} title="No AI check yet" description="Run an AI visibility check and we'll list the sites the answers cite." />
+                <EmptyState size="sm" icon={<Lightbulb />} title="No AI check yet" description="Run an AI check and we'll list the websites the answers link to." action={<LinkButton href={`/app/projects/${projectId}/visibility`} size="sm" variant="secondary">Go to AI answers</LinkButton>} />
               ) : aiSuggestions.length === 0 ? (
-                <EmptyState size="sm" icon={<BadgeCheck />} title="Nothing new to suggest" description="Every third-party site from your latest check is already tracked (or none were cited)." />
+                <EmptyState size="sm" icon={<BadgeCheck />} title="Nothing new to suggest" description="Every other website from your latest AI check is already on your list (or none were linked)." />
               ) : (
                 <ul className="divide-y divide-border">
                   {aiSuggestions.map((s) => (
@@ -319,7 +319,7 @@ export function OffsiteClient({
                       <div className="min-w-0">
                         <div className="truncate text-small font-medium text-fg">{s.name === s.domain ? s.domain : `${s.name} · ${s.domain}`}</div>
                         <div className="text-xs text-muted">
-                          {TYPE_LABEL[s.type]} · cited in <span className="tabular-nums">{s.count}</span> answer{s.count === 1 ? "" : "s"}
+                          {TYPE_LABEL[s.type]} · linked in <span className="tabular-nums">{s.count}</span> {s.count === 1 ? "answer" : "answers"}
                         </div>
                       </div>
                       {canEdit && (
@@ -334,11 +334,11 @@ export function OffsiteClient({
                               name: s.name,
                               url: s.url,
                               source: "ai_citation",
-                              notes: `Cited in ${s.count} AI answer${s.count === 1 ? "" : "s"} in the check on ${day(suggestions.measuredAt)}.`,
+                              notes: `Linked in ${s.count} AI ${s.count === 1 ? "answer" : "answers"} in the AI check on ${day(suggestions.measuredAt)}.`,
                             })
                           }
                         >
-                          Add to tracker
+                          Add to my list
                         </Button>
                       )}
                     </li>
@@ -349,7 +349,7 @@ export function OffsiteClient({
           </Card>
 
           <Card>
-            <CardHeader icon={<Lightbulb />} title="Starter list for India" description="Common places customers — and AI assistants — look a business up." />
+            <CardHeader icon={<Lightbulb />} title="Starter list for India" description="Common places customers — and AI tools — look a business up." />
             <CardBody>
               <ul className="divide-y divide-border">
                 {starter.map((s) => {
@@ -398,7 +398,7 @@ export function OffsiteClient({
         tone="danger"
         icon={<Trash2 />}
         title={`Remove ${confirmDelete?.name ?? "this item"}?`}
-        description="It will disappear from the tracker and from future monthly reports. This doesn't change anything on the other site."
+        description="It will disappear from your list and from future monthly reports. This doesn't change anything on the other site."
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirmDelete(null)}>

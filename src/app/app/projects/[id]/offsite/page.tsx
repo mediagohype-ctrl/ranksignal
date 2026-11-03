@@ -3,7 +3,7 @@ import { getOffsiteSuggestions, listOffsite } from "@/lib/offsite";
 import { PageHeader } from "@/components/ui";
 import { OffsiteClient, type OffsiteSuggestionsView } from "@/components/app/offsite/offsite-client";
 
-export const metadata = { title: "Off-site" };
+export const metadata = { title: "Outside your website" };
 
 export default async function OffsitePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,10 +18,10 @@ export default async function OffsitePage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHeader
-        breadcrumbs={[{ label: "Projects", href: "/app" }, { label: project.name, href: `/app/projects/${project.id}` }, { label: "Off-site" }]}
-        eyebrow="Off-site"
-        title="Off-site work"
-        description="Directory listings, review profiles, press mentions, forum threads and company profiles — the places outside your website that AI assistants read about you."
+        breadcrumbs={[{ label: "Projects", href: "/app" }, { label: project.name, href: `/app/projects/${project.id}` }, { label: "Outside your website" }]}
+        eyebrow="To-do"
+        title="Outside your website"
+        description="Listings, reviews and articles about you on other sites. AI tools read these too."
       />
       <OffsiteClient projectId={project.id} initialItems={items} suggestions={suggestions} canEdit={hasRole(session, "member")} />
     </>

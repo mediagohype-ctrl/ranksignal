@@ -74,11 +74,14 @@ export function PillarCard({
   href,
   linkLabel = "See details",
   maxChecks = 5,
+  partial = false,
   className,
 }: {
   label: React.ReactNode;
   score: number | null;
   grade?: string | null;
+  /** Website-only score while AI results are on the way. */
+  partial?: boolean;
   summary?: React.ReactNode;
   checks?: CheckItem[];
   icon?: React.ReactNode;
@@ -107,7 +110,7 @@ export function PillarCard({
           </div>
           {summary && <p className="mt-1.5 text-small leading-relaxed text-muted">{summary}</p>}
         </div>
-        <ScoreRing score={score} grade={grade} size="md" label={`${name} score`} />
+        <ScoreRing score={score} grade={grade} size="md" label={`${name} score`} partial={partial} />
       </div>
       {checks.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted">

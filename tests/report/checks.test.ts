@@ -16,9 +16,9 @@ describe("report checks on fixture pages", () => {
     expect(c["seo.titles"].detail).toContain("2 duplicated");
     expect(c["seo.meta_description"].facts.missing).toBe(2);
     expect(c["seo.h1"].facts.missing).toBe(2);
-    expect(c["seo.image_alt"].detail).toBe("4 of 4 images have no alt text, across 2 pages.");
+    expect(c["seo.image_alt"].detail).toBe("4 of 4 images have no image description, across 2 pages.");
     expect(c["seo.mobile_viewport"].facts.missing).toBe(2);
-    expect(c["seo.page_speed_proxy"].detail).toMatch(/^Proxy, not a speed test/);
+    expect(c["seo.page_speed_proxy"].detail).toMatch(/^Estimate, not a speed test/);
     expect(c["seo.page_speed_proxy"].facts.blocking).toBe(2);
     expect(c["seo.https"].status).toBe("pass");
     expect(c["seo.sitemap"].status).toBe("pass");

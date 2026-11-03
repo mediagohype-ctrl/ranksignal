@@ -116,6 +116,8 @@ export interface ExtractedPage {
   stylesheetCount?: number;
   /** Case-insensitive brand name occurrences (only when brand names were supplied). */
   brandMentions?: { inTitle: boolean; inH1: boolean; bodyCount: number };
+  /** What the site is built with (src/lib/platform/detect.ts); absent on pages crawled before detection existed. */
+  platform?: import("@/lib/platform/detect").Platform;
 }
 
 export interface FindingInput {
