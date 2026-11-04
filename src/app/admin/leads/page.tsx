@@ -8,6 +8,9 @@ import { LEAD_SOURCES, LEAD_STATUSES } from "@/lib/admin/leads";
 import { fmtDateTime, pageParams, qs, str, type SearchParams } from "@/lib/admin/params";
 import { Badge, buttonClass, Card, EmptyState, PageHeader, ScoreRing, Table, TD, TH, THead, TR } from "@/components/ui";
 import { FilterBar, FilterInput, FilterSelect, Pagination, StatusPill } from "@/components/admin/ui";
+import { SendFollowUpButton } from "@/components/admin/lead-actions";
+import { LEAD_FOLLOWUP_KIND } from "@/lib/admin/lead-followup";
+import { alreadySent } from "@/lib/growth/once";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Leads" };
@@ -23,6 +26,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     db.lead.groupBy({ by: ["status"], _count: { _all: true } }),
     db.lead.groupBy({ by: ["source"], _count: { _all: true } }),
   ]);
+  const followedUp = await alreadySent(
+    LEAD_FOLLOWUP_KIND,
+    leads.filter((l) => l.email).map((l) => l.id),
+  );
   const statusCount = new Map(byStatus.map((s) => [s.status, s._count._all]));
   const sourceCount = new Map(bySource.map((s) => [s.source, s._count._all]));
   const exportQs = qs(sp, { page: undefined, size: undefined });
@@ -32,7 +39,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <PageHeader
         className="mb-0"
         title="Leads"
-        description="People who ran a free check or wrote in through the contact form. IP addresses are stored only as a salted hash."
+        description="People who ran a free check (with the email they left for their result) or wrote in through the contact form. IP addresses are stored only as a salted hash."
         meta={
           <>
             {LEAD_SOURCES.map((s) => (
@@ -90,6 +97,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                 <TH>Score</TH>
                 <TH>Status</TH>
                 <TH>Received</TH>
+                <TH>Follow-up</TH>
               </tr>
             </THead>
             <tbody>
@@ -120,6 +128,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     <StatusPill status={l.status} />
                   </TD>
                   <TD className="whitespace-nowrap text-xs tabular-nums text-muted">{fmtDateTime(l.createdAt)}</TD>
+                  <TD>
+                    {l.email && l.source === "free_check" ? (
+                      <SendFollowUpButton leadId={l.id} sent={followedUp.has(l.id)} />
+                    ) : (
+                      <span className="text-xs text-muted">—</span>
+                    )}
+                  </TD>
                 </TR>
               ))}
             </tbody>

@@ -7,6 +7,7 @@ import { pageList } from "./helpers";
 import { titlesGuide } from "./guides/titles";
 import { GOOGLE_GUIDES } from "./guides/google";
 import { AI_GUIDES } from "./guides/ai";
+import { jsSiteGuide } from "./guides/js-site";
 
 export type { ChangeRow, FixContext, FixGuide, FixPage } from "./types";
 
@@ -15,6 +16,7 @@ export const GUIDES: Record<string, FixGuide> = {
   ...GOOGLE_GUIDES,
   ...AI_GUIDES,
   "seo.titles": titlesGuide,
+  "seo.js_rendering": jsSiteGuide,
 };
 
 export interface ResolvedFix {

@@ -6,16 +6,20 @@ import { jwtVerify } from "jose";
 const COOKIE = "av_session"; // keep in sync with SESSION_COOKIE_NAME in src/lib/auth/session.ts
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-async function hasValidSession(req: NextRequest): Promise<boolean> {
+async function sessionPayload(req: NextRequest) {
   const token = req.cookies.get(COOKIE)?.value;
   const s = process.env.SESSION_SECRET;
-  if (!token || !s || s.length < 32) return false;
+  if (!token || !s || s.length < 32) return null;
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(s), { algorithms: ["HS256"] });
-    return Boolean(payload.sub && typeof payload.org === "string");
+    return payload.sub && typeof payload.org === "string" ? payload : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+async function hasValidSession(req: NextRequest): Promise<boolean> {
+  return (await sessionPayload(req)) !== null;
 }
 
 function apiError(status: number, code: string, message: string) {
@@ -47,7 +51,12 @@ export async function middleware(req: NextRequest) {
     // Unauthenticated endpoints (free check, contact form, shared reports); each enforces its own
     // captcha / rate limits. Still behind the same-origin check above for mutating methods.
     if (pathname.startsWith("/api/public/")) return NextResponse.next();
-    if (!(await hasValidSession(req))) return apiError(401, "unauthorized", "Sign in required");
+    const payload = await sessionPayload(req);
+    if (!payload) return apiError(401, "unauthorized", "Sign in required");
+    // Staff "View as customer" sessions are read-only: no writes outside the admin back-office.
+    if (payload.ro === true && MUTATING.has(req.method) && !pathname.startsWith("/api/admin/")) {
+      return apiError(403, "read_only", "View as customer is read-only.");
+    }
     return NextResponse.next();
   }
 

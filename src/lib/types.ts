@@ -27,6 +27,8 @@ export interface SessionContext {
   role: Role;
   /** Staff member working inside a customer workspace ("support mode"); see src/lib/auth/access.ts. */
   staffMode?: boolean;
+  /** Staff "View as customer": read-only support session (role viewer; every write API rejects it). */
+  readOnly?: boolean;
 }
 
 // ---------- Plans (blueprint §10) ----------
@@ -118,6 +120,8 @@ export interface ExtractedPage {
   brandMentions?: { inTitle: boolean; inH1: boolean; bodyCount: number };
   /** What the site is built with (src/lib/platform/detect.ts); absent on pages crawled before detection existed. */
   platform?: import("@/lib/platform/detect").Platform;
+  /** JavaScript app-shell signals from the raw HTML (src/lib/crawler/js-site.ts); absent on older crawls. */
+  jsShell?: { appRoot: string | null; scripts: number };
 }
 
 export interface FindingInput {

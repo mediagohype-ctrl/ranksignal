@@ -88,7 +88,7 @@ export function ActionCenter({
         title="No fixes to approve yet"
         description="Check your website first. We'll turn the problems we find into fixes here."
         action={
-          <LinkButton href={`/app/projects/${projectId}/audit`}>Go to website problems</LinkButton>
+          <LinkButton href={`/app/projects/${projectId}/todo`}>Go to website problems</LinkButton>
         }
       />
     );
@@ -127,7 +127,7 @@ function evidenceLink(e: unknown, projectId: string): { label: string; href: str
     const kind = String(o.kind ?? o.type ?? "");
     if (kind === "finding") {
       const code = typeof o.code === "string" ? o.code : "";
-      return { label: `Website problem: ${findingCopy(code, code.replace(/_/g, " ")).title}`, href: `/app/projects/${projectId}/audit` };
+      return { label: `Website problem: ${findingCopy(code, code.replace(/_/g, " ")).title}`, href: `/app/projects/${projectId}/todo` };
     }
     if (kind === "visibility_run") return { label: "AI check results", href: `/app/projects/${projectId}/visibility` };
     if (kind === "prompt") return { label: "Customer question", href: `/app/projects/${projectId}/prompts` };

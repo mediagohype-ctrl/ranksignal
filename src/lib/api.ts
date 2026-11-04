@@ -61,6 +61,7 @@ export async function requireSession(minRole: Role = "viewer"): Promise<SessionC
   // Re-read access so removals and role changes take effect immediately, not at JWT expiry.
   const session = await resolveAccess(token);
   if (!session) throw new HttpError(401, "unauthorized", "Membership is no longer active");
+  if (session.readOnly && minRole !== "viewer") throw new HttpError(403, "read_only", "View as customer is read-only.");
   if (ROLE_RANK[session.role] < ROLE_RANK[minRole]) throw new HttpError(403, "forbidden", "Insufficient role");
   return session;
 }

@@ -6,9 +6,10 @@ import { db } from "@/lib/db";
 import { billingPeriod } from "@/lib/billing/usage";
 import { requireStaffPage } from "@/lib/admin/guard";
 import { orgActivity } from "@/lib/admin/metrics";
-import { formatUsd, microsToUsd } from "@/lib/admin/money";
+import { costVsPrice, formatInr, usdInrRate } from "@/lib/admin/money";
+import { hostLabel } from "@/lib/admin/labels";
 import { fmtAgo, fmtDate, oneOf, pageParams, str, type SearchParams } from "@/lib/admin/params";
-import { Card, EmptyState, PageHeader, Table, TD, TH, THead, TR } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader, Table, TD, TH, THead, TR } from "@/components/ui";
 import { FilterBar, FilterInput, FilterSelect, Mono, Pagination, PlanBadge, SortHeader, StatusPill, TierBadge } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         publishingEnabled: true,
         createdAt: true,
         _count: { select: { memberships: { where: { status: "active" } }, projects: true } },
+        projects: { orderBy: { createdAt: "asc" }, take: 1, select: { websiteUrl: true } },
+        memberships: { where: { role: "owner" }, orderBy: { createdAt: "asc" }, take: 1, select: { user: { select: { email: true } } } },
       },
     }),
     db.organization.count({ where }),
@@ -66,12 +69,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     rows.map((r) => r.id),
     period,
   );
+  const rate = usdInrRate();
 
   return (
     <div>
       <PageHeader
         title="Customers"
-        description="Every organization: plan, service tier, status, size and spend this month."
+        description={`Every organization with its website and owner: plan, status, size, and AI cost this month vs what they pay (₹${rate}/USD).`}
         meta={<span className="tabular-nums">{total.toLocaleString()} matching</span>}
       />
       <Card>
@@ -111,18 +115,27 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 <TH align="right">Projects</TH>
                 <TH>Last activity</TH>
                 <TH align="right">Credits ({period})</TH>
-                <TH align="right">AI cost</TH>
+                <TH align="right">AI cost (₹)</TH>
+                <TH align="right">Pays / mo</TH>
               </tr>
             </THead>
             <tbody>
               {rows.map((o) => {
                 const a = activity.get(o.id);
+                const website = o.projects[0]?.websiteUrl ?? null;
+                const owner = o.memberships[0]?.user.email ?? null;
+                const money = costVsPrice({ planId: o.planId, status: o.status, serviceTier: o.serviceTier, costMicros: a?.costMicros ?? 0 }, rate);
                 return (
                   <TR key={o.id}>
                     <TD>
                       <Link href={`/admin/customers/${o.id}`} className="font-medium text-fg hover:text-primary hover:underline">
                         {o.name}
                       </Link>
+                      <div className="text-xs text-fg-soft">
+                        {website ? hostLabel(website) : <span className="text-muted">no website yet</span>}
+                        {" · "}
+                        {owner ?? <span className="text-muted">no owner</span>}
+                      </div>
                       <div>
                         <Mono>{o.id}</Mono>
                         {!o.publishingEnabled && <span className="ml-2 text-xs font-medium text-warning">publishing paused</span>}
@@ -142,7 +155,17 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                     <TD numeric>{o._count.projects}</TD>
                     <TD className="whitespace-nowrap text-xs text-muted">{fmtAgo(a?.lastActivity ?? null)}</TD>
                     <TD numeric>{(a?.credits ?? 0).toLocaleString()}</TD>
-                    <TD numeric>{formatUsd(microsToUsd(a?.costMicros ?? 0))}</TD>
+                    <TD numeric>
+                      {formatInr(money.costInr)}
+                      {money.costsMore && (
+                        <div>
+                          <Badge tone="danger" size="sm">
+                            Costs more than they pay
+                          </Badge>
+                        </div>
+                      )}
+                    </TD>
+                    <TD numeric>{formatInr(money.priceInr)}</TD>
                   </TR>
                 );
               })}

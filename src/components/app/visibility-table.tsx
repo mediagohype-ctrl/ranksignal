@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { Check, ChevronDown, ExternalLink, Info, Minus, Search } from "lucide-react";
 import { Badge, Button, EmptyState, Input, Select, Table, TD, TH, THead, TR, Tooltip } from "@/components/ui";
 import { engineName } from "./providers-status";
+import { AnswerText } from "@/components/app/ai-answers/answer-text";
 
 export interface ObservationRow {
   id: string;
@@ -93,7 +94,7 @@ function Citations({ title, items, owned }: { title: string; items: ObservationR
   );
 }
 
-export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
+export function VisibilityTable({ rows, brandNames = [] }: { rows: ObservationRow[]; brandNames?: string[] }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [provider, setProvider] = useState("all");
@@ -246,9 +247,9 @@ export function VisibilityTable({ rows }: { rows: ObservationRow[] }) {
                             <h4 className="mb-1.5 text-caption uppercase tracking-[0.06em] text-muted">
                               What {engineName(r.platformLabel)} answered
                             </h4>
-                            {/* Untrusted provider text: rendered as plain text only. */}
-                            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-surface p-4 text-small leading-relaxed text-fg-soft">
-                              {r.rawResponse || <span className="text-muted">(empty answer)</span>}
+                            {/* Untrusted provider text: parsed and rendered as elements, never as HTML. */}
+                            <div className="max-h-96 overflow-y-auto rounded-xl border border-border bg-surface p-4">
+                              {r.rawResponse ? <AnswerText text={r.rawResponse} brandNames={brandNames} /> : <span className="text-small text-muted">(empty answer)</span>}
                             </div>
                             <p className="mt-2 text-xs text-muted">
                               {r.sentiment && <>Tone towards you: <span className="capitalize">{r.sentiment}</span> · </>}

@@ -8,7 +8,9 @@ import { NotificationsBell, UsageMeter, UserMenu } from "@/components/app/topbar
 import { Badge, Divider, ToastProvider } from "@/components/ui";
 import { PlanBanner } from "@/components/app/plan-banner";
 import { VerifyEmailBanner } from "@/components/app/verify-email-banner";
-import { getPlanBannerData } from "@/lib/billing/banner";
+import { getPlanBannerData, pickBanner } from "@/lib/billing/banner";
+import { TimeZoneProvider } from "@/components/app/time-zone";
+import { RunWatcher } from "@/components/app/run-watcher";
 
 export const dynamic = "force-dynamic";
 
@@ -22,20 +24,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       select: { id: true, name: true, websiteUrl: true },
       orderBy: { createdAt: "desc" },
     }),
-    db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, emailVerified: true } }),
+    db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, emailVerified: true, timeZone: true } }),
   ]);
   if (!org) redirect("/login");
-  // Trial / past-due / usage banner; never block the app if billing data can't be loaded.
+  // ONE banner slot (brief rule 6), priority in pickBanner: blocked account → email not confirmed → payment due →
+  // trial ends within 2 days → AI answers used up. Never block the app if billing data can't be loaded.
   const banner = await getPlanBannerData(session.organizationId).catch(() => null);
   const plan = getPlan(org.planId);
   const trial = org.planId === "trial";
-  // One banner slot (brief rule 6): a blocked account first (it's a dead end otherwise), then an unconfirmed
-  // email, then trial/usage notices.
-  const blocked = banner ? !banner.access.active : false;
-  const showVerify = !session.staffMode && user?.emailVerified === false && !blocked;
-
+  const bannerKind = banner
+    ? pickBanner({ access: banner.access, ai: banner.ai, emailVerified: user?.emailVerified ?? null, staffMode: session.staffMode })
+    : !session.staffMode && user?.emailVerified === false
+      ? "verify_email"
+      : null;
   return (
     <ToastProvider>
+      <TimeZoneProvider timeZone={user?.timeZone}>
+      <RunWatcher />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-small focus:shadow-lg"
@@ -73,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {session.staffMode && (
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-small text-fg">
                 <span>
-                  <strong>Support mode:</strong> you are working inside <strong>{org.name}</strong> as RankSignal staff. Every action is
+                  <strong>{session.readOnly ? "View as customer (read-only):" : "Support mode:"}</strong> you are working inside <strong>{org.name}</strong> as RankSignal staff. Every action is
                   audit-logged.
                 </span>
                 <span className="flex items-center gap-4">
@@ -88,11 +93,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </span>
               </div>
             )}
-            {showVerify && <VerifyEmailBanner className="mb-6" />}
-            {banner && !showVerify && (
+            {bannerKind === "verify_email" && <VerifyEmailBanner className="mb-6" />}
+            {banner && bannerKind && bannerKind !== "verify_email" && (
               <PlanBanner
+                kind={bannerKind}
                 access={banner.access}
-                usage={banner.usage}
+                ai={banner.ai}
+                timeZone={user?.timeZone}
                 canManageBilling={session.role === "owner" || session.role === "admin"}
                 className="mb-6"
               />
@@ -102,6 +109,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <MobileTabBar />
+      </TimeZoneProvider>
     </ToastProvider>
   );
 }

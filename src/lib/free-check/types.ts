@@ -37,9 +37,18 @@ export interface FreeCheckResult {
   issues: FreeCheckIssue[];
   /** Total number of issues found (the free result shows only the top ones). */
   totalIssues: number;
+  /** Lead row for this check (admin CRM), so the visitor can add their email. Null when it could not be stored. */
+  leadId?: string | null;
   strengths: string[];
   notes: string[];
 }
 
-export const AI_VISIBILITY_NOTE =
-  "This free check reads your website only. It does not ask ChatGPT, Gemini or other AI assistants about you — the full report does that after you sign up.";
+export const AI_VISIBILITY_NOTE = "This free check reads your website. It does not ask ChatGPT — the full check does.";
+
+/** Plain names for the four scores (docs/PLAIN_WORDS.md). */
+export const FREE_PILLAR_NAMES: Record<Pillar, string> = {
+  seo: "Google health",
+  aeo: "Easy to quote",
+  geo: "Ready for AI",
+  brand: "AI knows you",
+};

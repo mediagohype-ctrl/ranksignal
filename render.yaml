@@ -54,3 +54,33 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+      - key: RAZORPAY_PLAN_STARTER
+        sync: false
+      - key: RAZORPAY_PLAN_GROWTH
+        sync: false
+      - key: RAZORPAY_PLAN_AGENCY
+        sync: false
+      - key: AI_DAILY_BUDGET_USD # platform-wide daily AI spend cap (hard stop); default 5
+        sync: false
+      - key: NEXT_PUBLIC_TURNSTILE_SITE_KEY # bot check on the free check
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: EMAIL_FROM # e.g. RankSignal <hello@yourdomain.com>
+        sync: false
+      - key: RESEND_API_KEY # or SMTP_HOST/SMTP_PORT/SMTP_SECURE/SMTP_USER/SMTP_PASS
+        sync: false
+      - key: GOOGLE_CLIENT_ID # "Continue with Google"; add {APP_URL}/api/auth/google/callback as a redirect URI
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: STAFF_ALERT_EMAIL # who gets staff alerts (AI spend 80%, job/payment failed, trial ending)
+        sync: false
+      - key: STAFF_WHATSAPP # optional, E.164
+        sync: false
+      - key: WHATSAPP_TOKEN # optional: Meta WhatsApp Cloud API
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_UPDATE_TEMPLATE # approved template name for customer updates ({{1}} = message text)
+        sync: false

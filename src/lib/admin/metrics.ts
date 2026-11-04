@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { TRIAL_DAYS } from "@/lib/billing/plans";
 import { DAY_MS, dayKeys } from "./params";
+import { orgDisplayLabel, type OrgIdentity } from "@/lib/admin/labels";
 
 /* ------------------------------------------------------------------ daily series (Postgres) */
 
@@ -133,11 +134,28 @@ export async function orgActivity(orgIds: string[], period: string) {
   return out;
 }
 
-export async function orgNames(ids: (string | null | undefined)[]): Promise<Map<string, string>> {
+/** Name + main website + owner email per organisation (two orgs can share a name). */
+export async function orgIdentities(ids: (string | null | undefined)[]): Promise<Map<string, OrgIdentity>> {
   const unique = [...new Set(ids.filter((x): x is string => !!x))];
   if (!unique.length) return new Map();
-  const rows = await db.organization.findMany({ where: { id: { in: unique } }, select: { id: true, name: true } });
-  return new Map(rows.map((r) => [r.id, r.name]));
+  const rows = await db.organization.findMany({
+    where: { id: { in: unique } },
+    select: {
+      id: true,
+      name: true,
+      projects: { orderBy: { createdAt: "asc" }, take: 1, select: { websiteUrl: true } },
+      memberships: { where: { role: "owner" }, orderBy: { createdAt: "asc" }, take: 1, select: { user: { select: { email: true } } } },
+    },
+  });
+  return new Map(
+    rows.map((r) => [r.id, { name: r.name, website: r.projects[0]?.websiteUrl ?? null, ownerEmail: r.memberships[0]?.user.email ?? null }]),
+  );
+}
+
+/** Display labels for organisation lists: "Name · website · owner email". */
+export async function orgNames(ids: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const identities = await orgIdentities(ids);
+  return new Map([...identities].map(([id, o]) => [id, orgDisplayLabel(o)]));
 }
 
 export async function userEmails(ids: (string | null | undefined)[]): Promise<Map<string, string>> {

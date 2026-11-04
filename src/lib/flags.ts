@@ -7,7 +7,8 @@ export const FLAG_DEFAULTS: Record<string, boolean> = {
   "provider.gemini": true,
   "provider.perplexity": true,
   "provider.dataforseo": true,
-  "provider.simulated": true,
+  // Made-up demo answers: OFF unless staff turn it on, and never allowed in production (see registry simulatedAllowed).
+  "provider.simulated": false,
 };
 
 export async function isEnabled(key: string): Promise<boolean> {

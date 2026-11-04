@@ -15,7 +15,7 @@ export function AddToTasksButton({
   canEdit,
 }: {
   projectId: string;
-  task: { title: string; description: string; category: TaskCategory; priority: TaskPriority; links: string[] };
+  task: { title: string; description: string; category: TaskCategory; priority: TaskPriority; links: string[]; todoKey?: string };
   /** Already on the task board (open): don't add twice. */
   existing: boolean;
   canEdit: boolean;
@@ -24,7 +24,7 @@ export function AddToTasksButton({
   const toast = useToast();
   const [added, setAdded] = useState(existing);
   const [busy, setBusy] = useState(false);
-  const boardHref = `/app/projects/${projectId}/work`;
+  const boardHref = `/app/projects/${projectId}/todo`;
 
   if (added) {
     return (
@@ -32,7 +32,7 @@ export function AddToTasksButton({
         href={boardHref}
         className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-success/40 bg-success-soft px-4 text-small font-semibold text-success sm:w-auto"
       >
-        <CheckCircle2 size={18} aria-hidden /> In your task list — open it
+        <CheckCircle2 size={18} aria-hidden /> In your to-do list — open it
       </Link>
     );
   }
@@ -47,7 +47,7 @@ export function AddToTasksButton({
           category: task.category,
           priority: task.priority,
           performedBy: "client",
-          evidence: task.links.length ? { links: task.links.slice(0, 20) } : null,
+          evidence: task.links.length || task.todoKey ? { links: task.links.slice(0, 20), ...(task.todoKey ? { todoKey: task.todoKey } : {}) } : null,
         },
       });
       setAdded(true);

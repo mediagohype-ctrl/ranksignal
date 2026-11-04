@@ -11,7 +11,8 @@ const COLS = [
       { href: "/how-it-works", label: "How it works" },
       { href: "/services", label: "Done-for-you services" },
       { href: "/pricing", label: "Pricing" },
-      { href: "/#sample", label: "Sample report" },
+      { href: "/#sample", label: "Sample result" },
+      { href: "/tools", label: "Free tools" },
       { href: "/free-check", label: "Free website check" },
     ],
   },
@@ -19,7 +20,6 @@ const COLS = [
     title: "Resources",
     links: [
       { href: "/docs", label: "Getting started" },
-      { href: "/#explained", label: "Your four scores" },
       { href: "/#faq", label: "FAQ" },
       { href: "/contact", label: "Contact us" },
     ],

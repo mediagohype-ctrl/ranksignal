@@ -5,12 +5,13 @@ import { handler, json, parseBody, HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
 import { requireStaffApi } from "@/lib/admin/guard";
 import { reasonSchema, staffAudit } from "@/lib/admin/audit";
+import { PLAN_IDS } from "@/lib/billing/plans";
 
 const schema = z
   .object({
     publishingEnabled: z.boolean().optional(), // per-tenant publishing kill switch
     status: z.enum(["active", "past_due", "cancelled", "suspended"]).optional(),
-    planId: z.enum(["trial", "starter", "growth", "agency"]).optional(),
+    planId: z.enum(PLAN_IDS).optional(),
     serviceTier: z.enum(["fix", "grow", "authority"]).nullable().optional(),
     reason: reasonSchema,
   })

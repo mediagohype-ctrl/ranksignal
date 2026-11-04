@@ -4,10 +4,11 @@ import { History } from "lucide-react";
 import type { SnapshotDelta, SnapshotPillar } from "@/lib/snapshots/types";
 import { Card, LinkButton } from "@/components/ui";
 import { DeltaChip } from "./delta-chip";
+import { fmtDate } from "@/lib/dashboard/format";
 
 const PILLAR_NAMES: Record<SnapshotPillar, string> = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" };
 const pctText = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
-const dayText = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const dayText = (d: Date) => fmtDate(d);
 
 function Tile({ label, value, children }: { label: string; value: ReactNode; children?: ReactNode }) {
   return (

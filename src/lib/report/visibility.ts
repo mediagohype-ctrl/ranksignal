@@ -51,7 +51,8 @@ function parseBrandKnowledge(metrics: unknown): AiVisibilitySummary["brandKnowle
       provider: typeof b.provider === "string" ? b.provider : "unknown",
       knowsBrand: b.knowsBrand === true,
       summary: typeof b.summary === "string" ? b.summary.slice(0, 1000) : "",
-      inaccuracies: Array.isArray(b.inaccuracies) ? b.inaccuracies.filter((x): x is string => typeof x === "string").slice(0, 10) : [],
+      // Probes before bk-2 also listed claims merely "not supported" by the site, which are not mistakes (brief 7.5).
+      inaccuracies: Array.isArray(b.inaccuracies) && b.version !== "bk-1" ? b.inaccuracies.filter((x): x is string => typeof x === "string").slice(0, 10) : [],
     }));
   return out.length ? out : undefined;
 }

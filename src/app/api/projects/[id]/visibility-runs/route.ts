@@ -6,11 +6,14 @@ import { enqueue } from "@/lib/jobs/queue";
 import { currentPromptSetVersion } from "@/lib/prompts/service";
 import { assertOrgActive } from "@/lib/billing/access";
 import { assertVisibilityRunAllowed } from "@/lib/billing/ai-limits";
+import { isKnownProviderId } from "@/lib/providers/visibility/registry";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const ACTIVE_STATUSES = ["queued", "running"];
-const createSchema = z.object({ providers: z.array(z.enum(["openai", "gemini", "perplexity", "dataforseo", "simulated"])).max(5).optional() });
+// Any registry id (incl. "openrouter:<vendor>/<model>"); unknown ids are rejected, unconfigured ones are skipped by the job.
+const providerId = z.string().min(1).max(200).refine(isKnownProviderId, "Unknown AI assistant");
+const createSchema = z.object({ providers: z.array(providerId).max(10).optional() });
 
 export const GET = handler(async (req: Request, { params }: Ctx) => {
   const s = await requireSession("viewer");
@@ -48,11 +51,11 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
   const active = await db.visibilityRun.findFirst({
     where: { organizationId: s.organizationId, projectId: project.id, status: { in: ACTIVE_STATUSES } },
   });
-  if (active) throw new HttpError(409, "run_in_progress", "A visibility run is already in progress for this project", { runId: active.id });
+  if (active) throw new HttpError(409, "run_in_progress", "An AI check is already running for this website", { runId: active.id });
 
   const promptCount = await db.trackedPrompt.count({ where: { organizationId: s.organizationId, projectId: project.id, active: true } });
-  if (promptCount === 0) throw new HttpError(400, "no_prompts", "Add at least one tracked prompt before running a visibility scan");
-  // Monthly AI-check allowance (402 plan_limit). Prompts per run are capped in the job via getRunPromptCap().
+  if (promptCount === 0) throw new HttpError(400, "no_prompts", "Add at least one customer question before running an AI check");
+  // Monthly AI answers (402 plan_limit, with the reset date). The job sizes the run to the answers left.
   const allowance = await assertVisibilityRunAllowed(s.organizationId);
 
   const run = await db.visibilityRun.create({

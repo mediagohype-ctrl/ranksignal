@@ -8,14 +8,18 @@ import { sendVerificationEmail } from "@/lib/auth/email-verification";
 import { readInviteToken } from "@/lib/auth/invite";
 import { isDisposableEmail, passwordPolicyError } from "@/lib/security/email-policy";
 import { verifyTurnstile } from "@/lib/security/turnstile";
-import { TRIAL_DAYS } from "@/lib/billing/plans";
+import { createOwnerWorkspace } from "@/lib/auth/create-account";
+import { placeholderOrgName } from "@/lib/setup/facts";
 import { writeAuditLog } from "@/lib/audit-log";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters.`).max(200),
   name: z.string().trim().min(1).max(120),
-  organizationName: z.string().trim().min(1).max(120),
+  /** Optional (sign-up no longer asks): defaults to a placeholder that setup replaces with the website's business name. */
+  organizationName: z.string().trim().min(1).max(120).optional(),
+  /** Referral code carried from ?ref= on the sign-up page. */
+  ref: z.string().trim().max(64).optional(),
   turnstileToken: z.string().max(2048).optional(),
   /** Signed invitation token (from /accept-invite). Required to create the account for an invited email. */
   inviteToken: z.string().min(10).max(4096).optional(),
@@ -61,7 +65,6 @@ export const POST = handler(async (req: Request) => {
   if (policy) throw fieldError("password", policy);
 
   const passwordHash = await hashPassword(input.password);
-  const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
   const existing = await db.user.findUnique({ where: { email: input.email } });
   // Real accounts may not be re-registered; placeholder (invited) users only with the matching invite token.
@@ -80,10 +83,10 @@ export const POST = handler(async (req: Request) => {
           })
       : // New accounts start unverified; invitations for this email only activate via the invite link.
         await tx.user.create({ data: { email: input.email, name: input.name, passwordHash, emailVerified: false } });
-    const org = await tx.organization.create({ data: { name: input.organizationName, planId: "trial", status: "active" } });
-    await tx.membership.create({ data: { userId: user.id, organizationId: org.id, role: "owner", status: "active" } });
-    await tx.subscription.create({
-      data: { organizationId: org.id, provider: "razorpay", planId: "trial", status: "trialing", trialEndsAt, currentPeriodStart: new Date(), currentPeriodEnd: trialEndsAt },
+    const org = await createOwnerWorkspace(tx, {
+      userId: user.id,
+      organizationName: input.organizationName ?? placeholderOrgName(input.email),
+      ref: input.ref,
     });
     return { user, org };
   });

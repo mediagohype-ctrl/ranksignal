@@ -5,6 +5,7 @@ import { buildSiteReport } from "@/lib/report/build";
 import type { SiteReport } from "@/lib/report/types";
 import { log } from "@/lib/log";
 import { METHODOLOGY_VERSION } from "@/lib/report/score";
+import { issueCounts } from "@/lib/report/issues";
 import { FORMULA_VERSION } from "@/lib/visibility/metrics";
 import { computeDelta, likeForLikeFromObservations } from "./delta";
 import {
@@ -127,7 +128,8 @@ async function crawlScores(
     overallScore: report.overall.score,
     grade: report.overall.grade,
     pillarScores,
-    openIssues: await issuesAsOf(organizationId, projectId, at),
+    // The same grouped problem list (and count) the report and To-do show — one per problem, not one per page.
+    openIssues: issueCounts(report.issues),
   };
 }
 
@@ -233,7 +235,7 @@ async function writeVisibilitySnapshot(organizationId: string, projectId: string
   if (crawl && scored) {
     const pillarScores = Object.fromEntries(SNAPSHOT_PILLARS.map((p) => [p, null])) as SnapshotPillarScores;
     for (const p of scored.pillars) pillarScores[p.pillar] = p.score;
-    crawl = { ...crawl, overallScore: scored.overall.score, grade: scored.overall.grade, pillarScores };
+    crawl = { ...crawl, overallScore: scored.overall.score, grade: scored.overall.grade, pillarScores, openIssues: issueCounts(scored.issues) };
   }
 
   await db.reportSnapshot.create({

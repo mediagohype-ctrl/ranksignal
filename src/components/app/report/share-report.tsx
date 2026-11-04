@@ -22,7 +22,7 @@ async function call(projectId: string, body?: { enabled?: boolean; rotate?: true
 }
 
 /** "Share" button + dialog: create / copy / rotate / turn off a read-only client link. Admins manage; others see a hint. */
-export function ShareReportButton({ projectId, canManage }: { projectId: string; canManage: boolean }) {
+export function ShareReportButton({ projectId, canManage, label = "Share" }: { projectId: string; canManage: boolean; label?: string }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<ShareState | null>(null);
@@ -74,7 +74,7 @@ export function ShareReportButton({ projectId, canManage }: { projectId: string;
   return (
     <>
       <Button variant="secondary" icon={<Share2 />} onClick={() => setOpen(true)}>
-        Share
+        {label}
       </Button>
       <Dialog
         open={open}
@@ -94,7 +94,7 @@ export function ShareReportButton({ projectId, canManage }: { projectId: string;
 
           {state && !canManage && (
             <Notice tone="info" title={state.enabled ? "Sharing is on for this website" : "Sharing is off"}>
-              Only Admins and Owners can create, copy or turn off share links. Ask an Admin in your team if you need one.
+              Only the Owner can create, copy or turn off share links. Ask the Owner if you need one.
             </Notice>
           )}
 

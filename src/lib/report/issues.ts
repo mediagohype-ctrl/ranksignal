@@ -771,3 +771,16 @@ export function strengths(checks: EvaluatedCheck[], max = 8): string[] {
 
 /** Every check id that has issue copy (used by tests to verify coverage). */
 export const ISSUE_COPY_IDS = Object.keys(COPY);
+
+/** The one 3-level scale shown to people for a problem (docs/PLAIN_WORDS.md). Same words on To-do, Report and Home. */
+export const IMPACT_LABEL: Record<IssueImpact, string> = { high: "Urgent", medium: "Important", low: "Nice to have" };
+
+/**
+ * Open-problem counts for history snapshots, from the same grouped problem list the report and To-do show
+ * (one row per problem, not one per page). Urgent → high, Important → medium, Nice to have → low.
+ */
+export function issueCounts(issues: Pick<ReportIssue, "impact">[]): { critical: number; high: number; medium: number; low: number; info: number; total: number } {
+  const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0, total: issues.length };
+  for (const i of issues) counts[i.impact] += 1;
+  return counts;
+}

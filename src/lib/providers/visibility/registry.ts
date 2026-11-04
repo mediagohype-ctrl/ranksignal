@@ -1,7 +1,9 @@
 // Visibility provider registry. Uses EVERY configured + enabled real provider (OpenRouter models, OpenAI, Gemini, Perplexity,
 // DataForSEO). The simulated provider (clearly labelled fake data) is used ONLY when no real provider is
-// configured and ALLOW_SIMULATED_PROVIDER !== "false".
+// configured, the "provider.simulated" flag is ON (default OFF), ALLOW_SIMULATED_PROVIDER !== "false", and never
+// in production (NODE_ENV=production).
 import { db } from "@/lib/db";
+import { FLAG_DEFAULTS } from "@/lib/flags";
 import type { VisibilityProvider } from "@/lib/types";
 import { openaiVisibilityProvider } from "./openai";
 import { geminiVisibilityProvider } from "./gemini";
@@ -39,21 +41,32 @@ export const PROVIDER_ENV: Record<string, string[]> = {
 };
 
 /**
- * provider.<id> kill switches: an explicit FeatureFlag row wins; an absent row means ENABLED.
- * (Read directly so new providers don't depend on defaults in flags.ts.) DB errors fail open to enabled
- * for real providers only because configuration via env is itself an explicit opt-in.
+ * provider.<id> kill switches: an explicit FeatureFlag row wins; an absent row means the flags.ts default, else
+ * ENABLED (so new real providers don't need a default). DB errors fail open to enabled for real providers only,
+ * because configuration via env is itself an explicit opt-in; simulated fails closed.
  */
 export async function isProviderEnabled(id: string): Promise<boolean> {
   try {
     const flag = await db.featureFlag.findUnique({ where: { key: `provider.${id}` } });
-    return flag ? flag.enabled : true;
+    return flag ? flag.enabled : (FLAG_DEFAULTS[`provider.${id}`] ?? true);
   } catch {
     return id !== "simulated";
   }
 }
 
+/** Environment allows made-up demo answers at all: never in production, and ALLOW_SIMULATED_PROVIDER=false turns it off. */
 export function simulatedAllowed(): boolean {
-  return process.env.ALLOW_SIMULATED_PROVIDER !== "false";
+  return process.env.NODE_ENV !== "production" && process.env.ALLOW_SIMULATED_PROVIDER !== "false";
+}
+
+/** Every provider id a run may request: real providers (incl. one per configured OpenRouter model) + "simulated". */
+export function knownProviderIds(): string[] {
+  return [...realProviders().map((p) => p.id), "simulated"];
+}
+
+/** A requested id is valid when it is a registry id or any OpenRouter model id ("openrouter:<vendor>/<model>"). */
+export function isKnownProviderId(id: string): boolean {
+  return knownProviderIds().includes(id) || /^openrouter:[\w.-]+\/[\w.:-]+$/.test(id);
 }
 
 /** Real providers that are configured (env) and enabled (flag). */
@@ -89,13 +102,19 @@ export interface ProviderDescription {
   envVars: string[];
 }
 
-/** Provider availability for UI/settings (no secrets). */
-export async function describeProviders(): Promise<{ providers: ProviderDescription[]; mode: "real" | "simulated" | "none" }> {
+/**
+ * Provider availability for UI/settings (no secrets). With `maxProviders` (the plan's engines per check), only the
+ * first N configured + enabled engines are `active` — exactly the ones the next AI check will ask.
+ */
+export async function describeProviders(o: { maxProviders?: number } = {}): Promise<{ providers: ProviderDescription[]; mode: "real" | "simulated" | "none" }> {
   const providers: ProviderDescription[] = [];
+  let used = 0;
   for (const p of realProviders()) {
     const configured = p.isConfigured();
     const enabled = await isProviderEnabled(p.id);
-    providers.push({ id: p.id, label: p.label, configured, enabled, active: configured && enabled, simulated: false, envVars: PROVIDER_ENV[p.id.split(":")[0]] ?? [] });
+    const usable = configured && enabled && (!o.maxProviders || o.maxProviders <= 0 || used < o.maxProviders);
+    if (usable) used++;
+    providers.push({ id: p.id, label: p.label, configured, enabled, active: usable, simulated: false, envVars: PROVIDER_ENV[p.id.split(":")[0]] ?? [] });
   }
   const anyReal = providers.some((p) => p.active);
   const simEnabled = await isProviderEnabled("simulated");

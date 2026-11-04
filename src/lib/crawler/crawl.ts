@@ -14,10 +14,13 @@ import { crawlPriority } from "@/lib/audit/page-kind";
 export { crawlPriority };
 import { assertPublicUrl, safeFetch, SafeFetchError } from "@/lib/crawler/safe-fetch";
 import { discoverSitemapUrls } from "@/lib/crawler/sitemap";
+import { detectJsOnlySite, isShellPage, type JsSiteDetection, type RenderComparison } from "@/lib/crawler/js-site";
+import { renderWords } from "@/lib/crawler/render";
 
-/** Default sample when the project sets no limit — enough to cover a small business site's key pages. */
+/** Fallback when neither the project nor the plan sets a limit. By default a check covers the plan maximum. */
 export const DEFAULT_MAX_PAGES = 25;
-export const MAX_PAGES_CAP = 500;
+/** Hard safety cap (the largest plan). */
+export const MAX_PAGES_CAP = 5_000;
 const CONCURRENCY = 3;
 const MIN_DELAY_MS = 250;
 
@@ -34,12 +37,17 @@ export interface CrawlOptions {
 export interface CrawlResult {
   pages: (AuditPage & { id: string })[];
   site: SiteContext;
+  /** JavaScript-only site detection (stored in WorkflowRun.output.jsSite). */
+  jsSite: JsSiteDetection;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function clampMaxPages(v: unknown, planCap = MAX_PAGES_CAP): number {
-  const n = typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : DEFAULT_MAX_PAGES;
+/** Pages per check: the project's own limit, else the plan maximum (brief 7.6), never above the plan. */
+export function clampMaxPages(v: unknown, planCap?: number): number {
+  const fallback = typeof planCap === "number" && Number.isFinite(planCap) ? planCap : DEFAULT_MAX_PAGES;
+  const n = typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : fallback;
+  planCap ??= MAX_PAGES_CAP;
   return Math.max(1, Math.min(n, MAX_PAGES_CAP, planCap));
 }
 
@@ -183,6 +191,7 @@ export async function crawlSite(opts: CrawlOptions): Promise<CrawlResult> {
 
   return {
     pages,
+    jsSite: await detectJsSite(pages),
     site: {
       homepageUrl: homeUrl,
       robots: {
@@ -203,6 +212,25 @@ export async function crawlSite(opts: CrawlOptions): Promise<CrawlResult> {
       checkedAt: new Date().toISOString(),
     },
   };
+}
+
+/** Heuristic first; when pages look like empty shells, confirm with a headless browser if one is installed. */
+async function detectJsSite(pages: AuditPage[]): Promise<JsSiteDetection> {
+  const shells = pages.filter((p) => p.statusCode === 200 && p.extracted && isShellPage(p.extracted));
+  if (!shells.length) return detectJsOnlySite(pages);
+  try {
+    const sample = shells.slice(0, 3);
+    const words = await renderWords(sample.map((p) => p.finalUrl || p.url));
+    if (words) {
+      const rendered: RenderComparison[] = sample
+        .filter((p) => words.has(p.finalUrl || p.url))
+        .map((p) => ({ url: p.finalUrl || p.url, rawWords: p.extracted!.wordCount, renderedWords: words.get(p.finalUrl || p.url)! }));
+      if (rendered.length) return detectJsOnlySite(pages, rendered);
+    }
+  } catch {
+    /* rendering is optional */
+  }
+  return detectJsOnlySite(pages);
 }
 
 async function checkLlmsTxt(origin: string): Promise<{ found: boolean; status: number | null; bytes: number }> {

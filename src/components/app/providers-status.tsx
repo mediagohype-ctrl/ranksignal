@@ -38,9 +38,7 @@ export function engineName(labelOrId: string): string {
 function engineNote(p: PublicProvider): string {
   const id = p.id.split(":")[0];
   if (p.simulated) {
-    return p.active
-      ? "No real AI tool is switched on, so checks use made-up sample answers. They are always labelled and never count as real results."
-      : "Sample answers for demos. Switched off because real AI tools are on.";
+    return "No real AI tool is switched on, so checks use made-up sample answers. They are always labelled and never count as real results.";
   }
   const base: Record<string, string> = {
     openrouter: "Searches the web before answering, so it can link to real websites.",
@@ -52,16 +50,12 @@ function engineNote(p: PublicProvider): string {
   return base[id] ?? "Asks this AI tool the same questions your customers ask.";
 }
 
-function statusBadge(p: PublicProvider) {
-  if (p.active) return <Badge tone={p.simulated ? "warning" : "success"} variant="dot">Active</Badge>;
-  if (p.configured && !p.enabled) return <Badge tone="neutral" variant="dot">Turned off</Badge>;
-  return <Badge tone="neutral" variant="dot">Off</Badge>;
-}
-
-/** Card listing active engines (and, in a quieter line, the ones not in use). */
+/**
+ * Card listing ONLY the engines the next AI check will ask (describeProviders({ maxProviders }) marks them active).
+ * Engines without keys, switched off, or beyond the plan's engines per check are not shown to customers.
+ */
 export function ProvidersStatus({ providers, className }: { providers: PublicProvider[]; className?: string }) {
   const active = providers.filter((p) => p.active);
-  const inactive = providers.filter((p) => !p.active && !(p.simulated && !p.configured));
   const realActive = active.some((p) => !p.simulated);
   return (
     <Card className={className}>
@@ -70,15 +64,17 @@ export function ProvidersStatus({ providers, className }: { providers: PublicPro
         title="AI tools we ask"
         description={
           realActive
-            ? "Every AI check asks your questions to each AI tool below."
-            : "No real AI tool is switched on right now."
+            ? `Every AI check asks your questions to ${active.length === 1 ? "this AI tool" : `these ${active.length} AI tools`}.`
+            : active.length
+              ? "No real AI tool is switched on right now."
+              : undefined
         }
       />
       <CardBody className="space-y-4">
         {active.length === 0 ? (
           <p className="flex items-center gap-2 text-small text-fg-soft">
             <CircleSlash aria-hidden size={16} className="text-muted" />
-            No AI tools are available, so AI checks can&apos;t run right now. Please try again later or contact us.
+            AI checks can&apos;t run right now. Please try again later or contact us.
           </p>
         ) : (
           <ul className="grid gap-3 md:grid-cols-2">
@@ -89,25 +85,14 @@ export function ProvidersStatus({ providers, className }: { providers: PublicPro
                     {p.simulated ? <FlaskConical aria-hidden size={16} className="text-warning" /> : <Bot aria-hidden size={16} className="text-primary" />}
                     {engineName(p.label)}
                   </span>
-                  {statusBadge(p)}
+                  <Badge tone={p.simulated ? "warning" : "success"} variant="dot">
+                    In use
+                  </Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">{engineNote(p)}</p>
               </li>
             ))}
           </ul>
-        )}
-        {inactive.length > 0 && (
-          <p className="text-xs text-muted">
-            Not in use:{" "}
-            {inactive.map((p, i) => (
-              <span key={p.id}>
-                {i > 0 && ", "}
-                {engineName(p.label)}
-                {p.simulated ? " (only used when no real AI tool is on)" : p.configured && !p.enabled ? " (turned off)" : ""}
-              </span>
-            ))}
-            .
-          </p>
         )}
         <p className="flex gap-2 text-xs text-muted">
           <Info aria-hidden size={14} className="mt-0.5 shrink-0" />

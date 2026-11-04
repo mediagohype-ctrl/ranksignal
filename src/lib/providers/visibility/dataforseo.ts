@@ -1,7 +1,8 @@
 // DataForSEO AI Optimization — LLM Responses (ChatGPT) live endpoint. Response shapes vary by
 // model/version, so parsing is defensive: collect any text + url-bearing annotations we can find.
 import { JobError, type ProviderAnswer, type VisibilityProvider, type VisibilityQuery } from "@/lib/types";
-import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
+import { reserveAiSpend } from "@/lib/billing/ai-budget";
+import { DATAFORSEO_CALL_ESTIMATE_MICROS } from "@/lib/providers/pricing";
 import { providerError, withTimeout } from "./errors";
 
 const ENDPOINT = "https://api.dataforseo.com/v3/ai_optimization/chat_gpt/llm_responses/live";
@@ -60,8 +61,8 @@ export const dataForSeoVisibilityProvider: VisibilityProvider = {
     const login = process.env.DATAFORSEO_LOGIN;
     const password = process.env.DATAFORSEO_PASSWORD;
     if (!login || !password) throw new JobError("DataForSEO is not configured", "permanent");
-    // Owner cost protection: refuse once today's global AI spend reaches the budget (throws JobError "quota").
-    await assertAiBudget();
+    // Owner cost protection: reserve the estimated cost against today's AI budget (AiBudgetError when it won't fit).
+    const hold = await reserveAiSpend(DATAFORSEO_CALL_ESTIMATE_MICROS);
     const auth = Buffer.from(`${login}:${password}`).toString("base64");
     let res: Response;
     try {
@@ -76,21 +77,26 @@ export const dataForSeoVisibilityProvider: VisibilityProvider = {
         "dataforseo",
       );
     } catch (err) {
+      hold.release();
       if (err instanceof JobError) throw err;
       throw providerError("dataforseo", undefined, (err as Error)?.name);
     }
-    if (!res.ok) throw providerError("dataforseo", res.status);
+    if (!res.ok) {
+      hold.release();
+      throw providerError("dataforseo", res.status);
+    }
     const payload = (await res.json().catch(() => null)) as unknown;
     const root = isObj(payload) ? payload : {};
     const taskStatus = isObj(arr(root.tasks)[0]) ? (arr(root.tasks)[0] as Json).status_code : undefined;
     if (typeof taskStatus === "number" && taskStatus !== 20000) {
+      hold.release();
       // 40xxx = client error, 50xxx = provider error.
       throw new JobError(`dataforseo task status ${taskStatus}`, taskStatus >= 50000 ? "transient" : "permanent");
     }
     const parsed = parseDataForSeoPayload(payload);
     const costMicros = Math.round(parsed.costUsd * 1_000_000);
     // Record the provider-reported cost even when the answer turns out empty (the request was still billed).
-    noteAiSpend(costMicros);
+    hold.settle(costMicros);
     if (!parsed.text) throw new JobError("dataforseo returned no answer text", "transient");
     const m = parsed.modelName ?? model();
     return {

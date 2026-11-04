@@ -25,8 +25,12 @@ export const MARKETING_ROUTES: MarketingRoute[] = [
   { path: "/pricing", title: "Pricing", summary: "Self-serve Starter, Growth and Agency software plans with a free trial, plus done-for-you service tiers, in Indian rupees excluding GST.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/docs", title: "Getting started", summary: "Onboarding, connecting WordPress, the approval policy and known limitations.", changeFrequency: "monthly", priority: 0.7, section: "Docs" },
   { path: "/contact", title: "Contact", summary: "Contact form for agency plans, questions and support.", changeFrequency: "yearly", priority: 0.5, section: "Docs" },
-  { path: "/privacy", title: "Privacy policy (draft)", summary: "How customer data is handled.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
-  { path: "/terms", title: "Terms of service (draft)", summary: "Terms of use.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
+  { path: "/tools", title: "Free tools", summary: "Free tools: check if your website is ready for AI tools, make FAQ info for Google and AI, and make an AI guide file.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/tools/ai-mention-checker", title: "AI mention checker", summary: "Free check of whether AI tools like ChatGPT can read and recommend your website.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
+  { path: "/tools/faq-markup-maker", title: "FAQ info maker", summary: "Turn your questions and answers into FAQ info that Google and AI tools can read.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
+  { path: "/tools/ai-guide-file-maker", title: "AI guide file maker", summary: "Make an AI guide file (llms.txt) that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
+  { path: "/privacy", title: "Privacy policy", summary: "How customer data is handled.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
+  { path: "/terms", title: "Terms of service", summary: "Terms of use.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
 ];
 
 export function buildSitemap(base = siteBase(), lastModified = new Date()): MetadataRoute.Sitemap {

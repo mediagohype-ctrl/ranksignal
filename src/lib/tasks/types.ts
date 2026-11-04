@@ -3,7 +3,8 @@
 
 export const TASK_CATEGORIES = ["onsite", "content", "technical", "offsite", "reporting", "other"] as const;
 export const TASK_PERFORMERS = ["agency", "client", "system"] as const;
-export const TASK_STATUSES = ["backlog", "in_progress", "client_review", "done", "blocked", "cancelled"] as const;
+/** skipped / dismissed ("Not for me") take a To-do item off the list without calling it done. */
+export const TASK_STATUSES = ["backlog", "in_progress", "client_review", "done", "blocked", "cancelled", "skipped", "dismissed"] as const;
 export const TASK_PRIORITIES = ["high", "medium", "low"] as const;
 /** Statuses that still need work (used for the "next month" plan). */
 export const OPEN_STATUSES = ["backlog", "in_progress", "client_review", "blocked"] as const;
@@ -29,6 +30,8 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   done: "Done",
   blocked: "Blocked",
   cancelled: "Cancelled",
+  skipped: "Skipped",
+  dismissed: "Not for me",
 };
 
 export const STATUS_HINT: Record<TaskStatus, string> = {
@@ -38,6 +41,8 @@ export const STATUS_HINT: Record<TaskStatus, string> = {
   done: "Shipped",
   blocked: "Stuck until something changes",
   cancelled: "No longer needed",
+  skipped: "Put aside for now",
+  dismissed: "You said this isn't for you",
 };
 
 /** Who did the work, in client-facing words. */
@@ -49,8 +54,18 @@ export const PERFORMER_LABEL: Record<TaskPerformer, string> = {
 
 export const PRIORITY_LABEL: Record<TaskPriority, string> = { high: "High", medium: "Medium", low: "Low" };
 
+/** Result of looking at one page again after a fix ("Fixed — we can see it"). fixed=null: we can't tell from one page. */
+export interface TaskRecheck {
+  url: string;
+  at: string;
+  fixed: boolean | null;
+}
+
 export interface TaskEvidence {
   links: string[];
+  /** The To-do item this task records (a report problem id, or "offsite-<id>"). */
+  todoKey?: string;
+  recheck?: TaskRecheck;
 }
 
 /** Serializable task row as returned by the API and rendered by the board. */
@@ -149,8 +164,14 @@ export function asPriority(s: string | null | undefined): TaskPriority {
 
 /** Reads the Task.evidence JSON column defensively. */
 export function readEvidence(v: unknown): TaskEvidence {
-  const links = v && typeof v === "object" && !Array.isArray(v) ? (v as { links?: unknown }).links : undefined;
-  return { links: Array.isArray(links) ? links.filter((l): l is string => typeof l === "string").slice(0, 20) : [] };
+  const o = v && typeof v === "object" && !Array.isArray(v) ? (v as { links?: unknown; todoKey?: unknown; recheck?: unknown }) : {};
+  const out: TaskEvidence = { links: Array.isArray(o.links) ? o.links.filter((l): l is string => typeof l === "string").slice(0, 20) : [] };
+  if (typeof o.todoKey === "string" && o.todoKey) out.todoKey = o.todoKey.slice(0, 200);
+  const r = o.recheck && typeof o.recheck === "object" ? (o.recheck as Record<string, unknown>) : null;
+  if (r && typeof r.url === "string" && typeof r.at === "string") {
+    out.recheck = { url: r.url, at: r.at, fixed: typeof r.fixed === "boolean" ? r.fixed : null };
+  }
+  return out;
 }
 
 /**

@@ -13,6 +13,7 @@ import { recoverInterruptedRuns } from "@/lib/jobs/recovery";
 import { dispatchRunNotifications } from "@/lib/notifications/dispatch";
 import { scheduleMonthlyReports } from "@/lib/monthly-report/schedule";
 import { syncGoogleMetricsDue } from "@/lib/google/sync";
+import { runGrowthTick } from "@/lib/growth/tick";
 
 export type ScanKind = "crawl" | "visibility";
 
@@ -192,6 +193,8 @@ export async function schedulerTick(now = new Date()) {
         // Days 1-3 (UTC): last month's impact reports, a few projects per tick (idempotent per project + period).
         await step("monthly-reports", () => scheduleMonthlyReports(now));
         await step("google-metrics", () => syncGoogleMetricsDue(now));
+        // Trial nudges, fix of the week, WhatsApp updates, competitor alerts (each idempotent via SentMessage).
+        await step("growth", () => runGrowthTick(now));
       },
       { maxWait: 10_000, timeout: SCHEDULER_INTERVAL_MS - 30_000 },
     );

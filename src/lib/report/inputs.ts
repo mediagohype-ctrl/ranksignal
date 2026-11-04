@@ -1,6 +1,7 @@
 // Inputs and helpers shared by the report checks. Everything here is pure (no I/O).
 import type { AuditPage, SiteContext } from "@/lib/audit/rules";
 import type { AiVisibilitySummary, CheckResult, Pillar } from "@/lib/report/types";
+import type { JsSiteDetection } from "@/lib/crawler/js-site";
 
 export interface ReportPage extends AuditPage {
   responseBytes?: number | null;
@@ -26,6 +27,8 @@ export interface CheckContext {
   /** AI visibility computed from REAL (non-simulated) observations; measured=false otherwise. */
   ai: AiVisibilitySummary;
   now: Date;
+  /** JavaScript-only detection stored with the crawl (rendered comparison); absent → heuristic from pages. */
+  jsSite?: JsSiteDetection | null;
 }
 
 /** A check plus the evidence the issue writer needs (stripped before it reaches the SiteReport). */

@@ -48,14 +48,14 @@ export function DangerZone({ projectId, projectName }: { projectId: string; proj
       <CardBody>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-small font-semibold text-fg">Delete this project</h3>
+            <h3 className="text-small font-semibold text-fg">Stop following this website</h3>
             <p className="text-small text-muted">
               Removes all website checks, reports, AI answers, customer questions and suggested fixes for {projectName}. Changes already
               live on your website stay as they are.
             </p>
           </div>
           <Button variant="danger" icon={<Trash2 />} onClick={() => setOpen(true)} className="shrink-0">
-            Delete project
+            Delete website
           </Button>
         </div>
       </CardBody>
@@ -65,7 +65,7 @@ export function DangerZone({ projectId, projectName }: { projectId: string; proj
         tone="danger"
         icon={<Trash2 />}
         title={`Delete ${projectName}?`}
-        description="This permanently deletes the project and all of its history. It can't be undone."
+        description="This permanently deletes everything we saved about this website. It can't be undone."
         footer={
           <>
             <Button variant="secondary" onClick={close} disabled={busy}>

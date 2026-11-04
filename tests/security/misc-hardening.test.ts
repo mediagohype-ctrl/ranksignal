@@ -22,7 +22,13 @@ vi.mock("next/headers", () => ({
     delete: () => undefined,
   }),
 }));
-vi.mock("@/lib/billing/ai-budget", () => ({ assertAiBudget: h.budget, noteAiSpend: h.spend }));
+// Providers reserve the estimated cost first, then settle with the real cost (src/lib/billing/ai-budget.ts).
+vi.mock("@/lib/billing/ai-budget", () => ({
+  reserveAiSpend: vi.fn(async (...args: unknown[]) => {
+    await h.budget(...(args as []));
+    return { settle: h.spend, release: vi.fn() };
+  }),
+}));
 
 import { assertCanSendInvites, INVITES_PER_USER_PER_DAY } from "@/lib/auth/invite";
 import { setSessionCookie } from "@/lib/auth/session";

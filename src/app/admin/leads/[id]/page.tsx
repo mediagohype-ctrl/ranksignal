@@ -7,6 +7,8 @@ import { fmtDateTime } from "@/lib/admin/params";
 import { Badge, Card, CardBody, CardHeader, KeyValueList, PageHeader, ScoreRing } from "@/components/ui";
 import { Mono, StatusPill } from "@/components/admin/ui";
 import { LeadEditor } from "@/components/admin/actions";
+import { SendFollowUpButton } from "@/components/admin/lead-actions";
+import { LEAD_FOLLOWUP_KIND, topFixFromMessage } from "@/lib/admin/lead-followup";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lead" };
@@ -16,7 +18,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) notFound();
-  const [related, matchingUser] = await Promise.all([
+  const [related, matchingUser, followUp] = await Promise.all([
     lead.ipHash
       ? db.lead.findMany({
           where: { ipHash: lead.ipHash, id: { not: lead.id } },
@@ -26,7 +28,9 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
         })
       : Promise.resolve([]),
     lead.email ? db.user.findUnique({ where: { email: lead.email }, select: { id: true, email: true } }) : Promise.resolve(null),
+    db.sentMessage.findUnique({ where: { kind_key: { kind: LEAD_FOLLOWUP_KIND, key: lead.id } }, select: { createdAt: true } }),
   ]);
+  const topFix = lead.source === "free_check" ? topFixFromMessage(lead.message) : null;
   const title = lead.email ?? lead.name ?? lead.url ?? "Lead";
 
   return (
@@ -61,6 +65,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
                     { label: "Name", value: lead.name ?? "—" },
                     { label: "Email", value: lead.email ? <a className="text-primary hover:underline" href={`mailto:${lead.email}`}>{lead.email}</a> : "—" },
                     { label: "Company", value: lead.company ?? "—" },
+                    ...(lead.source === "free_check" ? [{ label: "Top fix", value: topFix ?? "—" }] : []),
                     {
                       label: "Website",
                       value: lead.url ? (
@@ -76,7 +81,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
                   ]}
                 />
               </div>
-              {lead.message && (
+              {lead.message && !topFix && (
                 <div className="rounded-xl border border-border bg-surface-2 p-4">
                   <div className="mb-1 text-caption uppercase tracking-[0.06em] text-muted">Message</div>
                   <p className="whitespace-pre-wrap text-small text-fg">{lead.message}</p>
@@ -104,7 +109,24 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
         </div>
         <Card>
           <CardHeader title="Pipeline & notes" description="Changes are audit-logged." />
-          <CardBody>
+          <CardBody className="space-y-5">
+            {lead.source === "free_check" && (
+              <div className="rounded-xl border border-border bg-surface-2 p-4">
+                <p className="text-small font-semibold text-fg">Follow-up email</p>
+                <p className="mt-1 text-xs text-muted">
+                  {lead.email
+                    ? followUp
+                      ? `Sent ${fmtDateTime(followUp.createdAt)}.`
+                      : "One plain email with their score, top fix and a sign-up link. Marks the lead contacted."
+                    : "No email yet — they didn't leave one on the free check."}
+                </p>
+                {lead.email && (
+                  <div className="mt-3">
+                    <SendFollowUpButton leadId={lead.id} sent={!!followUp} size="sm" />
+                  </div>
+                )}
+              </div>
+            )}
             <LeadEditor id={lead.id} status={lead.status} notes={lead.notes} />
           </CardBody>
         </Card>

@@ -7,7 +7,7 @@ export const alt = `${BRAND.name} — ${BRAND.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const OG_TEXT = `${BRAND.name}${BRAND.tagline}SEOAEOGEO AI visibilityFree AI-readiness check · plain-English fixes · no guaranteed rankings`;
+const OG_TEXT = `${BRAND.name}${BRAND.tagline}Google healthReady for AIAI mentionsFree website check · plain-word fixes · no guaranteed rankings`;
 
 /** Static Google Sans Flex instances (TTF) for next/og, subset to the text on the card. Falls back to the default font. */
 async function loadBrandFonts() {
@@ -58,7 +58,7 @@ export default async function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ fontSize: 66, fontWeight: 600, lineHeight: 1.08, letterSpacing: -2.5, maxWidth: 1000 }}>{BRAND.tagline}</div>
           <div style={{ display: "flex", gap: 14 }}>
-            {["SEO", "AEO", "GEO", "AI visibility"].map((t) => (
+            {["Google health", "Ready for AI", "AI mentions"].map((t) => (
               <div
                 key={t}
                 style={{ display: "flex", padding: "10px 22px", borderRadius: 999, background: "#eef2ff", color: "#3730a3", fontSize: 28, fontWeight: 600 }}
@@ -68,7 +68,7 @@ export default async function OpengraphImage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 26, color: "#475569" }}>Free AI-readiness check · plain-English fixes · no guaranteed rankings</div>
+        <div style={{ display: "flex", fontSize: 26, color: "#475569" }}>Free website check · plain-word fixes · no guaranteed rankings</div>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 12, display: "flex", background: "linear-gradient(90deg, #4338ca, #0d9488)" }} />
       </div>
     ),

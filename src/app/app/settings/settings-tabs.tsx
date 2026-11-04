@@ -61,8 +61,8 @@ export function SettingsTabs({
         value={tab}
         onChange={change}
         tabs={[
-          { id: "workspace", label: "Workspace", icon: <Building2 /> },
-          { id: "members", label: "Members", icon: <Users />, count: memberCount },
+          { id: "workspace", label: "Your business", icon: <Building2 /> },
+          { id: "members", label: "Team", icon: <Users />, count: memberCount },
           { id: "billing", label: "Billing & usage", icon: <CreditCard /> },
           ...(branding ? [{ id: "branding", label: "Branding", icon: <Palette /> }] : []),
           ...(account ? [{ id: "account", label: "Your account", icon: <UserRound /> }] : []),

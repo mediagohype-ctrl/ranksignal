@@ -9,7 +9,7 @@ import { FEATURES } from "@/components/marketing/content";
 export const metadata: Metadata = {
   title: "Features: website check, AI check and safe fixes",
   description:
-    "Everything RankSignal does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI (SEO and GEO), a clear to-do list and fixes you approve.",
+    "Everything RankSignal does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI, a clear to-do list and fixes you approve.",
   alternates: { canonical: "/features" },
 };
 
@@ -22,7 +22,7 @@ export default function FeaturesPage() {
         intro={
           <p>
             {BRAND.name} checks your website, asks AI about you, and helps you fix what&apos;s wrong — safely. Here&apos;s
-            what each part does, and what it doesn&apos;t. (Experts call this SEO and GEO.)
+            what each part does, and what it doesn&apos;t.
           </p>
         }
       >

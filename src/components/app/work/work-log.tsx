@@ -2,7 +2,7 @@
 import { Bot, Building2, CheckCircle2, ExternalLink, Info, User, Zap } from "lucide-react";
 import clsx from "clsx";
 import { Card, CardBody, CardHeader, EmptyState, Notice, Stat } from "@/components/ui";
-import { hostOf } from "@/lib/dashboard/format";
+import { fmtDate, hostOf } from "@/lib/dashboard/format";
 import { PERFORMER_LABEL, groupByWeek, type TaskPerformer } from "@/lib/tasks/types";
 import { CategoryBadge } from "./task-meta";
 
@@ -129,7 +129,7 @@ function MonthLog({ month, current, onOpenTask }: { month: WorkLogMonth; current
                           </div>
                         </div>
                         <time dateTime={it.completedAt} className="shrink-0 text-caption tabular-nums text-muted">
-                          {new Date(it.completedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                          {fmtDate(it.completedAt)}
                         </time>
                       </li>
                     );

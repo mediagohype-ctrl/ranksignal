@@ -8,7 +8,7 @@ import { SectionHeading } from "@/components/ui";
 
 const TITLE = "Free website check: is your site ready for Google and AI?";
 const DESCRIPTION =
-  "Free website check in about 30 seconds. See if Google and AI assistants like ChatGPT can read and understand your website — a simple SEO and GEO check in plain words. No sign-up.";
+  "Free website check in about 30 seconds. See if Google and AI assistants like ChatGPT can read and understand your website — in plain words. No sign-up.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const WHAT: { icon: ReactNode; title: string; body: string }[] = [
-  { icon: <Search />, title: "Google health", body: "Your Google headlines and summaries, main headings, secure address (https), and whether your pages can appear on Google." },
+  { icon: <Search />, title: "Google health", body: "Your Google headlines and summaries, main headings, secure address (the padlock), and whether your pages can appear on Google." },
   { icon: <Sparkles />, title: "Easy to quote", body: "Whether your pages answer real customer questions clearly enough to be quoted." },
   { icon: <Bot />, title: "Ready for AI", body: "Whether the robots of ChatGPT, Perplexity and Claude are allowed in, and whether AI can tell who you are." },
   { icon: <ShieldCheck />, title: "Trust signs", body: "Your business details, About and Contact pages, and links to your social profiles." },
@@ -47,8 +47,8 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
         title="Is your website ready for Google and AI?"
         intro={
           <p>
-            Type your website. We&apos;ll read your homepage and up to four main pages, then show your score and the
-            top things to fix, in plain words.
+            Type your website. We&apos;ll read your homepage and up to four main pages, then show your score and your
+            top 3 fixes, in plain words.
           </p>
         }
       />
@@ -69,9 +69,8 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
           ))}
         </ul>
         <p className="mx-auto mt-10 max-w-2xl text-center text-small text-muted">
-          The free check reads your website only. It does <strong className="font-semibold text-fg">not</strong> ask
-          ChatGPT, Gemini or other AI assistants about you — the full check does that after you sign up. We never store
-          the pages we read. (Experts call this kind of check SEO and GEO.)
+          This free check reads your website. It does <strong className="font-semibold text-fg">not</strong> ask
+          ChatGPT — the full check does, after you sign up. We never store the pages we read.
         </p>
       </Section>
     </>

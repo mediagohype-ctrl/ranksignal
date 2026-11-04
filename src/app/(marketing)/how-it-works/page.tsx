@@ -19,7 +19,7 @@ import {
 
 export const metadata: Metadata = {
   title: "How it works: check, fix and grow",
-  description: `How ${BRAND.name} works: add your website, we check it for Google and AI (SEO and GEO), you get a plain to-do list, approve fixes, and we check again — with undo.`,
+  description: `How ${BRAND.name} works: add your website, we check it for Google and AI, you get a plain to-do list, approve fixes, and we check again — with undo.`,
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -30,7 +30,7 @@ const STEP_DETAILS: string[][] = [
     "If you like, connect WordPress or GitHub. Connecting never changes your site until you say OK to a change.",
   ],
   [
-    "We read your pages gently (following your site's robot rules file) and look for problems that matter to Google and AI. Experts call this SEO, AEO and GEO.",
+    "We read your pages gently (following your site's robot rules file) and look for problems that matter to Google and AI.",
     "We ask each AI assistant on your plan your customer questions, so you have a starting point.",
     "You get your scores, how often AI names you and how often it links to you — each with the number of answers behind it.",
   ],

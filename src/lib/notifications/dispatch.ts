@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { renderEmail } from "@/lib/email/layout";
-import { readNotificationPrefs } from "@/lib/dashboard/project-schema";
+import { wantsEmail } from "@/lib/dashboard/project-schema";
+import { getStoredReport } from "@/lib/report/stored";
 import {
   approvalsNotice, filterUnsent, jobFailedNotice, reportReadyNotice, visibilityReadyNotice, type RunNotice,
 } from "./templates";
@@ -47,13 +48,9 @@ async function noticeFor(run: FinishedRun, projectName: string): Promise<RunNoti
       select: { status: true, pagesCrawled: true },
     });
     if (!cr || cr.status !== "succeeded") return null;
-    const groups = await db.auditFinding.groupBy({
-      by: ["severity"],
-      where: { organizationId: run.organizationId, projectId, status: "open" },
-      _count: { _all: true },
-    });
-    const openBySeverity = Object.fromEntries(groups.map((g) => [g.severity, g._count._all]));
-    return reportReadyNotice({ ...base, crawlRunId, pagesCrawled: cr.pagesCrawled, openBySeverity });
+    // Same grouped issues (and count) as the report page.
+    const report = await getStoredReport(projectId, run.organizationId);
+    return reportReadyNotice({ ...base, crawlRunId, pagesCrawled: cr.pagesCrawled, issues: report?.issues ?? [] });
   }
 
   if (run.kind === "visibility") {
@@ -64,11 +61,12 @@ async function noticeFor(run: FinishedRun, projectName: string): Promise<RunNoti
     }
     const vr = await db.visibilityRun.findFirst({
       where: { id: visibilityRunId, organizationId: run.organizationId },
-      select: { status: true, metrics: true },
+      select: { status: true, metrics: true, sampleSize: true },
     });
     if (!vr || !SUCCESS.includes(vr.status)) return null;
+    const questions = (await db.observation.groupBy({ by: ["promptId"], where: { visibilityRunId } })).length;
     return visibilityReadyNotice({
-      ...base, visibilityRunId, metrics: obj(vr.metrics), partial: vr.status === "succeeded_with_warnings",
+      ...base, visibilityRunId, metrics: obj(vr.metrics), partial: vr.status === "succeeded_with_warnings", questions, expected: vr.sampleSize,
     });
   }
 
@@ -159,7 +157,7 @@ export async function dispatchRunNotifications(o: { since: Date; now?: Date }): 
       data: { organizationId: n.organizationId, type: n.type, title: n.title, body: n.body, link: n.link },
     });
     created++;
-    if (!emailOn || !readNotificationPrefs(byId.get(n.projectId)?.settings).email) continue;
+    if (!emailOn || !wantsEmail(byId.get(n.projectId)?.settings, n.type === "job_failed" ? "checkFailed" : n.type === "approval_requested" ? "fixesWaiting" : null)) continue;
     if (!recipientCache.has(n.organizationId)) recipientCache.set(n.organizationId, await adminRecipients(n.organizationId));
     await emailNotice(n, recipientCache.get(n.organizationId)!);
   }

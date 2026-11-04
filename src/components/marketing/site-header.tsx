@@ -17,7 +17,8 @@ const NAV = [
   { href: "/contact", label: "Contact" },
 ];
 
-export function SiteHeader() {
+/** `signedIn` is read from the session cookie on the server (marketing layout). */
+export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -56,17 +57,25 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
-          <Link href="/login" className="rounded-md py-1 text-[0.9375rem] font-medium text-fg-soft hover:text-fg">
-            Log in
-          </Link>
-          <Link href="/signup" className={inkPill("md")}>
-            Start free
-          </Link>
+          {signedIn ? (
+            <Link href="/app" className={inkPill("md")}>
+              Open app
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="rounded-md py-1 text-[0.9375rem] font-medium text-fg-soft hover:text-fg">
+                Log in
+              </Link>
+              <Link href="/signup" className={inkPill("md")}>
+                Start free
+              </Link>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <Link href="/signup" className={inkPill("md", false, "h-9 px-4 max-[359px]:hidden")}>
-            Start free
+          <Link href={signedIn ? "/app" : "/signup"} className={inkPill("md", false, "h-9 px-4 max-[359px]:hidden")}>
+            {signedIn ? "Open app" : "Start free"}
           </Link>
           <button
             type="button"
@@ -109,16 +118,24 @@ export function SiteHeader() {
               </Link>
             </li>
             <li className="mt-8 grid gap-3 sm:grid-cols-2">
-              <Link href="/signup" onClick={() => setOpen(false)} className={inkPill("lg")}>
-                Start free
-              </Link>
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="inline-flex h-14 items-center justify-center rounded-full border border-border-strong text-[1rem] font-medium text-fg hover:bg-surface-2"
-              >
-                Log in
-              </Link>
+              {signedIn ? (
+                <Link href="/app" onClick={() => setOpen(false)} className={inkPill("lg")}>
+                  Open app
+                </Link>
+              ) : (
+                <>
+                  <Link href="/signup" onClick={() => setOpen(false)} className={inkPill("lg")}>
+                    Start free
+                  </Link>
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex h-14 items-center justify-center rounded-full border border-border-strong text-[1rem] font-medium text-fg hover:bg-surface-2"
+                  >
+                    Log in
+                  </Link>
+                </>
+              )}
             </li>
           </ul>
         </nav>

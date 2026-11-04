@@ -424,6 +424,9 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
   const listCount = $("ul, ol").filter((_, el) => $(el).closest("nav, header, footer").length === 0 && $(el).children("li").length >= 2).length;
   const tableCount = $("table").filter((_, el) => $(el).find("tr").length >= 2).length;
 
+  // JavaScript app-shell signals (read before scripts are stripped): see src/lib/crawler/js-site.ts.
+  const jsShell = { appRoot: findAppRoot($), scripts: $("script[src]").length + $('script[type="module" i]:not([src])').length };
+
   // Visible text (strip non-content elements).
   $("script, style, noscript, template, svg, iframe, head").remove();
   const text = clean($("body").length ? $("body").text() : $.root().text());
@@ -496,5 +499,16 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
     renderBlockingScripts,
     stylesheetCount,
     ...(brandMentions ? { brandMentions } : {}),
+    jsShell,
   };
+}
+
+/** Mount points used by client-side JavaScript apps (React, Next.js, Vue, Angular, Svelte, Gatsby, Nuxt). */
+const APP_ROOTS: [string, string][] = [
+  ["#root", "#root"], ["#__next", "#__next"], ["#app", "#app"], ["#___gatsby", "#___gatsby"], ["#__nuxt", "#__nuxt"],
+  ["#svelte", "#svelte"], ["[ng-version]", "ng-version"], ["app-root", "app-root"], ["[data-reactroot]", "data-reactroot"],
+];
+function findAppRoot($: cheerio.CheerioAPI): string | null {
+  for (const [sel, name] of APP_ROOTS) if ($(sel).length) return name;
+  return null;
 }

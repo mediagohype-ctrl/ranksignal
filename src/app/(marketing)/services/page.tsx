@@ -13,7 +13,7 @@ import {
 } from "@/components/marketing/services-ui";
 
 const TITLE = "Done-for-you: we fix your website for Google and AI";
-const DESCRIPTION = `Our team fixes your website, Google Business Profile and listings every month so Google and AI assistants can find and quote you (SEO and GEO, done for you), and sends a monthly report with the evidence. Plans from ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
+const DESCRIPTION = `Our team fixes your website, Google Business Profile and listings every month so Google and AI assistants can find and quote you, and sends a monthly report with the evidence. Plans from ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -136,7 +136,7 @@ export default function ServicesPage() {
       "@context": "https://schema.org",
       "@type": "Service",
       name: TITLE,
-      serviceType: "AI search visibility (SEO, AEO and GEO) management",
+      serviceType: "Website and AI search help for small businesses",
       description: DESCRIPTION,
       url: `${SITE}/services`,
       areaServed: { "@type": "Country", name: "India" },

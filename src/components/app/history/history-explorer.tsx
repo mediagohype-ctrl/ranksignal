@@ -1,9 +1,13 @@
 "use client";
 // Score history chart + snapshot table with a "show simulated" toggle (simulated runs hidden by default).
+// Plain mode (brief 5.7): one line — the overall score, same number as Home — with a dot for each fix that went
+// live. Expert mode adds the four parts of the score and the table of every check.
 import { useMemo, useState } from "react";
 import { FlaskConical } from "lucide-react";
-import { ScoreHistoryChart, type HistoryMarker, type ScoreHistoryPoint, type ShippedMarker } from "@/components/app/charts";
+import { ScoreHistoryChart, type ShippedMarker } from "@/components/app/charts";
+import { buildScorePoints } from "./score-points";
 import { Badge, Button, EmptyState, Table, TD, TH, THead, TR } from "@/components/ui";
+import { fmtDate } from "@/lib/dashboard/format";
 
 export interface HistorySnapshotRow {
   id: string;
@@ -31,37 +35,23 @@ export interface ShippedChange {
 }
 
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const day = (iso: string) => fmtDate(iso);
 const dayKey = (iso: string) => iso.slice(0, 10);
 
-export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnapshotRow[]; shipped: ShippedChange[] }) {
+export function HistoryExplorer({
+  snapshots,
+  shipped,
+  expert = false,
+}: {
+  snapshots: HistorySnapshotRow[];
+  shipped: ShippedChange[];
+  expert?: boolean;
+}) {
   const [showSimulated, setShowSimulated] = useState(false);
   const simulatedCount = snapshots.filter((s) => s.simulated).length;
   const rows = useMemo(() => snapshots.filter((s) => showSimulated || !s.simulated), [snapshots, showSimulated]);
 
-  const { points, markers } = useMemo(() => {
-    const pts: ScoreHistoryPoint[] = [];
-    const mks: HistoryMarker[] = [];
-    const seenCrawl = new Set<string>();
-    let prevMethod: string | null = null;
-    let prevPromptSet: number | null = null;
-    for (const s of rows) {
-      const t = new Date(s.at).getTime();
-      if (prevMethod !== null && s.methodologyVersion !== prevMethod) mks.push({ t, kind: "methodology", label: "Scoring method changed" });
-      prevMethod = s.methodologyVersion;
-      if (s.promptSetVersion !== null) {
-        if (prevPromptSet !== null && s.promptSetVersion !== prevPromptSet) mks.push({ t, kind: "prompt_set", label: "Customer questions changed" });
-        prevPromptSet = s.promptSetVersion;
-      }
-      // One point per website scan: visibility snapshots carry copied crawl scores, so skip repeats.
-      if (s.overall === null && s.seo === null) continue;
-      const key = s.crawlRunId ?? s.id;
-      if (seenCrawl.has(key)) continue;
-      seenCrawl.add(key);
-      pts.push({ t, overall: s.overall, seo: s.seo, aeo: s.aeo, geo: s.geo, brand: s.brand });
-    }
-    return { points: pts, markers: mks };
-  }, [rows]);
+  const { points, markers } = useMemo(() => buildScorePoints(rows), [rows]);
 
   const shippedMarkers = useMemo<ShippedMarker[]>(() => {
     const byDay = new Map<string, ShippedMarker>();
@@ -79,7 +69,7 @@ export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnap
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 sm:px-6">
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-caption font-normal text-muted" aria-label="Chart key">
           <li className="flex items-center gap-1.5">
-            <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-fg-soft" /> Changes shipped ({shipped.length})
+            <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-fg-soft" /> Fixes that went live ({shipped.length})
           </li>
           <li className="flex items-center gap-1.5">
             <span aria-hidden className="inline-block h-3 w-0 border-l-2 border-dashed border-warning" /> AI questions changed
@@ -105,21 +95,21 @@ export function HistoryExplorer({ snapshots, shipped }: { snapshots: HistorySnap
         {points.length === 0 ? (
           <EmptyState size="sm" title="No scores yet" description="Scores appear here after your first finished website check." />
         ) : (
-          <ScoreHistoryChart data={points} markers={markers} shipped={shippedMarkers} />
+          <ScoreHistoryChart data={points} markers={markers} shipped={shippedMarkers} onlyOverall={!expert} />
         )}
         {points.length === 1 && <p className="mt-2 text-caption font-normal text-muted">One check so far — the lines start after your next check.</p>}
       </div>
 
-      {rows.length > 0 && (
+      {expert && rows.length > 0 && (
         <Table caption="Scores after each check, newest first" zebra maxHeight="28rem" stickyHeader>
           <THead>
             <tr>
               <TH>Date</TH>
               <TH>Check</TH>
               <TH align="right">Overall</TH>
-              <TH align="right">Google health</TH>
-              <TH align="right">Easy to quote</TH>
-              <TH align="right">Ready for AI</TH>
+              <TH align="right">Google health (SEO)</TH>
+              <TH align="right">Easy to quote (AEO)</TH>
+              <TH align="right">Ready for AI (GEO)</TH>
               <TH align="right">AI knows you</TH>
               <TH align="right">Problems to fix</TH>
               <TH align="right">Named you</TH>

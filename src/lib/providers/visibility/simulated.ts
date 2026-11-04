@@ -49,7 +49,7 @@ export function createSimulatedProvider(ctx: SimulatedContext): VisibilityProvid
     id: "simulated",
     label: SIMULATED_LABEL,
     simulated: true,
-    isConfigured: () => process.env.ALLOW_SIMULATED_PROVIDER !== "false",
+    isConfigured: () => process.env.NODE_ENV !== "production" && process.env.ALLOW_SIMULATED_PROVIDER !== "false",
     async run(query: VisibilityQuery): Promise<ProviderAnswer> {
       const rand = mulberry32(hashString(`${query.text.trim().toLowerCase()}|${query.locale}`));
       const entities: { name: string; domain?: string; isBrand: boolean }[] = [];

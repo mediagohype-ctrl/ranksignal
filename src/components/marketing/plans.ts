@@ -1,6 +1,8 @@
 // Marketing view of the billing plans. Limits and prices always come from @/lib/billing/plans
 // so the website matches what the app enforces.
-import { PAID_PLAN_IDS, TRIAL_DAYS, getEngineLimit, getPlan, getPlanWithAiLimits } from "@/lib/billing/plans";
+import {
+  PAID_PLAN_IDS, TRIAL_DAYS, checksPerMonth, getEngineLimit, getPlan, getPlanWithAiLimits, questionsPerCheck,
+} from "@/lib/billing/plans";
 import type { PlanLimits } from "@/lib/types";
 
 export type PaidPlanId = (typeof PAID_PLAN_IDS)[number];
@@ -36,14 +38,40 @@ export interface MarketingPlan {
   cta: string;
   highlights: string[];
   limits: PlanLimits;
-  /** AI-check limits the app enforces per plan. */
-  ai: { checksPerMonth: number; questionsPerCheck: number; engines: number };
+  /** AI limits the app enforces per plan (answers per month is the real limit; checks = whole checks that fit). */
+  ai: { answersPerMonth: number; checksPerMonth: number; questionsPerCheck: number; engines: number };
 }
+
+const plural = (n: number, one: string, many = `${one}s`) => `${num(n)} ${n === 1 ? one : many}`;
+
+/** "300 AI answers a month (4 checks of 25 questions × 3 AI assistants)". */
+export function aiAnswersLine(planId: string): string {
+  const a = getPlanWithAiLimits(planId);
+  const q = questionsPerCheck(planId);
+  const e = getEngineLimit(planId);
+  const c = checksPerMonth(planId);
+  return `${num(a.aiAnswersPerMonth)} AI answers a month (${plural(c, "check")} of ${q} questions × ${plural(e, "AI assistant")})`;
+}
+
+/** The free trial's AI allowance, worded exactly as the app enforces it: "1 AI check: 10 questions × 3 AI assistants". */
+export const TRIAL_AI = (() => {
+  const q = questionsPerCheck("trial");
+  const e = getEngineLimit("trial");
+  const checks = checksPerMonth("trial");
+  return {
+    checks,
+    questions: q,
+    engines: e,
+    answers: getPlanWithAiLimits("trial").aiAnswersPerMonth,
+    summary: `${plural(checks, "AI check")}: ${q} questions × ${plural(e, "AI assistant")}`,
+  };
+})();
 
 export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
   const l = getPlan(id);
   const a = getPlanWithAiLimits(id);
   const engines = getEngineLimit(id);
+  const perCheck = questionsPerCheck(id);
   const plus = id === "agency" ? "+" : "";
   return {
     id,
@@ -52,8 +80,8 @@ export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
     ...COPY[id],
     highlights: [
       `${num(l.maxProjects)}${plus} website${l.maxProjects === 1 ? "" : "s"}`,
-      `${num(l.maxTrackedPrompts)}${plus} customer questions (up to ${num(a.maxPromptsPerRun)} per AI check)`,
-      `${num(a.maxVisibilityRunsPerMonth)} AI check${a.maxVisibilityRunsPerMonth === 1 ? "" : "s"} a month on up to ${engines} AI assistant${engines === 1 ? "" : "s"}`,
+      `${num(l.maxTrackedPrompts)}${plus} customer questions (up to ${num(perCheck)} per AI check)`,
+      aiAnswersLine(id),
       `Weekly website check, up to ${num(l.maxPagesPerCrawl)} pages each time`,
       l.competitorTracking ? "Compare against your competitors" : "No competitor comparison",
       l.approvalPublishing ? "Fixes go live only with your OK, with undo" : "Fixes as step-by-step instructions",
@@ -61,7 +89,7 @@ export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
       ...(id === "agency" ? ["White-label reports and emails"] : []),
     ],
     limits: l,
-    ai: { checksPerMonth: a.maxVisibilityRunsPerMonth, questionsPerCheck: a.maxPromptsPerRun, engines },
+    ai: { answersPerMonth: a.aiAnswersPerMonth, checksPerMonth: checksPerMonth(id), questionsPerCheck: perCheck, engines },
   };
 });
 

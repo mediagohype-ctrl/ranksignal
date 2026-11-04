@@ -5,11 +5,12 @@ import { canSeeDrafts, listProjectReports, payloadOf } from "@/lib/monthly-repor
 import { periodLabel } from "@/lib/monthly-report/period";
 import { DeltaChip } from "@/components/app/monthly/report-view";
 import { Badge, Card, EmptyState, LinkButton, Notice, PageHeader } from "@/components/ui";
+import { fmtDate } from "@/lib/dashboard/format";
 
 export const metadata = { title: "Monthly reports" };
 export const dynamic = "force-dynamic";
 
-const day = (d: Date | null) => (d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null);
+const day = (d: Date | null) => (d ? fmtDate(d) : null);
 const pct = (n: number | null | undefined) => (typeof n === "number" ? `${Math.round(n * 100)}%` : "—");
 
 export default async function MonthlyArchivePage({ params }: { params: Promise<{ id: string }> }) {

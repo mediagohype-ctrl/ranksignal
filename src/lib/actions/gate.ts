@@ -3,6 +3,7 @@
 import type { Action, Integration, Project } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isEnabled } from "@/lib/flags";
+import { isPaused } from "@/lib/dashboard/project-schema";
 import { classifyAction, pageSignalsFor, type PolicyResult } from "@/lib/policy/engine";
 import { draftHash } from "@/lib/actions/hash";
 import type { ActionTarget, ConnectorCapabilities, ProposedChange } from "@/lib/types";
@@ -93,6 +94,7 @@ export async function checkExecutionGate(
   }
 
   if (!org.publishingEnabled) return { ok: false, code: "publishing_disabled", message: "Publishing is disabled for this organization.", policy };
+  if (isPaused(project.settings)) return { ok: false, code: "paused_by_customer", message: "Changes to this website are paused in Settings.", policy };
   if (!(await isEnabled("global.publishing"))) return { ok: false, code: "publishing_paused", message: "Publishing is globally paused (kill switch).", policy };
   if (!(await actionTypeEnabled(action.type))) return { ok: false, code: "action_type_disabled", message: `Action type ${action.type} is disabled.`, policy };
 

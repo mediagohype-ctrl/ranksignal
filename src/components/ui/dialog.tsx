@@ -32,6 +32,12 @@ export function Dialog({
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descId = useId();
+  // Callers usually pass an inline onClose; keep it in a ref so the open effect (focus-in, focus-restore) runs
+  // only when `open` changes — not on every parent re-render (which re-focused the first input on each keystroke).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
@@ -41,7 +47,7 @@ export function Dialog({
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
       if (e.key === "Tab" && el) {
         const items = Array.from(
           el.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex='-1'])"),
@@ -64,7 +70,7 @@ export function Dialog({
       document.body.style.overflow = prevOverflow;
       prev?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (

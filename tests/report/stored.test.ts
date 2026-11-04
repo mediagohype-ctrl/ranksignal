@@ -18,7 +18,7 @@ vi.mock("@/lib/providers/llm", () => ({
   getLlmBackend: () => "openrouter",
 }));
 vi.mock("@/lib/billing/usage", () => ({ recordUsage: async (_o: string, u: { provider: string }) => void h.usage.push(u) }));
-vi.mock("@/lib/report/site-data", () => ({ getCrawlSiteContext: async () => null }));
+vi.mock("@/lib/report/site-data", () => ({ getCrawlSiteContext: async () => null, getCrawlFacts: async () => ({ site: null, jsSite: null }) }));
 vi.mock("@/lib/auth/session", () => ({ getSession: async () => null }));
 vi.mock("@/lib/db", () => ({
   db: {

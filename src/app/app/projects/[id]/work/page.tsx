@@ -1,98 +1,17 @@
-import { HttpError } from "@/lib/api";
-import { requireAppProject } from "@/lib/dashboard/server";
-import {
-  canDeleteTasks,
-  canEditTasks,
-  canSeeInternal,
-  listAssignees,
-  listShippedWork,
-  listTasks,
-  monthRange,
-  prefillFromSource,
-  type TaskDraft,
-} from "@/lib/tasks";
-import { PageHeader } from "@/components/ui";
-import { WorkClient } from "@/components/app/work/work-client";
-import type { WorkLogMonth } from "@/components/app/work/work-log";
+import { redirect } from "next/navigation";
+import { legacyTodoTarget, todoHref } from "@/lib/tasks/todo";
 
-export const metadata = { title: "Work" };
-
-function one(v: string | string[] | undefined): string | undefined {
-  const s = Array.isArray(v) ? v[0] : v;
-  return s && s.length <= 64 ? s : undefined;
-}
-
-function monthLabel(d: Date) {
-  return d.toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
-}
-
-export default async function WorkPage({
+// This page is now part of the one To-do list (Developer Brief v1). Old links and bookmarks land there.
+export default async function LegacyPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { id } = await params;
-  const sp = await searchParams;
-  const { session, project } = await requireAppProject(id);
-  const internal = canSeeInternal(session);
-  const canEdit = canEditTasks(session);
-
-  const now = new Date();
-  const thisMonth = monthRange(now, 0);
-  const lastMonth = monthRange(now, -1);
-
-  const [tasks, assignees, shipped] = await Promise.all([
-    listTasks(session, project.id),
-    canEdit ? listAssignees(session) : Promise.resolve([]),
-    listShippedWork(project.id, session.organizationId, lastMonth.from, thisMonth.to, { clientVisibleOnly: !internal }),
-  ]);
-
-  const toView = (from: Date, to: Date, label: string): WorkLogMonth => ({
-    label,
-    items: shipped
-      .filter((s) => s.completedAt >= from && s.completedAt < to)
-      .map((s) => ({ ...s, completedAt: s.completedAt.toISOString() })),
-  });
-  const months: [WorkLogMonth, WorkLogMonth] = [
-    toView(thisMonth.from, thisMonth.to, monthLabel(thisMonth.from)),
-    toView(lastMonth.from, lastMonth.to, monthLabel(lastMonth.from)),
-  ];
-
-  // ?fromFinding= / ?fromAction= open the create dialog prefilled from that finding or action.
-  let prefill: TaskDraft | null = null;
-  let prefillError: string | null = null;
-  const fromFinding = one(sp.fromFinding);
-  const fromAction = one(sp.fromAction);
-  if (canEdit && (fromFinding || fromAction)) {
-    try {
-      prefill = await prefillFromSource(session, project.id, fromFinding ? { findingId: fromFinding } : { actionId: fromAction });
-    } catch (e) {
-      prefillError =
-        e instanceof HttpError && e.status === 404
-          ? `We couldn't find that ${fromFinding ? "website problem" : "suggested fix"} in this project. You can still add a task by hand.`
-          : "Something went wrong loading the details. You can still add a task by hand.";
-    }
-  }
-
-  return (
-    <>
-      <PageHeader
-        eyebrow="To-do"
-        title="Task board"
-        description="Every task for this website — planned, in progress and done — plus what was delivered each month."
-      />
-      <WorkClient
-        projectId={project.id}
-        initialTasks={tasks}
-        assignees={assignees}
-        months={months}
-        perms={{ canEdit, canSeeInternal: internal, canDelete: canDeleteTasks(session), staffMode: !!session.staffMode }}
-        currentUserId={session.userId}
-        prefill={prefill}
-        prefillError={prefillError}
-      />
-    </>
-  );
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
+  // "Add a task from this problem" links keep their prefilled form on the task board.
+  const finding = Array.isArray(sp.fromFinding) ? sp.fromFinding[0] : sp.fromFinding;
+  if (finding && /^[A-Za-z0-9_-]{1,64}$/.test(finding)) redirect(`${todoHref(id)}/board?fromFinding=${finding}`);
+  redirect(todoHref(id, legacyTodoTarget("work", sp)));
 }

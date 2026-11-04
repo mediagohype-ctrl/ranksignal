@@ -9,7 +9,7 @@ import type { Citation, ExtractedPage } from "@/lib/types";
 import type { SiteReport } from "@/lib/report/types";
 import type { CheckContext, ReportFinding, ReportPage } from "@/lib/report/inputs";
 import { composeReport } from "@/lib/report/compose";
-import { getCrawlSiteContext } from "@/lib/report/site-data";
+import { getCrawlFacts } from "@/lib/report/site-data";
 import { emptyVisibility, summarizeVisibility, type VisObservation } from "@/lib/report/visibility";
 import { llmSummary } from "@/lib/report/summary";
 import { getLlmBackend } from "@/lib/providers/llm";
@@ -90,11 +90,11 @@ export async function buildSiteReport(projectId: string, organizationId: string,
     }),
   ]);
 
-  const [pageRows, site, obsRows] = await Promise.all([
+  const [pageRows, facts, obsRows] = await Promise.all([
     crawlRun
       ? db.crawlPage.findMany({ where: { organizationId, crawlRunId: crawlRun.id }, select: PAGE_SELECT, orderBy: { crawledAt: "asc" }, take: MAX_PAGES })
       : Promise.resolve([]),
-    crawlRun ? getCrawlSiteContext(organizationId, crawlRun) : Promise.resolve(null),
+    crawlRun ? getCrawlFacts(organizationId, crawlRun) : Promise.resolve({ site: null, jsSite: null }),
     visRun
       ? db.observation.findMany({
           where: { organizationId, visibilityRunId: visRun.id },
@@ -135,10 +135,11 @@ export async function buildSiteReport(projectId: string, organizationId: string,
     brandNames: brandNames.length ? brandNames : [project.name],
     competitors,
     pages,
-    site,
+    site: facts.site,
     findings,
     ai: vis.summary,
     now: new Date(),
+    jsSite: facts.jsSite,
   };
 
   const report = composeReport({

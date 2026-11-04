@@ -159,8 +159,8 @@ export function TaskDetailDialog({
           ),
         }]
       : []),
-    ...(task.findingId ? [{ label: "From", value: <Link href={`/app/projects/${projectId}/audit`} className="font-medium text-primary hover:underline">Audit finding</Link> }] : []),
-    ...(task.actionId ? [{ label: "From", value: <Link href={`/app/projects/${projectId}/actions`} className="font-medium text-primary hover:underline">Recommended change</Link> }] : []),
+    ...(task.findingId ? [{ label: "From", value: <Link href={`/app/projects/${projectId}/todo`} className="font-medium text-primary hover:underline">Website problem</Link> }] : []),
+    ...(task.actionId ? [{ label: "From", value: <Link href={`/app/projects/${projectId}/todo/action-${task.actionId}`} className="font-medium text-primary hover:underline">Suggested change</Link> }] : []),
   ];
 
   return (

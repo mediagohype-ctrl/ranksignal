@@ -4,6 +4,7 @@
 // Older runs without it return null and the report checks fall back to the audit findings.
 import { db } from "@/lib/db";
 import type { SiteContext } from "@/lib/audit/rules";
+import { parseJsSite, type JsSiteDetection } from "@/lib/crawler/js-site";
 
 export async function getCrawlSiteContext(
   organizationId: string,
@@ -22,3 +23,15 @@ export function parseSiteContext(output: unknown, crawlRunId: string): SiteConte
   return site;
 }
 
+
+/** Site facts plus the JavaScript-only detection stored with the same crawl (one query). */
+export async function getCrawlFacts(
+  organizationId: string,
+  crawlRun: { id: string; workflowRunId: string | null },
+): Promise<{ site: SiteContext | null; jsSite: JsSiteDetection | null }> {
+  if (!crawlRun.workflowRunId) return { site: null, jsSite: null };
+  const wf = await db.workflowRun.findFirst({ where: { id: crawlRun.workflowRunId, organizationId }, select: { output: true } });
+  const out = wf?.output && typeof wf.output === "object" ? (wf.output as Record<string, unknown>) : null;
+  const sameRun = !!out && (out.crawlRunId === undefined || out.crawlRunId === crawlRun.id);
+  return { site: parseSiteContext(wf?.output ?? null, crawlRun.id), jsSite: sameRun ? parseJsSite(out!.jsSite) : null };
+}

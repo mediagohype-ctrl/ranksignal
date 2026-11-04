@@ -11,7 +11,7 @@ import { CODE_PLATFORMS, isPlatform, PLATFORM_LABEL, PLATFORMS, type Platform } 
 import { getSitePlatform } from "@/lib/platform/server";
 import { OPEN_STATUSES, type TaskPriority } from "@/lib/tasks/types";
 import type { IssueImpact } from "@/lib/report/types";
-import { issueHref } from "@/components/app/nav";
+import { issueHref, todoItemHref } from "@/components/app/nav";
 import { CopyBlock } from "@/components/app/actions/copy-block";
 import { AddToTasksButton } from "@/components/app/fix/add-to-tasks";
 import { InlineCode } from "@/components/app/fix/inline-code";
@@ -65,8 +65,8 @@ export default async function FixPage({
 
   return (
     <div className="mx-auto max-w-[960px] space-y-6">
-      <Link href={problemHref} className="inline-flex items-center gap-1.5 text-small font-medium text-muted hover:text-fg">
-        <ArrowLeft size={16} aria-hidden /> Back to the problem
+      <Link href={todoItemHref(project.id, issue.id)} className="inline-flex items-center gap-1.5 text-small font-medium text-muted hover:text-fg">
+        <ArrowLeft size={16} aria-hidden /> Back to the fix
       </Link>
 
       <header className="space-y-2">
@@ -220,6 +220,7 @@ export default async function FixPage({
             category: fix.category,
             priority: PRIORITY[issue.impact],
             links: pages.map((p) => p.url).filter((u) => /^https?:\/\//.test(u)),
+            todoKey: issue.id,
           }}
         />
       </div>

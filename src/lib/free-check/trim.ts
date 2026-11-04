@@ -1,8 +1,9 @@
 // Pure: SiteReport → FreeCheckResult (what an anonymous visitor sees).
 import type { SiteReport } from "@/lib/report/types";
-import { AI_VISIBILITY_NOTE, type FreeCheckResult } from "@/lib/free-check/types";
+import { AI_VISIBILITY_NOTE, FREE_PILLAR_NAMES, type FreeCheckResult } from "@/lib/free-check/types";
 
-export const FREE_MAX_ISSUES = 5;
+/** The free result shows the top 3 fixes; the rest are counted and shown blurred. */
+export const FREE_MAX_ISSUES = 3;
 export const FREE_MAX_FIX_STEPS = 2;
 export const FREE_MAX_STRENGTHS = 5;
 export const FREE_MAX_CHECKS_PER_PILLAR = 6;
@@ -10,7 +11,6 @@ export const FREE_MAX_CHECKS_PER_PILLAR = 6;
 const STATUS_ORDER: Record<string, number> = { fail: 0, warn: 1, pass: 2 };
 
 export function trimReport(report: SiteReport, o: { brand: string | null; pagesChecked: string[] }): FreeCheckResult {
-  const labels = Object.fromEntries(report.pillars.map((p) => [p.pillar, p.label]));
   return {
     url: report.websiteUrl,
     brand: o.brand,
@@ -19,13 +19,13 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
     overall: { ...report.overall },
     pillars: report.pillars.map((p) => ({
       pillar: p.pillar,
-      label: p.label,
+      label: FREE_PILLAR_NAMES[p.pillar] ?? p.label,
       score: p.score,
       grade: p.grade,
       summary:
         p.score === null
           ? p.pillar === "brand" || p.pillar === "geo"
-            ? "Shown in the full report — we ask ChatGPT, Gemini and others about you after you sign up."
+            ? "Shown in the full check — we ask ChatGPT, Gemini and others about you after you sign up."
             : "We couldn't measure this from the pages we read."
           : p.summary,
       checks: p.checks
@@ -36,7 +36,7 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
     issues: report.issues.slice(0, FREE_MAX_ISSUES).map((i) => ({
       id: i.id,
       pillar: i.pillar,
-      pillarLabel: labels[i.pillar] ?? i.pillar.toUpperCase(),
+      pillarLabel: FREE_PILLAR_NAMES[i.pillar] ?? "Website",
       title: i.title,
       whatsWrong: i.whatsWrong,
       howToFix: i.howToFix.slice(0, FREE_MAX_FIX_STEPS),
@@ -48,7 +48,7 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
     strengths: report.strengths.slice(0, FREE_MAX_STRENGTHS),
     notes: [
       AI_VISIBILITY_NOTE,
-      `This free check read ${o.pagesChecked.length} page${o.pagesChecked.length === 1 ? "" : "s"} (your homepage and main pages). The full report can read hundreds of pages.`,
+      `This free check read ${o.pagesChecked.length} page${o.pagesChecked.length === 1 ? "" : "s"} (your homepage and main pages). The full check can read hundreds of pages.`,
       "Scores show what we found today. They don't predict your Google position or whether AI will name you.",
     ],
   };

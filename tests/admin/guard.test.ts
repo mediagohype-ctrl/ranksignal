@@ -106,10 +106,10 @@ describe("staff access", () => {
     expect(audit.after).toMatchObject({ serviceTier: "grow", reason: "Signed Grow contract" });
   });
 
-  it("enter issues a staffMode admin session for the target org", async () => {
+  it("enter (mode support) issues a staffMode admin session for the target org", async () => {
     asStaff();
     mockDb.organization.findUnique.mockResolvedValue({ id: "o1", name: "Acme" });
-    const res = await enterPost(jsonReq("/api/admin/orgs/o1/enter", "POST", { reason: "Support ticket 42" }), params("o1"));
+    const res = await enterPost(jsonReq("/api/admin/orgs/o1/enter", "POST", { reason: "Support ticket 42", mode: "support" }), params("o1"));
     expect(res.status).toBe(200);
     expect(session.setSessionCookie).toHaveBeenCalledWith({
       userId: "staff1",
@@ -119,6 +119,20 @@ describe("staff access", () => {
       staffMode: true,
     }, { maxAgeSeconds: 7200 });
     expect(mockDb.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: "support.enter", organizationId: "o1" });
+  });
+
+  it("View as customer (default mode) issues a read-only viewer session and audit-logs it", async () => {
+    asStaff();
+    mockDb.organization.findUnique.mockResolvedValue({ id: "o1", name: "Acme" });
+    const res = await enterPost(jsonReq("/api/admin/orgs/o1/enter", "POST", { reason: "Customer asked why score dropped" }), params("o1"));
+    expect(res.status).toBe(200);
+    expect(session.setSessionCookie).toHaveBeenCalledWith(
+      { userId: "staff1", email: STAFF_SESSION.email, organizationId: "o1", role: "viewer", staffMode: true, readOnly: true },
+      { maxAgeSeconds: 7200 },
+    );
+    const audit = mockDb.auditLog.create.mock.calls[0][0].data;
+    expect(audit).toMatchObject({ action: "support.view_as_customer", organizationId: "o1", actorType: "staff" });
+    expect(audit.after).toMatchObject({ mode: "view", readOnly: true, reason: "Customer asked why score dropped" });
   });
 
   it("retry only applies to failed jobs", async () => {

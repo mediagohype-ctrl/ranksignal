@@ -23,6 +23,10 @@ model Organization {
   publishingEnabled Boolean  @default(true) // per-tenant kill switch
   serviceTier       String? // done-for-you tier: fix | grow | authority (null = self-serve)
   branding          Json? // white-label: { displayName, logoUrl, accentColor, replyTo, footerText } (agency plan)
+  whatsappNumber    String? // E.164, for WhatsApp updates (brief §9)
+  whatsappOptIn     Boolean  @default(false)
+  referralCode      String?  @unique
+  referredById      String? // organization that referred this one
   createdAt         DateTime @default(now())
 
   memberships   Membership[]
@@ -43,6 +47,9 @@ model User {
   passwordHash  String
   emailVerified Boolean  @default(false)
   isStaff       Boolean  @default(false)
+  timeZone      String? // IANA zone, e.g. "Asia/Kolkata"; dates are stored UTC and shown in this zone
+  expertMode    Boolean  @default(false) // show SEO/AEO/GEO scores, risk classes and raw tables
+  googleId      String?  @unique // "Continue with Google" sign-in
   createdAt     DateTime @default(now())
 
   memberships Membership[]
@@ -77,6 +84,7 @@ model Project {
   competitors    Json?      // {name, domain, aliases[]}[]
   keywords       Json?     
   settings       Json?      // crawl limits, schedules, automation permissions
+  facts          Json?      // business facts the owner confirmed in setup: {name, sells, customers, city, country, language}
   createdAt      DateTime @default(now())
 
   organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -635,4 +643,17 @@ model MetricDaily {
 
   @@unique([projectId, source, date, dimension, key])
   @@index([organizationId, projectId, source, date])
+}
+
+/** Idempotency log for outbound messages (trial nudges, weekly emails, WhatsApp, alerts): one row per kind+key. */
+model SentMessage {
+  id             String   @id @default(cuid())
+  organizationId String?
+  channel        String // email | whatsapp | staff
+  kind           String // e.g. trial_day1, fix_of_week, competitor_alert, staff_ai_budget_80
+  key            String // dedupe key, e.g. "<orgId>" or "<orgId>:2026-W45"
+  createdAt      DateTime @default(now())
+
+  @@unique([kind, key])
+  @@index([organizationId, createdAt])
 }

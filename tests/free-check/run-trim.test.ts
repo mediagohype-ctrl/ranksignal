@@ -61,14 +61,17 @@ describe("trimReport", () => {
     const r = trimReport(fakeReport(), { brand: "X", pagesChecked: ["https://x.example/"] });
     expect(r.issues).toHaveLength(FREE_MAX_ISSUES);
     expect(r.totalIssues).toBe(9);
+    expect(FREE_MAX_ISSUES).toBe(3); // the free result shows the top 3 fixes; the rest are blurred
+    expect(r.issues.map((i) => i.id)).toEqual(["i0", "i1", "i2"]);
     expect(r.issues[0].howToFix).toEqual(["one", "two"].slice(0, FREE_MAX_FIX_STEPS));
     expect(r.issues[0]).not.toHaveProperty("affectedUrls");
     expect(r.issues[0]).not.toHaveProperty("whyItMatters");
-    expect(r.issues[0].pillarLabel).toBe("SEO");
+    expect(r.issues[0].pillarLabel).toBe("Google health");
+    expect(r.pillars[0].label).toBe("Google health");
     expect(r.strengths).toHaveLength(5);
     expect(r.pillars.map((p) => p.pillar)).toEqual(["seo", "aeo", "geo", "brand"]);
     expect(r.pillars[0].checks.map((c) => c.id)).toEqual(["c", "a"]); // not_measured dropped, fails first
-    expect(r.pillars[2].summary).toMatch(/full report/i);
+    expect(r.pillars[2].summary).toMatch(/full check/i);
     expect(r.notes).toContain(AI_VISIBILITY_NOTE);
     expect(r).not.toHaveProperty("aiVisibility");
     expect(r).not.toHaveProperty("projectId");
@@ -115,7 +118,7 @@ describe("runFreeCheck (injected fetcher, no network/DB)", () => {
     expect(r.pagesChecked.length).toBeGreaterThan(1);
     expect(r.pagesChecked.length).toBeLessThanOrEqual(5);
     expect(r.overall.score).not.toBeNull();
-    expect(r.issues.length).toBeLessThanOrEqual(5);
+    expect(r.issues.length).toBeLessThanOrEqual(3);
     expect(r.issues.every((i) => i.howToFix.length <= 2)).toBe(true);
     expect(r.notes[0]).toBe(AI_VISIBILITY_NOTE);
     // AI-answer checks are never shown as measured in the free check.

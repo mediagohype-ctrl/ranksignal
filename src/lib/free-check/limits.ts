@@ -5,6 +5,7 @@ const HOUR = 60 * 60 * 1000;
 
 export const FREE_CHECK_LIMITS = { perIp: 3, global: 30, windowMs: HOUR } as const;
 export const CONTACT_LIMITS = { perIp: 5, global: 60, windowMs: HOUR } as const;
+export const FREE_CHECK_EMAIL_LIMITS = { perIp: 5, global: 120, windowMs: HOUR } as const;
 
 export type LimitResult = { allowed: true } | { allowed: false; scope: "ip" | "global"; retryAfterSec: number };
 
@@ -24,4 +25,9 @@ export function checkFreeCheckLimit(ip: string, now = Date.now()): LimitResult {
 
 export function checkContactLimit(ip: string, now = Date.now()): LimitResult {
   return check("contact", CONTACT_LIMITS, ip, now);
+}
+
+/** "Email me my full result" after a free check: 5 per IP per hour, 120 per hour overall. */
+export function checkFreeCheckEmailLimit(ip: string, now = Date.now()): LimitResult {
+  return check("free-check-email", FREE_CHECK_EMAIL_LIMITS, ip, now);
 }

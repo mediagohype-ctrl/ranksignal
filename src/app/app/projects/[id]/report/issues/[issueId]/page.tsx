@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, ChevronRight, ExternalLink, Globe, Wrench } from
 import { requireAppProject } from "@/lib/dashboard/server";
 import { loadIssue } from "@/lib/report/issue-page";
 import type { IssueImpact } from "@/lib/report/types";
-import { issueHref, issuePageHref } from "@/components/app/nav";
+import { issueHref, issuePageHref, todoItemHref } from "@/components/app/nav";
 import { PILLAR_SHORT } from "@/components/app/report/pillars";
 import { Card, LinkButton } from "@/components/ui";
 
@@ -37,7 +37,8 @@ export default async function IssuePage({ params }: { params: Promise<{ id: stri
   if (!data) notFound();
   const { report, issue, index, prev, next, pages, unlisted } = data;
   const reportHref = `/app/projects/${project.id}/report#issues`;
-  const fixHref = `${issueHref(project.id, issue.id)}/fix`;
+  const fixHref = todoItemHref(project.id, issue.id);
+  const helpHref = `${issueHref(project.id, issue.id)}/fix`;
   const pr = PRIORITY[issue.impact];
 
   return (
@@ -137,10 +138,15 @@ export default async function IssuePage({ params }: { params: Promise<{ id: stri
       <div className="sticky bottom-20 z-10 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between lg:bottom-4">
         <div>
           <p className="font-semibold text-fg">Ready to fix it?</p>
-          <p className="text-small text-fg-soft">Step-by-step help for your website, and you can add it to your task list.</p>
+          <p className="text-small text-fg-soft">
+            See the change, then fix it in one step.{" "}
+            <Link href={helpHref} className="font-medium text-primary hover:underline">
+              See step-by-step help
+            </Link>
+          </p>
         </div>
         <LinkButton href={fixHref} size="lg" icon={<Wrench />} iconRight={<ArrowRight />} className="w-full sm:w-auto">
-          How to fix this
+          Fix it
         </LinkButton>
       </div>
 

@@ -1,5 +1,5 @@
 // Product UI vignettes for /how-it-works. Built from the real ui primitives and tokens, in the same
-// language as home-ui.tsx and home-proof.tsx. Every business, number and answer shown here is sample
+// language as home-ui.tsx. Every business, number and answer shown here is sample
 // data for a fictional bakery and is labelled as such.
 import clsx from "clsx";
 import { ArrowRight, Check, Download, Minus, Pencil, Plus, RotateCcw } from "lucide-react";

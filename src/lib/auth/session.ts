@@ -17,7 +17,7 @@ function secret() {
 }
 
 export async function createSessionToken(ctx: SessionContext, pwf: string, maxAgeSeconds = MAX_AGE_SECONDS) {
-  return new SignJWT({ email: ctx.email, org: ctx.organizationId, role: ctx.role, pwf, ...(ctx.staffMode ? { stf: true } : {}) })
+  return new SignJWT({ email: ctx.email, org: ctx.organizationId, role: ctx.role, pwf, ...(ctx.staffMode ? { stf: true } : {}), ...(ctx.readOnly ? { ro: true } : {}) })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(ctx.userId)
     .setIssuedAt()
@@ -41,6 +41,7 @@ export async function verifySessionToken(token: string): Promise<SessionContext 
       organizationId: payload.org,
       role: (payload.role as Role) ?? "viewer",
       ...(payload.stf === true ? { staffMode: true } : {}),
+      ...(payload.ro === true ? { readOnly: true } : {}),
     };
   } catch {
     return null;

@@ -10,11 +10,12 @@ import type { CountChange, MonthlyReportPayload, RateTriple, SearchSection } fro
 import type { PublicBranding } from "@/lib/branding";
 import { TYPE_LABEL, asType } from "@/lib/offsite/types";
 import { BRAND } from "@/lib/brand";
+import { fmtDate } from "@/lib/dashboard/format";
 
 const pct = (n: number | null | undefined) => (typeof n === "number" ? `${Math.round(n * 100)}%` : "—");
 const num = (n: number | null | undefined) => (typeof n === "number" ? String(Math.round(n)) : "—");
 const day = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
+  iso ? fmtDate(iso) : "—";
 
 const PRINT_CSS = `
 @media print {

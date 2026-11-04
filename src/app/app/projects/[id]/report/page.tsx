@@ -3,6 +3,7 @@ import { Download, History } from "lucide-react";
 import { db } from "@/lib/db";
 import { getStoredReport } from "@/lib/report/stored";
 import { log } from "@/lib/log";
+import { getExpertMode } from "@/lib/expert";
 import type { SiteReport } from "@/lib/report/types";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, fmtRelative, hostOf, isActiveStatus } from "@/lib/dashboard/format";
@@ -27,7 +28,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const where = { organizationId: session.organizationId, projectId: project.id };
   const canRun = hasRole(session, "member");
 
-  const [latestCrawl, goodCrawls, latestVis, promptCount] = await Promise.all([
+  const [latestCrawl, goodCrawls, latestVis, promptCount, expert] = await Promise.all([
     db.crawlRun.findFirst({ where, orderBy: { createdAt: "desc" } }),
     db.crawlRun.findMany({
       where: { ...where, status: { in: DONE } },
@@ -37,6 +38,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     }),
     db.visibilityRun.findFirst({ where, orderBy: { createdAt: "desc" } }),
     db.trackedPrompt.count({ where: { ...where, active: true } }),
+    getExpertMode(session),
   ]);
   const lastGoodCrawl = goodCrawls[0] ?? null;
   const previousCrawl = goodCrawls[1] ?? null;
@@ -135,15 +137,17 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
               labels={{ audit: "Check website again" }}
               primary="none"
             />
-            <a
-              href={`/api/projects/${project.id}/report?format=markdown`}
-              download
-              className={buttonClass("secondary")}
-            >
-              <Download aria-hidden /> Download report
-            </a>
-            <PrintButton />
-            <ShareReportButton projectId={project.id} canManage={hasRole(session, "admin")} />
+            {expert && (
+              <a
+                href={`/api/projects/${project.id}/report?format=markdown`}
+                download
+                className={buttonClass("secondary")}
+              >
+                <Download aria-hidden /> Download as text
+              </a>
+            )}
+            <PrintButton label="Download PDF" />
+            <ShareReportButton projectId={project.id} canManage={hasRole(session, "admin")} label="Share link" />
           </div>
         }
       />
@@ -170,6 +174,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         canRun={canRun}
         visibilityActive={visActive}
         measuredWith={<MeasuredWith labels={r.aiVisibility.providers} />}
+        expert={expert}
       />
 
       {/* Real Google data (Search Console / GA4) when connected; shows a connect prompt otherwise. */}

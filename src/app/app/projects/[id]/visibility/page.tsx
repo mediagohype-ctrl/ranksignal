@@ -1,11 +1,16 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { FileText, Link2, ListChecks, MessageSquare, ThumbsUp } from "lucide-react";
+import { getExpertMode } from "@/lib/expert";
+import { groupByQuestion, joinNames, runProviders, wrongFacts, type AnswerObservation } from "@/lib/dashboard/ai-answers";
+import { AnswersList } from "@/components/app/ai-answers/answers-list";
+import { WrongFacts } from "@/components/app/ai-answers/wrong-facts";
 import { db } from "@/lib/db";
 import { readMetrics } from "@/lib/dashboard/data";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { asArray, asRecord, fmtDate, isActiveStatus, pct } from "@/lib/dashboard/format";
 import { describeProviders } from "@/lib/providers/visibility/registry";
+import { getOrgEngineLimit } from "@/lib/billing/ai-limits";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { ProvidersStatus, engineName, type PublicProvider } from "@/components/app/providers-status";
 import { RunButtons } from "@/components/app/run-buttons";
@@ -14,6 +19,8 @@ import {
   Badge, Card, CardBody, CardHeader, EmptyState, LinkButton, Meter, PageHeader, SimulatedDataBanner, Stat, StatusBadge, Table, TD, TH,
   THead, TR,
 } from "@/components/ui";
+
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
 export const metadata = { title: "AI answers" };
 
@@ -27,13 +34,23 @@ export default async function VisibilityPage({
   const { id } = await params;
   const { run: runParam } = await searchParams;
   const { session, project } = await requireAppProject(id);
-  const runs = await db.visibilityRun.findMany({
-    where: { organizationId: session.organizationId, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-  });
+  const [runs, expert, prompts] = await Promise.all([
+    db.visibilityRun.findMany({
+      where: { organizationId: session.organizationId, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    getExpertMode(session),
+    db.trackedPrompt.findMany({
+      where: { organizationId: session.organizationId, projectId: project.id },
+      orderBy: [{ active: "desc" }, { priority: "asc" }, { createdAt: "asc" }],
+      select: { id: true, text: true, active: true },
+    }),
+  ]);
   const active = runs.some((r) => isActiveStatus(r.status));
-  const engines: PublicProvider[] | null = await describeProviders()
+  const canEdit = hasRole(session, "member");
+  // Only the engines this plan asks per check (S1 hook).
+  const engines: PublicProvider[] | null = await describeProviders({ maxProviders: await getOrgEngineLimit(session.organizationId).catch(() => undefined) })
     .then((d) => d.providers.map(({ id, label, configured, enabled, active: on, simulated }) => ({ id, label, configured, enabled, active: on, simulated })))
     .catch(() => null);
   const run =
@@ -45,7 +62,7 @@ export default async function VisibilityPage({
   const observations = run
     ? await db.observation.findMany({
         where: { organizationId: session.organizationId, visibilityRunId: run.id },
-        include: { prompt: { select: { text: true } } },
+        include: { prompt: { select: { id: true, text: true } } },
         orderBy: { createdAt: "asc" },
       })
     : [];
@@ -66,6 +83,29 @@ export default async function VisibilityPage({
     limitations: o.limitations,
     simulated: o.simulated,
   }));
+  const answerRows: AnswerObservation[] = observations.map((o) => ({
+    id: o.id,
+    promptId: o.prompt.id,
+    prompt: o.prompt.text,
+    provider: o.provider,
+    platformLabel: o.platformLabel,
+    brandMentioned: o.brandMentioned,
+    brandCited: o.brandCited,
+    brandRecommended: o.brandRecommended,
+    competitorMentions: asRecord<number>(o.competitorMentions),
+    rawResponse: o.rawResponse,
+    citations: asArray<AnswerObservation["citations"][number]>(o.citations),
+    simulated: o.simulated,
+  }));
+  const questions = groupByQuestion(answerRows, strings(project.brandNames));
+  const counted = questions.flatMap((q) => q.answers);
+  const namedTotal = counted.filter((a) => a.brandMentioned).length;
+  // The AI tools this check actually used, by product name.
+  const engineList = joinNames(runProviders(run?.providers).map(engineName));
+  // Wrong facts: from this check, else the newest check that looked for them.
+  const facts = runs.map((r) => wrongFacts(r.metrics)).find((f) => f.length) ?? [];
+  const runFacts = wrongFacts(run?.metrics);
+  const shownFacts = runFacts.length ? runFacts : facts;
   const m = readMetrics(run?.metrics);
   const simulated = m?.simulated || rows.some((r) => r.simulated);
   const sources = [...(m?.citationSources ?? [])].sort((a, b) => b.count - a.count).slice(0, 20);
@@ -82,14 +122,25 @@ export default async function VisibilityPage({
         actions={
           <>
             <AutoRefresh active={active} label="Collecting AI answers" />
-            <LinkButton href={`/app/projects/${project.id}/report#ai-visibility`} variant="secondary" icon={<FileText />}>
-              See in full report
-            </LinkButton>
-            <RunButtons projectId={project.id} crawlActive={false} visibilityActive={active} canRun={hasRole(session, "member")} show={["visibility"]} />
+            {expert && (
+              <LinkButton href={`/app/projects/${project.id}/report#ai-visibility`} variant="secondary" icon={<FileText />}>
+                See in full report
+              </LinkButton>
+            )}
+            {run && (
+              <RunButtons
+                projectId={project.id}
+                crawlActive={false}
+                visibilityActive={active}
+                canRun={canEdit}
+                show={["visibility"]}
+                labels={{ visibility: "Check AI" }}
+              />
+            )}
           </>
         }
       />
-      {engines && <ProvidersStatus providers={engines} />}
+      {expert && engines && <ProvidersStatus providers={engines} />}
       {simulated && (
         <SimulatedDataBanner>
           these are sample answers, not real ones from AI tools. Real answers appear once AI checks are switched on — contact us if
@@ -100,13 +151,51 @@ export default async function VisibilityPage({
       {!run ? (
         <EmptyState
           icon={<MessageSquare />}
-          title="No AI checks yet"
-          description="Pick the questions your customers ask, then run an AI check to see how AI tools answer them."
-          action={<LinkButton href={`/app/projects/${project.id}/prompts`} icon={<ListChecks />}>Choose questions</LinkButton>}
+          title="AI tools haven't been asked about you yet."
+          action={
+            <RunButtons
+              projectId={project.id}
+              crawlActive={false}
+              visibilityActive={active}
+              canRun={canEdit}
+              show={["visibility"]}
+              labels={{ visibility: "Check AI" }}
+            />
+          }
           bordered
         />
       ) : (
         <>
+          <section aria-labelledby="aa-headline" className="space-y-1">
+            <h2 id="aa-headline" className="text-h3 text-balance text-fg">
+              {counted.length === 0
+                ? isActiveStatus(run.status)
+                  ? "Collecting AI answers…"
+                  : "This AI check didn't get any answers."
+                : `AI named you in ${namedTotal} of ${counted.length} ${counted.length === 1 ? "answer" : "answers"}.`}
+            </h2>
+            <p className="text-small text-muted">
+              Checked {fmtDate(run.finishedAt ?? run.createdAt)}. Tap a question to read what AI said.
+            </p>
+          </section>
+
+          {(questions.length > 0 || prompts.length > 0) && (
+            <div className="space-y-2">
+              <AnswersList projectId={project.id} questions={questions} prompts={prompts} canEdit={canEdit} brandNames={strings(project.brandNames)} runId={runParam ? run?.id : null} />
+              {questions.length > 0 && (
+                <p className="text-xs text-muted">
+                  Checked {questions.length} {questions.length === 1 ? "question" : "questions"}
+                  {engineList ? ` on ${engineList}` : ""}.
+                  {run.failed > 0 && ` ${run.collected} of ${run.sampleSize} answers came back.`}
+                </p>
+              )}
+            </div>
+          )}
+
+          <WrongFacts projectId={project.id} facts={shownFacts} canEdit={canEdit} />
+
+          {expert && (
+            <>
           <nav aria-label="Choose a check" className="flex flex-wrap items-center gap-2">
             <span className="text-caption uppercase tracking-[0.06em] text-muted">Check from</span>
             {runs.slice(0, 8).map((r) => (
@@ -194,7 +283,7 @@ export default async function VisibilityPage({
                   />
                 </CardBody>
               ) : (
-                <VisibilityTable rows={rows} />
+                <VisibilityTable rows={rows} brandNames={strings(project.brandNames)} />
               )}
             </Card>
             <Card>
@@ -230,6 +319,8 @@ export default async function VisibilityPage({
               </CardBody>
             </Card>
           </div>
+            </>
+          )}
           <p className="text-xs text-muted">
             AI answers change from day to day and between AI tools. These numbers describe these answers only; they don&apos;t
             promise how any AI tool will answer in future.

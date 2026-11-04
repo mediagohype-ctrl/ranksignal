@@ -9,6 +9,7 @@ import {
   MARKETING_PLANS,
   SERVICE_FROM_PRICE,
   SERVICE_TIERS,
+  TRIAL_AI,
   TRIAL_DAYS,
   inr,
   num,
@@ -37,12 +38,16 @@ const ROWS: { label: string; hint?: string; values: Cell[] }[] = [
     hint: "Questions we ask AI assistants about what you sell",
     values: MARKETING_PLANS.map((p) => num(p.limits.maxTrackedPrompts)),
   },
+  {
+    label: "AI answers per month",
+    hint: "One answer = one question asked to one AI assistant",
+    values: MARKETING_PLANS.map((p) => num(p.ai.answersPerMonth)),
+  },
   { label: "Questions asked per AI check", values: MARKETING_PLANS.map((p) => num(p.ai.questionsPerCheck)) },
-  { label: "AI checks per month", values: MARKETING_PLANS.map((p) => num(p.ai.checksPerMonth)) },
-  { label: "AI assistants per check", hint: "ChatGPT, Gemini, Perplexity, Claude and more", values: MARKETING_PLANS.map((p) => `Up to ${p.ai.engines}`) },
+  { label: "AI assistants per check", hint: "ChatGPT, Gemini, Perplexity, Claude and more", values: MARKETING_PLANS.map((p) => num(p.ai.engines)) },
+  { label: "Full AI checks per month", values: MARKETING_PLANS.map((p) => num(p.ai.checksPerMonth)) },
   { label: "Automatic website checks", hint: "On a schedule you choose: weekly, monthly or off", values: MARKETING_PLANS.map(() => "Weekly") },
   { label: "Pages per website check", values: MARKETING_PLANS.map((p) => num(p.limits.maxPagesPerCrawl)) },
-  { label: "Monthly usage credits", values: MARKETING_PLANS.map((p) => num(p.limits.monthlyCredits)) },
   { label: "Competitor comparison", values: MARKETING_PLANS.map((p) => p.limits.competitorTracking) },
   { label: "Fixes go live only with your OK", values: MARKETING_PLANS.map((p) => p.limits.approvalPublishing) },
   { label: "Undo and change history", values: MARKETING_PLANS.map(() => true) },
@@ -90,11 +95,11 @@ const WHICH: { label: string; diy: string; dfy: string }[] = [
 const PRICING_FAQ = [
   {
     q: "What happens after the free trial?",
-    a: `Your ${TRIAL_DAYS}-day trial gives you a full report and your first AI check. It only turns into a paid plan if you choose one and add payment details.`,
+    a: `Your ${TRIAL_DAYS}-day trial gives you a full website report and ${TRIAL_AI.summary}. It only turns into a paid plan if you choose one and add payment details.`,
   },
   {
-    q: "What are usage credits?",
-    a: "Asking AI assistants questions and checking pages costs us money, so each software plan includes a monthly pool of credits. The app shows how many you've used and stops before you go over.",
+    q: "What is an AI answer?",
+    a: "Each time we ask one AI assistant one of your customer questions, that's one AI answer. Each plan includes a number of AI answers a month; the app shows how many are left and when they reset on the 1st, and stops before you go over.",
   },
   {
     q: "Can I start with the software and switch to done-for-you later?",
@@ -329,8 +334,8 @@ export default function PricingPage() {
                 </tbody>
               </Table>
               <p className="border-t border-border px-6 py-4 text-small text-muted sm:px-8">
-                Limits above are the ones the app enforces. Not sure which fits? The free trial mirrors Starter limits with a
-                smaller credit pool, and you can pick a plan later.
+                Limits above are the ones the app enforces. Not sure which fits? The free trial includes a full website report and{" "}
+                {TRIAL_AI.summary}, and you can pick a plan later.
               </p>
             </div>
           </details>

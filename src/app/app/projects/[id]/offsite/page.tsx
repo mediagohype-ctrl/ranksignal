@@ -1,29 +1,14 @@
-import { requireAppProject, hasRole } from "@/lib/dashboard/server";
-import { getOffsiteSuggestions, listOffsite } from "@/lib/offsite";
-import { PageHeader } from "@/components/ui";
-import { OffsiteClient, type OffsiteSuggestionsView } from "@/components/app/offsite/offsite-client";
+import { redirect } from "next/navigation";
+import { legacyTodoTarget, todoHref } from "@/lib/tasks/todo";
 
-export const metadata = { title: "Outside your website" };
-
-export default async function OffsitePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { session, project } = await requireAppProject(id);
-  const [items, suggestions] = await Promise.all([
-    listOffsite(session, project.id),
-    getOffsiteSuggestions(session, project.id).catch((e): OffsiteSuggestionsView | null => {
-      console.error("[offsite] suggestions failed:", e instanceof Error ? e.message : e);
-      return null;
-    }),
-  ]);
-  return (
-    <>
-      <PageHeader
-        breadcrumbs={[{ label: "Projects", href: "/app" }, { label: project.name, href: `/app/projects/${project.id}` }, { label: "Outside your website" }]}
-        eyebrow="To-do"
-        title="Outside your website"
-        description="Listings, reviews and articles about you on other sites. AI tools read these too."
-      />
-      <OffsiteClient projectId={project.id} initialItems={items} suggestions={suggestions} canEdit={hasRole(session, "member")} />
-    </>
-  );
+// This page is now part of the one To-do list (Developer Brief v1). Old links and bookmarks land there.
+export default async function LegacyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
+  redirect(todoHref(id, legacyTodoTarget("offsite", sp)));
 }

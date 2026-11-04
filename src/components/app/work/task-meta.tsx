@@ -20,6 +20,8 @@ export const STATUS_TONE: Record<TaskStatus, Tone> = {
   done: "success",
   blocked: "danger",
   cancelled: "neutral",
+  skipped: "neutral",
+  dismissed: "neutral",
 };
 
 /** Accent stripe colour for board columns (token classes only). */
@@ -30,6 +32,8 @@ export const STATUS_DOT: Record<TaskStatus, string> = {
   done: "bg-success",
   blocked: "bg-danger",
   cancelled: "bg-border-strong",
+  skipped: "bg-border-strong",
+  dismissed: "bg-border-strong",
 };
 
 const PRIORITY_TONE: Record<TaskPriority, Tone> = { high: "danger", medium: "info", low: "neutral" };

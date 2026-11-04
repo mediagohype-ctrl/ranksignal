@@ -93,7 +93,7 @@ const taskFields = {
   dueAt: optionalDate,
   clientVisible: z.boolean(),
   shippedUrl: optionalUrl,
-  evidence: z.object({ links: z.array(httpUrl).max(20) }).nullable().optional(),
+  evidence: z.object({ links: z.array(httpUrl).max(20), todoKey: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/).optional() }).nullable().optional(),
   actionId: optionalId,
   findingId: optionalId,
 };
@@ -204,10 +204,10 @@ async function assertLinks(s: SessionContext, projectId: string, o: { actionId?:
   }
 }
 
-function evidenceJson(e: { links: string[] } | null | undefined) {
+function evidenceJson(e: { links: string[]; todoKey?: string } | null | undefined) {
   if (e === undefined) return undefined;
-  if (e === null || !e.links.length) return Prisma.JsonNull;
-  return { links: Array.from(new Set(e.links)) } as Prisma.InputJsonValue;
+  if (e === null || (!e.links.length && !e.todoKey)) return Prisma.JsonNull;
+  return { links: Array.from(new Set(e.links)), ...(e.todoKey ? { todoKey: e.todoKey } : {}) } as Prisma.InputJsonValue;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -309,7 +309,14 @@ export async function updateTask(s: SessionContext, taskId: string, raw: TaskPat
   if (patch.actionId !== undefined) data.actionId = patch.actionId;
   if (patch.findingId !== undefined) data.findingId = patch.findingId;
   const ev = evidenceJson(patch.evidence);
-  if (ev !== undefined) data.evidence = ev;
+  if (ev !== undefined) {
+    // Keep the To-do link and re-check result; the API only edits links.
+    const prevEv = readEvidence(prev.evidence);
+    const todoKey = patch.evidence?.todoKey ?? prevEv.todoKey;
+    const recheck = prevEv.recheck;
+    const links = patch.evidence?.links ?? [];
+    data.evidence = todoKey || recheck ? ({ links: Array.from(new Set(links)), ...(todoKey ? { todoKey } : {}), ...(recheck ? { recheck } : {}) } as unknown as Prisma.InputJsonValue) : ev;
+  }
   const statusChanged = patch.status !== undefined && patch.status !== prev.status;
   if (statusChanged) {
     data.status = patch.status;

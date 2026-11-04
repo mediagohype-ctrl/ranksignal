@@ -46,6 +46,19 @@ export interface LlmRefineResult {
   costMicros: number;
   wroteText: boolean;
   unsupportedClaims: number;
+  /** Only the text the AI wrote (no template instructions, no "AI flagged…" notes) — what the claim screen reads. */
+  generatedText?: string;
+}
+
+/**
+ * Text to screen for promises / regulated claims (bug 10). Briefs carry our own template rules ("No promises about
+ * Google rankings…") and the AI's list of claims to verify, so scanning the whole brief flagged our own words. Scan
+ * only what was generated: the AI's text when it wrote some, otherwise the proposed text unless it is a brief.
+ */
+export function claimScanText(d: Pick<RecDraft, "proposedChange">, r: Pick<LlmRefineResult, "generatedText"> | null): string | null {
+  if (r?.generatedText) return r.generatedText;
+  if (!d.proposedChange || d.proposedChange.field === "brief") return null;
+  return d.proposedChange.after;
 }
 
 /**
@@ -89,18 +102,19 @@ async function llmRefine(d: RecDraft, facts: BusinessFacts): Promise<LlmRefineRe
         d.confidence = Math.min(d.confidence, 0.4);
       }
     }
-    return { costMicros: res.costMicros, wroteText, unsupportedClaims: wroteText ? res.data.unsupportedClaims.length : 0 };
+    return { costMicros: res.costMicros, wroteText, unsupportedClaims: wroteText ? res.data.unsupportedClaims.length : 0, generatedText: wroteText ? text : undefined };
   }
   const user = `Task: propose a 5–8 item section outline for a page answering this question.\nQuestion: ${d.llmDraft.prompt ?? ""}`;
   const res = await generateStructured({ schema: briefSchema, system, user, maxTokens: 500 });
   if (!res) return null;
+  let outline = "";
   if (res.data.outline.length) {
-    const outline = res.data.outline.slice(0, 8).map((s, i) => `${i + 1}. ${clip(s, 200)}`).join("\n");
+    outline =res.data.outline.slice(0, 8).map((s, i) => `${i + 1}. ${clip(s, 200)}`).join("\n");
     const flagged = res.data.unsupportedClaims.length ? `\n\n> AI flagged unsupported claims to verify: ${res.data.unsupportedClaims.slice(0, 5).join("; ")}` : "";
     d.proposedChange = { ...d.proposedChange, after: `${d.proposedChange.after}\n\n## AI-suggested outline (review)\n${outline}${flagged}` };
   }
   const wroteText = res.data.outline.length > 0;
-  return { costMicros: res.costMicros, wroteText, unsupportedClaims: wroteText ? res.data.unsupportedClaims.length : 0 };
+  return { costMicros: res.costMicros, wroteText, unsupportedClaims: wroteText ? res.data.unsupportedClaims.length : 0, generatedText: outline || undefined };
 }
 
 /**
@@ -194,6 +208,7 @@ export const analyzeJob: JobHandler = async (ctx) => {
     seen.add(key);
     let llmWritten = false;
     let unsupportedClaims = 0;
+    let refined: LlmRefineResult | null = null;
     const deterministicText = d.proposedChange?.after;
 
     if (d.llmDraft && isLlmConfigured() && llmUsed < MAX_LLM_DRAFTS) {
@@ -206,6 +221,7 @@ export const analyzeJob: JobHandler = async (ctx) => {
         } finally {
           await releaseReservation(orgId, { provider: "openai", taskType: "content_generation", credits: 1, runId: ctx.run.id });
         }
+        refined = r;
         if (r) {
           llmWritten = r.wroteText;
           unsupportedClaims = r.unsupportedClaims;
@@ -219,7 +235,7 @@ export const analyzeJob: JobHandler = async (ctx) => {
     // Belt and braces: any change to the draft text during the LLM step counts as AI-written, even if a later
     // bookkeeping call (usage/reservation) failed before the result was recorded.
     if (d.proposedChange?.after !== deterministicText) llmWritten = true;
-    const claims = detectRegulatedClaims(d.proposedChange?.after);
+    const claims = detectRegulatedClaims(claimScanText(d, refined));
     if (claims.length && d.llmDraft) d.rationale += ` Contains claim-like wording (${claims.join(", ")}) — routed to manual review.`;
 
     const isWrite = WRITE_TYPES.has(d.type);

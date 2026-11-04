@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ChevronsUpDown, FolderKanban, Menu, Plug, Plus, Settings, SlidersHorizontal, X } from "lucide-react";
+import { ChevronsUpDown, FileText, FolderKanban, Menu, Plug, Plus, Settings, SlidersHorizontal, X } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { Avatar } from "@/components/ui";
 import { LogoLockup } from "@/components/brand/logo";
@@ -168,7 +168,7 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
                     active={routeProjectId === current.id && section === slug}
                     icon={SETUP_ICONS[slug]}
                   >
-                    {slug === "integrations" ? "Connect website" : "Project settings"}
+                    {slug === "integrations" ? "Connect website" : "Settings"}
                   </NavLink>
                 </li>
               ))}
@@ -180,6 +180,9 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
       <div className="space-y-0.5 border-t border-border px-3 py-3">
         <NavLink href="/app" active={pathname === "/app"} icon={FolderKanban}>
           All websites
+        </NavLink>
+        <NavLink href="/app/prospect" active={pathname.startsWith("/app/prospect")} icon={FileText}>
+          Prospect report
         </NavLink>
         <NavLink href="/app/settings" active={pathname.startsWith("/app/settings")} icon={Settings}>
           Settings & billing

@@ -50,6 +50,14 @@ vi.mock("@/lib/db", () => {
   return { db: { $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)) } };
 });
 
+const alerts = vi.hoisted(() => [] as { kind: string; key: string; subject: string; organizationId?: string | null }[]);
+vi.mock("@/lib/alerts/staff", () => ({
+  sendStaffAlert: vi.fn(async (a: { kind: string; key: string; subject: string }) => {
+    alerts.push(a);
+    return { status: "sent" };
+  }),
+}));
+
 import { verifyRazorpaySignature } from "@/lib/billing/razorpay";
 import { processRazorpayWebhook } from "@/lib/billing/webhook";
 
@@ -73,6 +81,8 @@ beforeEach(() => {
   state.subs = [];
   state.org = { id: "org_1", planId: "trial", status: "active" };
   state.audits = 0;
+  alerts.length = 0;
+  delete process.env.RAZORPAY_PLAN_AGENCY;
 });
 
 describe("verifyRazorpaySignature", () => {
@@ -86,6 +96,36 @@ describe("verifyRazorpaySignature", () => {
     expect(verifyRazorpaySignature(body, sign(body).slice(0, 10), SECRET)).toBe(false);
     expect(verifyRazorpaySignature(body, null, SECRET)).toBe(false);
     expect(verifyRazorpaySignature(body, sign(body), undefined)).toBe(false);
+  });
+});
+
+describe("payment failures and plan changes", () => {
+  it("alerts staff once per failed-payment event (halted / pending / payment.failed)", async () => {
+    let body = event("subscription.activated");
+    await processRazorpayWebhook(body, { signature: sign(body), eventId: "a1" }, SECRET);
+    expect(alerts).toHaveLength(0);
+    body = event("subscription.halted");
+    await processRazorpayWebhook(body, { signature: sign(body), eventId: "h1" }, SECRET);
+    await processRazorpayWebhook(body, { signature: sign(body), eventId: "h1" }, SECRET); // replay: no second alert
+    expect(alerts).toEqual([expect.objectContaining({ kind: "payment_failed", key: "h1", organizationId: "org_1" })]);
+    const pf = JSON.stringify({ event: "payment.failed", payload: { payment: { entity: { id: "pay_1", amount: 299900, currency: "INR", notes: { organizationId: "org_1" } } } } });
+    await processRazorpayWebhook(pf, { signature: sign(pf), eventId: "p1" }, SECRET);
+    expect(alerts.map((a) => a.key)).toEqual(["h1", "p1"]);
+  });
+
+  it("subscription.updated switches the plan when Razorpay reports the new plan", async () => {
+    let body = event("subscription.activated");
+    await processRazorpayWebhook(body, { signature: sign(body), eventId: "u0" }, SECRET);
+    process.env.RAZORPAY_PLAN_AGENCY = "plan_agency_live";
+    body = event("subscription.updated", { plan_id: "plan_agency_live", status: "active" });
+    const res = await processRazorpayWebhook(body, { signature: sign(body), eventId: "u1" }, SECRET);
+    expect(res.status).toBe("processed");
+    expect(state.org).toMatchObject({ planId: "agency", status: "active" });
+  });
+
+  it("subscription.updated with a status that doesn't change billing is ignored", async () => {
+    const body = event("subscription.updated", { status: "authenticated" });
+    expect((await processRazorpayWebhook(body, { signature: sign(body), eventId: "u2" }, SECRET)).status).toBe("ignored");
   });
 });
 

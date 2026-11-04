@@ -2,7 +2,8 @@
 // API answers can differ from the consumer ChatGPT UI (personalisation, model routing, UI search).
 import { JobError, type ProviderAnswer, type VisibilityProvider, type VisibilityQuery } from "@/lib/types";
 import { APPROX_WEB_SEARCH_CALL_MICROS, estimateCostMicros, getModel, getOpenAI, isOpenAIConfigured } from "@/lib/providers/llm";
-import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
+import { reserveAiSpend } from "@/lib/billing/ai-budget";
+import { roughTokens, SEARCH_CONTEXT_TOKENS } from "@/lib/providers/pricing";
 import { providerError } from "./errors";
 
 export const OPENAI_LIMITATIONS =
@@ -23,7 +24,9 @@ export const openaiVisibilityProvider: VisibilityProvider = {
     if (!openai) throw new JobError("OpenAI is not configured", "permanent");
     const model = getModel();
     const country = localeToCountry(query.locale);
-    await assertAiBudget();
+    const maxOutput = 1200;
+    const estimate = estimateCostMicros(model, roughTokens(query.text) + SEARCH_CONTEXT_TOKENS, maxOutput) + APPROX_WEB_SEARCH_CALL_MICROS;
+    const hold = await reserveAiSpend(estimate);
     let res;
     try {
       res = await openai.responses.create({
@@ -34,9 +37,10 @@ export const openaiVisibilityProvider: VisibilityProvider = {
             : { type: "web_search" },
         ],
         input: query.text,
-        max_output_tokens: 1200,
+        max_output_tokens: maxOutput,
       });
     } catch (err) {
+      hold.release();
       const status = (err as { status?: number }).status;
       throw providerError("openai", status, (err as Error)?.name);
     }
@@ -57,7 +61,7 @@ export const openaiVisibilityProvider: VisibilityProvider = {
     }
     const costMicros =
       estimateCostMicros(model, res.usage?.input_tokens, res.usage?.output_tokens) + APPROX_WEB_SEARCH_CALL_MICROS;
-    noteAiSpend(costMicros);
+    hold.settle(costMicros);
     return {
       provider: "openai",
       platformLabel: `ChatGPT-style answer (OpenAI API, ${model}, web search)`,

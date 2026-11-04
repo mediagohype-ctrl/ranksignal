@@ -1,4 +1,5 @@
-// Credit ledger (blueprint §10). Rows: reservation | actual | release, bucketed by billingPeriod YYYY-MM (UTC).
+// Credit ledger (blueprint §10). Credits are INTERNAL cost tracking — customer copy never says "credits"
+// (customers see "AI answers left", see allowance.ts). Rows: reservation | actual | release, bucketed by billingPeriod YYYY-MM (UTC).
 //   used     = sum(actual)
 //   reserved = max(0, sum(reservation) - sum(release))
 // Flow for metered work: reserveCredits -> do work -> recordUsage(actual) -> releaseReservation(same credits).
@@ -12,6 +13,11 @@ export const USAGE_THRESHOLDS = [0.8, 1] as const;
 
 export function billingPeriod(d: Date = new Date()): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** "1 Dec" — when this month's usage resets (start of next UTC month). */
+function resetDay(now = new Date()): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 type Tx = Pick<typeof db, "usageLedger" | "organization">;
@@ -68,8 +74,10 @@ export async function reserveCredits(
     }
     const { used, reserved } = await periodTotals(tx, orgId, period);
     if (used + reserved + o.credits > plan.monthlyCredits) {
+      // Internal numbers stay in the log line; the customer gets a plain sentence with the reset date.
+      console.info(`[usage] monthly limit: ${used} used, ${reserved} held, ${o.credits} needed of ${plan.monthlyCredits}`);
       throw new JobError(
-        `You've used this month's ${plan.monthlyCredits.toLocaleString()} credits (${used} used, ${reserved} on hold, ${o.credits} needed). Upgrade your plan, or wait until next month.`,
+        `Your plan's usage for this month is used up, so this check can't start. It resets on ${resetDay()}. Upgrade if you need more before then.`,
         "quota",
       );
     }
@@ -151,11 +159,11 @@ async function maybeNotifyThreshold(orgId: string, period: string, usedBefore: n
         data: {
           organizationId: orgId,
           type: "usage_threshold",
-          title: pct >= 100 ? `You've used all your credits for ${period}` : `You've used ${pct}% of your credits for ${period}`,
+          title: pct >= 100 ? "You've used this month's plan usage" : `You've used ${pct}% of this month's plan usage`,
           body:
             pct >= 100
-              ? `Your workspace has used all ${limit} credits for ${period}. New website checks and AI checks are paused until next month. Upgrade to keep going.`
-              : `Your workspace has used ${usedAfter} of ${limit} credits for ${period}. Upgrade if you need more.`,
+              ? `New website checks and AI checks are paused until ${resetDay()}, when your usage resets. Upgrade to keep going.`
+              : `Your workspace has used ${pct}% of what your plan includes this month. It resets on ${resetDay()}. Upgrade if you need more.`,
           link: "/app/settings/billing",
         },
       });

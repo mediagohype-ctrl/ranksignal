@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { BRAND } from "@/lib/brand";
+import { getSession } from "@/lib/auth/session";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 
@@ -10,7 +11,17 @@ export const metadata: Metadata = {
   openGraph: { siteName: BRAND.name, locale: "en_IN", type: "website" },
 };
 
-export default function MarketingLayout({ children }: { children: ReactNode }) {
+/** Signed-in visitors see "Open app" instead of "Log in" / "Start free". Never fails the page. */
+async function isSignedIn(): Promise<boolean> {
+  try {
+    return (await getSession()) !== null;
+  } catch {
+    return false;
+  }
+}
+
+export default async function MarketingLayout({ children }: { children: ReactNode }) {
+  const signedIn = await isSignedIn();
   return (
     <div className="flex min-h-screen flex-col bg-bg text-fg">
       <a
@@ -19,7 +30,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
-      <SiteHeader />
+      <SiteHeader signedIn={signedIn} />
       <main id="main" className="flex-1">
         {children}
       </main>

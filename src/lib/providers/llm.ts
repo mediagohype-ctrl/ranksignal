@@ -4,9 +4,9 @@
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
-import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
+import { isAiBudgetExhausted, reserveAiSpend } from "@/lib/billing/ai-budget";
 import { geminiGenerateContent, getGeminiModel, isGeminiConfigured, readGeminiCandidate } from "./gemini-client";
-import { estimateGeminiCostMicros } from "./pricing";
+import { estimateGeminiCostMicros, roughTokens } from "./pricing";
 import { getOpenRouterAnalysisModels, isOpenRouterConfigured, openRouterChat, parseOpenRouterResponse } from "./openrouter-client";
 
 export const DEFAULT_MODEL = "gpt-4o-mini";
@@ -98,15 +98,11 @@ function parseJson(content: string): unknown {
   }
 }
 
-/** False when the global daily AI budget is spent; generateStructured then degrades to null (caller fallbacks). */
-async function withinAiBudget(): Promise<boolean> {
-  try {
-    await assertAiBudget();
-    return true;
-  } catch (err) {
-    console.warn("[llm] skipped: daily AI budget reached", { message: (err as Error)?.message?.slice(0, 120) });
-    return false;
-  }
+/** Budget refusals (daily cap reached, or spend unreadable) degrade generateStructured to null (caller fallbacks). */
+function budgetRefused(err: unknown): boolean {
+  if (!(err as { aiBudget?: unknown } | null)?.aiBudget) return false;
+  console.warn("[llm] skipped: daily AI budget", { exhausted: isAiBudgetExhausted(err) });
+  return true;
 }
 
 export async function generateStructured<T>(o: StructuredInput<T>): Promise<{ data: T; costMicros: number } | null> {
@@ -125,8 +121,16 @@ async function generateWithOpenAI<T>(o: StructuredInput<T>): Promise<{ data: T; 
   const response_format = responseFormatFor(o.schema as unknown as z.ZodTypeAny);
 
   let costMicros = 0;
+  const maxTokens = o.maxTokens ?? 1500;
+  const estimate = estimateCostMicros(model, roughTokens(system + user) + 200, maxTokens);
   for (let attempt = 0; attempt < 2; attempt++) {
-    if (!(await withinAiBudget())) return null;
+    let hold;
+    try {
+      hold = await reserveAiSpend(estimate);
+    } catch (err) {
+      if (budgetRefused(err)) return null;
+      throw err;
+    }
     try {
       const res = await openai.chat.completions.create({
         model,
@@ -135,11 +139,11 @@ async function generateWithOpenAI<T>(o: StructuredInput<T>): Promise<{ data: T; 
           { role: "user", content: user },
         ],
         response_format,
-        max_tokens: o.maxTokens ?? 1500,
+        max_tokens: maxTokens,
         temperature: 0.2,
       });
       const callCost = estimateCostMicros(model, res.usage?.prompt_tokens, res.usage?.completion_tokens);
-      noteAiSpend(callCost);
+      hold.settle(callCost);
       costMicros += callCost;
       const content = res.choices[0]?.message?.content;
       if (!content) continue;
@@ -149,6 +153,7 @@ async function generateWithOpenAI<T>(o: StructuredInput<T>): Promise<{ data: T; 
       if (parsed.success) return { data: parsed.data, costMicros };
       console.warn("[llm] output failed schema validation", { attempt, issues: parsed.error.issues.length });
     } catch (err) {
+      hold.release(); // no-op once settled
       // Log class/status only — never request bodies or keys.
       const status = (err as { status?: number }).status;
       console.warn("[llm] request failed", { attempt, status, name: (err as Error)?.name });
@@ -184,8 +189,8 @@ async function generateWithGemini<T>(o: StructuredInput<T>): Promise<{ data: T; 
 
   let costMicros = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
-    if (!(await withinAiBudget())) return null;
     try {
+      // geminiGenerateContent reserves and settles the daily AI budget itself.
       const payload = await geminiGenerateContent(
         model,
         {
@@ -197,7 +202,6 @@ async function generateWithGemini<T>(o: StructuredInput<T>): Promise<{ data: T; 
       );
       const { text, usage } = readGeminiCandidate(payload);
       const callCost = estimateGeminiCostMicros(model, usage.inputTokens, usage.outputTokens, false);
-      noteAiSpend(callCost);
       costMicros += callCost;
       if (!text) continue;
       const parsedJson = parseJson(text);
@@ -206,6 +210,7 @@ async function generateWithGemini<T>(o: StructuredInput<T>): Promise<{ data: T; 
       if (parsed.success) return { data: parsed.data, costMicros };
       console.warn("[llm] gemini output failed schema validation", { attempt, issues: parsed.error.issues.length });
     } catch (err) {
+      if (budgetRefused(err)) return null;
       const errorClass = (err as { errorClass?: string }).errorClass;
       console.warn("[llm] gemini request failed", { attempt, errorClass });
       if (errorClass === "permanent") return null;
@@ -251,7 +256,7 @@ ${js}` : wrapped.system;
       } catch (err) {
         const errorClass = (err as { errorClass?: string }).errorClass;
         console.warn("[llm] openrouter request failed", { model, attempt, errorClass, message: (err as Error)?.message?.slice(0, 160) });
-        if (errorClass === "quota") return null; // daily AI budget reached: no further calls
+        if (budgetRefused(err) || errorClass === "quota") return null; // daily AI budget: no further calls
         if (errorClass === "permanent") break; // try the next model
       }
     }

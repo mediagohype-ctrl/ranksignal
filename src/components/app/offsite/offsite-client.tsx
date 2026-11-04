@@ -20,6 +20,7 @@ import {
 import type { AiCitationSuggestion, StarterSuggestion } from "@/lib/offsite/suggestions";
 import { OffsiteFormDialog, type OffsiteDraft } from "./offsite-form-dialog";
 import { offsiteApi } from "./offsite-api";
+import { fmtDate } from "@/lib/dashboard/format";
 
 const STATUS_TONE: Record<OffsiteStatus, Tone> = { todo: "neutral", submitted: "info", live: "success", rejected: "danger" };
 
@@ -27,7 +28,7 @@ function monthStartUtc(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
 }
 const day = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
+  iso ? fmtDate(iso) : "—";
 const hostOf = (u: string | null) => {
   if (!u) return null;
   try {

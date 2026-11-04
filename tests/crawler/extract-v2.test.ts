@@ -69,10 +69,12 @@ describe("crawl prioritisation and limits", () => {
       "https://a.test/", "https://a.test/pricing", "https://a.test/our-approach", "https://a.test/x?page=2", "https://a.test/blog/2020/01/post",
     ]);
   });
-  it("defaults to 25 pages and respects plan caps", () => {
-    expect(DEFAULT_MAX_PAGES).toBe(25);
-    expect(clampMaxPages(undefined, 250)).toBe(25);
+  it("defaults to the plan maximum and respects plan caps", () => {
+    expect(clampMaxPages(undefined, 250)).toBe(250);
+    expect(clampMaxPages(undefined, 1000)).toBe(1000);
     expect(clampMaxPages(undefined, 10)).toBe(10);
     expect(clampMaxPages(400, 250)).toBe(250);
+    expect(clampMaxPages(40, 250)).toBe(40);
+    expect(clampMaxPages(undefined)).toBe(DEFAULT_MAX_PAGES);
   });
 });

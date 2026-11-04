@@ -1,6 +1,7 @@
 // POST /api/public/free-check — anonymous AI-readiness check (lead magnet).
 // Captcha + 3/IP/hour + 30/hour global, SSRF-safe fetching, ~25s budget, no LLM calls.
-// The only DB write is a best-effort Lead row for the admin CRM (url, score, hashed IP) that never blocks the response.
+// The only DB write is a best-effort Lead row for the admin CRM (url, score, hashed IP). Its id is returned so the
+// visitor can add their email (POST /api/public/free-check/email); the insert waits at most ~1.5s and never fails the check.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody } from "@/lib/api";
 import { clientIp } from "@/lib/auth/rate-limit";
@@ -8,11 +9,15 @@ import { verifyTurnstile } from "@/lib/security/turnstile";
 import { checkFreeCheckLimit } from "@/lib/free-check/limits";
 import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/validate";
 import { FreeCheckError, runFreeCheck } from "@/lib/free-check/run";
-import { recordLeadInBackground } from "@/lib/admin/leads";
+import { recordLead } from "@/lib/admin/leads";
+import { topFixMessage } from "@/lib/admin/lead-followup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+/** Longest we wait for the best-effort Lead insert before answering without a lead id. */
+const LEAD_WAIT_MS = 1_500;
 
 const bodySchema = z.object({
   url: z.string().max(2048),
@@ -42,8 +47,11 @@ export const POST = handler(async (req: Request) => {
 
   try {
     const item = await runFreeCheck(valid.url);
-    recordLeadInBackground({ source: "free_check", url: item.url, score: item.overall.score, ip });
-    return json({ item }, { headers: { "Cache-Control": "no-store" } });
+    const leadId = await Promise.race([
+      recordLead({ source: "free_check", url: item.url, score: item.overall.score, message: topFixMessage(item.issues[0]?.title), ip }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), LEAD_WAIT_MS)),
+    ]);
+    return json({ item: { ...item, leadId } }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof FreeCheckError) throw new HttpError(e.code === "blocked_url" ? 400 : 422, e.code, e.message);
     throw e;

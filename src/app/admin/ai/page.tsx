@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import { getAiDailyBudgetUsd } from "@/lib/billing/ai-budget";
 import { requireStaffPage } from "@/lib/admin/guard";
 import { dailyCostByProvider, orgNames } from "@/lib/admin/metrics";
-import { formatInr, formatUsd, microsToInr, microsToUsd, usdInrRate } from "@/lib/admin/money";
+import { costVsPrice, formatInr, formatUsd, microsToInr, microsToUsd, usdInrRate } from "@/lib/admin/money";
 import { pctDelta, rangeParam, utcDayStart, type SearchParams } from "@/lib/admin/params";
-import { Card, CardBody, CardHeader, EmptyState, Meter, Notice, PageHeader, Stat, Table, TD, TH, THead, TR } from "@/components/ui";
+import { Badge, Card, CardBody, CardHeader, EmptyState, Meter, Notice, PageHeader, Stat, Table, TD, TH, THead, TR } from "@/components/ui";
 import { DailyStackedBars } from "@/components/admin/charts";
 import { RangePicker } from "@/components/admin/ui";
 
@@ -73,7 +73,14 @@ export default async function AiCostsPage({ searchParams }: { searchParams: Prom
       take: 10,
     }),
   ]);
-  const names = await orgNames(topOrgs.map((o) => o.organizationId));
+  const [names, orgRows] = await Promise.all([
+    orgNames(topOrgs.map((o) => o.organizationId)),
+    db.organization.findMany({
+      where: { id: { in: topOrgs.map((o) => o.organizationId) } },
+      select: { id: true, planId: true, status: true, serviceTier: true },
+    }),
+  ]);
+  const orgById = new Map(orgRows.map((o) => [o.id, o]));
   const budget = getAiDailyBudgetUsd();
   const todayUsd = microsToUsd(today._sum.costMicros ?? 0);
   const totalMicros = totalCur._sum.costMicros ?? 0;
@@ -144,7 +151,10 @@ export default async function AiCostsPage({ searchParams }: { searchParams: Prom
           rows={sortRows(byModel.map((g) => ({ key: `${g.provider} · ${g.model ?? "unknown"}`, micros: g._sum.costMicros ?? 0, count: g._count._all })))}
         />
         <Card>
-          <CardHeader title="Top 10 costliest organizations" description={`Last ${r.days} days`} />
+          <CardHeader
+            title="Top 10 costliest organizations"
+            description={`Last ${r.days} days. "Per month" scales that spend to 30 days and compares it with what they pay.`}
+          />
           {topOrgs.length === 0 ? (
             <EmptyState size="sm" title="No spend in this period" />
           ) : (
@@ -155,10 +165,16 @@ export default async function AiCostsPage({ searchParams }: { searchParams: Prom
                   <TH align="right">Credits</TH>
                   <TH align="right">USD</TH>
                   <TH align="right">INR</TH>
+                  <TH align="right">Cost / mo vs pays</TH>
                 </tr>
               </THead>
               <tbody>
-                {topOrgs.map((o) => (
+                {topOrgs.map((o) => {
+                  const info = orgById.get(o.organizationId);
+                  const money = info
+                    ? costVsPrice({ ...info, costMicros: ((o._sum.costMicros ?? 0) * 30) / Math.max(r.days, 1) }, rate)
+                    : null;
+                  return (
                   <TR key={o.organizationId}>
                     <TD>
                       <Link href={`/admin/customers/${o.organizationId}?tab=usage`} className="font-medium text-fg hover:text-primary hover:underline">
@@ -168,8 +184,25 @@ export default async function AiCostsPage({ searchParams }: { searchParams: Prom
                     <TD numeric>{(o._sum.credits ?? 0).toLocaleString()}</TD>
                     <TD numeric>{formatUsd(microsToUsd(o._sum.costMicros ?? 0), 3)}</TD>
                     <TD numeric>{formatInr(microsToInr(o._sum.costMicros ?? 0))}</TD>
+                    <TD numeric>
+                      {money ? (
+                        <>
+                          {formatInr(money.costInr)} / {formatInr(money.priceInr)}
+                          {money.costsMore && (
+                            <div>
+                              <Badge tone="danger" size="sm">
+                                Costs more than they pay
+                              </Badge>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </TD>
                   </TR>
-                ))}
+                  );
+                })}
               </tbody>
             </Table>
           )}

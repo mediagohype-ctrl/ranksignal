@@ -43,6 +43,7 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   set("languages", () => (data.languages = body.languages));
   set("competitors", () => (data.competitors = body.competitors as Prisma.InputJsonValue));
   set("keywords", () => (data.keywords = body.keywords));
+  set("facts", () => (data.facts = body.facts as Prisma.InputJsonValue));
 
   const before = readSettings(project.settings);
   let automationChanged = false;

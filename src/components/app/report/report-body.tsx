@@ -6,7 +6,7 @@ import { fmtDate } from "@/lib/dashboard/format";
 import { AiVisibilitySection } from "@/components/app/report/ai-visibility-section";
 import { IssueList } from "@/components/app/report/issue-list";
 import { issueHref } from "@/components/app/nav";
-import { PILLAR_EXPLAINER, PILLAR_ICON } from "@/components/app/report/pillars";
+import { PILLAR_EXPLAINER, PILLAR_ICON, PILLAR_TECH, visiblePillars } from "@/components/app/report/pillars";
 import { QuickWins } from "@/components/app/report/quick-wins";
 import { Badge, Card, CheckList, Notice, PillarCard, ScoreRing, SectionHeading } from "@/components/ui";
 
@@ -17,6 +17,7 @@ export function ReportBody({
   visibilityActive = false,
   readOnly = false,
   measuredWith,
+  expert = false,
 }: {
   report: SiteReport;
   /** Omit on public pages: no links into the app are rendered. */
@@ -25,6 +26,8 @@ export function ReportBody({
   visibilityActive?: boolean;
   readOnly?: boolean;
   measuredWith?: React.ReactNode;
+  /** Expert mode: technical pillar names (SEO/AEO/GEO), every pillar incl. Easy to quote, grades and version info. */
+  expert?: boolean;
 }) {
   const issuesById = new Map(r.issues.map((i) => [i.id, i]));
   const quickWins = r.quickWins.map((qid) => issuesById.get(qid)).filter((i): i is NonNullable<typeof i> => !!i);
@@ -62,13 +65,19 @@ export function ReportBody({
         <SectionHeading
           id="pillars"
           title="What makes up your score"
-          description="Four parts, each out of 100, from real checks on your pages and real AI answers."
+          description={
+            expert
+              ? "Four parts, each out of 100, from real checks on your pages and real AI answers."
+              : "Each part is out of 100, from real checks on your pages and real AI answers."
+          }
         />
         <div className="grid gap-6 md:grid-cols-2">
-          {r.pillars.map((p) => (
+          {visiblePillars(r.pillars, expert).map((p) => (
             <PillarCard
               key={p.pillar}
               {...p}
+              label={expert ? `${p.label} (${PILLAR_TECH[p.pillar]})` : p.label}
+              grade={expert ? p.grade : null}
               icon={PILLAR_ICON[p.pillar]}
               className="break-inside-avoid"
               summary={
@@ -151,7 +160,7 @@ export function ReportBody({
         )}
         <p className="text-xs text-muted">
           Scores are estimates from the pages we could read and a sample of AI answers; they don&apos;t guarantee rankings or AI placements.
-          Methodology v{r.methodologyVersion} · Report generated {fmtDate(r.generatedAt, true)}.
+          {expert && <>Methodology v{r.methodologyVersion} · </>}Report made {fmtDate(r.generatedAt, true)}.
         </p>
       </footer>
     </>

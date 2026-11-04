@@ -17,7 +17,8 @@ export async function resolveAccess(token: SessionContext): Promise<SessionConte
   if (membership?.status === "active") return { ...token, role: membership.role as Role, staffMode: false };
   if (token.staffMode) {
     const user = await db.user.findUnique({ where: { id: token.userId }, select: { isStaff: true } });
-    if (user?.isStaff) return { ...token, role: "admin", staffMode: true };
+    // "View as customer" (readOnly) sessions are viewers; every write API also rejects them (src/middleware.ts).
+    if (user?.isStaff) return token.readOnly ? { ...token, role: "viewer", staffMode: true, readOnly: true } : { ...token, role: "admin", staffMode: true };
   }
   return null;
 }

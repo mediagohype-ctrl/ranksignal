@@ -1,9 +1,14 @@
-import { ArrowRight, FileText, History } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, History, MessageSquare, TrendingUp } from "lucide-react";
 import { db } from "@/lib/db";
 import { getProjectDashboard } from "@/lib/dashboard/data";
-import { requireAppProject } from "@/lib/dashboard/server";
+import { hasRole, requireAppProject } from "@/lib/dashboard/server";
+import { readNotificationPrefs } from "@/lib/dashboard/project-schema";
+import { getExpertMode } from "@/lib/expert";
+import { buildScorePoints, scoreChange } from "@/components/app/history/score-points";
+import { MonthlyEmailSwitch } from "@/components/app/history/monthly-email-switch";
+import { ShareReportButton } from "@/components/app/report/share-report";
+import { BadgeEmbed } from "@/components/app/badge-embed";
 import { fmtDate, humanize, pct } from "@/lib/dashboard/format";
-import { BRAND } from "@/lib/brand";
 import { appliedChangeWhere, APPLIED_STATUSES } from "@/lib/actions/service";
 import { backfillSnapshots, getPeriodComparison, listSnapshots, type SnapshotView } from "@/lib/snapshots";
 import { SinceLastMonth } from "@/components/app/history/since-last-month";
@@ -15,13 +20,13 @@ import {
   THead, TR,
 } from "@/components/ui";
 
-export const metadata = { title: "Score history" };
+export const metadata = { title: "Progress" };
 
 export default async function ReportsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { session, project } = await requireAppProject(id);
   const orgId = session.organizationId;
-  const [d, executed, appliedValidated, shippedRows, snapshots] = await Promise.all([
+  const [d, executed, appliedValidated, shippedRows, snapshots, expert] = await Promise.all([
     getProjectDashboard(orgId, project.id),
     db.action.findMany({
       where: {
@@ -43,40 +48,82 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       select: { startedAt: true, finishedAt: true, action: { select: { type: true } } },
     }),
     loadSnapshots(project.id, orgId),
+    getExpertMode(session),
   ]);
   // After loadSnapshots (which backfills past runs), so the comparison sees them.
   const comparison = snapshots.length ? await getPeriodComparison(project.id, orgId).catch(() => null) : null;
-  const s = d.actions.byStatus;
   const applied = d.actions.applied;
-  const validated = appliedValidated;
-  const failed = (s.failed ?? 0) + (s.rollback_failed ?? 0);
-  const rolledBack = s.rolled_back ?? 0;
   const historyRows: HistorySnapshotRow[] = snapshots.map(toRow);
   const shipped: ShippedChange[] = shippedRows.map((e) => ({ at: (e.finishedAt ?? e.startedAt).toISOString(), title: humanize(e.action.type) }));
   const anySimulated = d.history.some((h) => h.simulated);
-  const first = d.history[0];
-  const last = d.history[d.history.length - 1];
-  const delta = first && last && first !== last ? Math.round(last.visibilityIndex - first.visibilityIndex) : null;
   const reportHref = `/app/projects/${project.id}/report`;
+  // Tiles (brief 5.7): fixes done, AI mentions, score change since the first check (real checks only).
+  const change = scoreChange(buildScorePoints(historyRows.filter((r) => !r.simulated)).points);
+  const m = d.latest?.metrics ?? null;
+  const answers = m && !m.simulated ? m.collected : 0;
+  const named = m && !m.simulated ? Math.round(m.mentionRate * m.collected) : 0;
+  const canEdit = hasRole(session, "member");
 
   return (
     <div className="space-y-8">
       <PageHeader
         icon={<History />}
         eyebrow="Progress"
-        title="Score history"
-        description={`How ${project.name}'s scores have changed over time, and the fixes made · prepared ${fmtDate(new Date(), true)} by ${BRAND.name}`}
+        title="Is it working?"
+        description={`How ${project.name}'s score has changed, and the fixes that went live.`}
         actions={
           <div className="no-print flex flex-wrap gap-2">
-            <PrintButton />
-            <LinkButton href={reportHref} icon={<FileText />} iconRight={<ArrowRight />}>
-              Open full report
-            </LinkButton>
+            <PrintButton label="Download PDF" />
+            <ShareReportButton projectId={project.id} canManage={hasRole(session, "admin")} label="Share link" />
           </div>
         }
       />
 
-      {comparison?.after && (
+      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-3">
+        <Stat
+          label="Fixes done"
+          value={applied}
+          icon={<CheckCircle2 />}
+          hint={`${appliedValidated} confirmed live on your website`}
+        />
+        <Stat
+          label="AI mentions"
+          value={answers ? named : "—"}
+          icon={<MessageSquare />}
+          hint={answers ? `Named in ${named} of ${answers} answers` : "No AI check yet"}
+        />
+        <Stat
+          label="Score change since start"
+          value={change === null ? "—" : change > 0 ? `+${change}` : change < 0 ? `−${Math.abs(change)}` : "0"}
+          icon={<TrendingUp />}
+          hint={change === null ? "Shows after your second check" : "Points out of 100"}
+        />
+      </section>
+
+      <Card className="break-inside-avoid">
+        <CardHeader title="Your score over time" description="Each dot on the bottom line is a fix that went live." />
+        {historyRows.length === 0 ? (
+          <CardBody>
+            <EmptyState
+              size="sm"
+              title="Your score shows here after your first website check."
+              action={<LinkButton href={`/app/projects/${project.id}`} variant="secondary" className="no-print">Go to Home</LinkButton>}
+            />
+          </CardBody>
+        ) : (
+          <HistoryExplorer snapshots={historyRows} shipped={shipped} expert={expert} />
+        )}
+      </Card>
+
+      <Card padding="md" className="no-print">
+        <MonthlyEmailSwitch projectId={project.id} initial={readNotificationPrefs(project.settings).monthlyReport} canEdit={canEdit} />
+      </Card>
+
+      <div className="no-print">
+        <BadgeEmbed projectId={project.id} />
+      </div>
+
+      {expert && comparison?.after && (
         <SinceLastMonth
           delta={comparison.delta}
           baselineIsFirst={comparison.baselineIsFirst}
@@ -84,21 +131,8 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
         />
       )}
 
-      <Card variant="subtle" padding="md" className="no-print">
-        <div className="flex flex-wrap items-center gap-4">
-          <FileText aria-hidden size={22} className="shrink-0 text-primary" />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-h4 text-fg">Looking for your scores and what to fix?</h2>
-            <p className="text-small text-muted">
-              The full report explains your scores in plain English, with step-by-step fixes. This page shows how they changed.
-            </p>
-          </div>
-          <LinkButton href={reportHref} variant="secondary" iconRight={<ArrowRight />}>
-            Go to full report
-          </LinkButton>
-        </div>
-      </Card>
-
+      {expert && (
+      <>
       {anySimulated && (
         <SimulatedDataBanner>
           some checks below used sample answers, not real AI tools. Those rows are marked &ldquo;sample&rdquo;.
@@ -107,35 +141,6 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       <Notice tone="warning" title="A number going up or down doesn't prove why">
         AI answers vary between checks, AI tools and over time. A number moving after a fix doesn&apos;t prove the fix caused it.
       </Notice>
-
-      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="AI mentions score"
-          value={last ? Math.round(last.visibilityIndex) : "—"}
-          delta={delta}
-          deltaLabel={first ? `since ${fmtDate(first.at)}` : undefined}
-          hint={last ? `Latest check ${fmtDate(last.at)}` : "No AI checks yet"}
-        />
-        <Stat label="Named you" value={pct(last?.mentionRate)} hint={last ? `Out of ${last.sampleSize} ${last.sampleSize === 1 ? "answer" : "answers"}` : undefined} />
-        <Stat label="Fixes made" value={applied} hint={`${validated} confirmed live on your website`} />
-        <Stat label="Failed / undone" value={`${failed} / ${rolledBack}`} hint="Fixes that didn't work or were undone" />
-      </section>
-
-      <Card className="break-inside-avoid">
-        <CardHeader
-          title="Score history"
-          description="Your overall score and the four parts of it after each check. Dots mark fixes made to your site; dashed lines mark where the questions or how we score changed."
-        />
-        {historyRows.length === 0 ? (
-          <CardBody>
-            <EmptyState size="sm" title="No history yet" description="Check your website to record your first scores. Each later check adds a point."
-              action={<LinkButton href={`/app/projects/${project.id}/audit`} variant="secondary" className="no-print">Go to website problems</LinkButton>}
-            />
-          </CardBody>
-        ) : (
-          <HistoryExplorer snapshots={historyRows} shipped={shipped} />
-        )}
-      </Card>
 
       <Card className="break-inside-avoid">
         <CardHeader title="AI mentions over time" description="Dashed lines mark where your customer questions changed, so compare like with like." />
@@ -245,6 +250,17 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
           </Table>
         )}
       </Card>
+      <Card variant="subtle" padding="md" className="no-print">
+        <div className="flex flex-wrap items-center gap-4">
+          <FileText aria-hidden size={22} className="shrink-0 text-primary" />
+          <p className="min-w-0 flex-1 text-small text-muted">Scores explained, with step-by-step fixes, are in the full report.</p>
+          <LinkButton href={reportHref} variant="secondary" iconRight={<ArrowRight />}>
+            Go to full report
+          </LinkButton>
+        </div>
+      </Card>
+      </>
+      )}
       <p className="text-xs text-muted">
         {d.findings.totalOpen} {d.findings.totalOpen === 1 ? "problem" : "problems"} to fix across {d.findings.pagesCrawled}{" "}
         {d.findings.pagesCrawled === 1 ? "page" : "pages"} checked (website check {fmtDate(d.findings.crawledAt)}). AI mentions are measured

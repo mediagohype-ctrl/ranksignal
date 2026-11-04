@@ -1,8 +1,9 @@
 import { Suspense } from "react";
-import { Building2, Coins, FolderKanban, Globe2, ShieldCheck, Users } from "lucide-react";
+import { Bot, Building2, FolderKanban, Globe2, ShieldCheck, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { PLANS, getPlan } from "@/lib/billing/plans";
-import { getUsageSummary } from "@/lib/billing/usage";
+import { getAiAllowance } from "@/lib/billing/allowance";
+import { answersPerCheck } from "@/lib/billing/plans";
 import { requireAppSession, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, humanize } from "@/lib/dashboard/format";
 import { MembersPanel } from "@/components/app/members-panel";
@@ -15,44 +16,31 @@ import {
   Card,
   CardBody,
   CardHeader,
-  EmptyState,
   KeyValueList,
-  LinkButton,
   Meter,
   Notice,
   PageHeader,
   SectionHeading,
   Skeleton,
   Stat,
-  Table,
-  TD,
-  TH,
-  THead,
-  TR,
 } from "@/components/ui";
 import { SettingsTabs } from "./settings-tabs";
 import { AccountPanel } from "./account-panel";
+import { PreferencesPanel } from "@/components/app/project-settings/preferences-panel";
 
 export const metadata = { title: "Settings" };
-
-const TASK_LABEL: Record<string, string> = {
-  crawl_page: "Website checks",
-  visibility_prompt: "AI checks",
-  brand_probe: "AI knows you checks",
-  content_generation: "Writing suggested fixes",
-  llm_analysis: "AI analysis",
-};
 
 const REGION_LABEL: Record<string, string> = { IN: "India", US: "United States", EU: "European Union", GB: "United Kingdom" };
 
 export default async function SettingsPage() {
   const s = await requireAppSession();
-  const [org, usage, sub, projectCount, memberCount, me] = await Promise.all([
+  const [org, ai, sub, projectCount, memberCount, me] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: s.organizationId },
       select: { name: true, planId: true, status: true, region: true, createdAt: true, publishingEnabled: true, serviceTier: true, branding: true },
     }),
-    getUsageSummary(s.organizationId),
+    // Customers see AI answers left, never internal credits.
+    getAiAllowance(s.organizationId).catch(() => null),
     db.subscription.findFirst({
       where: { organizationId: s.organizationId },
       orderBy: { createdAt: "desc" },
@@ -60,10 +48,9 @@ export default async function SettingsPage() {
     }),
     db.project.count({ where: { organizationId: s.organizationId } }),
     db.membership.count({ where: { organizationId: s.organizationId, status: { not: "removed" } } }),
-    db.user.findUnique({ where: { id: s.userId }, select: { name: true, email: true, emailVerified: true, createdAt: true } }),
+    db.user.findUnique({ where: { id: s.userId }, select: { name: true, email: true, emailVerified: true, createdAt: true, expertMode: true, timeZone: true } }),
   ]);
   const plan = getPlan(org.planId);
-  const byType = Object.entries(usage.byTaskType).sort((a, b) => b[1] - a[1]);
   const canManage = hasRole(s, "admin");
   const planHint =
     sub?.trialEndsAt && sub.status === "trialing"
@@ -71,12 +58,11 @@ export default async function SettingsPage() {
       : sub?.currentPeriodEnd
         ? `Renews ${fmtDate(sub.currentPeriodEnd)}`
         : undefined;
-  const creditsLeft = Math.max(0, usage.limit - usage.used - usage.reserved);
 
   const workspace = (
     <div className="grid gap-6 lg:grid-cols-3">
       <Card className="lg:col-span-2">
-        <CardHeader icon={<Building2 />} title="Workspace details" description="The basics about your organization." />
+        <CardHeader icon={<Building2 />} title="Your business" description="The basics about your account." />
         <CardBody>
           <KeyValueList
             items={[
@@ -110,7 +96,7 @@ export default async function SettingsPage() {
         </CardBody>
       </Card>
       <div className="grid gap-4 sm:grid-cols-3 lg:col-span-3">
-        <Stat label="Projects" value={`${projectCount} / ${plan.maxProjects}`} icon={<FolderKanban />} hint="Websites you're following" />
+        <Stat label="Websites" value={`${projectCount} / ${plan.maxProjects}`} icon={<FolderKanban />} hint="Websites you're following" />
         <Stat label="Team seats" value={`${memberCount} / ${plan.seats}`} icon={<Users />} hint="People with access" />
         <Stat label="Plan" value={plan.name} icon={<Globe2 />} hint={planHint ?? "Change it under Billing & usage"} />
       </div>
@@ -120,24 +106,32 @@ export default async function SettingsPage() {
   const billing = (
     <div className="space-y-10">
       <section aria-labelledby="usage-h" className="space-y-5">
-        <SectionHeading id="usage-h" title="This month's usage" description={`Billing period ${usage.period}. Credits are used when we check your website or ask AI tools.`} />
+        <SectionHeading
+          id="usage-h"
+          title="This month's AI answers"
+          description="One AI answer is one of your customer questions asked to one AI assistant."
+        />
         {org.status !== "active" && (
           <Notice tone="danger" title={`Your account is ${humanize(org.status).toLowerCase()}`}>
-            New scans may be paused until billing is sorted out.
+            New checks may be paused until billing is sorted out.
           </Notice>
         )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Stat
-            label="Credits used"
-            icon={<Coins />}
-            value={<span className="tabular-nums">{usage.used.toLocaleString()}</span>}
-            hint={`of ${usage.limit.toLocaleString()} this month`}
-            footer={<Meter value={usage.used + usage.reserved} max={Math.max(usage.limit, 1)} label="Credits used this period" showValue />}
+            label="AI answers left"
+            icon={<Bot />}
+            value={
+              <span className="tabular-nums">
+                {ai ? `${ai.left.toLocaleString("en-IN")} of ${ai.cap.toLocaleString("en-IN")}` : "—"}
+              </span>
+            }
+            hint={ai?.resetsAt ? `Resets on ${fmtDate(ai.resetsAt)}` : org.planId === "trial" ? "These cover your whole free trial" : undefined}
+            footer={ai ? <Meter value={ai.used} max={Math.max(ai.cap, 1)} label="AI answers used" showValue /> : undefined}
           />
           <Stat
-            label="Credits left"
-            value={<span className="tabular-nums">{creditsLeft.toLocaleString()}</span>}
-            hint={usage.reserved ? `${usage.reserved.toLocaleString()} held for jobs that are running` : "Nothing on hold right now"}
+            label="One AI check uses"
+            value={<span className="tabular-nums">{answersPerCheck(org.planId).toLocaleString("en-IN")} answers</span>}
+            hint="Questions per check × AI assistants per check"
           />
           <Stat
             label="Current plan"
@@ -150,35 +144,6 @@ export default async function SettingsPage() {
             hint={planHint}
           />
         </div>
-        <Card>
-          <CardHeader title="Where your credits went" description="Grouped by type of work." />
-          {byType.length === 0 ? (
-            <EmptyState size="sm" icon={<Coins />} title="No credits used yet this month" description="Check a website or run an AI check to see usage here."
-              action={<LinkButton href="/app" variant="secondary">Go to your projects</LinkButton>}
-            />
-          ) : (
-            <Table caption="Credits by task type" zebra>
-              <THead>
-                <tr>
-                  <TH>Type of work</TH>
-                  <TH align="right">Credits</TH>
-                  <TH align="right">Share</TH>
-                </tr>
-              </THead>
-              <tbody>
-                {byType.map(([t, n]) => (
-                  <TR key={t}>
-                    <TD className="font-medium text-fg">{TASK_LABEL[t] ?? humanize(t)}</TD>
-                    <TD numeric>{n.toLocaleString()}</TD>
-                    <TD numeric className="text-muted">
-                      {usage.used ? `${Math.round((n / usage.used) * 100)}%` : "—"}
-                    </TD>
-                  </TR>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card>
       </section>
       <section aria-labelledby="plans-h" className="space-y-5">
         <SectionHeading id="plans-h" title="Plans" description="All prices are per month, in Indian Rupees." />
@@ -189,7 +154,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Manage your workspace, team, plan and your own account." meta={<span>{org.name}</span>} />
+      <PageHeader title="Settings" description="Your business, team, plan and your own account." meta={<span>{org.name}</span>} />
       <Suspense fallback={<Skeleton className="h-10 w-80" />}>
         <SettingsTabs
           memberCount={memberCount}
@@ -207,7 +172,10 @@ export default async function SettingsPage() {
           }
           account={
             me ? (
-              <AccountPanel user={{ name: me.name, email: me.email, emailVerified: me.emailVerified, createdAt: me.createdAt.toISOString() }} />
+              <div className="space-y-6">
+                <PreferencesPanel expertMode={me.expertMode} timeZone={me.timeZone} />
+                <AccountPanel user={{ name: me.name, email: me.email, emailVerified: me.emailVerified, createdAt: me.createdAt.toISOString() }} />
+              </div>
             ) : undefined
           }
         />

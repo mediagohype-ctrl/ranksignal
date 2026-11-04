@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, CheckCircle2, ExternalLink, Link2, Search, Unplug } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, Notice, Select, Skeleton, buttonClass } from "@/components/ui";
+import { fmtDateTime } from "@/lib/dashboard/format";
 
 type Product = "gsc" | "ga4";
 
@@ -53,7 +54,7 @@ const ERRORS: Record<string, string> = {
 };
 
 const when = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "not yet";
+  iso ? fmtDateTime(iso) : "not yet";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { cache: "no-store", ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });

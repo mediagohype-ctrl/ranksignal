@@ -28,7 +28,44 @@ export function omitServerOwned<T extends Record<string, unknown>>(v: T): T {
 
 const frequency = z.enum(SCHEDULE_FREQUENCIES);
 export const scheduleSchema = z.object({ crawl: frequency.optional(), visibility: frequency.optional() }).strict();
-export const notificationPrefsSchema = z.object({ email: z.boolean() }).strict();
+/**
+ * Email switches. `email` is the old project-wide switch (kept: off = no emails at all); the three named switches
+ * (brief 5.8 "Emails") are each on unless set to false.
+ */
+export const EMAIL_KINDS = ["monthlyReport", "fixesWaiting", "checkFailed"] as const;
+export type EmailKind = (typeof EMAIL_KINDS)[number];
+export const notificationPrefsSchema = z
+  .object({
+    email: z.boolean().optional(),
+    monthlyReport: z.boolean().optional(),
+    fixesWaiting: z.boolean().optional(),
+    checkFailed: z.boolean().optional(),
+  })
+  .strict();
+
+/** Business facts the owner confirmed (Project.facts). Every field optional; empty strings clear a field. */
+const factText = (max: number) => z.string().trim().max(max);
+export const projectFactsSchema = z
+  .object({
+    name: factText(120).optional(),
+    sells: factText(300).optional(),
+    customers: factText(300).optional(),
+    city: factText(120).optional(),
+    country: factText(80).optional(),
+    language: factText(40).optional(),
+  })
+  .strict();
+export type ProjectFacts = z.infer<typeof projectFactsSchema>;
+
+export function readFacts(v: unknown): ProjectFacts {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: ProjectFacts = {};
+  for (const k of ["name", "sells", "customers", "city", "country", "language"] as const) {
+    const x = (v as Record<string, unknown>)[k];
+    if (typeof x === "string") out[k] = x;
+  }
+  return out;
+}
 
 export const projectSettingsSchema = z
   .object({
@@ -36,6 +73,8 @@ export const projectSettingsSchema = z
     automation: z.object({ allowClassB: z.array(z.string().min(1).max(64)).max(50).default([]) }).optional(),
     schedule: scheduleSchema.optional(),
     notifications: notificationPrefsSchema.optional(),
+    /** Customer's "Pause all changes" switch: nothing is published to the website while true. */
+    paused: z.boolean().optional(),
   })
   .passthrough()
   // Server-owned keys can never be written through project create/PATCH bodies.
@@ -53,6 +92,7 @@ export const projectCreateSettingsSchema = z
     automation: z.object({ allowClassB: z.array(z.string().min(1).max(64)).max(50).default([]) }).strict().optional(),
     schedule: scheduleSchema.optional(),
     notifications: notificationPrefsSchema.optional(),
+    paused: z.boolean().optional(),
     share: z.unknown().optional(),
   })
   .strict()
@@ -98,6 +138,7 @@ export const projectPatchSchema = z.object({
     .optional(),
   competitors: z.array(competitorSchema).max(20).optional(),
   keywords: z.array(z.string()).max(100).optional(),
+  facts: projectFactsSchema.optional(),
   settings: projectSettingsSchema.optional(),
 });
 export type ProjectPatch = z.infer<typeof projectPatchSchema>;
@@ -106,7 +147,8 @@ export interface ProjectSettings {
   maxPagesPerCrawl?: number;
   automation?: { allowClassB?: string[] };
   schedule?: Partial<ProjectSchedule>;
-  notifications?: { email?: boolean };
+  notifications?: { email?: boolean } & Partial<Record<EmailKind, boolean>>;
+  paused?: boolean;
   [k: string]: unknown;
 }
 
@@ -126,15 +168,46 @@ export function readSchedule(settings: unknown): ProjectSchedule {
   };
 }
 
-/** Email notifications default to on. */
-export function readNotificationPrefs(settings: unknown): { email: boolean } {
-  const n = readSettings(settings).notifications;
-  return { email: !(n && typeof n === "object" && n.email === false) };
+export type NotificationPrefs = { email: boolean } & Record<EmailKind, boolean>;
+
+/** Email notifications default to on (every switch). */
+export function readNotificationPrefs(settings: unknown): NotificationPrefs {
+  const raw = readSettings(settings).notifications;
+  const n = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    email: n.email !== false,
+    monthlyReport: n.monthlyReport !== false,
+    fixesWaiting: n.fixesWaiting !== false,
+    checkFailed: n.checkFailed !== false,
+  };
+}
+
+/** Whether to email about this kind of event: the project-wide switch AND the event's own switch (if any). */
+export function wantsEmail(settings: unknown, kind: EmailKind | null): boolean {
+  const p = readNotificationPrefs(settings);
+  return p.email && (kind === null || p[kind]);
+}
+
+/** Customer's "Pause all changes" switch (default off). Publishing checks this alongside Organization.publishingEnabled. */
+export function isPaused(settings: unknown): boolean {
+  return readSettings(settings).paused === true;
+}
+
+/**
+ * The single "Make small safe fixes without asking" switch. On = every safe type (policy class B) is allowed to
+ * go live without approval; off = none. Any non-empty stored list counts as on.
+ */
+export function isAutoFixOn(settings: unknown): boolean {
+  const allow = readSettings(settings).automation?.allowClassB;
+  return Array.isArray(allow) && allow.length > 0;
 }
 
 /** Which keys in a PATCH need admin+ (they change spend or what gets auto-published). */
 export function patchNeedsAdmin(body: ProjectPatch): boolean {
-  return Boolean(body.settings && (body.settings.automation !== undefined || body.settings.schedule !== undefined));
+  return Boolean(
+    body.settings &&
+      (body.settings.automation !== undefined || body.settings.schedule !== undefined || body.settings.paused !== undefined),
+  );
 }
 
 export class SettingsPatchError extends Error {
@@ -181,8 +254,15 @@ export function mergeSettingsPatch(
     scheduleChanged = JSON.stringify(readSchedule(before)) !== JSON.stringify(schedule);
   }
   if (inc.notifications) {
-    next.notifications = { email: inc.notifications.email };
-    if (readNotificationPrefs(before).email !== inc.notifications.email) changed.push("settings.notifications");
+    const prev = readSettings(before).notifications;
+    const merged = { ...(prev && typeof prev === "object" ? prev : {}) } as Record<string, boolean>;
+    for (const [k, v] of Object.entries(inc.notifications)) if (typeof v === "boolean") merged[k] = v;
+    next.notifications = merged;
+    if (JSON.stringify(readNotificationPrefs(before)) !== JSON.stringify(readNotificationPrefs(next))) changed.push("settings.notifications");
+  }
+  if (inc.paused !== undefined) {
+    next.paused = inc.paused;
+    if (isPaused(before) !== inc.paused) changed.push("settings.paused");
   }
   // Defence in depth: server-owned keys always come from the stored value.
   for (const k of SERVER_OWNED_SETTINGS) {

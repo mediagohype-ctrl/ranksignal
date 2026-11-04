@@ -97,3 +97,27 @@ export function formatUsd(n: number, digits = 2): string {
     maximumFractionDigits: digits,
   }).format(n);
 }
+
+/** What this customer pays us per month (INR list price): self-serve plan + done-for-you tier. 0 unless billed. */
+export function monthlyPriceInr(o: MrrOrgInput): number {
+  if (!isBilledStatus(o.status)) return 0;
+  const plan = isPlanId(o.planId) ? (PLANS[o.planId].priceInrMonthly ?? 0) : 0;
+  const tier = isServiceTier(o.serviceTier) ? SERVICE_TIER_PRICES_INR[o.serviceTier] : 0;
+  return plan + tier;
+}
+
+export interface CostVsPrice {
+  costInr: number;
+  priceInr: number;
+  /** priceInr − costInr (negative = we lose money on this customer). */
+  marginInr: number;
+  /** "Costs more than they pay": AI cost this month is above what they pay (trials pay 0, so any cost flags). */
+  costsMore: boolean;
+}
+
+/** AI cost this month (micro-USD → INR at the admin rate) vs the customer's monthly price. */
+export function costVsPrice(o: MrrOrgInput & { costMicros: number }, rate = usdInrRate()): CostVsPrice {
+  const costInr = microsToInr(Math.max(0, o.costMicros), rate);
+  const priceInr = monthlyPriceInr(o);
+  return { costInr, priceInr, marginInr: priceInr - costInr, costsMore: costInr > 0 && costInr > priceInr };
+}

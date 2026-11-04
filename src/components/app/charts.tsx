@@ -2,6 +2,7 @@
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
+import { DEFAULT_TIME_ZONE, fmtDate } from "@/lib/dashboard/format";
 
 const axis = { stroke: "var(--chart-grid)", tick: { fill: "var(--muted)", fontSize: 12 }, tickLine: false, axisLine: false } as const;
 const tooltipStyle = {
@@ -150,19 +151,22 @@ const SCORE_SERIES: { key: keyof Omit<ScoreHistoryPoint, "t">; name: string; col
   { key: "brand", name: "AI knows you", color: "var(--chart-5)", width: 2 },
 ];
 
-const shortDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-const longDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const shortDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: DEFAULT_TIME_ZONE });
+const longDate = (t: number) => fmtDate(t);
 
 export function ScoreHistoryChart({
   data,
   markers = [],
   shipped = [],
   height = 300,
+  onlyOverall = false,
 }: {
   data: ScoreHistoryPoint[];
   markers?: HistoryMarker[];
   shipped?: ShippedMarker[];
   height?: number;
+  /** Plain mode: just the overall score line (the four parts are Expert mode only). */
+  onlyOverall?: boolean;
 }) {
   const times = [...data.map((d) => d.t), ...shipped.map((s) => s.t)];
   const min = Math.min(...times);
@@ -202,7 +206,7 @@ export function ScoreHistoryChart({
               label={{ value: m.label, position: "insideTopLeft", fill: "var(--muted)", fontSize: 11 }}
             />
           ))}
-          {SCORE_SERIES.map((s) => (
+          {SCORE_SERIES.filter((s) => !onlyOverall || s.key === "overall").map((s) => (
             <Line
               key={s.key}
               type="monotone"

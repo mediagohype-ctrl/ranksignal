@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { billingPeriod, getUsageSummary } from "@/lib/billing/usage";
-import { accessMessage, getOrgAccess } from "@/lib/billing/access";
+import { getOrgAccess } from "@/lib/billing/access";
+import { hostLabel, staffAccessMessage } from "@/lib/admin/labels";
 import { getPlan } from "@/lib/billing/plans";
 import { requireStaffPage } from "@/lib/admin/guard";
 import { dailyCostByProvider, userEmails } from "@/lib/admin/metrics";
-import { formatInr, formatUsd, isServiceTier, microsToInr, microsToUsd, SERVICE_TIER_PRICES_INR } from "@/lib/admin/money";
+import { costVsPrice, formatInr, formatUsd, isServiceTier, microsToInr, microsToUsd, SERVICE_TIER_PRICES_INR, usdInrRate } from "@/lib/admin/money";
 import { DAY_MS, fmtAgo, fmtDate, fmtDateTime, oneOf, pageParams, str, type SearchParams } from "@/lib/admin/params";
 import {
   Badge,
@@ -56,9 +57,13 @@ export default async function CustomerDetail({ params, searchParams }: { params:
       billingCustomerId: true,
       createdAt: true,
       _count: { select: { memberships: true, projects: true, workflowRuns: true, auditLogs: true } },
+      projects: { orderBy: { createdAt: "asc" }, take: 1, select: { websiteUrl: true } },
+      memberships: { where: { role: "owner" }, orderBy: { createdAt: "asc" }, take: 1, select: { user: { select: { email: true } } } },
     },
   });
   if (!org) notFound();
+  const website = org.projects[0]?.websiteUrl ?? null;
+  const ownerEmail = org.memberships[0]?.user.email ?? null;
   const notesCount = await db.adminNote.count({ where: { organizationId: id } });
   const base = `/admin/customers/${id}`;
 
@@ -74,6 +79,8 @@ export default async function CustomerDetail({ params, searchParams }: { params:
             <TierBadge tier={org.serviceTier} />
             <StatusPill status={org.status} />
             {!org.publishingEnabled && <Badge tone="warning">Publishing paused</Badge>}
+            <span className="text-fg-soft">{hostLabel(website) ?? "no website yet"}</span>
+            <span className="text-fg-soft">· {ownerEmail ?? "no owner"}</span>
             <Mono>{org.id}</Mono>
             <span>· created {fmtDate(org.createdAt)}</span>
           </>
@@ -145,13 +152,15 @@ async function OverviewTab({ org }: { org: Org }) {
   const plan = getPlan(org.planId);
   const micros = monthCost._sum.costMicros ?? 0;
   const tierPrice = isServiceTier(org.serviceTier) ? SERVICE_TIER_PRICES_INR[org.serviceTier] : 0;
+  const rate = usdInrRate();
+  const money = costVsPrice({ planId: org.planId, status: org.status, serviceTier: org.serviceTier, costMicros: micros }, rate);
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader title="Subscription & access" />
         <CardBody className="space-y-4">
-          <Notice tone={access.active ? (access.reason ? "warning" : "success") : "danger"} title={access.active ? "Can run scans" : "Scans blocked"}>
-            {accessMessage(access)}
+          <Notice tone={access.active ? (access.reason ? "warning" : "success") : "danger"} title={access.active ? "Can run checks" : "Checks blocked"}>
+            {staffAccessMessage(access)}
           </Notice>
           <KeyValueList
             items={[
@@ -178,9 +187,17 @@ async function OverviewTab({ org }: { org: Org }) {
                 items={[
                   { label: "Reserved credits", value: usage.reserved.toLocaleString() },
                   ...Object.entries(usage.byTaskType).map(([k, v]) => ({ label: k.replace(/_/g, " "), value: v.toLocaleString() })),
-                  { label: "AI / provider cost", value: `${formatUsd(microsToUsd(micros))} (≈ ${formatInr(microsToInr(micros))})` },
+                  { label: "AI / provider cost", value: `${formatUsd(microsToUsd(micros))} (≈ ${formatInr(microsToInr(micros, rate))})` },
+                  { label: "They pay / month", value: formatInr(money.priceInr) },
+                  { label: "Margin this month", value: formatInr(money.marginInr) },
                 ]}
               />
+              {money.costsMore && (
+                <Notice tone="danger" title="Costs more than they pay">
+                  AI cost this month ({formatInr(money.costInr)} at ₹{rate}/USD) is higher than what this customer pays (
+                  {formatInr(money.priceInr)}).
+                </Notice>
+              )}
             </>
           ) : (
             <p className="text-small text-muted">Usage unavailable.</p>

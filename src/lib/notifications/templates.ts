@@ -13,77 +13,108 @@ export interface RunNotice {
   email: { subject: string; preheader: string; paragraphs: string[]; ctaLabel: string };
 }
 
-/** Severity groups as shown to people (docs/PLAIN_WORDS.md): critical/high → Urgent, medium → Important, low/info → Nice to have. */
+/**
+ * Priority groups as shown to people (docs/PLAIN_WORDS.md). Report issues carry impact high/medium/low; raw
+ * audit severities (critical/high → Urgent, medium → Important, low/info → Nice to have) are only a fallback.
+ */
 const PRIORITIES = [
-  { label: "urgent", severities: ["critical", "high"] },
-  { label: "important", severities: ["medium"] },
-  { label: "nice to have", severities: ["low", "info"] },
+  { label: "urgent", impacts: ["high"], severities: ["critical", "high"] },
+  { label: "important", impacts: ["medium"], severities: ["medium"] },
+  { label: "nice to have", impacts: ["low"], severities: ["low", "info"] },
 ] as const;
 const pct = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? `${Math.round(x * 100)}%` : "—");
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
+/**
+ * Counts per priority. Pass the REPORT's grouped issues (getStoredReport(...).issues) so the message matches the
+ * number people see in the report; `openBySeverity` (raw finding rows) is a legacy fallback only.
+ */
+export function priorityCounts(o: { issues?: { impact: string }[] | null; openBySeverity?: Partial<Record<string, number>> }): [string, number][] {
+  if (o.issues) {
+    return PRIORITIES.map((p) => [p.label, o.issues!.filter((i) => (p.impacts as readonly string[]).includes(i.impact)).length] as [string, number]).filter(([, n]) => n > 0);
+  }
+  const sev = o.openBySeverity ?? {};
+  return PRIORITIES.map((p) => [p.label, p.severities.reduce((a, s) => a + (sev[s] ?? 0), 0)] as [string, number]).filter(([, n]) => n > 0);
+}
+
+/** After the WEBSITE check. AI results come separately ("Your AI results are ready") — never "full report" here. */
 export function reportReadyNotice(o: {
   organizationId: string; projectId: string; projectName: string; crawlRunId: string; pagesCrawled: number;
-  openBySeverity: Partial<Record<string, number>>;
+  /** The report's grouped issues (preferred). */
+  issues?: { impact: string }[] | null;
+  /** Legacy fallback: open findings by severity. */
+  openBySeverity?: Partial<Record<string, number>>;
 }): RunNotice {
-  const counts = PRIORITIES.map((p) => [p.label, p.severities.reduce((a, s) => a + (o.openBySeverity[s] ?? 0), 0)] as const).filter(([, n]) => n > 0);
+  const counts = priorityCounts(o);
   const total = counts.reduce((a, [, n]) => a + n, 0);
   const summary = total
     ? `We found ${plural(total, "problem")} to fix: ${counts.map(([s, n]) => `${n} ${s}`).join(", ")}.`
     : "We didn't find any problems to fix this time.";
-  const urgent = (o.openBySeverity.critical ?? 0) + (o.openBySeverity.high ?? 0);
+  const urgent = counts.find(([s]) => s === "urgent")?.[1] ?? 0;
   return {
     organizationId: o.organizationId,
     projectId: o.projectId,
     type: "report_ready",
-    title: `Your full report is ready — ${o.projectName}`,
+    title: `Your website results are ready — ${o.projectName}`,
     body: `We checked ${plural(o.pagesCrawled, "page")}. ${summary}`,
     link: `/app/projects/${o.projectId}/report?run=${o.crawlRunId}`,
     email: {
-      subject: `Your full report for ${o.projectName} is ready`,
+      subject: `Your website results for ${o.projectName} are ready`,
       preheader: summary,
       paragraphs: [
         `We just finished checking ${plural(o.pagesCrawled, "page")} on ${o.projectName}'s website.`,
         summary,
         urgent > 0
-          ? `Start with the ${plural(urgent, "urgent problem")} — the report explains what's wrong, why it matters and how to fix it.`
-          : "The report explains each problem in plain English, with suggested fixes.",
+          ? `Start with the ${plural(urgent, "urgent problem")} — each one explains what's wrong, why it matters and how to fix it.`
+          : "Each problem is explained in plain English, with suggested fixes.",
+        "What AI tools say about you comes next — we'll tell you when your AI results are ready.",
       ],
-      ctaLabel: "Open the full report",
+      ctaLabel: "See your website results",
     },
   };
 }
 
+/** After the AI check. `questions` = distinct customer questions actually asked in this run. */
 export function visibilityReadyNotice(o: {
   organizationId: string; projectId: string; projectName: string; visibilityRunId: string;
   metrics: { mentionRate?: unknown; citationRate?: unknown; collected?: unknown; simulated?: unknown } | null;
   partial: boolean;
+  questions?: number | null;
+  /** Answers expected (run.sampleSize), for "123 of 125 answers". */
+  expected?: number | null;
 }): RunNotice {
   const m = o.metrics ?? {};
   const simulated = m.simulated === true;
   const answers = typeof m.collected === "number" ? m.collected : null;
+  const questions = typeof o.questions === "number" && o.questions > 0 ? o.questions : null;
   const rates = `AI named you in ${pct(m.mentionRate)} of answers and linked to your site in ${pct(m.citationRate)}.`;
   const notes = [
     simulated ? "These are made-up demo answers (simulated), not real AI answers." : "",
-    o.partial ? "Some questions couldn't be checked this time, so the numbers are based on fewer answers." : "",
+    o.partial
+      ? answers !== null && o.expected
+        ? `We got ${answers} of ${o.expected} answers this time, so the numbers are based on fewer answers.`
+        : "Some questions couldn't be checked this time, so the numbers are based on fewer answers."
+      : "",
   ].filter(Boolean);
   return {
     organizationId: o.organizationId,
     projectId: o.projectId,
     type: "visibility_ready",
-    title: `AI check finished — ${o.projectName}`,
+    title: `Your AI results are ready — ${o.projectName}`,
     body: [rates, ...notes].join(" "),
     link: `/app/projects/${o.projectId}/visibility?run=${o.visibilityRunId}`,
     email: {
-      subject: `AI check finished for ${o.projectName}`,
+      subject: `Your AI results for ${o.projectName} are ready`,
       preheader: rates,
       paragraphs: [
-        `We asked AI assistants${answers !== null ? ` ${plural(answers, "question")}` : " your customer questions"} that your customers might ask.`,
+        questions !== null
+          ? `We asked AI assistants ${plural(questions, "question")} your customers might ask${answers !== null ? ` and read ${plural(answers, "answer")}` : ""}.`
+          : "We asked AI assistants the questions your customers might ask.",
         rates,
         ...notes,
         "Results move around from one check to the next, so look at the trend over several checks rather than a single number.",
       ],
-      ctaLabel: "See the results",
+      ctaLabel: "See your AI results",
     },
   };
 }
@@ -92,8 +123,14 @@ export function visibilityReadyNotice(o: {
 export function plainFailureReason(error: string | null | undefined, errorClass: string | null | undefined): string {
   const e = (error ?? "").toLowerCase();
   if (e.includes("interrupted")) return "The check was interrupted while our servers restarted. Please run it again.";
-  if (errorClass === "quota" || e.includes("credit") || e.includes("quota") || e.includes("budget"))
-    return "Your plan's usage limit was reached. Usage resets at the start of your next billing period, or you can upgrade.";
+  // Daily AI budget: the check isn't failed, it continues tomorrow (the job requeues it).
+  if (e.includes("budget")) return "We've reached today's limit for AI checks. We'll finish the rest of your AI check tomorrow — there's nothing you need to do.";
+  if (e.includes("ai answers")) return "You've used all the AI answers in your plan for this month. They reset on the 1st, or you can upgrade for more.";
+  if (e.includes("trial has ended")) return "Your free trial has ended. Choose a plan to keep running checks.";
+  if (e.includes("payment")) return "Checks are paused because your last payment didn't go through. Update your payment details to continue.";
+  if (e.includes("paused") || e.includes("suspended")) return "Your workspace is paused, so new checks can't start. Contact us to turn it back on.";
+  if (errorClass === "quota" || e.includes("credit") || e.includes("quota") || e.includes("usage"))
+    return "Your plan's usage limit for this month was reached. It resets on the 1st of next month, or you can upgrade.";
   if (e.includes("no active prompts")) return "There are no customer questions to check yet. Add some on the Customer questions page.";
   if (e.includes("no visibility provider")) return "No AI assistant is connected for checks right now. Please try again later.";
   if (e.includes("robots")) return "Your site's robot rules file asked us not to read these pages, so we stopped.";

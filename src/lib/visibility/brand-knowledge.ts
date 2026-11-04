@@ -8,7 +8,30 @@ import type { ProviderAnswer, VisibilityProvider, VisibilityQuery } from "@/lib/
 import { termRegex, toCitations } from "./parse";
 
 export const BRAND_PROBE_TASK_TYPE = "brand_probe";
-export const BRAND_PROBE_VERSION = "bk-1";
+export const BRAND_PROBE_VERSION = "bk-2";
+
+/** Business facts the owner CONFIRMED in setup (Project.facts). Only these can make an AI answer "wrong". */
+export interface ConfirmedFacts {
+  name?: string;
+  sells?: string;
+  customers?: string;
+  city?: string;
+  country?: string;
+  language?: string;
+}
+export const CONFIRMED_FACT_KEYS = ["name", "sells", "customers", "city", "country", "language"] as const;
+
+/** Parse Project.facts; null when nothing was confirmed. */
+export function parseConfirmedFacts(v: unknown): ConfirmedFacts | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  const out: ConfirmedFacts = {};
+  for (const k of CONFIRMED_FACT_KEYS) {
+    const val = o[k];
+    if (typeof val === "string" && val.trim()) out[k] = val.trim().slice(0, 300);
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 export interface BrandFacts {
   brandNames: string[];
@@ -18,6 +41,8 @@ export interface BrandFacts {
   countries?: string[];
   homeTitle?: string | null;
   homeDescription?: string | null;
+  /** Facts the owner confirmed in setup; without them we don't call anything an AI says "wrong" (except name/website). */
+  confirmed?: ConfirmedFacts | null;
 }
 
 export interface BrandKnowledgeResult {
@@ -27,7 +52,7 @@ export interface BrandKnowledgeResult {
   knowsBrand: boolean;
   /** What the AI says about the brand, 1–2 sentences (paraphrase or excerpt of untrusted text). */
   summary: string;
-  /** Claims that conflict with, or aren't supported by, the brand's own site. */
+  /** Claims that CONTRADICT a fact the owner confirmed (or the business name / website). Unsupported ≠ wrong. */
   inaccuracies: string[];
   confidence: number;
   ownSiteCited: boolean;
@@ -43,7 +68,7 @@ export function brandProbePrompts(brand: string, opts: { includeReviews?: boolea
 
 /** Facts from the project profile plus the home page title/description from the latest crawl. */
 export async function loadBrandFacts(
-  project: { id: string; organizationId: string; brandNames: unknown; categories: unknown; audience: string | null; countries: unknown; name: string },
+  project: { id: string; organizationId: string; brandNames: unknown; categories: unknown; audience: string | null; countries: unknown; name: string; facts?: unknown },
   websiteDomain: string,
 ): Promise<BrandFacts> {
   const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()) : []);
@@ -53,6 +78,7 @@ export async function loadBrandFacts(
     categories: strs(project.categories),
     audience: project.audience,
     countries: strs(project.countries),
+    confirmed: parseConfirmedFacts(project.facts),
   };
   try {
     const crawl = await db.crawlRun.findFirst({
@@ -120,12 +146,39 @@ export function heuristicBrandKnowledge(answers: Pick<ProviderAnswer, "answerTex
   return { knowsBrand, summary, inaccuracies: [] as string[], confidence, ownSiteCited };
 }
 
+const claimSchema = z.object({
+  claim: z.string().max(300),
+  /** Which fact it is checked against: a confirmed-fact key, "name" or "website". */
+  fact: z.string().max(40),
+  verdict: z.enum(["contradicts", "not_supported"]),
+});
 const assessmentSchema = z.object({
   knowsBrand: z.boolean(),
   summary: z.string().max(600),
-  inaccuracies: z.array(z.string().max(300)).max(8),
+  claims: z.array(claimSchema).max(12),
   confidence: z.number().min(0).max(1),
 });
+export type AssessedClaim = z.infer<typeof claimSchema>;
+
+/**
+ * Brief 7.5: a claim is a "wrong fact" only when it CONTRADICTS a fact the owner confirmed. Claims that are merely
+ * not supported by the facts are not inaccuracies. With no confirmed facts, only contradictions of the business name
+ * or website count.
+ */
+export function wrongFacts(claims: AssessedClaim[], confirmed: ConfirmedFacts | null | undefined): string[] {
+  const allowed = new Set<string>(["name", "website"]);
+  if (confirmed) for (const k of CONFIRMED_FACT_KEYS) if (confirmed[k]) allowed.add(k);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const c of claims) {
+    const claim = c.claim.trim();
+    const key = c.fact.trim().toLowerCase();
+    if (c.verdict !== "contradicts" || !claim || !allowed.has(key) || seen.has(claim.toLowerCase())) continue;
+    seen.add(claim.toLowerCase());
+    out.push(claim);
+  }
+  return out.slice(0, 8);
+}
 
 export async function assessBrandKnowledge(
   answers: Pick<ProviderAnswer, "answerText" | "citations">[],
@@ -139,10 +192,11 @@ export async function assessBrandKnowledge(
       "You check whether an AI assistant's answer correctly describes a specific business. You receive the business's own facts " +
       "(from its website/profile) and the assistant's answers. Decide knowsBrand = true only if the answers clearly describe THIS " +
       "business (matching name AND what it does or its website), not a different company with a similar name, and do not say they " +
-      "lack information. summary: 1–2 plain-English sentences on what the AI says about the brand. inaccuracies: short statements " +
-      "of claims in the answers that conflict with the business facts or are not supported by them (e.g. wrong category, wrong " +
-      "location, invented products, confusion with another company); empty if none. confidence: 0–1 in your judgement. " +
-      "Do not invent facts beyond the inputs.",
+      "lack information. summary: 1–2 plain-English sentences on what the AI says about the brand. claims: factual claims in the " +
+      "answers about the business, each with `fact` = the confirmedFacts key it relates to (name, sells, customers, city, country, " +
+      "language) or \"website\", and verdict \"contradicts\" ONLY when the claim clearly conflicts with that confirmed fact (e.g. a " +
+      "different city, a different product line, a different company). If the facts simply don't mention it, the verdict is " +
+      "\"not_supported\" — that is NOT an error. confidence: 0–1 in your judgement. Do not invent facts beyond the inputs.",
     user: JSON.stringify({
       businessFacts: {
         brandNames: facts.brandNames,
@@ -153,6 +207,7 @@ export async function assessBrandKnowledge(
         homePageTitle: facts.homeTitle ?? null,
         homePageDescription: facts.homeDescription ?? null,
       },
+      confirmedFacts: { ...(facts.confirmed ?? {}), name: facts.confirmed?.name ?? facts.brandNames[0] ?? null, website: facts.websiteDomain },
       ownWebsiteCitedByAI: h.ownSiteCited,
       aiAnswers: answers.map((a) => ({
         text: (a.answerText ?? "").slice(0, 6000),
@@ -165,7 +220,7 @@ export async function assessBrandKnowledge(
   return {
     knowsBrand: res.data.knowsBrand,
     summary: firstSentences(res.data.summary, 2, 400),
-    inaccuracies: res.data.inaccuracies.map((s) => s.trim()).filter(Boolean),
+    inaccuracies: wrongFacts(res.data.claims, facts.confirmed),
     confidence: Math.round(res.data.confidence * 100) / 100,
     ownSiteCited: h.ownSiteCited,
     method: "llm",

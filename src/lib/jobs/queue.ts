@@ -12,6 +12,8 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { log } from "@/lib/log";
 import { JobError, type WorkflowKind, type WorkflowState } from "@/lib/types";
+import { runWithAiScope } from "@/lib/billing/ai-budget";
+import { sendStaffAlert } from "@/lib/alerts/staff";
 
 export interface JobContext {
   run: { id: string; organizationId: string; projectId: string | null; input: Record<string, unknown>; attempts: number };
@@ -212,6 +214,23 @@ export async function notifyStaffNeedsReview(run: { id: string; kind: string; or
   }
 }
 
+/**
+ * Email/WhatsApp staff about a run that failed for good (deduped per run). Plan/usage limits ("quota") are the
+ * customer's limits, not an ops problem, so they don't alert. Never throws.
+ */
+export function alertStaffJobFailed(run: { id: string; kind: string; organizationId: string; projectId: string | null }, error: string, errorClass: string) {
+  if (errorClass === "quota") return;
+  void sendStaffAlert({
+    kind: "job_failed",
+    key: run.id,
+    organizationId: run.organizationId,
+    subject: `Job failed: ${run.kind.replace(/_/g, " ")} (${errorClass})`,
+    text: `Run ${run.id} (${run.kind}) for organization ${run.organizationId}${run.projectId ? `, project ${run.projectId}` : ""} failed and will not be retried.
+
+Error: ${error.slice(0, 500)}`,
+  }).catch(() => undefined);
+}
+
 /** Settle a site-write run as failed/needs_review (fenced on `where`), with event + staff notification. */
 async function markNeedsReview(
   run: { id: string; kind: string; organizationId: string; projectId: string | null },
@@ -227,6 +246,7 @@ async function markNeedsReview(
   log.error("queue.needs_review", { runId: run.id, kind: run.kind, orgId: run.organizationId, reason });
   await db.workflowEvent.create({ data: { workflowRunId: run.id, name: `${run.kind}.needs_review`, toState: "failed", data: { reason } } }).catch(() => undefined);
   await notifyStaffNeedsReview(run, reason);
+  alertStaffJobFailed(run, `Needs review: ${reason}`, NEEDS_REVIEW);
   return true;
 }
 
@@ -287,12 +307,14 @@ async function execute(run: RunRow, controller: AbortController) {
     if (await fencedUpdate(run.id, { state: "failed", error: "Interrupted too many times (worker restarts)", errorClass: "transient", lockedAt: null, lockedBy: null })) {
       await ctx.event(`${run.kind}.failed`, { error: "attempts_exhausted" });
       log.error("queue.job_failed", { ...fields, error: "attempts_exhausted" });
+      alertStaffJobFailed(run, "Interrupted too many times (worker restarts)", "transient");
     }
     return;
   }
   if (!handler) {
     await fencedUpdate(run.id, { state: "failed", error: `No handler for ${run.kind}`, errorClass: "permanent", lockedAt: null, lockedBy: null });
     log.error("queue.job_failed", { ...fields, error: "no_handler" });
+    alertStaffJobFailed(run, `No handler for ${run.kind}`, "permanent");
     return;
   }
 
@@ -306,7 +328,8 @@ async function execute(run: RunRow, controller: AbortController) {
   // An aborted run must stop heartbeating at once, so its lock goes stale and nobody thinks it is alive.
   controller.signal.addEventListener("abort", () => clearInterval(heartbeat), { once: true });
   try {
-    const work = handler(ctx);
+    // AI calls made by this run are attributed to its organization (workspace daily AI budget).
+    const work = runWithAiScope({ organizationId: run.organizationId }, () => handler(ctx));
     // After an abort the handler keeps running detached; mark its eventual rejection handled so it can't
     // become an unhandledRejection (which would crash the process).
     work.catch(() => undefined);
@@ -342,6 +365,7 @@ async function execute(run: RunRow, controller: AbortController) {
     });
     if (!ok) return;
     await ctx.event(`${run.kind}.${retry ? "retry_scheduled" : "failed"}`, { error: message.slice(0, 500), errorClass });
+    if (!retry) alertStaffJobFailed(run, message, errorClass);
     (retry ? log.warn : log.error)(retry ? "queue.job_retry_scheduled" : "queue.job_failed", {
       ...fields,
       attempts: run.attempts,

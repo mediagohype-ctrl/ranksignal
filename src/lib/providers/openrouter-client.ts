@@ -1,6 +1,7 @@
 // OpenRouter (OpenAI-compatible chat completions; one key for GPT, Claude and other models).
 // Shared by the visibility adapter and the structured-generation helper. Never logs keys or prompts.
-import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
+import { reserveAiSpend } from "@/lib/billing/ai-budget";
+import { estimateOpenRouterCallMicros } from "./pricing";
 import { JobError } from "@/lib/types";
 import { providerError, withTimeout } from "./visibility/errors";
 
@@ -32,13 +33,28 @@ const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
 /**
- * POST a chat completion. Throws JobError (transient for 408/429/5xx/network; quota when the global daily
- * AI budget is spent — checked before every request).
+ * POST a chat completion. Throws JobError (transient for 408/429/5xx/network; AiBudgetError "quota" when the
+ * daily AI budget can't cover this call — its estimated cost is reserved before every request and settled with
+ * the real charged cost after).
  */
 export async function openRouterChat(body: Json, timeoutMs: number): Promise<unknown> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new JobError("OpenRouter is not configured", "permanent");
-  await assertAiBudget();
+  const estimate = estimateOpenRouterCallMicros(body);
+  const hold = await reserveAiSpend(estimate);
+  try {
+    const payload = await openRouterRequest(key, body, timeoutMs);
+    const cost = isObj(payload) && isObj(payload.usage) ? payload.usage.cost : undefined;
+    hold.settle(typeof cost === "number" ? cost * 1_000_000 : estimate);
+    return payload;
+  } catch (err) {
+    // Provider errors are not billed (or are billed as cents at most); release the hold.
+    hold.release();
+    throw err;
+  }
+}
+
+async function openRouterRequest(key: string, body: Json, timeoutMs: number): Promise<unknown> {
   let res: Response;
   try {
     res = await withTimeout(
@@ -72,8 +88,6 @@ export async function openRouterChat(body: Json, timeoutMs: number): Promise<unk
     const code = num(payload.error.code);
     throw providerError("openrouter", code || 502, String(payload.error.message ?? ""));
   }
-  const cost = isObj(payload) && isObj(payload.usage) ? payload.usage.cost : undefined;
-  if (typeof cost === "number") noteAiSpend(cost * 1_000_000);
   return payload;
 }
 

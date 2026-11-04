@@ -1,7 +1,7 @@
 // Perplexity Sonar API (OpenAI-compatible chat completions with built-in web search).
 import { JobError, type ProviderAnswer, type VisibilityProvider, type VisibilityQuery } from "@/lib/types";
-import { estimatePerplexityCostMicros } from "@/lib/providers/pricing";
-import { assertAiBudget, noteAiSpend } from "@/lib/billing/ai-budget";
+import { estimatePerplexityCallMicros, estimatePerplexityCostMicros } from "@/lib/providers/pricing";
+import { reserveAiSpend } from "@/lib/billing/ai-budget";
 import { providerError, withTimeout } from "./errors";
 import { describeLocale } from "./locale";
 
@@ -75,7 +75,8 @@ export const perplexityVisibilityProvider: VisibilityProvider = {
     };
     if (country) body.web_search_options = { user_location: { country } };
 
-    await assertAiBudget();
+    const estimate = estimatePerplexityCallMicros(model, query.text, body.max_tokens as number);
+    const hold = await reserveAiSpend(estimate);
     let res: Response;
     try {
       res = await withTimeout(
@@ -89,18 +90,23 @@ export const perplexityVisibilityProvider: VisibilityProvider = {
         "perplexity",
       );
     } catch (err) {
+      hold.release();
       if (err instanceof JobError) throw err;
       throw providerError("perplexity", undefined, (err as Error)?.name);
     }
-    if (!res.ok) throw providerError("perplexity", res.status);
+    if (!res.ok) {
+      hold.release();
+      throw providerError("perplexity", res.status);
+    }
     const payload = (await res.json().catch(() => null)) as unknown;
     const parsed = parsePerplexityResponse(payload);
-    if (!parsed.text) throw new JobError("perplexity returned no answer text", "transient");
     const costMicros =
       parsed.reportedCostUsd !== undefined
         ? Math.round(parsed.reportedCostUsd * 1_000_000)
         : estimatePerplexityCostMicros(model, parsed.inputTokens, parsed.outputTokens);
-    noteAiSpend(costMicros);
+    // Billed even when the answer turns out empty.
+    hold.settle(costMicros);
+    if (!parsed.text) throw new JobError("perplexity returned no answer text", "transient");
     return {
       provider: "perplexity",
       platformLabel: "Perplexity (Sonar API)",

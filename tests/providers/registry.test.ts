@@ -9,7 +9,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { describeProviders, getAvailableProviders } from "@/lib/providers/visibility/registry";
+import { describeProviders, getAvailableProviders, isKnownProviderId } from "@/lib/providers/visibility/registry";
 
 const ctx = { brandNames: ["Acme"], competitors: [], websiteDomain: "acme.in" };
 const KEYS = ["OPENAI_API_KEY", "GEMINI_API_KEY", "PERPLEXITY_API_KEY", "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"];
@@ -24,7 +24,13 @@ afterEach(() => vi.unstubAllEnvs());
 const ids = async (requested?: string[]) => (await getAvailableProviders({ ...ctx, requested })).map((p) => p.id);
 
 describe("visibility provider registry", () => {
-  it("no keys → simulated only", async () => {
+  it("simulated is OFF by default (no flag row) → no keys means nothing", async () => {
+    expect(await ids()).toEqual([]);
+    expect((await describeProviders()).mode).toBe("none");
+  });
+
+  it("no keys + provider.simulated turned on → simulated only", async () => {
+    flags.set("provider.simulated", true);
     expect(await ids()).toEqual(["simulated"]);
     const d = await describeProviders();
     expect(d.mode).toBe("simulated");
@@ -55,7 +61,28 @@ describe("visibility provider registry", () => {
     expect(await ids(["perplexity"])).toEqual(["perplexity"]);
   });
 
+  it("never allows simulated in production, even with the flag on", async () => {
+    flags.set("provider.simulated", true);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(await ids()).toEqual([]);
+  });
+
+  it("describeProviders marks only the plan's engines per check as active", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g");
+    vi.stubEnv("PERPLEXITY_API_KEY", "p");
+    vi.stubEnv("OPENAI_API_KEY", "o");
+    const d = await describeProviders({ maxProviders: 2 });
+    expect(d.providers.filter((p) => p.active).map((p) => p.id)).toEqual(["openai", "gemini"]);
+  });
+
+  it("accepts every registry id (incl. OpenRouter models) and rejects unknown ids", () => {
+    for (const id of ["openai", "gemini", "perplexity", "dataforseo", "simulated", "openrouter:anthropic/claude-opus-5.5"]) expect(isKnownProviderId(id)).toBe(true);
+    expect(isKnownProviderId("bing")).toBe(false);
+    expect(isKnownProviderId("openrouter:")).toBe(false);
+  });
+
   it("honours provider.<id> kill switches", async () => {
+    flags.set("provider.simulated", true);
     vi.stubEnv("GEMINI_API_KEY", "g");
     vi.stubEnv("PERPLEXITY_API_KEY", "p");
     flags.set("provider.gemini", false);

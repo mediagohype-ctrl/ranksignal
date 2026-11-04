@@ -17,6 +17,7 @@ import {
   fieldDescribedBy,
   useToast,
 } from "@/components/ui";
+import { fmtDate } from "@/lib/dashboard/format";
 
 const MIN_PASSWORD = 10;
 
@@ -97,7 +98,7 @@ function ProfileCard({ user }: { user: { name: string | null; email: string; ema
               ),
               hint: user.emailVerified ? undefined : "Confirm it so reports and password resets reach you.",
             },
-            { label: "Member since", value: new Date(user.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" }) },
+            { label: "Member since", value: fmtDate(user.createdAt) },
           ]}
         />
         {!user.emailVerified && (

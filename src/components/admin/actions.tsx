@@ -6,6 +6,7 @@ import {
   ArrowRightToLine,
   BadgeIndianRupee,
   CalendarPlus,
+  Eye,
   KeyRound,
   Layers,
   MailCheck,
@@ -21,6 +22,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Button, Dialog, Field, Notice, Select, Textarea, useToast, type ButtonVariant } from "@/components/ui";
+import { PLAN_IDS, PLANS } from "@/lib/billing/plans";
 
 export async function adminSend<T = unknown>(url: string, method: string, body?: unknown): Promise<T | undefined> {
   const res = await fetch(url, {
@@ -186,12 +188,24 @@ export function OrgActions({ org }: { org: OrgActionTarget }) {
   return (
     <div className="flex flex-wrap gap-2">
       <ReasonAction
+        label="View as customer"
+        icon={<Eye />}
+        variant="primary"
+        title="View this workspace as the customer sees it?"
+        description={`Read-only: you can look around ${org.name} but can't change anything. Your visit is audit-logged. Use "Exit" in the banner to return.`}
+        endpoint={`${endpoint}/enter`}
+        body={{ mode: "view" }}
+        confirmLabel="View as customer"
+        successMessage="Opening workspace (read-only)…"
+        onSuccess={() => window.location.assign("/app")}
+      />
+      <ReasonAction
         label="Enter workspace"
         icon={<ArrowRightToLine />}
-        variant="primary"
         title="Enter this workspace in support mode?"
-        description={`You'll act inside ${org.name} as an admin. Every action is audit-logged. Use "Exit" in the admin bar to return.`}
+        description={`You'll act inside ${org.name} as an admin and CAN make changes. Every action is audit-logged. Use "Exit" in the admin bar to return.`}
         endpoint={`${endpoint}/enter`}
+        body={{ mode: "support" }}
         confirmLabel="Enter workspace"
         successMessage="Entering workspace…"
         onSuccess={() => window.location.assign("/app")}
@@ -207,7 +221,7 @@ export function OrgActions({ org }: { org: OrgActionTarget }) {
           name: "planId",
           label: "Plan",
           defaultValue: org.planId,
-          options: ["trial", "starter", "growth", "agency"].map((p) => ({ value: p, label: p[0].toUpperCase() + p.slice(1) })),
+          options: PLAN_IDS.map((p) => ({ value: p, label: PLANS[p].name })),
         }}
         successMessage="Plan updated"
       />

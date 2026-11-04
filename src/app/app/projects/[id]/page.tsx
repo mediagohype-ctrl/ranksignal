@@ -9,17 +9,21 @@ import { getPlan } from "@/lib/billing/plans";
 import { effectiveIntervalDays } from "@/lib/jobs/scheduler";
 import { getStoredReport } from "@/lib/report/stored";
 import { scoreLabel } from "@/lib/report/score";
+import { pointsLabel } from "@/lib/report/points";
+import { IMPACT_LABEL } from "@/lib/report/issues";
+import { timeLabel, todoHref } from "@/lib/tasks/todo";
+import { loadTodo } from "@/lib/tasks/todo-server";
 import { log } from "@/lib/log";
-import type { IssueEffort, IssueImpact, SiteReport } from "@/lib/report/types";
+import type { SiteReport } from "@/lib/report/types";
 import { AutoRefresh } from "@/components/app/auto-refresh";
+import { AiCheckRefresh } from "@/components/app/fix/ai-check-refresh";
+import { todoItemHref } from "@/components/app/nav";
 import { RunButtons } from "@/components/app/run-buttons";
-import { Card, CardHeader, EmptyState, LinkButton, PageHeader, SCORE_BAND_CLASS, ScoreRing, SimulatedDataBanner, scoreBand } from "@/components/ui";
+import { Card, CardHeader, EmptyState, LinkButton, PageHeader, SCORE_BAND_CLASS, ScoreRing, SimulatedDataBanner, Spinner, scoreBand } from "@/components/ui";
 
 export const metadata = { title: "Home" };
 
 const DAY_MS = 86_400_000;
-const EFFORT_TIME: Record<IssueEffort, string> = { quick: "About 15 min", moderate: "About 1 hour", involved: "Half a day or more" };
-const IMPACT_TEXT: Record<IssueImpact, string> = { high: "Big win", medium: "Good win", low: "Small win" };
 
 // Home (brief 5.4): one score, two small numbers, the next 3 fixes, one primary button, last/next check.
 export default async function HomePage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,8 +47,10 @@ export default async function HomePage({ params }: { params: Promise<{ id: strin
   const crawlActive = d.activeRuns.some((r) => r.kind === "crawl");
   const visActive = d.activeRuns.some((r) => r.kind === "visibility");
   const base = `/app/projects/${project.id}`;
-  const fixes = report?.issues.slice(0, 3) ?? [];
-  const firstFixHref = fixes[0] ? `${base}/report/issues/${encodeURIComponent(fixes[0].id)}` : `${base}/audit`;
+  // The same list, order and "+N points" as the To-do tab (done / skipped problems drop out).
+  const todo = report ? await loadTodo(session, project.id, report) : null;
+  const fixes = todo?.lists.website.slice(0, 3) ?? [];
+  const firstFixHref = fixes[0] ? todoItemHref(project.id, fixes[0].id) : todoHref(project.id);
 
   const score = report?.overall.score ?? null;
   const partial = report?.overall.partial === true;
@@ -70,7 +76,14 @@ export default async function HomePage({ params }: { params: Promise<{ id: strin
         description={`How ${project.name} shows up on Google and in AI answers.`}
         actions={
           <>
-            <AutoRefresh active={d.activeRuns.length > 0} label={crawlActive ? "Checking your website…" : "Asking AI tools…"} />
+            <AutoRefresh active={crawlActive} label="Checking your website…" />
+            {/* AI checks take a while: refresh every ~15 s so new answers and the score land on Home live. */}
+            <AiCheckRefresh running={visActive} />
+            {!crawlActive && visActive && (
+              <span role="status" className="no-print inline-flex items-center gap-2 rounded-full border border-info/30 bg-info-soft px-3 py-1 text-xs font-medium text-info">
+                <Spinner size={12} /> Asking AI tools…<span className="sr-only"> This page updates automatically.</span>
+              </span>
+            )}
             <RunButtons
               projectId={project.id}
               crawlActive={crawlActive}
@@ -125,7 +138,7 @@ export default async function HomePage({ params }: { params: Promise<{ id: strin
               title={<span id="next-fixes">Your next 3 fixes</span>}
               description="The changes that help most for the least work."
               actions={
-                <LinkButton href={`${base}/audit`} variant="ghost" size="sm" iconRight={<ArrowRight />}>
+                <LinkButton href={todoHref(project.id)} variant="ghost" size="sm" iconRight={<ArrowRight />}>
                   See all
                 </LinkButton>
               }
@@ -142,12 +155,12 @@ export default async function HomePage({ params }: { params: Promise<{ id: strin
                       <div className="text-small font-medium text-fg">{f.title}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                         <span className="inline-flex items-center gap-1">
-                          <Clock size={12} aria-hidden /> {EFFORT_TIME[f.effort]}
+                          <Clock size={12} aria-hidden /> {timeLabel(f.minutes)}
                         </span>
-                        <span>{IMPACT_TEXT[f.impact]}</span>
+                        {f.points > 0 ? <span className="font-semibold text-success">{pointsLabel(f.points)}</span> : <span>{IMPACT_LABEL[f.impact]}</span>}
                       </div>
                     </div>
-                    <LinkButton href={`${base}/report/issues/${encodeURIComponent(f.id)}`} variant="secondary" size="sm">
+                    <LinkButton href={todoItemHref(project.id, f.id)} variant="secondary" size="sm" aria-label={`Start: ${f.title}`}>
                       Start
                     </LinkButton>
                   </li>

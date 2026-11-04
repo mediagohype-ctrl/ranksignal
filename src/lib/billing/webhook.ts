@@ -3,8 +3,10 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { sendStaffAlert } from "@/lib/alerts/staff";
 import { isPlanId, planIdFromRazorpayPlan } from "./plans";
 import { verifyRazorpaySignature, type RazorpaySubscription } from "./razorpay";
+import { applyReferralReward } from "@/lib/growth/referral";
 
 type SubStatus = "trialing" | "active" | "past_due" | "cancelled" | "expired";
 type OrgStatus = "active" | "past_due" | "cancelled" | "suspended";
@@ -18,6 +20,27 @@ export const RAZORPAY_EVENT_MAP: Record<string, { sub: SubStatus; org: OrgStatus
   "subscription.completed": { sub: "expired", org: "cancelled" },
 };
 
+/**
+ * subscription.updated (e.g. a plan change made through the Razorpay update API) carries no fixed state: map it
+ * from the subscription's own status. Statuses that don't change billing (created/authenticated) are ignored.
+ */
+export const RAZORPAY_STATUS_MAP: Record<string, { sub: SubStatus; org: OrgStatus }> = {
+  active: { sub: "active", org: "active" },
+  pending: { sub: "past_due", org: "past_due" },
+  halted: { sub: "past_due", org: "past_due" },
+  cancelled: { sub: "cancelled", org: "cancelled" },
+  completed: { sub: "expired", org: "cancelled" },
+  expired: { sub: "expired", org: "cancelled" },
+};
+
+/** Events that mean a payment didn't go through (staff are alerted once per event). */
+export const PAYMENT_FAILED_EVENTS = ["subscription.pending", "subscription.halted", "payment.failed"];
+
+export function mappingFor(type: string, entityStatus: string | undefined): { sub: SubStatus; org: OrgStatus } | undefined {
+  if (type === "subscription.updated") return entityStatus ? RAZORPAY_STATUS_MAP[entityStatus] : undefined;
+  return RAZORPAY_EVENT_MAP[type];
+}
+
 export type WebhookResult =
   | { status: "invalid_signature" }
   | { status: "invalid_payload" }
@@ -25,9 +48,19 @@ export type WebhookResult =
   | { status: "ignored"; eventId: string; reason: string }
   | { status: "processed"; eventId: string; organizationId: string };
 
+interface RazorpayPaymentEntity {
+  id?: string;
+  amount?: number;
+  currency?: string;
+  error_description?: string | null;
+  error_reason?: string | null;
+  notes?: Record<string, string> | null;
+  subscription_id?: string | null;
+}
+
 interface RazorpayEventBody {
   event?: string;
-  payload?: { subscription?: { entity?: RazorpaySubscription } };
+  payload?: { subscription?: { entity?: RazorpaySubscription }; payment?: { entity?: RazorpayPaymentEntity } };
 }
 
 const toDate = (s?: number | null) => (s ? new Date(s * 1000) : null);
@@ -49,11 +82,12 @@ export async function processRazorpayWebhook(
   // Razorpay sends X-Razorpay-Event-Id; fall back to a body digest so identical replays are still caught.
   const eventId = headers.eventId || `sha256:${createHash("sha256").update(rawBody).digest("hex")}`;
 
-  const mapping = RAZORPAY_EVENT_MAP[type];
   const entity = body.payload?.subscription?.entity;
+  const mapping = mappingFor(type, entity?.status);
 
+  let result: WebhookResult;
   try {
-    return await db.$transaction(async (tx) => {
+    result = await db.$transaction(async (tx) => {
       // Insert first: unique(provider,eventId) makes concurrent/replayed deliveries fail with P2002.
       await tx.webhookEvent.create({
         data: { provider: "razorpay", eventId, type, payload: body as unknown as Prisma.InputJsonValue },
@@ -125,5 +159,53 @@ export async function processRazorpayWebhook(
       return { status: "duplicate", eventId };
     }
     throw err;
+  }
+  if (PAYMENT_FAILED_EVENTS.includes(type)) await alertPaymentFailed(type, eventId, body, result);
+  // Referral: a paid subscription went active → one free month for the referrer (idempotent; never fails the webhook).
+  if (result.status === "processed" && mapping?.sub === "active") await applyReferralReward(result.organizationId).catch(() => undefined);
+  return result;
+}
+
+/** Best-effort read for alert context: a lookup failure must never stop the alert. */
+async function lookup<T>(f: () => Promise<T>): Promise<T | null> {
+  try {
+    return await f();
+  } catch {
+    return null;
+  }
+}
+
+/** Staff alert for a failed payment (after the event is stored; duplicates never reach here). Never throws. */
+async function alertPaymentFailed(type: string, eventId: string, body: RazorpayEventBody, result: WebhookResult): Promise<void> {
+  try {
+    const payment = body.payload?.payment?.entity;
+    const sub = body.payload?.subscription?.entity;
+    let organizationId = result.status === "processed" ? result.organizationId : null;
+    const subId = sub?.id ?? payment?.subscription_id ?? null;
+    if (!organizationId && subId) {
+      organizationId = (await lookup(() => db.subscription.findUnique({ where: { providerSubscriptionId: subId }, select: { organizationId: true } })))?.organizationId ?? null;
+    }
+    organizationId ??= (typeof payment?.notes?.organizationId === "string" ? payment.notes.organizationId : null) ?? (typeof sub?.notes?.organizationId === "string" ? sub.notes.organizationId : null);
+    const orgId = organizationId;
+    const org = orgId ? await lookup(() => db.organization.findUnique({ where: { id: orgId }, select: { name: true, planId: true } })) : null;
+    const amount = typeof payment?.amount === "number" ? ` of ${(payment.amount / 100).toLocaleString("en-IN")} ${payment.currency ?? "INR"}` : "";
+    const reason = payment?.error_description || payment?.error_reason;
+    await sendStaffAlert({
+      kind: "payment_failed",
+      key: eventId,
+      organizationId,
+      subject: `Payment failed${org ? `: ${org.name}` : ""} (${type})`,
+      text: [
+        `Razorpay sent ${type}${amount}.`,
+        org ? `Organization: ${org.name} (${organizationId}), plan ${org.planId}.` : organizationId ? `Organization: ${organizationId}.` : "Not linked to an organization.",
+        subId ? `Subscription: ${subId}.` : "",
+        reason ? `Reason: ${reason}` : "",
+        type === "payment.failed" ? "" : "Checks stay on for the grace period, then pause until the payment goes through.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    });
+  } catch (err) {
+    console.warn("[billing] payment-failed alert failed", (err as Error)?.name);
   }
 }

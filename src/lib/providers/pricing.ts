@@ -43,3 +43,44 @@ export function estimatePerplexityCostMicros(model: string, inputTokens = 0, out
   const fee = byPrefix(PERPLEXITY_REQUEST_MICROS, model, "sonar") ?? 5_000;
   return Math.round((inputTokens * p.input + outputTokens * p.output) / 1_000_000) + fee;
 }
+
+// ---------- Pre-call estimates (daily AI budget reservations, src/lib/billing/ai-budget.ts) ----------
+// Deliberately on the HIGH side: a call is only made when its estimate fits in what's left of today's budget,
+// so an estimate below the real cost could let spend creep past the cap.
+
+/** Rough token count for text we send (≈3 characters per token; overestimates English slightly). */
+export function roughTokens(text: string): number {
+  return Math.ceil(text.length / 3);
+}
+
+/** Extra input tokens a web-searching call pulls in (search results are fed to the model). */
+export const SEARCH_CONTEXT_TOKENS = 10_000;
+
+/** OpenRouter models vary; estimate with a high per-token price unless OPENROUTER_CALL_ESTIMATE_USD sets a flat figure. */
+export const OPENROUTER_ESTIMATE_PRICES_PER_MTOK = { input: 5_000_000, output: 25_000_000 };
+export const OPENROUTER_WEB_SEARCH_MICROS = 20_000;
+
+export function estimateOpenRouterCallMicros(body: Record<string, unknown>): number {
+  const flat = Number(process.env.OPENROUTER_CALL_ESTIMATE_USD);
+  if (Number.isFinite(flat) && flat > 0) return Math.round(flat * 1_000_000);
+  const web = Array.isArray(body.plugins) && body.plugins.length > 0;
+  const input = roughTokens(JSON.stringify(body.messages ?? "")) + (web ? SEARCH_CONTEXT_TOKENS : 0);
+  const output = typeof body.max_tokens === "number" ? body.max_tokens : 4_000;
+  const p = OPENROUTER_ESTIMATE_PRICES_PER_MTOK;
+  return Math.round((input * p.input + output * p.output) / 1_000_000) + (web ? OPENROUTER_WEB_SEARCH_MICROS : 0);
+}
+
+export function estimateGeminiCallMicros(model: string, body: Record<string, unknown>): number {
+  const grounded = JSON.stringify(body.tools ?? "").includes("google_search");
+  const cfg = (body.generationConfig ?? {}) as { maxOutputTokens?: unknown };
+  const output = typeof cfg.maxOutputTokens === "number" ? cfg.maxOutputTokens : 8_192;
+  const input = roughTokens(JSON.stringify(body.contents ?? "") + JSON.stringify(body.systemInstruction ?? "")) + (grounded ? SEARCH_CONTEXT_TOKENS : 0);
+  return estimateGeminiCostMicros(model, input, output, grounded);
+}
+
+export function estimatePerplexityCallMicros(model: string, inputText: string, maxTokens: number): number {
+  return estimatePerplexityCostMicros(model, roughTokens(inputText) + SEARCH_CONTEXT_TOKENS, maxTokens);
+}
+
+/** DataForSEO LLM Responses bills per task (plus the model's tokens); flat high estimate. */
+export const DATAFORSEO_CALL_ESTIMATE_MICROS = 50_000;

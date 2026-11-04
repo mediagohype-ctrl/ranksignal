@@ -2,8 +2,8 @@
 import { roleLabel } from "@/components/app/role-label";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Bell, BellOff, CreditCard, LogOut, Settings, Users } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, BellOff, CreditCard, LogOut, Plug, Settings } from "lucide-react";
 import clsx from "clsx";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtRelative } from "@/lib/dashboard/format";
@@ -33,26 +33,26 @@ function usePopover() {
 const POPOVER =
   "z-50 overflow-hidden rounded-xl border border-border bg-surface shadow-lg animate-pop-in";
 
-/* ------------------------------------------------------------- usage meter */
+/* ------------------------------------------------------------- AI answers left */
 
-interface UsageItem {
-  period: string;
+interface AllowanceItem {
   used: number;
-  reserved: number;
-  limit: number;
-  percentUsed?: number;
+  cap: number;
+  left: number;
+  resetsAt: string | null;
 }
 
+/** Header widget: "AI answers left N" (brief 5.8). Hidden if it can't be loaded. */
 export function UsageMeter() {
-  const [usage, setUsage] = useState<UsageItem | null>(null);
+  const [a, setA] = useState<AllowanceItem | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let alive = true;
     const load = () =>
-      api<{ item: UsageItem }>("/api/usage")
+      api<{ item: AllowanceItem }>("/api/me/allowance")
         .then((r) => {
           if (!alive) return;
-          setUsage(r.item);
+          setA(r.item);
           setFailed(false);
         })
         .catch(() => alive && setFailed(true));
@@ -64,29 +64,57 @@ export function UsageMeter() {
     };
   }, []);
   if (failed) return null;
-  if (!usage)
+  if (!a)
     return (
       <div className="hidden w-40 flex-col gap-1.5 md:flex" aria-hidden>
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-1.5 w-full" rounded="full" />
       </div>
     );
-  const left = Math.max(0, usage.limit - usage.used - usage.reserved);
   return (
     <Link
       href="/app/settings?tab=billing"
       className="hidden w-44 flex-col gap-1.5 rounded-lg px-2 py-1 hover:bg-surface-2 md:flex"
-      title={`${usage.used.toLocaleString()} used and ${usage.reserved.toLocaleString()} on hold, out of ${usage.limit.toLocaleString()} credits this month`}
+      title={`${a.left.toLocaleString("en-IN")} of ${a.cap.toLocaleString("en-IN")} AI answers left`}
     >
       <span className="flex items-baseline justify-between text-xs">
-        <span className="text-muted">Credits</span>
-        <span className="tabular-nums font-medium text-fg">
-          {left.toLocaleString()} <span className="font-normal text-muted">left</span>
-        </span>
+        <span className="text-muted">AI answers left</span>
+        <span className="tabular-nums font-medium text-fg">{a.left.toLocaleString("en-IN")}</span>
       </span>
-      <Meter value={usage.used + usage.reserved} max={Math.max(usage.limit, 1)} label="Monthly credit usage" size="xs" />
+      <Meter value={a.used} max={Math.max(a.cap, 1)} label="AI answers used" size="xs" />
     </Link>
   );
+}
+
+/** Saves the browser's time zone the first time someone signs in without one (brief 5.8). Renders nothing. */
+function TimeZoneAutoDetect() {
+  useEffect(() => {
+    let tz: string | null = null;
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    } catch {
+      return;
+    }
+    if (!tz) return;
+    try {
+      if (localStorage.getItem("rs.tz-checked") === tz) return;
+    } catch {
+      /* storage blocked: still check once per page load */
+    }
+    api<{ item: { timeZone: string | null } }>("/api/me")
+      .then(async (r) => {
+        if (!r.item.timeZone) await api("/api/me", { method: "PATCH", body: { timeZone: tz } });
+        try {
+          localStorage.setItem("rs.tz-checked", tz!);
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => {
+        /* non-critical */
+      });
+  }, []);
+  return null;
 }
 
 /* ------------------------------------------------------------- notifications */
@@ -271,12 +299,18 @@ export function UserMenu({
 }) {
   const { open, setOpen, ref } = usePopover();
   const { busy, logout } = useLogout();
+  const pathname = usePathname();
   const display = name || email;
+  // Inside a website's pages, Settings and Connect website open that website's pages; elsewhere, pick a website first.
+  const projectId = /^\/app\/projects\/([^/]+)/.exec(pathname ?? "")?.[1];
+  const settingsHref = projectId ? `/app/projects/${projectId}/settings` : "/app/settings";
+  const connectHref = projectId ? `/app/projects/${projectId}/integrations` : "/app";
   const itemCls =
     "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-small text-fg-soft hover:bg-surface-2 hover:text-fg [&_svg]:text-muted";
 
   return (
     <div className="relative" ref={ref}>
+      <TimeZoneAutoDetect />
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -304,14 +338,14 @@ export function UserMenu({
             </div>
           </div>
           <div className="p-1.5">
-            <Link role="menuitem" href="/app/settings" className={itemCls} onClick={() => setOpen(false)}>
-              <Settings size={16} aria-hidden /> Workspace settings
+            <Link role="menuitem" href={settingsHref} className={itemCls} onClick={() => setOpen(false)}>
+              <Settings size={16} aria-hidden /> Settings
             </Link>
-            <Link role="menuitem" href="/app/settings?tab=members" className={itemCls} onClick={() => setOpen(false)}>
-              <Users size={16} aria-hidden /> Team members
+            <Link role="menuitem" href={connectHref} className={itemCls} onClick={() => setOpen(false)}>
+              <Plug size={16} aria-hidden /> Connect website
             </Link>
             <Link role="menuitem" href="/app/settings?tab=billing" className={itemCls} onClick={() => setOpen(false)}>
-              <CreditCard size={16} aria-hidden /> Billing & usage
+              <CreditCard size={16} aria-hidden /> Plan &amp; billing
             </Link>
           </div>
           <div className="border-t border-border p-1.5">
@@ -322,7 +356,7 @@ export function UserMenu({
               disabled={busy}
               className={clsx(itemCls, "disabled:opacity-60")}
             >
-              {busy ? <Spinner size={16} /> : <LogOut size={16} aria-hidden />} {busy ? "Signing out…" : "Sign out"}
+              {busy ? <Spinner size={16} /> : <LogOut size={16} aria-hidden />} {busy ? "Logging out…" : "Log out"}
             </button>
           </div>
         </div>
@@ -339,7 +373,7 @@ export function LogoutButton() {
       type="button"
       onClick={logout}
       disabled={busy}
-      aria-label="Sign out"
+      aria-label="Log out"
       className="flex size-10 items-center justify-center rounded-lg text-fg-soft hover:bg-surface-2 hover:text-fg disabled:opacity-50"
     >
       {busy ? <Spinner size={18} /> : <LogOut size={18} aria-hidden />}

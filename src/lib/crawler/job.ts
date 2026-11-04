@@ -13,6 +13,7 @@ import { SafeFetchError } from "@/lib/crawler/safe-fetch";
 import { urlKey } from "@/lib/crawler/normalize";
 import { runAudit } from "@/lib/audit/rules";
 import { writeSnapshot } from "@/lib/snapshots";
+import { JS_SITE_FINDING_CODE, JS_SYMPTOM_FINDINGS, type JsSiteDetection } from "@/lib/crawler/js-site";
 
 const MAX_ATTEMPTS = 3; // matches enqueue() in the crawl-runs route
 
@@ -65,6 +66,25 @@ export async function reconcileFindings(
   return { created: creates.length, updated: seen.size - creates.length, resolved: stale.length };
 }
 
+/**
+ * On a JavaScript-only site, the per-page "no heading / same headline / too little text" findings are all caused by
+ * the empty HTML shell. Replace them with ONE finding so the owner sees one clear problem, not dozens.
+ */
+export function applyJsSiteFindings(findings: FindingInput[], js: JsSiteDetection | null | undefined, homepageUrl: string): FindingInput[] {
+  if (!js?.detected) return findings;
+  const kept = findings.filter((f) => !JS_SYMPTOM_FINDINGS.has(f.code));
+  kept.unshift({
+    category: "ai_readiness",
+    code: JS_SITE_FINDING_CODE,
+    severity: "critical",
+    confidence: js.method === "rendered" ? 0.95 : 0.8,
+    message: "AI tools can't read your site because it needs JavaScript. Your pages arrive empty and the words only appear after JavaScript runs.",
+    pageUrl: homepageUrl,
+    evidence: { method: js.method, shellPages: js.shellPages, totalPages: js.totalPages, appRoot: js.appRoot, examples: js.examples },
+  });
+  return kept;
+}
+
 export const crawlJob: JobHandler = async (ctx) => {
   const crawlRunId = typeof ctx.run.input.crawlRunId === "string" ? ctx.run.input.crawlRunId : null;
   if (!crawlRunId) throw new JobError("crawlRunId missing from job input", "permanent");
@@ -108,7 +128,7 @@ export const crawlJob: JobHandler = async (ctx) => {
     const result = await crawlSite({ crawlRunId, organizationId, projectId: project.id, websiteUrl: project.websiteUrl, maxPages, brandNames });
     pagesCrawled = result.pages.length;
 
-    const findings = runAudit(result.pages, result.site);
+    const findings = applyJsSiteFindings(runAudit(result.pages, result.site), result.jsSite, result.site.homepageUrl);
     const pageIdByUrl = new Map<string, string>();
     for (const p of result.pages) {
       for (const u of [p.url, p.finalUrl]) {
@@ -123,6 +143,14 @@ export const crawlJob: JobHandler = async (ctx) => {
       data: { status: "succeeded", finishedAt: new Date(), pagesCrawled, error: null },
     });
     await ctx.event("crawl.completed", { crawlRunId, pagesCrawled, findings: findings.length, ...summary });
+    const output = {
+      crawlRunId, pagesCrawled, findings: findings.length, ...summary,
+      site: result.site as unknown as Prisma.InputJsonValue,
+      jsSite: result.jsSite as unknown as Prisma.InputJsonValue,
+    };
+    // The queue stores the output only after this handler returns, but the snapshot below builds the stored report
+    // now and reads site facts + JavaScript detection from it — so save it first (the queue rewrites the same value).
+    await db.workflowRun.update({ where: { id: ctx.run.id }, data: { output } }).catch(() => undefined);
     // Measurement history; writeSnapshot never throws, the extra catch guards against import-time surprises.
     await writeSnapshot({ organizationId, projectId: project.id, kind: "crawl", crawlRunId }).catch(() => undefined);
 
@@ -133,7 +161,7 @@ export const crawlJob: JobHandler = async (ctx) => {
       input: { trigger: "crawl", crawlRunId },
       idempotencyKey: `analyze:crawl:${crawlRunId}`,
     });
-    return { crawlRunId, pagesCrawled, findings: findings.length, ...summary, site: result.site as unknown as Prisma.InputJsonValue };
+    return output;
   } catch (err) {
     const e = classify(err);
     const willRetry = e.errorClass === "transient" && ctx.run.attempts < MAX_ATTEMPTS;

@@ -4,20 +4,29 @@ import type { PlanId, PlanLimits } from "@/lib/types";
 export const TRIAL_DAYS = 7;
 
 /**
- * AI-check limits per plan. Kept local (PlanLimits in @/lib/types is a frozen shared contract), so PLANS is typed
- * with the extended shape; it is still assignable to Record<PlanId, PlanLimits>.
- *   maxVisibilityRunsPerMonth — AI visibility checks an organization may start per calendar month (UTC).
- *   maxPromptsPerRun          — tracked questions asked per check (caps provider calls per run).
- * PLACEHOLDER VALUES — tune once real provider costs per plan are known.
+ * AI limits per plan — the ONE plan config read by the app, pricing page, billing settings and admin. Kept local
+ * (PlanLimits in @/lib/types is a frozen shared contract), so PLANS is typed with the extended shape; it is still
+ * assignable to Record<PlanId, PlanLimits>.
+ *   aiAnswersPerMonth — AI answers (one question asked to one AI assistant) per calendar month (UTC). THE customer limit.
+ *   maxPromptsPerRun  — customer questions asked per AI check.
+ *   enginesPerCheck   — AI assistants asked per AI check.
+ *   aiDailyBudgetUsd  — hard cap on this workspace's AI spend per UTC day (cost protection; never shown to customers).
+ * aiAnswersPerMonth is a whole number of full checks (questions × engines), so "N AI checks a month" is exact.
+ * monthlyCredits stay INTERNAL (cost tracking across website checks + AI); customers only ever see AI answers.
+ * PLACEHOLDER budgets — tune once real provider costs per plan are known.
  */
 export interface PlanAiLimits {
-  maxVisibilityRunsPerMonth: number;
+  aiAnswersPerMonth: number;
   maxPromptsPerRun: number;
+  enginesPerCheck: number;
+  aiDailyBudgetUsd: number;
 }
 export type PlanWithAiLimits = PlanLimits & PlanAiLimits;
 
+export const PLAN_IDS = ["trial", "starter", "growth", "agency"] as const satisfies readonly PlanId[];
+
 export const PLANS: Record<PlanId, PlanWithAiLimits> = {
-  // Trial mirrors Starter limits for TRIAL_DAYS, with a smaller credit pool.
+  // Trial: one full AI check (10 questions × 3 AI assistants = 30 answers) during TRIAL_DAYS.
   trial: {
     id: "trial",
     name: "Free trial",
@@ -30,9 +39,12 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
     seats: 2,
     competitorTracking: true,
     approvalPublishing: true,
-    maxVisibilityRunsPerMonth: 2, // PLACEHOLDER
-    maxPromptsPerRun: 10, // PLACEHOLDER
+    aiAnswersPerMonth: 30,
+    maxPromptsPerRun: 10,
+    enginesPerCheck: 3,
+    aiDailyBudgetUsd: 1, // PLACEHOLDER
   },
+  // 300 answers = 4 checks of 25 questions × 3 assistants.
   starter: {
     id: "starter",
     name: "Starter",
@@ -45,9 +57,12 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
     seats: 2,
     competitorTracking: true,
     approvalPublishing: true,
-    maxVisibilityRunsPerMonth: 4, // PLACEHOLDER
-    maxPromptsPerRun: 25, // PLACEHOLDER
+    aiAnswersPerMonth: 300,
+    maxPromptsPerRun: 25,
+    enginesPerCheck: 3,
+    aiDailyBudgetUsd: 2, // PLACEHOLDER
   },
+  // 1,200 answers = 6 checks of 40 questions × 5 assistants.
   growth: {
     id: "growth",
     name: "Growth",
@@ -60,9 +75,12 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
     seats: 5,
     competitorTracking: true,
     approvalPublishing: true,
-    maxVisibilityRunsPerMonth: 12, // PLACEHOLDER
-    maxPromptsPerRun: 60, // PLACEHOLDER
+    aiAnswersPerMonth: 1_200,
+    maxPromptsPerRun: 40,
+    enginesPerCheck: 5,
+    aiDailyBudgetUsd: 6, // PLACEHOLDER
   },
+  // 6,000 answers = 12 checks of 100 questions × 5 assistants.
   agency: {
     id: "agency",
     name: "Agency",
@@ -75,8 +93,10 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
     seats: 15,
     competitorTracking: true,
     approvalPublishing: true,
-    maxVisibilityRunsPerMonth: 40, // PLACEHOLDER
-    maxPromptsPerRun: 150, // PLACEHOLDER
+    aiAnswersPerMonth: 6_000,
+    maxPromptsPerRun: 100,
+    enginesPerCheck: 5,
+    aiDailyBudgetUsd: 25, // PLACEHOLDER
   },
 };
 
@@ -107,13 +127,30 @@ export function planIdFromRazorpayPlan(razorpayPlanId: string | undefined | null
   return null;
 }
 
+/** Most AI assistants any check uses (done-for-you clients always get all of them). */
+export const MAX_ENGINES = 5;
+
 /**
- * AI engines measured per visibility run. OPENROUTER_VISIBILITY_MODELS is ordered by priority
- * (ChatGPT, Gemini, Perplexity, Claude, Grok), so lower plans get the most-used engines first.
- * Done-for-you clients (serviceTier set) always get every engine.
+ * AI engines asked per AI check. The registry orders providers by priority (OPENROUTER_VISIBILITY_MODELS first:
+ * ChatGPT, Gemini, Perplexity, Claude, Grok), so smaller plans get the most-used engines first.
  */
-export const ENGINES_BY_PLAN: Record<string, number> = { trial: 2, starter: 3, growth: 5, agency: 5 };
 export function getEngineLimit(planId: string, serviceTier?: string | null): number {
-  if (serviceTier) return 5;
-  return ENGINES_BY_PLAN[planId] ?? 2;
+  if (serviceTier) return MAX_ENGINES;
+  return getPlanWithAiLimits(planId).enginesPerCheck;
+}
+
+/** Questions asked per AI check (never above the plan's tracked-question limit). */
+export function questionsPerCheck(planId: string): number {
+  const p = getPlanWithAiLimits(planId);
+  return Math.min(p.maxPromptsPerRun, p.maxTrackedPrompts);
+}
+
+/** AI answers one full check uses on this plan (questions × engines). */
+export function answersPerCheck(planId: string): number {
+  return questionsPerCheck(planId) * getEngineLimit(planId);
+}
+
+/** Full AI checks a month that fit in the plan's AI answers (for pricing/billing copy). */
+export function checksPerMonth(planId: string): number {
+  return Math.floor(getPlanWithAiLimits(planId).aiAnswersPerMonth / Math.max(1, answersPerCheck(planId)));
 }

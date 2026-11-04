@@ -1,7 +1,6 @@
 // Google Gemini API with Grounding with Google Search. Answers come from the developer API and can
 // differ from the Gemini app and Google AI Overviews.
 import { JobError, type ProviderAnswer, type VisibilityProvider, type VisibilityQuery } from "@/lib/types";
-import { noteAiSpend } from "@/lib/billing/ai-budget";
 import { geminiGenerateContent, getGeminiModel, isGeminiConfigured, readGeminiCandidate } from "@/lib/providers/gemini-client";
 import { estimateGeminiCostMicros } from "@/lib/providers/pricing";
 import { describeLocale } from "./locale";
@@ -83,7 +82,8 @@ export const geminiVisibilityProvider: VisibilityProvider = {
       model: parsed.modelVersion ?? model,
       answerText: parsed.text,
       citations: parsed.citations,
-      costMicros: noteAndReturn(estimateGeminiCostMicros(model, parsed.inputTokens, parsed.outputTokens, parsed.grounded)),
+      // Spend is already settled against the daily budget inside geminiGenerateContent.
+      costMicros: estimateGeminiCostMicros(model, parsed.inputTokens, parsed.outputTokens, parsed.grounded),
       simulated: false,
       limitations: loc.countryName
         ? `${GEMINI_LIMITATIONS} Location is passed as a text hint (${loc.countryName}), not a precise user location.`
@@ -91,8 +91,3 @@ export const geminiVisibilityProvider: VisibilityProvider = {
     };
   },
 };
-
-function noteAndReturn(costMicros: number): number {
-  noteAiSpend(costMicros);
-  return costMicros;
-}

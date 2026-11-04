@@ -4,7 +4,7 @@ import type { MonthlyReport } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/api";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
-import { readNotificationPrefs } from "@/lib/dashboard/project-schema";
+import { wantsEmail } from "@/lib/dashboard/project-schema";
 import { monthlyReportEmail, monthlyReportNotice } from "./email";
 import type { MonthlyReportPayload } from "./types";
 import { getBranding } from "@/lib/branding";
@@ -49,7 +49,7 @@ export async function deliverMonthlyReport(
       where: { id: report.projectId, organizationId: report.organizationId },
       select: { settings: true },
     });
-    if (project && isEmailConfigured() && readNotificationPrefs(project.settings).email) {
+    if (project && isEmailConfigured() && wantsEmail(project.settings, "monthlyReport")) {
       const members = await db.membership.findMany({
         where: { organizationId: report.organizationId, status: "active", role: { in: ["owner", "admin"] } },
         select: { user: { select: { email: true } } },

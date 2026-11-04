@@ -5,6 +5,7 @@ import { buildIssues, quickWins, strengths } from "@/lib/report/issues";
 import { AI_PILLARS, gradeFor, METHODOLOGY_VERSION, overallScore, PILLAR_LABELS, PILLAR_ORDER, pillarScore, pillarSummary, scoreLabel } from "@/lib/report/score";
 import { v2Pages, okPages, pct, type CheckContext, type EvaluatedCheck } from "@/lib/report/inputs";
 import { templateSummary } from "@/lib/report/summary";
+import { applyJsSite, jsFilteredFindings, jsSiteCheck, jsSiteDetection, jsSiteIssue } from "@/lib/report/checks/js-site";
 
 export interface ComposeInput {
   projectId: string;
@@ -47,7 +48,10 @@ export function composeReport(input: ComposeInput): SiteReport {
     return report;
   }
 
-  const byPillar = runAllChecks(ctx);
+  // JavaScript-only site: one problem replaces the per-page symptoms it causes (brief 7.1).
+  const js = jsSiteDetection(ctx);
+  const jsCheck = jsSiteCheck(ctx, js);
+  const byPillar = applyJsSite(runAllChecks(ctx), jsCheck);
   const allChecks = PILLAR_ORDER.flatMap((p) => byPillar[p]);
   // Simulated answers never count, so they leave the score just as partial as no answers.
   const aiIn = ai.measured && !ai.simulated;
@@ -58,7 +62,8 @@ export function composeReport(input: ComposeInput): SiteReport {
     return { pillar: p, label: PILLAR_LABELS[p], score, grade: gradeFor(score), summary: pillarSummary(p, score, checks, aiIn), ...(partial ? { partial } : {}), checks };
   });
   const overall = overallScore(Object.fromEntries(pillars.map((p) => [p.pillar, p.score])));
-  const issues = buildIssues(allChecks, ctx.findings);
+  const issues = buildIssues(allChecks, jsFilteredFindings(ctx.findings, !!jsCheck));
+  if (jsCheck) issues.unshift(jsSiteIssue(jsCheck)); // always the top problem
   const top = issues[0];
   const headline =
     overall === null
@@ -97,7 +102,8 @@ function limitations(input: ComposeInput): string[] {
   if (failed > 0) out.push(`${failed} page${failed === 1 ? "" : "s"} could not be read (errors or non-HTML), so content checks skip them.`);
   if (ctx.pages.length && v2Pages(ctx.pages).length === 0) out.push("Your last scan was made before some newer checks existed; run a new scan to measure them.");
   if (!ctx.site) out.push("Detailed robots.txt / llms.txt / HTTPS data wasn't recorded for this scan; those checks use the audit findings instead.");
-  out.push("We read each page's HTML as delivered. Content that only appears after JavaScript runs may be missed.");
+  if (jsSiteDetection(ctx).detected) out.push("Your pages arrive empty and fill in with JavaScript, so checks that read page text are left out until that's fixed.");
+  else out.push("We read each page's HTML as delivered. Content that only appears after JavaScript runs may be missed.");
   out.push("Page speed is estimated from page size and scripts (a proxy) — use Google PageSpeed Insights for a real speed test.");
   out.push("Readability uses the Flesch reading-ease formula, which is designed for English text.");
   const ai = ctx.ai;

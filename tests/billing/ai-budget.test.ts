@@ -30,8 +30,23 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+const alerts = vi.hoisted(() => [] as { kind: string; key: string }[]);
+vi.mock("@/lib/alerts/staff", () => ({
+  sendStaffAlert: vi.fn(async (a: { kind: string; key: string }) => {
+    alerts.push(a);
+    return { status: "sent" };
+  }),
+}));
+
 import {
+  __aiBudgetReservedMicros,
   __resetAiBudgetForTests,
+  __setAiBudgetOrgCapQueryForTests,
+  AiBudgetError,
+  fitsBudget,
+  isAiBudgetExhausted,
+  reserveAiSpend,
+  runWithAiScope,
   __setAiBudgetLedgerQueryForTests,
   AI_BUDGET_CACHE_MS,
   assertAiBudget,
@@ -53,6 +68,8 @@ beforeEach(() => {
   state.aggregateCalls = 0;
   state.existingNotification = false;
   state.created = [];
+  alerts.length = 0;
+  __setAiBudgetOrgCapQueryForTests(async () => null);
   delete process.env.AI_DAILY_BUDGET_USD;
 });
 afterEach(() => {
@@ -161,5 +178,100 @@ describe("openRouterChat chokepoint", () => {
     );
     await openRouterChat({ model: "x", messages: [] }, 1000);
     expect((await getAiBudgetStatus()).spentUsd).toBe(0.5);
+  });
+});
+
+describe("reservations: hard cap", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it("fit rule: spent + reserved + estimate ≤ cap; waitable only when in-flight holds are in the way", () => {
+    expect(fitsBudget(0, 0, 100, 100)).toEqual({ ok: true, waitable: false });
+    expect(fitsBudget(50, 40, 20, 100)).toEqual({ ok: false, waitable: true });
+    expect(fitsBudget(90, 0, 20, 100)).toEqual({ ok: false, waitable: false });
+    expect(fitsBudget(100, 0, 0, 100)).toEqual({ ok: false, waitable: false });
+  });
+
+  it("50 concurrent calls with a slow ledger read: exactly as many as fit get through, never above the cap", async () => {
+    process.env.AI_DAILY_BUDGET_USD = "1"; // 1,000,000 micro-USD
+    __setAiBudgetLedgerQueryForTests(async () => {
+      await sleep(Math.random() * 3);
+      return 0;
+    });
+    const results = await Promise.allSettled(Array.from({ length: 50 }, () => reserveAiSpend(30_000, { maxWaitMs: 0 })));
+    const ok = results.filter((r) => r.status === "fulfilled");
+    expect(ok).toHaveLength(33);
+    expect(__aiBudgetReservedMicros()).toBe(33 * 30_000);
+    for (const r of results) if (r.status === "rejected") expect(isAiBudgetExhausted(r.reason)).toBe(true);
+  });
+
+  it("workers that reserve → call → settle concurrently never spend more than the cap", async () => {
+    process.env.AI_DAILY_BUDGET_USD = "0.5";
+    __setAiBudgetLedgerQueryForTests(async () => 0);
+    let spent = 0;
+    let maxCommitted = 0;
+    const worker = async () => {
+      for (;;) {
+        let hold;
+        try {
+          hold = await reserveAiSpend(40_000, { maxWaitMs: 200 });
+        } catch (e) {
+          expect(e).toBeInstanceOf(AiBudgetError);
+          return;
+        }
+        maxCommitted = Math.max(maxCommitted, spent + __aiBudgetReservedMicros());
+        await sleep(Math.random() * 4);
+        const actual = 25_000 + Math.floor(Math.random() * 15_000); // real cost ≤ estimate
+        spent += actual;
+        hold.settle(actual);
+      }
+    };
+    await Promise.all(Array.from({ length: 12 }, worker));
+    expect(spent).toBeLessThanOrEqual(500_000);
+    expect(maxCommitted).toBeLessThanOrEqual(500_000);
+    expect((await getAiBudgetStatus()).spentUsd).toBeLessThanOrEqual(0.5);
+  });
+
+  it("waits for in-flight holds to settle instead of refusing", async () => {
+    process.env.AI_DAILY_BUDGET_USD = "1";
+    __setAiBudgetLedgerQueryForTests(async () => 0);
+    const first = await reserveAiSpend(600_000);
+    const second = reserveAiSpend(600_000, { maxWaitMs: 5_000 });
+    await sleep(5);
+    first.release(); // the first call failed: no spend
+    await expect(second).resolves.toBeDefined();
+  });
+
+  it("fails CLOSED when today's spend can't be read", async () => {
+    __setAiBudgetLedgerQueryForTests(async () => {
+      throw new Error("db down");
+    });
+    const err = await reserveAiSpend(1_000).catch((e) => e);
+    expect(err).toBeInstanceOf(AiBudgetError);
+    expect((err as AiBudgetError).scope).toBe("unavailable");
+    expect((err as AiBudgetError).errorClass).toBe("transient");
+    expect(isAiBudgetExhausted(err)).toBe(false);
+  });
+
+  it("per-workspace daily cap, with the organization taken from the AI scope", async () => {
+    __setAiBudgetLedgerQueryForTests(async () => 0);
+    __setAiBudgetOrgCapQueryForTests(async (orgId) => (orgId === "org_a" ? 100_000 : null));
+    await runWithAiScope({ organizationId: "org_a" }, () => reserveAiSpend(60_000));
+    const err = await runWithAiScope({ organizationId: "org_a" }, () => reserveAiSpend(60_000, { maxWaitMs: 0 })).catch((e) => e);
+    expect((err as AiBudgetError).scope).toBe("workspace");
+    expect(isAiBudgetExhausted(err)).toBe(true);
+    await expect(reserveAiSpend(60_000, { organizationId: "org_b" })).resolves.toBeDefined();
+  });
+
+  it("alerts staff once at 80% and once at 100% of the platform cap", async () => {
+    process.env.AI_DAILY_BUDGET_USD = "1";
+    __setAiBudgetLedgerQueryForTests(async () => 0);
+    (await reserveAiSpend(500_000)).settle(500_000);
+    expect(alerts).toHaveLength(0);
+    (await reserveAiSpend(350_000)).settle(350_000);
+    (await reserveAiSpend(10_000)).settle(10_000);
+    expect(alerts.map((a) => a.kind)).toEqual(["ai_budget_80"]);
+    await reserveAiSpend(500_000, { maxWaitMs: 0 }).catch(() => undefined);
+    await reserveAiSpend(500_000, { maxWaitMs: 0 }).catch(() => undefined);
+    expect(alerts.map((a) => a.kind)).toEqual(["ai_budget_80", "ai_budget_100"]);
   });
 });

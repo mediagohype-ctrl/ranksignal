@@ -171,37 +171,26 @@ export const RISK_CLASSES = [
   },
 ];
 
+/** The 5 most important questions, in plain words (home page + FAQ markup). */
 export const FAQS: { q: string; a: string }[] = [
   {
     q: "What does it mean to show up in AI answers?",
-    a: "More and more people ask ChatGPT, Gemini, Perplexity or Google's AI for a recommendation instead of searching. Showing up means these assistants understand your business, name it, and link to your website when someone asks about what you sell.",
+    a: "More and more people ask ChatGPT, Gemini or Google's AI for a recommendation instead of searching. Showing up means these assistants know your business, name it, and link to your website when someone asks about what you sell.",
   },
   {
-    q: `Can ${BRAND.name} promise I'll appear in AI answers?`,
-    a: "No. Nobody can honestly promise a Google position or an AI mention — other companies' systems write those answers, and they change over time. We measure carefully and help you fix the problems most likely to hold you back.",
-  },
-  {
-    q: "How do you know if AI mentions me?",
-    a: "We ask each AI assistant your customer questions again and again and save every answer. Then we count how often you're named and linked, and always show how many answers each number is based on, so you can judge how far to trust it.",
+    q: `Can ${BRAND.name} promise I'll show up on Google or in AI answers?`,
+    a: "No. Nobody can honestly promise a Google position or an AI mention — other companies write those answers, and they change over time. We check carefully, show you what we found, and help you fix the problems most likely to hold you back.",
   },
   {
     q: "Will you change my website without asking?",
-    a: "No, not unless you allow it. By default every change to your website needs your OK on the exact draft. You can choose to let a few small, safe edits go live on their own. Risky changes are never made by us. And we can pause all changes for your account at once — just ask.",
+    a: "No. Every change to your website needs your OK on the exact wording first. We save the old version before any change, so you can undo it in one click.",
   },
   {
     q: "Does it work with my website?",
-    a: "We connect to WordPress, GitHub, Shopify, Webflow, Contentful, Sanity and Wix. For any other website, you can copy each fix as simple step-by-step instructions and make the change yourself.",
-  },
-  {
-    q: "Do I still need to care about Google?",
-    a: "Yes. A healthy website on Google also helps AI assistants understand you. Our website check covers both: your Google health and whether AI can read and quote you.",
-  },
-  {
-    q: "How soon will I see results?",
-    a: "You see your first scores on day one. When AI answers change depends on the AI companies and on the fixes you make, so we show you what changed over time — without claiming one fix caused it.",
+    a: "Yes. We connect to WordPress, Shopify, Wix, Webflow and more. For any other website, you get each fix as simple step-by-step instructions you (or your web person) can copy.",
   },
   {
     q: "Is there a free trial?",
-    a: "Yes. Every plan starts with a 7-day free trial, so you can run a full website check and AI check before you pay.",
+    a: "Yes. Every plan starts with a 7-day free trial, so you can see all your fixes and what ChatGPT says about you before you pay. Cancel any time.",
   },
 ];

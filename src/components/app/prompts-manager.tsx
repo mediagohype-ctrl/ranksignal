@@ -72,6 +72,55 @@ const chipCls = (on: boolean) =>
     on ? "border-primary bg-primary-soft text-primary-soft-fg" : "border-border bg-surface text-fg-soft hover:bg-surface-2",
   );
 
+/**
+ * Add / pause / resume a customer question through the prompts API. Shared by this manager and the AI Answers
+ * screen (brief 5.6), so both use the same endpoints and messages.
+ */
+export function usePromptActions(projectId: string) {
+  const router = useRouter();
+  const toast = useToast();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  async function add(text: string): Promise<boolean> {
+    const t = text.trim();
+    if (t.length < 3) {
+      toast("Please write a question of at least 3 characters.", "error");
+      return false;
+    }
+    setAdding(true);
+    try {
+      const r = await api<{ items: unknown[]; skippedDuplicates?: number }>(`/api/projects/${projectId}/prompts`, {
+        body: { prompts: [{ text: t, intent: "informational" }] },
+      });
+      toast(r.items.length ? "Question added. It will be asked in the next AI check." : "You already have this question.", "success");
+      router.refresh();
+      return true;
+    } catch (e) {
+      toast(errorMessage(e), "error");
+      return false;
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function setActive(promptId: string, active: boolean) {
+    setBusyId(promptId);
+    try {
+      if (active) await api(`/api/projects/${projectId}/prompts/${promptId}`, { method: "PATCH", body: { active: true } });
+      else await api(`/api/projects/${projectId}/prompts/${promptId}`, { method: "DELETE" });
+      toast(active ? "Question switched back on." : "Question paused. We won't ask it in the next AI checks.", "success");
+      router.refresh();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return { add, adding, setActive, busyId };
+}
+
 export function PromptsManager({ projectId, prompts, canEdit }: { projectId: string; prompts: PromptRow[]; canEdit: boolean }) {
   const router = useRouter();
   const toast = useToast();
@@ -87,7 +136,6 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [savingSuggestions, setSavingSuggestions] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   const visible = useMemo(() => prompts.filter((p) => showInactive || p.active), [prompts, showInactive]);
   const intentCounts = useMemo(() => {
@@ -143,18 +191,9 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
     }
   }
 
-  async function setActive(p: PromptRow, active: boolean) {
-    setBusyId(p.id);
-    try {
-      if (active) await api(`/api/projects/${projectId}/prompts/${p.id}`, { method: "PATCH", body: { active: true } });
-      else await api(`/api/projects/${projectId}/prompts/${p.id}`, { method: "DELETE" });
-      router.refresh();
-    } catch (e) {
-      toast(errorMessage(e), "error");
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const promptActions = usePromptActions(projectId);
+  const setActive = (p: PromptRow, active: boolean) => promptActions.setActive(p.id, active);
+  const busyId = promptActions.busyId;
 
   async function generate() {
     setGenerating(true);
@@ -182,7 +221,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
         body: { prompts: chosen.map((c) => ({ text: c.text, intent: c.intent, topic: c.topic, locale: c.locale })) },
       });
       toast(
-        `Saved ${r.items.length} question${r.items.length === 1 ? "" : "s"}${r.skippedDuplicates ? `, skipped ${r.skippedDuplicates} duplicate(s)` : ""}.`,
+        `Saved ${r.items.length} question${r.items.length === 1 ? "" : "s"}${r.skippedDuplicates ? `, skipped ${r.skippedDuplicates} ${r.skippedDuplicates === 1 ? "duplicate" : "duplicates"}` : ""}.`,
         "success",
       );
       setCandidates(null);

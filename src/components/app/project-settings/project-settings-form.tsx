@@ -1,15 +1,17 @@
 "use client";
+// Settings (brief 5.8): My business, Connect website, Automatic checks, Auto-fix, Pause all changes, Emails, then
+// Team / Plan / Expert mode (rendered by the page and passed in). Switches and selects save straight away; My
+// business has the one Save button on the screen.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import clsx from "clsx";
-import { Bell, CalendarClock, Globe2, Plus, Settings2, Sparkles, Tag, Trash2, Users, Wand2 } from "lucide-react";
+import { Briefcase, CalendarClock, Globe2, Mail, PauseCircle, Plug, Plus, Tag, Trash2, Wand2 } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { CLASS_B_TYPES } from "@/lib/policy/engine";
-import { frequencyDays, type ProjectSchedule, type ScheduleFrequency } from "@/lib/dashboard/project-schema";
-import {
-  Badge, Button, Card, CardBody, CardFooter, CardHeader, Field, Input, Notice, Select, fieldDescribedBy, useToast,
-} from "@/components/ui";
+import { frequencyDays, type EmailKind, type ProjectFacts, type ProjectSchedule, type ScheduleFrequency } from "@/lib/dashboard/project-schema";
+import { Button, Card, CardBody, CardFooter, CardHeader, Field, Input, LinkButton, Notice, Select, Textarea, fieldDescribedBy, useToast } from "@/components/ui";
 import { DangerZone } from "./danger-zone";
+import { SwitchRow } from "./switch";
+import { fmtDate } from "@/lib/dashboard/format";
 
 export interface CompetitorRow {
   name: string;
@@ -21,13 +23,15 @@ export interface CompetitorRow {
 export interface ProjectSettingsInitial {
   name: string;
   websiteUrl: string;
+  facts: ProjectFacts;
   brandNames: string[];
   competitors: CompetitorRow[];
   countries: string[];
   languages: string[];
   schedule: ProjectSchedule;
-  allowClassB: string[];
-  emailNotifications: boolean;
+  autoFix: boolean;
+  paused: boolean;
+  emails: Record<EmailKind, boolean>;
 }
 
 interface Props {
@@ -37,327 +41,305 @@ interface Props {
   plan: { name: string; minScanIntervalDays: number };
   canEdit: boolean;
   isAdmin: boolean;
+  expert?: boolean;
+  integrationsHref: string;
+  /** Rendered after Emails, in this order. */
+  team?: React.ReactNode;
+  planSection?: React.ReactNode;
+  preferences?: React.ReactNode;
 }
 
-const AUTOMATION_HELP: Record<string, { label: string; what: string; risk: string }> = {
-  update_meta_description: {
-    label: "Google summaries",
-    what: "The short text Google and AI tools may show under your Google headline.",
-    risk: "Low risk: visitors don't see it on the page itself, and the old version is saved so it can be undone.",
-  },
-  update_title: {
-    label: "Google headlines",
-    what: "The clickable headline shown on Google and in browser tabs.",
-    risk: "Low to medium risk: headlines show on Google. Your homepage and key pages always need your OK."
-  },
-  update_image_alt: {
-    label: "Image descriptions",
-    what: "Short descriptions of images, read aloud by screen readers and used by Google.",
-    risk: "Low risk: not visible to most visitors, and helps accessibility. Can be undone.",
-  },
-  update_og_tags: {
-    label: "Share previews",
-    what: "The title, text and image shown when someone shares your page in chat or social apps.",
-    risk: "Low risk: only affects previews of shared links. Can be undone.",
-  },
+const SAFE_FIX_NAMES: Record<string, string> = {
+  update_meta_description: "Google summaries",
+  update_title: "Google headlines",
+  update_image_alt: "Image descriptions",
+  update_og_tags: "Share previews",
 };
 
 const FREQ_LABEL: Record<ScheduleFrequency, string> = { off: "Off", weekly: "Every week", monthly: "Every month" };
+const EMAILS: { kind: EmailKind; label: string; help: string }[] = [
+  { kind: "monthlyReport", label: "Monthly report", help: "What changed this month, in one short email." },
+  { kind: "fixesWaiting", label: "Fixes waiting", help: "When fixes are ready for your OK." },
+  { kind: "checkFailed", label: "Check failed", help: "When we couldn't check your website or ask AI." },
+];
 const DAY_MS = 86_400_000;
 
 const splitList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
 function nextRunText(freq: ScheduleFrequency, minDays: number, last: string | null): string {
   const days = frequencyDays(freq);
-  if (days === null) return "Automatic checks are off.";
-  if (!last) return "The first automatic check starts within a few minutes.";
+  if (days === null) return "Off.";
+  if (!last) return "The first one starts within a few minutes.";
   const next = new Date(new Date(last).getTime() + Math.max(days, minDays) * DAY_MS);
-  if (next.getTime() <= Date.now()) return "Due now — it will start within a few minutes.";
-  return `Next automatic check around ${next.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}.`;
+  if (next.getTime() <= Date.now()) return "Due now.";
+  return `Next one around ${fmtDate(next)}.`;
 }
 
-function SaveFooter({ dirty, saving, disabled, onSave, onReset }: { dirty: boolean; saving: boolean; disabled: boolean; onSave: () => void; onReset: () => void }) {
-  return (
-    <CardFooter>
-      <div className="flex w-full items-center justify-end gap-2">
-        {dirty && !saving && <span className="mr-auto text-small text-muted">Unsaved changes</span>}
-        <Button variant="secondary" size="sm" onClick={onReset} disabled={!dirty || saving || disabled}>
-          Reset
-        </Button>
-        <Button size="sm" onClick={onSave} loading={saving} loadingText="Saving…" disabled={!dirty || disabled}>
-          Save
-        </Button>
-      </div>
-    </CardFooter>
-  );
-}
-
-export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdit, isAdmin }: Props) {
+export function ProjectSettingsForm({
+  projectId,
+  initial,
+  lastRuns,
+  plan,
+  canEdit,
+  isAdmin,
+  expert = false,
+  integrationsHref,
+  team,
+  planSection,
+  preferences,
+}: Props) {
   const router = useRouter();
   const toast = useToast();
   const [saved, setSaved] = useState(initial);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
-  const [name, setName] = useState(initial.name);
-  const [brands, setBrands] = useState<string[]>(initial.brandNames.length ? initial.brandNames : [""]);
+  // My business
+  const [name, setName] = useState(initial.facts.name || initial.name);
+  const [city, setCity] = useState(initial.facts.city ?? "");
+  const [sells, setSells] = useState(initial.facts.sells ?? "");
+  const [brands, setBrands] = useState<string[]>(() => {
+    const own = (initial.facts.name || initial.name).trim().toLowerCase();
+    const others = initial.brandNames.filter((b) => b.trim().toLowerCase() !== own);
+    return others.length ? others : [""];
+  });
   const [competitors, setCompetitors] = useState<CompetitorRow[]>(initial.competitors);
+  // Expert-only: markets
   const [countries, setCountries] = useState(initial.countries.join(", "));
   const [languages, setLanguages] = useState(initial.languages.join(", "));
-  const [schedule, setSchedule] = useState<ProjectSchedule>(initial.schedule);
-  const [allowB, setAllowB] = useState<string[]>(initial.allowClassB);
-  const [emailOn, setEmailOn] = useState(initial.emailNotifications);
 
-  async function save(section: string, body: Record<string, unknown>, apply: (s: ProjectSettingsInitial) => ProjectSettingsInitial) {
-    setSaving(section);
+  async function patch(section: string, body: Record<string, unknown>, apply: (s: ProjectSettingsInitial) => ProjectSettingsInitial, ok = "Saved.") {
+    setBusy(section);
     setErrors((e) => ({ ...e, [section]: undefined }));
     try {
       await api(`/api/projects/${projectId}`, { method: "PATCH", body });
       setSaved(apply);
-      toast("Settings saved.", "success");
+      toast(ok, "success");
       router.refresh();
+      return true;
     } catch (err) {
       const msg = errorMessage(err);
       setErrors((e) => ({ ...e, [section]: msg }));
       toast(msg, "error");
+      return false;
     } finally {
-      setSaving(null);
+      setBusy(null);
     }
   }
 
-  // ---- General ----
-  const generalDirty = name.trim() !== saved.name;
-  const saveGeneral = () => {
-    if (!name.trim()) return setErrors((e) => ({ ...e, general: "Please enter a project name." }));
-    void save("general", { name: name.trim() }, (s) => ({ ...s, name: name.trim() }));
-  };
-
-  // ---- Brand names ----
+  // ---- My business ----
   const cleanBrands = brands.map((b) => b.trim()).filter(Boolean);
-  const brandsDirty = JSON.stringify(cleanBrands) !== JSON.stringify(saved.brandNames);
-  const saveBrands = () => {
-    if (cleanBrands.length === 0) return setErrors((e) => ({ ...e, brands: "Add at least one name your customers use for you." }));
-    if (new Set(cleanBrands.map((b) => b.toLowerCase())).size !== cleanBrands.length)
-      return setErrors((e) => ({ ...e, brands: "Each name should appear only once." }));
-    void save("brands", { brandNames: cleanBrands }, (s) => ({ ...s, brandNames: cleanBrands }));
-  };
-
-  // ---- Competitors ----
+  // The business name is always the first name we look for in AI answers.
+  const brandNames = [name.trim(), ...cleanBrands.filter((b) => b.toLowerCase() !== name.trim().toLowerCase())].filter(Boolean).slice(0, 20);
   const cleanCompetitors = competitors
     .map((c) => ({ name: c.name.trim(), domain: c.domain.trim(), aliases: c.aliases }))
     .filter((c) => c.name || c.domain);
-  const competitorsDirty = JSON.stringify(cleanCompetitors) !== JSON.stringify(saved.competitors);
-  const saveCompetitors = () => {
-    if (cleanCompetitors.some((c) => !c.name)) return setErrors((e) => ({ ...e, competitors: "Every competitor needs a name." }));
-    const payload = cleanCompetitors.map((c) => ({ name: c.name, domain: c.domain || undefined, aliases: splitList(c.aliases) }));
-    void save("competitors", { competitors: payload }, (s) => ({ ...s, competitors: cleanCompetitors }));
-  };
+  const facts: ProjectFacts = { ...saved.facts, name: name.trim(), city: city.trim(), sells: sells.trim() };
+  const businessDirty =
+    name.trim() !== (saved.facts.name || saved.name) ||
+    city.trim() !== (saved.facts.city ?? "") ||
+    sells.trim() !== (saved.facts.sells ?? "") ||
+    JSON.stringify(brandNames) !== JSON.stringify(saved.brandNames) ||
+    JSON.stringify(cleanCompetitors) !== JSON.stringify(saved.competitors);
 
-  // ---- Markets ----
-  const countryList = splitList(countries).map((c) => c.toUpperCase());
-  const languageList = splitList(languages).map((l) => l.toLowerCase());
-  const marketsDirty =
-    JSON.stringify(countryList) !== JSON.stringify(saved.countries) || JSON.stringify(languageList) !== JSON.stringify(saved.languages);
-  const saveMarkets = () => {
+  function saveBusiness() {
+    if (!name.trim()) return setErrors((e) => ({ ...e, business: "Please enter your business name." }));
+    if (new Set(cleanBrands.map((b) => b.toLowerCase())).size !== cleanBrands.length)
+      return setErrors((e) => ({ ...e, business: "Each other name should appear only once." }));
+    if (cleanCompetitors.some((c) => !c.name)) return setErrors((e) => ({ ...e, business: "Every competitor needs a name." }));
+    void patch(
+      "business",
+      {
+        name: name.trim(),
+        facts,
+        brandNames,
+        competitors: cleanCompetitors.map((c) => ({ name: c.name, domain: c.domain || undefined, aliases: splitList(c.aliases) })),
+      },
+      (s) => ({ ...s, name: name.trim(), facts, brandNames, competitors: cleanCompetitors }),
+      "Your business details are saved.",
+    );
+  }
+
+  // ---- Markets (expert) ----
+  function saveMarkets() {
+    const countryList = splitList(countries).map((c) => c.toUpperCase());
+    const languageList = splitList(languages).map((l) => l.toLowerCase());
     if (countryList.some((c) => !/^[A-Z]{2}$/.test(c)))
       return setErrors((e) => ({ ...e, markets: "Use 2-letter country codes separated by commas, e.g. IN, US, GB." }));
     if (languageList.length === 0 || languageList.some((l) => !/^[a-z]{2,3}(-[a-z]{2})?$/.test(l)))
       return setErrors((e) => ({ ...e, markets: "Add at least one language code, e.g. en or hi." }));
-    void save("markets", { countries: countryList, languages: languageList }, (s) => ({ ...s, countries: countryList, languages: languageList }));
-  };
+    void patch("markets", { countries: countryList, languages: languageList }, (s) => ({ ...s, countries: countryList, languages: languageList }));
+  }
 
-  // ---- Schedule / automation / notifications ----
-  const scheduleDirty = JSON.stringify(schedule) !== JSON.stringify(saved.schedule);
-  const automationDirty = JSON.stringify([...allowB].sort()) !== JSON.stringify([...saved.allowClassB].sort());
-  const notificationsDirty = emailOn !== saved.emailNotifications;
   const freqAllowed = (f: ScheduleFrequency) => {
     const d = frequencyDays(f);
     return d === null || d >= plan.minScanIntervalDays;
   };
-
-  const adminOnlyNote = !isAdmin && (
-    <Notice tone="neutral" className="mb-4">Only owners and admins can change this.</Notice>
-  );
+  const adminNote = !isAdmin && <p className="pb-2 text-xs text-muted">Ask the Owner to change this.</p>;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {!canEdit && (
         <Notice tone="info" title="View only">
-          You can see this project but not change it. Ask the Owner or an Admin if something needs changing.
+          You can see these settings but not change them. Ask the Owner if something needs changing.
         </Notice>
       )}
 
+      {/* My business */}
       <Card as="section">
-        <CardHeader title="General" description="Basic details for this project." icon={<Settings2 />} />
+        <CardHeader title="My business" description="We use these to ask AI the right questions and spot you in answers." icon={<Briefcase />} />
         <CardBody className="space-y-5">
-          <Field label="Project name" htmlFor="ps-name" error={errors.general} required>
-            <Input
-              id="ps-name"
-              value={name}
-              maxLength={120}
-              disabled={!canEdit}
-              invalid={!!errors.general}
-              aria-describedby={fieldDescribedBy("ps-name", { error: errors.general })}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </Field>
-          <Field
-            label="Website"
-            htmlFor="ps-url"
-            hint="The website can't be changed, so your history stays comparable. To track a different site, create a new project."
-          >
-            <Input id="ps-url" value={initial.websiteUrl} readOnly aria-describedby={fieldDescribedBy("ps-url", { hint: true })} />
-          </Field>
-        </CardBody>
-        <SaveFooter dirty={generalDirty} saving={saving === "general"} disabled={!canEdit} onSave={saveGeneral} onReset={() => setName(saved.name)} />
-      </Card>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Business name" htmlFor="ps-name" required>
+              <Input id="ps-name" value={name} maxLength={120} disabled={!canEdit} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label="Website" htmlFor="ps-url" hint="To follow a different website, add it as a new one.">
+              <Input id="ps-url" value={initial.websiteUrl} readOnly aria-describedby={fieldDescribedBy("ps-url", { hint: true })} />
+            </Field>
+            <Field label="City" htmlFor="ps-city" optional>
+              <Input id="ps-city" value={city} maxLength={120} disabled={!canEdit} placeholder="e.g. Pune" onChange={(e) => setCity(e.target.value)} />
+            </Field>
+            <Field label="What you sell" htmlFor="ps-sells" optional className="sm:col-span-2">
+              <Textarea
+                id="ps-sells"
+                rows={2}
+                value={sells}
+                maxLength={300}
+                disabled={!canEdit}
+                placeholder="e.g. Custom birthday and wedding cakes"
+                onChange={(e) => setSells(e.target.value)}
+              />
+            </Field>
+          </div>
 
-      <Card as="section">
-        <CardHeader
-          title="Your business names"
-          description="Every name people use for your business — we look for these in AI answers. Include short forms and common misspellings."
-          icon={<Tag />}
-        />
-        <CardBody className="space-y-3">
-          <ul className="space-y-2">
-            {brands.map((b, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <Input
-                  aria-label={`Business name ${i + 1}`}
-                  value={b}
-                  maxLength={120}
-                  disabled={!canEdit}
-                  placeholder={i === 0 ? "e.g. Acme Bakery" : "e.g. Acme"}
-                  onChange={(e) => setBrands((xs) => xs.map((x, j) => (j === i ? e.target.value : x)))}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove business name ${b || i + 1}`}
-                  disabled={!canEdit || brands.length <= 1}
-                  onClick={() => setBrands((xs) => xs.filter((_, j) => j !== i))}
-                >
-                  <Trash2 />
-                </Button>
-              </li>
-            ))}
-          </ul>
-          <Button variant="secondary" size="sm" icon={<Plus />} disabled={!canEdit || brands.length >= 20} onClick={() => setBrands((xs) => [...xs, ""])}>
-            Add a name
-          </Button>
-          {errors.brands && <p className="text-small text-danger" role="alert">{errors.brands}</p>}
-        </CardBody>
-        <SaveFooter
-          dirty={brandsDirty}
-          saving={saving === "brands"}
-          disabled={!canEdit}
-          onSave={saveBrands}
-          onReset={() => setBrands(saved.brandNames.length ? saved.brandNames : [""])}
-        />
-      </Card>
-
-      <Card as="section">
-        <CardHeader
-          title="Competitors"
-          description="Businesses you want to compare against in AI answers. Up to 20."
-          icon={<Users />}
-        />
-        <CardBody className="space-y-3">
-          {competitors.length === 0 && <p className="text-small text-muted">No competitors yet. Add the two or three you lose customers to most often.</p>}
-          <ul className="space-y-3">
-            {competitors.map((c, i) => {
-              const upd = (patch: Partial<CompetitorRow>) => setCompetitors((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-              return (
-                <li key={i} className="grid gap-2 rounded-xl bg-surface-2 p-3 sm:grid-cols-[1fr_1fr_1.4fr_auto] sm:items-end">
-                  <Field label="Name" htmlFor={`ps-comp-${i}-name`}>
-                    <Input id={`ps-comp-${i}-name`} value={c.name} maxLength={120} disabled={!canEdit} onChange={(e) => upd({ name: e.target.value })} />
-                  </Field>
-                  <Field label="Website" htmlFor={`ps-comp-${i}-domain`} optional>
-                    <Input id={`ps-comp-${i}-domain`} value={c.domain} placeholder="example.com" disabled={!canEdit} onChange={(e) => upd({ domain: e.target.value })} />
-                  </Field>
-                  <Field label="Other names" htmlFor={`ps-comp-${i}-aliases`} optional>
-                    <Input id={`ps-comp-${i}-aliases`} value={c.aliases} placeholder="Comma separated" disabled={!canEdit} onChange={(e) => upd({ aliases: e.target.value })} />
-                  </Field>
+          <div className="space-y-2">
+            <h3 className="flex items-center gap-2 text-small font-medium text-fg">
+              <Tag aria-hidden size={14} className="text-muted" /> Other names people use for you
+            </h3>
+            <ul className="space-y-2">
+              {brands.map((b, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <Input
+                    aria-label={`Other name ${i + 1}`}
+                    value={b}
+                    maxLength={120}
+                    disabled={!canEdit}
+                    placeholder="e.g. a short form or common misspelling"
+                    onChange={(e) => setBrands((xs) => xs.map((x, j) => (j === i ? e.target.value : x)))}
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Remove competitor ${c.name || i + 1}`}
-                    disabled={!canEdit}
-                    onClick={() => setCompetitors((xs) => xs.filter((_, j) => j !== i))}
+                    aria-label={`Remove name ${b || i + 1}`}
+                    disabled={!canEdit || (brands.length <= 1 && !b)}
+                    onClick={() => setBrands((xs) => (xs.length <= 1 ? [""] : xs.filter((_, j) => j !== i)))}
                   >
                     <Trash2 />
                   </Button>
                 </li>
-              );
-            })}
-          </ul>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<Plus />}
-            disabled={!canEdit || competitors.length >= 20}
-            onClick={() => setCompetitors((xs) => [...xs, { name: "", domain: "", aliases: "" }])}
-          >
-            Add competitor
-          </Button>
-          {errors.competitors && <p className="text-small text-danger" role="alert">{errors.competitors}</p>}
+              ))}
+            </ul>
+            <Button variant="ghost" size="sm" icon={<Plus />} disabled={!canEdit || brands.length >= 19} onClick={() => setBrands((xs) => [...xs, ""])}>
+              Add a name
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-small font-medium text-fg">Competitors</h3>
+            {competitors.length === 0 && <p className="text-small text-muted">Add the two or three businesses you lose customers to.</p>}
+            <ul className="space-y-3">
+              {competitors.map((c, i) => {
+                const upd = (p: Partial<CompetitorRow>) => setCompetitors((xs) => xs.map((x, j) => (j === i ? { ...x, ...p } : x)));
+                return (
+                  <li key={i} className="grid gap-2 rounded-xl bg-surface-2 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                    <Field label="Name" htmlFor={`ps-comp-${i}-name`}>
+                      <Input id={`ps-comp-${i}-name`} value={c.name} maxLength={120} disabled={!canEdit} onChange={(e) => upd({ name: e.target.value })} />
+                    </Field>
+                    <Field label="Website" htmlFor={`ps-comp-${i}-domain`} optional>
+                      <Input id={`ps-comp-${i}-domain`} value={c.domain} placeholder="example.com" disabled={!canEdit} onChange={(e) => upd({ domain: e.target.value })} />
+                    </Field>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove competitor ${c.name || i + 1}`}
+                      disabled={!canEdit}
+                      onClick={() => setCompetitors((xs) => xs.filter((_, j) => j !== i))}
+                    >
+                      <Trash2 />
+                    </Button>
+                    {expert && (
+                      <Field label="Other names" htmlFor={`ps-comp-${i}-aliases`} optional className="sm:col-span-3">
+                        <Input id={`ps-comp-${i}-aliases`} value={c.aliases} placeholder="Comma separated" disabled={!canEdit} onChange={(e) => upd({ aliases: e.target.value })} />
+                      </Field>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Plus />}
+              disabled={!canEdit || competitors.length >= 20}
+              onClick={() => setCompetitors((xs) => [...xs, { name: "", domain: "", aliases: "" }])}
+            >
+              Add competitor
+            </Button>
+          </div>
+          {errors.business && (
+            <p className="text-small text-danger" role="alert">
+              {errors.business}
+            </p>
+          )}
         </CardBody>
-        <SaveFooter
-          dirty={competitorsDirty}
-          saving={saving === "competitors"}
-          disabled={!canEdit}
-          onSave={saveCompetitors}
-          onReset={() => setCompetitors(saved.competitors)}
-        />
+        <CardFooter>
+          <div className="flex w-full items-center justify-end gap-2">
+            {businessDirty && busy !== "business" && <span className="mr-auto text-small text-muted">Unsaved changes</span>}
+            <Button onClick={saveBusiness} loading={busy === "business"} loadingText="Saving…" disabled={!businessDirty || !canEdit}>
+              Save
+            </Button>
+          </div>
+        </CardFooter>
       </Card>
 
-      <Card as="section">
-        <CardHeader title="Markets" description="Where your customers are and which languages they use. We ask AI tools with these in mind." icon={<Globe2 />} />
-        <CardBody className="grid gap-5 sm:grid-cols-2">
-          <Field label="Countries" htmlFor="ps-countries" hint="2-letter codes, comma separated — e.g. IN, US, GB">
-            <Input id="ps-countries" value={countries} disabled={!canEdit} aria-describedby={fieldDescribedBy("ps-countries", { hint: true })} onChange={(e) => setCountries(e.target.value)} />
-          </Field>
-          <Field label="Languages" htmlFor="ps-languages" hint="Language codes, comma separated — e.g. en, hi">
-            <Input id="ps-languages" value={languages} disabled={!canEdit} aria-describedby={fieldDescribedBy("ps-languages", { hint: true })} onChange={(e) => setLanguages(e.target.value)} />
-          </Field>
-          {errors.markets && <p className="text-small text-danger sm:col-span-2" role="alert">{errors.markets}</p>}
-        </CardBody>
-        <SaveFooter
-          dirty={marketsDirty}
-          saving={saving === "markets"}
-          disabled={!canEdit}
-          onSave={saveMarkets}
-          onReset={() => {
-            setCountries(saved.countries.join(", "));
-            setLanguages(saved.languages.join(", "));
-          }}
-        />
+      {/* Connect website */}
+      <Card as="section" padding="md">
+        <div className="flex flex-wrap items-center gap-4">
+          <Plug aria-hidden size={20} className="shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-h4 text-fg">Connect website</h2>
+            <p className="text-small text-muted">Connect your website so approved fixes can go live by themselves.</p>
+          </div>
+          <LinkButton href={integrationsHref} variant="secondary">
+            Connect website
+          </LinkButton>
+        </div>
       </Card>
 
+      {/* Automatic checks */}
       <Card as="section">
-        <CardHeader
-          title="Schedule"
-          description="Run checks automatically so you can see how things change over time. Each check uses credits from your plan."
-          icon={<CalendarClock />}
-        />
+        <CardHeader title="Automatic checks" description="We check again by ourselves, so you can see things change." icon={<CalendarClock />} />
         <CardBody>
-          {adminOnlyNote}
+          {adminNote}
           <div className="grid gap-5 sm:grid-cols-2">
             {(
               [
-                ["crawl", "Website check", "Reads your pages and checks for problems."],
-                ["visibility", "AI check", "Asks AI tools your customer questions."],
+                ["crawl", "Website", ["weekly", "monthly", "off"]],
+                ["visibility", "AI", saved.schedule.visibility === "weekly" ? ["weekly", "monthly", "off"] : ["monthly", "off"]],
               ] as const
-            ).map(([kind, label, help]) => (
-              <Field key={kind} label={label} htmlFor={`ps-sched-${kind}`} hint={`${help} ${nextRunText(saved.schedule[kind], plan.minScanIntervalDays, lastRuns[kind])}`}>
+            ).map(([kind, label, options]) => (
+              <Field key={kind} label={label} htmlFor={`ps-sched-${kind}`} hint={nextRunText(saved.schedule[kind], plan.minScanIntervalDays, lastRuns[kind])}>
                 <Select
                   id={`ps-sched-${kind}`}
-                  value={schedule[kind]}
-                  disabled={!isAdmin}
+                  value={saved.schedule[kind]}
+                  disabled={!isAdmin || busy === "schedule"}
                   aria-describedby={fieldDescribedBy(`ps-sched-${kind}`, { hint: true })}
-                  onChange={(e) => setSchedule((s) => ({ ...s, [kind]: e.target.value as ScheduleFrequency }))}
+                  onChange={(e) => {
+                    const schedule = { ...saved.schedule, [kind]: e.target.value as ScheduleFrequency };
+                    void patch("schedule", { settings: { schedule } }, (s) => ({ ...s, schedule }), "Automatic checks saved.");
+                  }}
                 >
-                  {(["off", "weekly", "monthly"] as const).map((f) => (
+                  {(options as readonly ScheduleFrequency[]).map((f) => (
                     <option key={f} value={f} disabled={!freqAllowed(f)}>
                       {FREQ_LABEL[f]}
                       {!freqAllowed(f) ? " (not on your plan)" : ""}
@@ -367,104 +349,120 @@ export function ProjectSettingsForm({ projectId, initial, lastRuns, plan, canEdi
               </Field>
             ))}
           </div>
-          <p className="mt-4 text-small text-muted">
-            Your {plan.name} plan runs automatic checks at most every {plan.minScanIntervalDays === 1 ? "day" : `${plan.minScanIntervalDays} days`}.
-            Automatic checks pause if your plan isn&apos;t active. You can always start a check yourself from the Home page.
-          </p>
-          {errors.schedule && <p className="mt-2 text-small text-danger" role="alert">{errors.schedule}</p>}
+          {errors.schedule && (
+            <p className="mt-2 text-small text-danger" role="alert">
+              {errors.schedule}
+            </p>
+          )}
         </CardBody>
-        <SaveFooter
-          dirty={scheduleDirty}
-          saving={saving === "schedule"}
-          disabled={!isAdmin}
-          onSave={() => void save("schedule", { settings: { schedule } }, (s) => ({ ...s, schedule }))}
-          onReset={() => setSchedule(saved.schedule)}
-        />
       </Card>
 
+      {/* Auto-fix + Pause */}
       <Card as="section">
-        <CardHeader
-          title="Small changes that can go live without asking"
-          description="Small, low-risk edits we may put live without asking first — never on your homepage or key pages, and only when your connected website lets us undo the change."
-          icon={<Wand2 />}
-        />
-        <CardBody className="space-y-4">
-          {adminOnlyNote}
-          <fieldset className="grid gap-3 md:grid-cols-2">
-            <legend className="sr-only">Changes allowed without approval</legend>
-            {CLASS_B_TYPES.map((t) => {
-              const h = AUTOMATION_HELP[t] ?? { label: t.replace(/_/g, " "), what: "", risk: "" };
-              const checked = allowB.includes(t);
-              return (
-                <label
-                  key={t}
-                  className={clsx(
-                    "flex items-start gap-3 rounded-xl border p-4 transition-colors",
-                    isAdmin ? "cursor-pointer hover:bg-surface-2" : "cursor-not-allowed opacity-80",
-                    checked ? "border-primary bg-primary-soft" : "border-border",
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 size-4 shrink-0 accent-primary"
-                    checked={checked}
-                    disabled={!isAdmin}
-                    onChange={(e) => setAllowB((xs) => (e.target.checked ? [...xs, t] : xs.filter((x) => x !== t)))}
-                  />
-                  <span className="space-y-1">
-                    <span className="flex flex-wrap items-center gap-2 text-small font-medium text-fg">
-                      {h.label}
-                      {checked && <Badge tone="primary" size="sm">Automatic</Badge>}
-                    </span>
-                    <span className="block text-small text-fg-soft">{h.what}</span>
-                    <span className="block text-xs text-muted">{h.risk}</span>
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
-          <Notice tone="tip" icon={<Sparkles />} title="Everything else waits for you">
-            Page text, info for Google and AI, and anything on important pages always need your OK on the exact wording. Risky
-            changes (like deleting pages or changing web addresses) are never made for you. Every change is recorded and can be undone.
-          </Notice>
-          {errors.automation && <p className="text-small text-danger" role="alert">{errors.automation}</p>}
+        <CardHeader title="Changes to your website" icon={<Wand2 />} />
+        <CardBody className="divide-y divide-border">
+          {adminNote}
+          <SwitchRow
+            id="ps-autofix"
+            label="Make small safe fixes without asking"
+            help={
+              expert
+                ? `Class B types: ${CLASS_B_TYPES.join(", ")}. Never on your homepage or key pages, and only when the change can be undone.`
+                : `${CLASS_B_TYPES.map((t) => SAFE_FIX_NAMES[t] ?? t).join(", ")}. Never on your homepage or key pages, and always undoable.`
+            }
+            checked={saved.autoFix}
+            disabled={!isAdmin}
+            busy={busy === "autofix"}
+            onChange={(next) =>
+              void patch(
+                "autofix",
+                { settings: { automation: { allowClassB: next ? [...CLASS_B_TYPES] : [] } } },
+                (s) => ({ ...s, autoFix: next }),
+                next ? "Small safe fixes will go live by themselves." : "Every fix will wait for your OK.",
+              )
+            }
+          />
+          <SwitchRow
+            id="ps-paused"
+            label="Pause all changes"
+            help="While this is on, nothing changes on your website — not even fixes you already approved."
+            checked={saved.paused}
+            disabled={!isAdmin}
+            busy={busy === "paused"}
+            onChange={(next) =>
+              void patch("paused", { settings: { paused: next } }, (s) => ({ ...s, paused: next }), next ? "All changes are paused." : "Changes can go live again.")
+            }
+          />
+          {saved.paused && (
+            <div className="pt-3">
+              <Notice tone="warning" icon={<PauseCircle />} title="Changes are paused">
+                Nothing will go live on your website until you switch this off.
+              </Notice>
+            </div>
+          )}
+          {(errors.autofix || errors.paused) && (
+            <p className="pt-2 text-small text-danger" role="alert">
+              {errors.autofix || errors.paused}
+            </p>
+          )}
         </CardBody>
-        <SaveFooter
-          dirty={automationDirty}
-          saving={saving === "automation"}
-          disabled={!isAdmin}
-          onSave={() => void save("automation", { settings: { automation: { allowClassB: allowB } } }, (s) => ({ ...s, allowClassB: allowB }))}
-          onReset={() => setAllowB(saved.allowClassB)}
-        />
       </Card>
 
+      {/* Emails */}
       <Card as="section">
-        <CardHeader title="Notifications" description="Notifications in the app are always on. Choose whether the Owner and Admins also get emails." icon={<Bell />} />
-        <CardBody>
-          <label className={clsx("flex items-start gap-3", canEdit ? "cursor-pointer" : "cursor-not-allowed")}>
-            <input
-              type="checkbox"
-              className="mt-0.5 size-4 shrink-0 accent-primary"
-              checked={emailOn}
+        <CardHeader title="Emails" description="Sent to the people who look after this account." icon={<Mail />} />
+        <CardBody className="divide-y divide-border">
+          {EMAILS.map((e) => (
+            <SwitchRow
+              key={e.kind}
+              id={`ps-email-${e.kind}`}
+              label={e.label}
+              help={e.help}
+              checked={saved.emails[e.kind]}
               disabled={!canEdit}
-              onChange={(e) => setEmailOn(e.target.checked)}
+              busy={busy === `email-${e.kind}`}
+              onChange={(next) =>
+                void patch(
+                  `email-${e.kind}`,
+                  // Turning one on also turns the old all-emails switch back on, so the email can be sent.
+                  { settings: { notifications: { [e.kind]: next, ...(next ? { email: true } : {}) } } },
+                  (s) => ({ ...s, emails: { ...s.emails, [e.kind]: next } }),
+                )
+              }
             />
-            <span>
-              <span className="block text-small font-medium text-fg">Email the Owner and Admins about this project</span>
-              <span className="block text-small text-muted">
-                When a report is ready, an AI check finishes, a website check fails, or fixes need your OK.
-              </span>
-            </span>
-          </label>
+          ))}
         </CardBody>
-        <SaveFooter
-          dirty={notificationsDirty}
-          saving={saving === "notifications"}
-          disabled={!canEdit}
-          onSave={() => void save("notifications", { settings: { notifications: { email: emailOn } } }, (s) => ({ ...s, emailNotifications: emailOn }))}
-          onReset={() => setEmailOn(saved.emailNotifications)}
-        />
       </Card>
+
+      {team}
+      {planSection}
+      {preferences}
+
+      {expert && (
+        <Card as="section">
+          <CardHeader title="Markets" description="Countries and languages we ask AI tools in." icon={<Globe2 />} />
+          <CardBody className="grid gap-5 sm:grid-cols-2">
+            <Field label="Countries" htmlFor="ps-countries" hint="2-letter codes, comma separated — e.g. IN, US, GB">
+              <Input id="ps-countries" value={countries} disabled={!canEdit} onChange={(e) => setCountries(e.target.value)} />
+            </Field>
+            <Field label="Languages" htmlFor="ps-languages" hint="Language codes, comma separated — e.g. en, hi">
+              <Input id="ps-languages" value={languages} disabled={!canEdit} onChange={(e) => setLanguages(e.target.value)} />
+            </Field>
+            {errors.markets && (
+              <p className="text-small text-danger sm:col-span-2" role="alert">
+                {errors.markets}
+              </p>
+            )}
+          </CardBody>
+          <CardFooter>
+            <div className="flex w-full justify-end">
+              <Button variant="secondary" size="sm" onClick={saveMarkets} loading={busy === "markets"} disabled={!canEdit}>
+                Save markets
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      )}
 
       {isAdmin && <DangerZone projectId={projectId} projectName={saved.name} />}
     </div>

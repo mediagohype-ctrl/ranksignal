@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { Check, Mail, Sparkles } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/dashboard/client";
 import { BRAND } from "@/lib/brand";
+import { TRIAL_DAYS } from "@/lib/billing/plans";
 import type { PlanLimits } from "@/lib/types";
 import { Badge, Button, LinkButton, Notice, Spinner, useToast } from "@/components/ui";
 import { openRazorpaySubscription } from "./billing/razorpay-checkout";
@@ -15,8 +16,21 @@ const POLL_MAX = 40; // ~2 minutes
 
 type Phase = { kind: "idle" } | { kind: "activating"; planId: string } | { kind: "slow" } | { kind: "coming_soon" };
 
-/** Optional AI-check fields that @/lib/billing/plans adds to each plan at runtime. */
-type PlanWithAi = PlanLimits & { maxVisibilityRunsPerMonth?: number; maxPromptsPerRun?: number };
+/** AI fields that @/lib/billing/plans adds to each plan (optional so plain PlanLimits still type-check). */
+type PlanWithAi = PlanLimits & { aiAnswersPerMonth?: number; maxPromptsPerRun?: number; enginesPerCheck?: number };
+
+/** "300 AI answers a month (25 questions × 3 AI assistants per check)"; trial: "1 AI check: 10 questions × 3 AI assistants". */
+function aiLine(p: PlanWithAi): string {
+  const answers = p.aiAnswersPerMonth ?? 0;
+  const q = Math.min(p.maxPromptsPerRun ?? 0, p.maxTrackedPrompts);
+  const e = p.enginesPerCheck ?? 0;
+  const per = q > 0 && e > 0 ? `${q} questions × ${e} AI assistant${e === 1 ? "" : "s"}` : "";
+  if (p.id === "trial") {
+    const checks = q > 0 && e > 0 ? Math.floor(answers / (q * e)) : 0;
+    return per ? `${checks} AI check${checks === 1 ? "" : "s"}: ${per}` : `${answers} AI answers`;
+  }
+  return `${answers.toLocaleString("en-IN")} AI answers a month${per ? ` (${per} per check)` : ""}`;
+}
 
 export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanLimits[]; currentPlanId: string; canManage: boolean }) {
   const toast = useToast();
@@ -158,11 +172,8 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
           const features = [
             `${p.maxProjects} website${p.maxProjects === 1 ? "" : "s"}`,
             `${p.maxTrackedPrompts} customer ${p.maxTrackedPrompts === 1 ? "question" : "questions"}`,
-            ...(p.maxVisibilityRunsPerMonth
-              ? [`${p.maxVisibilityRunsPerMonth} AI ${p.maxVisibilityRunsPerMonth === 1 ? "check" : "checks"} a month${p.maxPromptsPerRun ? ` (up to ${p.maxPromptsPerRun} questions each)` : ""}`]
-              : []),
+            ...(p.aiAnswersPerMonth ? [aiLine(p)] : []),
             `${p.maxPagesPerCrawl.toLocaleString()} pages per website check`,
-            `${p.monthlyCredits.toLocaleString()} credits a month`,
             `${p.seats} team seat${p.seats === 1 ? "" : "s"}`,
             `Check your website again every ${p.minScanIntervalDays === 1 ? "day" : `${p.minScanIntervalDays} days`}`,
             ...(p.competitorTracking ? ["Compare with competitors"] : []),
@@ -190,7 +201,7 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
                 </span>
                 {p.priceInrMonthly !== null && <span className="text-small text-muted">/ month</span>}
               </div>
-              {p.id === "trial" && <p className="mt-1 text-xs text-muted">7 days to try everything</p>}
+              {p.id === "trial" && <p className="mt-1 text-xs text-muted">{TRIAL_DAYS} days to try everything</p>}
               <ul className="mt-4 flex-1 space-y-2 border-t border-border pt-4 text-small text-fg-soft">
                 {features.map((f) => (
                   <li key={f} className="flex items-start gap-2">
@@ -217,8 +228,8 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
         })}
       </ul>
       <p className="text-xs text-muted">
-        Credits and AI checks reset at the start of each month. Payments are processed securely by Razorpay; your plan changes as soon as
-        the payment is confirmed.
+        AI answers reset on the 1st of each month (the free trial&apos;s answers cover the whole trial). Payments are processed securely by
+        Razorpay; your plan changes as soon as the payment is confirmed.
       </p>
     </div>
   );

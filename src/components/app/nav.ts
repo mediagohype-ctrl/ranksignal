@@ -15,6 +15,8 @@ export interface NavTab {
   question: string;
   icon: typeof Home;
   pages: NavPage[];
+  /** Old route segments that now redirect into this tab (kept so the tab stays highlighted meanwhile). */
+  aliases?: string[];
 }
 
 export const APP_TABS: NavTab[] = [
@@ -33,12 +35,10 @@ export const APP_TABS: NavTab[] = [
     label: "To-do",
     question: "What do I fix?",
     icon: ListChecks,
-    pages: [
-      { slug: "audit", label: "Website problems" },
-      { slug: "actions", label: "Fixes to approve" },
-      { slug: "offsite", label: "Outside your website" },
-      { slug: "work", label: "Task board" },
-    ],
+    // One list replaces Website problems, Fixes to approve, Outside your website and the Task board. The old
+    // routes redirect into it (see legacyTodoTarget in src/lib/tasks/todo.ts).
+    pages: [{ slug: "todo", label: "To-do" }],
+    aliases: ["audit", "actions", "offsite", "work"],
   },
   {
     key: "answers",
@@ -65,11 +65,16 @@ export const APP_TABS: NavTab[] = [
 /** Project pages that live outside the 4 tabs (setup things, reached from the sidebar footer / menu). */
 export const PROJECT_SETUP_PAGES: NavPage[] = [
   { slug: "integrations", label: "Connect website" },
-  { slug: "settings", label: "Project settings" },
+  { slug: "settings", label: "Settings" },
 ];
 
 export function tabForSection(section: string): NavTab | null {
-  return APP_TABS.find((t) => t.pages.some((p) => p.slug === section)) ?? null;
+  return APP_TABS.find((t) => t.pages.some((p) => p.slug === section) || t.aliases?.includes(section)) ?? null;
+}
+
+/** A To-do item's fix screen (one problem, one button). */
+export function todoItemHref(projectId: string, itemId: string) {
+  return `/app/projects/${projectId}/todo/${encodeURIComponent(itemId)}`;
 }
 
 export function projectHref(projectId: string, slug: string) {
@@ -84,4 +89,9 @@ export function issueHref(projectId: string, issueId: string) {
 /** One page of a problem: what we found there, and how to fix it on that page. */
 export function issuePageHref(projectId: string, issueId: string, pageUrl: string) {
   return `${issueHref(projectId, issueId)}/pages?url=${encodeURIComponent(pageUrl)}`;
+}
+
+/** One customer question on its own page: every AI tool's answer, who they named instead, sources and how to get named. */
+export function questionHref(projectId: string, promptId: string, runId?: string | null) {
+  return `/app/projects/${projectId}/visibility/questions/${encodeURIComponent(promptId)}${runId ? `?run=${encodeURIComponent(runId)}` : ""}`;
 }

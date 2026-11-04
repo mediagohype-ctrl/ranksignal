@@ -110,7 +110,7 @@ export function MembersPanel({
     setBusy(m.id);
     try {
       await api(`/api/org/members/${m.id}`, { method: "PATCH", body: { role: next } });
-      toast(`${m.user.name ?? m.user.email} is now ${next === "admin" ? "an" : "a"} ${roleLabel(next)}.`, "success");
+      toast(`${m.user.name ?? m.user.email}'s role is now ${roleLabel(next)}.`, "success");
       await load();
     } catch (err) {
       toast(errorMessage(err), "error");

@@ -21,7 +21,7 @@ import { clientIpFromHeaders } from "@/lib/auth/rate-limit";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Shared visibility report",
+  title: "Shared full report",
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
   referrer: "no-referrer",
 };
@@ -137,7 +137,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
           size="lg"
           icon={<ScanSearch />}
           title={`${result.brand}'s report isn't ready yet`}
-          description="The website scan for this report hasn't finished. Check back a little later — this link will show the report as soon as it's ready."
+          description="The website check for this report hasn't finished. Check back a little later — this link will show the report as soon as it's ready."
           bordered
         />
       </Shell>
@@ -149,7 +149,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
     <Shell branding={branding}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="eyebrow">SEO · AEO · GEO report</p>
+          <p className="eyebrow">Website and AI report</p>
           <h1 className="mt-2 text-h1 text-balance text-fg">
             {r.brand} <span className="text-muted">— {hostOf(r.websiteUrl)}</span>
           </h1>
@@ -159,10 +159,10 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
           <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-small text-muted">
             <span>Generated {fmtDate(r.generatedAt, true)}</span>
             <span aria-hidden>·</span>
-            <span>Website scanned {fmtDate(r.crawl.finishedAt)}</span>
+            <span>Website checked {fmtDate(r.crawl.finishedAt)}</span>
             <span aria-hidden>·</span>
             <span className="tabular-nums">
-              {r.crawl.pagesCrawled} {r.crawl.pagesCrawled === 1 ? "page" : "pages"} scanned
+              {r.crawl.pagesCrawled} {r.crawl.pagesCrawled === 1 ? "page" : "pages"} checked
             </span>
           </p>
         </div>
@@ -179,7 +179,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
             <div>
               <p className="text-h4 text-navy-fg">Want a report like this for your website?</p>
               <p className="mt-1 text-small text-navy-fg/75">
-                {BRAND.name} checks how Google and AI assistants see your business and explains what to fix, in plain English.
+                {BRAND.name} checks how Google and AI assistants see your business and explains what to fix, in plain words.
               </p>
             </div>
             <LinkButton href="/free-check" variant="accent" size="lg" iconRight={<ArrowRight />}>

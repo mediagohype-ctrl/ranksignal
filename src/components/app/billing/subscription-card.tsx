@@ -3,6 +3,7 @@ import { useState } from "react";
 import { CalendarClock, CreditCard, XCircle } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { Badge, Button, Dialog, KeyValueList, Meter, useToast } from "@/components/ui";
+import { fmtDate } from "@/lib/dashboard/format";
 
 export interface BillingInfo {
   checkoutAvailable: boolean;
@@ -20,14 +21,15 @@ export interface BillingInfo {
 export interface UsageResponse {
   plan: { id: string; name: string };
   access: { active: boolean; reason?: string; trialEndsAt?: string | null; trialDaysLeft: number | null; message: string; graceEndsAt?: string | null };
-  aiChecks: { used: number; limit: number; remaining: number; maxPromptsPerRun: number };
+  /** AI answers this month (GET /api/usage → getVisibilityRunAllowance): limit = answers per month, remaining = left. */
+  aiChecks: { used: number; limit: number; remaining: number; maxPromptsPerRun: number; answersPerCheck?: number; resetsAt?: string | null };
   billing: BillingInfo;
 }
 
 export function fmtDay(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return Number.isNaN(d.getTime()) ? null : fmtDate(d);
 }
 
 const STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" | "neutral" }> = {
@@ -103,11 +105,20 @@ export function SubscriptionSummary({ usage, canManage, onChanged }: { usage: Us
       </div>
       <div className="space-y-3">
         <h3 className="flex items-center gap-2 text-h4 text-fg">
-          <CalendarClock size={18} aria-hidden className="text-muted" /> AI checks this month
+          <CalendarClock size={18} aria-hidden className="text-muted" /> AI answers
         </h3>
-        <Meter value={usage.aiChecks.used} max={Math.max(1, usage.aiChecks.limit)} label="AI checks used" showValue />
+        <Meter value={usage.aiChecks.used} max={Math.max(1, usage.aiChecks.limit)} label="AI answers used" showValue />
+        <p className="text-small text-fg">
+          AI answers left: {usage.aiChecks.remaining.toLocaleString("en-IN")} of {usage.aiChecks.limit.toLocaleString("en-IN")}
+        </p>
         <p className="text-small text-muted">
-          {usage.aiChecks.used} of {usage.aiChecks.limit} checks used · up to {usage.aiChecks.maxPromptsPerRun} questions per check.
+          One answer is one question asked to one AI assistant
+          {usage.aiChecks.answersPerCheck ? `; a full AI check uses ${usage.aiChecks.answersPerCheck.toLocaleString("en-IN")}` : ""}.{" "}
+          {usage.aiChecks.resetsAt
+            ? `Resets on ${fmtDay(usage.aiChecks.resetsAt)}.`
+            : usage.plan.id === "trial"
+              ? "These cover your whole free trial."
+              : ""}
         </p>
       </div>
       <Dialog
