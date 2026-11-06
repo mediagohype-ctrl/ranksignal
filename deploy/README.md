@@ -29,7 +29,8 @@ The password for the database and the `ranksignal` Linux user is set at the top 
 ## Later
 
 - **New code:** commit, then run the same command again. The server's `.env` and database are kept.
-- **Change keys** (Razorpay, Turnstile, email…): edit `/var/www/ranksignal/.env` on the server, then
+- **Change keys** (Razorpay, Turnstile, email…): `bash deploy/set-env.sh <VPS_IP> KEY=value KEY2=value2` (sets them on
+  the server and restarts the app; nothing is saved in git). Or edit `/var/www/ranksignal/.env` on the server, then
   `systemctl restart ranksignal`. Or update your PC's `.env` and deploy with `REFRESH_ENV=1 bash deploy/deploy.sh …`.
 - **Copy Neon data again** (replaces the VPS data): `IMPORT_DB=1 bash deploy/deploy.sh …`
 - **SSL notice email:** `LETSENCRYPT_EMAIL=you@email.com bash deploy/deploy.sh …`

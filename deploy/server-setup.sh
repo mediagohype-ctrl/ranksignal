@@ -127,11 +127,23 @@ if [ -n "$NEON_URL" ] && { [ "$TABLES" = 0 ] || [ "${IMPORT_DB:-0}" = 1 ]; }; th
   DUMP=/root/neon-$(date +%F-%H%M).dump
   echo "    Downloading everything from Neon (your Neon database is only read, never changed)…"
   pg_dump "$NEON_URL" --format=custom --no-owner --no-acl --schema=public --file="$DUMP"
-  # --clean: a re-import (IMPORT_DB=1) replaces what's here. Harmless warnings (e.g. about the public schema) are OK.
-  pg_restore --clean --if-exists --no-owner --no-acl -d "$DB_URL" "$DUMP" || warn "pg_restore reported warnings (usually harmless) — checking the data…"
+  NEON_USERS="$(psql "$NEON_URL" -tAc 'SELECT count(*) FROM "User"' 2>/dev/null || echo "?")"
+  # Start from an empty database so the copy is exact (this replaces anything already here), app stopped meanwhile.
+  systemctl stop ranksignal 2>/dev/null || true
+  sudo -u postgres psql -q -v ON_ERROR_STOP=1 -d "$DB_NAME" -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public AUTHORIZATION $DB_USER;"
+  # pg_restore needs a plain libpq address (no Prisma-only "?schema=public").
+  PG_URL="postgresql://$DB_USER:$(urlencode "$PASSWORD")@127.0.0.1:5432/$DB_NAME"
+  pg_restore --no-owner --no-acl -d "$PG_URL" "$DUMP" 2> /root/neon-restore.log || true
+  if grep -v -E 'already exists|errors ignored on restore' /root/neon-restore.log | grep -q 'error'; then
+    warn "restore messages (full log: /root/neon-restore.log):"; grep 'error' /root/neon-restore.log | head -10
+  fi
   USERS="$(sudo -u postgres psql -d "$DB_NAME" -tAc 'SELECT count(*) FROM "User"' 2>/dev/null || echo 0)"
   PROJECTS="$(sudo -u postgres psql -d "$DB_NAME" -tAc 'SELECT count(*) FROM "Project"' 2>/dev/null || echo 0)"
-  ok "copied: $USERS users, $PROJECTS websites (backup of the download kept at $DUMP)"
+  if [ "$NEON_USERS" != "?" ] && [ "$USERS" != "$NEON_USERS" ]; then
+    echo -e "    \033[1;31mThe copy is incomplete: Neon has $NEON_USERS users, the VPS has $USERS.\033[0m See /root/neon-restore.log"
+    exit 1
+  fi
+  ok "copied: $USERS users, $PROJECTS websites — same as Neon (download kept at $DUMP)"
 else
   ok "skipped (database already has data; deploy with IMPORT_DB=1 to copy from Neon again and replace it)"
 fi

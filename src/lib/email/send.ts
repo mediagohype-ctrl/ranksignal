@@ -9,6 +9,11 @@ export interface SendEmailInput {
   html: string;
   text: string;
   replyTo?: string;
+  /**
+   * Holds a one-time secret link (password reset, email check, team invite). These are never copied to
+   * EMAIL_BCC: anyone reading the copy could use the link to get into the customer's account.
+   */
+  private?: boolean;
 }
 
 export interface SendEmailResult {
@@ -25,6 +30,23 @@ function smtpConfigured(): boolean {
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.EMAIL_FROM && (smtpConfigured() || process.env.RESEND_API_KEY));
+}
+
+/** EMAIL_BCC: comma-separated addresses that get a hidden copy of every non-private email. */
+export function bccFor(o: Pick<SendEmailInput, "to" | "private">, list = process.env.EMAIL_BCC ?? ""): string[] {
+  if (o.private) return [];
+  const to = o.to.trim().toLowerCase();
+  const seen = new Set<string>();
+  for (const a of list.split(",")) {
+    const e = a.trim().toLowerCase();
+    if (e && e !== to && /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(e)) seen.add(e);
+  }
+  return [...seen];
+}
+
+/** EMAIL_REPLY_TO: where customer replies go when the email doesn't set its own reply-to. */
+function replyToFor(o: SendEmailInput): string | undefined {
+  return o.replyTo || process.env.EMAIL_REPLY_TO || undefined;
 }
 
 let transporter: Transporter | null = null;
@@ -53,7 +75,8 @@ async function sendViaSmtp(from: string, o: SendEmailInput): Promise<SendEmailRe
       subject: o.subject,
       html: o.html,
       text: o.text,
-      ...(o.replyTo ? { replyTo: o.replyTo } : {}),
+      ...(bccFor(o).length ? { bcc: bccFor(o) } : {}),
+      ...(replyToFor(o) ? { replyTo: replyToFor(o) } : {}),
     });
     return { ok: true, id: info.messageId };
   } catch (err) {
@@ -75,7 +98,8 @@ async function sendViaResend(apiKey: string, from: string, o: SendEmailInput): P
         subject: o.subject,
         html: o.html,
         text: o.text,
-        ...(o.replyTo ? { reply_to: o.replyTo } : {}),
+        ...(bccFor(o).length ? { bcc: bccFor(o) } : {}),
+        ...(replyToFor(o) ? { reply_to: replyToFor(o) } : {}),
       }),
       signal: AbortSignal.timeout(10_000),
     });

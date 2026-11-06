@@ -34,5 +34,5 @@ export async function sendPasswordResetEmail(user: { id: string; email: string; 
   const token = await createPasswordResetToken(user.id, user.passwordHash);
   const link = appLink(`/reset-password?token=${encodeURIComponent(token)}`);
   const mail = passwordResetTemplate({ name: user.name, link });
-  return sendEmail({ to: user.email, ...mail });
+  return sendEmail({ to: user.email, ...mail, private: true });
 }

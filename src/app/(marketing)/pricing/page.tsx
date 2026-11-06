@@ -7,6 +7,7 @@ import { BRAND } from "@/lib/brand";
 import { JsonLd, inkPill } from "@/components/marketing/ui";
 import {
   MARKETING_PLANS,
+  planSignupHref,
   SERVICE_FROM_PRICE,
   SERVICE_TIERS,
   TRIAL_AI,
@@ -269,7 +270,7 @@ export default function PricingPage() {
                 </p>
                 <p className="mt-4 text-small text-fg-soft">Plus GST · indicative price</p>
                 <Link
-                  href={p.id === "agency" ? "/contact" : `/signup?plan=${p.id}`}
+                  href={planSignupHref(p.id)}
                   className={clsx(
                     "mt-8 w-full",
                     p.featured

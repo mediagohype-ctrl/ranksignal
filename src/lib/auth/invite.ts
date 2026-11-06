@@ -44,5 +44,5 @@ export async function sendInviteEmail(o: {
 }) {
   const token = await createInviteToken(o.membershipId, o.email);
   const link = appLink(`/accept-invite?token=${encodeURIComponent(token)}`);
-  return sendEmail({ to: o.email, ...inviteTemplate({ inviterName: o.inviterName, organizationName: o.organizationName, role: o.role, link }) });
+  return sendEmail({ to: o.email, ...inviteTemplate({ inviterName: o.inviterName, organizationName: o.organizationName, role: o.role, link }), private: true });
 }

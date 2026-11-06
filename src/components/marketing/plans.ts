@@ -24,7 +24,7 @@ const COPY: Record<PaidPlanId, { blurb: string; suffix?: string; featured?: bool
   agency: {
     blurb: "For agencies looking after many client websites.",
     suffix: "+",
-    cta: "Talk to us",
+    cta: "Get Agency",
   },
 };
 
@@ -184,4 +184,10 @@ export const SERVICE_FROM_PRICE = Math.min(...SERVICE_TIERS.map((t) => t.price))
 /** Contact link that pre-fills the "Done-for-you services" topic (optionally a tier). */
 export function servicesContactHref(tier?: ServiceTierId) {
   return `/contact?topic=services${tier ? `&tier=${tier}` : ""}`;
+}
+
+/** Where a plan's button on the public site goes. Agency skips the trial and opens Razorpay checkout after sign-up. */
+export function planSignupHref(planId: string): string {
+  if (planId !== "agency") return `/signup?plan=${planId}`;
+  return `/signup?plan=agency&next=${encodeURIComponent("/app/settings?tab=billing&plan=agency")}`;
 }

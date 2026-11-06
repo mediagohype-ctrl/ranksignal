@@ -8,17 +8,22 @@ const isDev = process.env.NODE_ENV !== "production";
  * - Cloudflare Turnstile (script + iframe challenges.cloudflare.com) — src/components/turnstile.tsx
  * - Razorpay Checkout (script checkout.razorpay.com; iframes api/checkout.razorpay.com; XHR api/lumberjack) —
  *   src/components/app/billing/razorpay-checkout.ts
+ * - Google Analytics / Tag Manager and Microsoft Clarity — src/components/analytics.tsx
  * Images allow any https origin (white-label logos, avatars). Everything else is same-origin.
  * TODO(security): move to a nonce-based CSP (middleware-generated nonce + 'strict-dynamic') so 'unsafe-inline'
  * can be dropped from script-src. Next.js inline bootstrap scripts currently need it.
  */
+const ANALYTICS_SCRIPTS = "https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms";
+const ANALYTICS_CONNECT =
+  "https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.clarity.ms https://c.bing.com";
+
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://checkout.razorpay.com`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://checkout.razorpay.com ${ANALYTICS_SCRIPTS}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com data:",
   "img-src 'self' data: https:",
-  `connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com${isDev ? " ws: wss:" : ""}`,
+  `connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com ${ANALYTICS_CONNECT}${isDev ? " ws: wss:" : ""}`,
   "frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",

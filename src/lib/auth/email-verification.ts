@@ -17,5 +17,5 @@ export async function readEmailVerificationToken(token: string): Promise<{ userI
 export async function sendVerificationEmail(userId: string, email: string, name?: string | null) {
   const token = await createEmailVerificationToken(userId, email);
   const link = appLink(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
-  return sendEmail({ to: email, ...verifyEmailTemplate({ name, link }) });
+  return sendEmail({ to: email, ...verifyEmailTemplate({ name, link }), private: true });
 }

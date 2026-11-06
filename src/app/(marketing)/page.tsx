@@ -6,7 +6,7 @@ import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { SampleResult } from "@/components/marketing/home-sample";
 import { FAQS } from "@/components/marketing/content";
-import { MARKETING_PLANS, TRIAL_DAYS, inr } from "@/components/marketing/plans";
+import { MARKETING_PLANS, TRIAL_DAYS, inr, planSignupHref } from "@/components/marketing/plans";
 
 // Home page: exactly five blocks (brief §5.1) — hero, sample result, three steps, three plans, five questions.
 
@@ -209,7 +209,7 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <Link href={p.id === "agency" ? "/contact" : `/signup?plan=${p.id}`} className={inkPill("md", false, "mt-8 w-full")}>
+                <Link href={planSignupHref(p.id)} className={inkPill("md", false, "mt-8 w-full")}>
                   {p.cta}
                 </Link>
               </li>

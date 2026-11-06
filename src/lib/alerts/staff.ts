@@ -55,7 +55,7 @@ export async function sendStaffAlert(a: StaffAlert): Promise<StaffAlertResult> {
   try {
     if (emails.length) {
       const { html, text } = renderEmail({ title: a.subject, preheader: a.text.slice(0, 120), paragraphs: a.text.split(/\n{2,}/), footer: `Staff alert · ${kind}` });
-      for (const to of emails) email = (await sendEmail({ to, subject: `[Staff] ${a.subject}`, html, text })).ok || email;
+      for (const to of emails) email = (await sendEmail({ to, subject: `[Staff] ${a.subject}`, html, text, private: true })).ok || email;
     }
     if (whatsappTo) {
       const template = process.env.STAFF_WHATSAPP_TEMPLATE?.trim();

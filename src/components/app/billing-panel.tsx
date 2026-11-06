@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { Check, Mail, Sparkles } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/dashboard/client";
@@ -40,6 +40,9 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [planId, setPlanId] = useState(currentPlanId);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const params = useSearchParams();
+  const autoPlan = params.get("plan");
+  const autoStarted = useRef(false);
 
   const loadUsage = useCallback(async () => {
     try {
@@ -125,6 +128,16 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
       else toast(errorMessage(e), "error");
     }
   }
+
+  // Arriving from the pricing page with ?plan=agency (etc.): open Razorpay checkout for that plan straight away.
+  useEffect(() => {
+    if (autoStarted.current || !autoPlan || !usage || !canManage) return;
+    const target = plans.find((p) => p.id === autoPlan && p.id !== "trial");
+    autoStarted.current = true;
+    if (!target || usage.plan.id === target.id) return;
+    void checkout(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlan, usage, canManage, plans]);
 
   const currentIdx = plans.findIndex((p) => p.id === planId);
   const supportEmail = usage?.billing.supportEmail ?? BRAND.supportEmail;

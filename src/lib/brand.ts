@@ -2,6 +2,6 @@
 export const BRAND = {
   name: "RankSignal",
   tagline: "See how AI search talks about your brand — and fix it safely.",
-  supportEmail: "info@gohypemedia.com",
+  supportEmail: "support@mywebrank.tech",
   appUrl: process.env.APP_URL ?? "http://localhost:3000",
 };
