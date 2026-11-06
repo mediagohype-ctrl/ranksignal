@@ -42,6 +42,7 @@ import {
   __aiBudgetReservedMicros,
   __resetAiBudgetForTests,
   __setAiBudgetOrgCapQueryForTests,
+  __setAiBudgetMonthQueriesForTests,
   AiBudgetError,
   fitsBudget,
   isAiBudgetExhausted,
@@ -56,6 +57,7 @@ import {
   utcDayStart,
 } from "@/lib/billing/ai-budget";
 import { openRouterChat } from "@/lib/providers/openrouter-client";
+import { monthlyAiBudgetInr, monthlyAiBudgetMicros } from "@/lib/billing/ai-margin";
 import { JobError } from "@/lib/types";
 
 const T0 = new Date("2026-10-28T10:00:00Z");
@@ -70,7 +72,10 @@ beforeEach(() => {
   state.created = [];
   alerts.length = 0;
   __setAiBudgetOrgCapQueryForTests(async () => null);
+  __setAiBudgetMonthQueriesForTests(async () => null, async () => 0);
   delete process.env.AI_DAILY_BUDGET_USD;
+  delete process.env.AI_COST_SHARE;
+  delete process.env.ADMIN_USD_INR_RATE;
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -262,6 +267,29 @@ describe("reservations: hard cap", () => {
     await expect(reserveAiSpend(60_000, { organizationId: "org_b" })).resolves.toBeDefined();
   });
 
+  it("per-workspace MONTHLY cap counts earlier days this month plus today", async () => {
+    __setAiBudgetLedgerQueryForTests(async () => 0);
+    let rangeArgs: [Date, Date] | null = null;
+    __setAiBudgetMonthQueriesForTests(
+      async (orgId) => (orgId === "org_a" ? 1_000_000 : null),
+      async (since, until) => {
+        rangeArgs = [since, until];
+        return 900_000; // already spent on earlier days this month
+      },
+    );
+    (await reserveAiSpend(60_000, { organizationId: "org_a" })).settle(60_000);
+    const err = await reserveAiSpend(60_000, { organizationId: "org_a", maxWaitMs: 0 }).catch((e) => e);
+    expect(err).toBeInstanceOf(AiBudgetError);
+    expect((err as AiBudgetError).scope).toBe("workspace");
+    expect((err as Error).message).toMatch(/this month/);
+    expect(isAiBudgetExhausted(err)).toBe(true);
+    // Earlier days = from the 1st of the month up to today (UTC).
+    expect(rangeArgs![0].getUTCDate()).toBe(1);
+    expect(rangeArgs![1].getTime()).toBe(utcDayStart(new Date()).getTime());
+    // Other workspaces are not affected.
+    await expect(reserveAiSpend(60_000, { organizationId: "org_b" })).resolves.toBeDefined();
+  });
+
   it("alerts staff once at 80% and once at 100% of the platform cap", async () => {
     process.env.AI_DAILY_BUDGET_USD = "1";
     __setAiBudgetLedgerQueryForTests(async () => 0);
@@ -273,5 +301,27 @@ describe("reservations: hard cap", () => {
     await reserveAiSpend(500_000, { maxWaitMs: 0 }).catch(() => undefined);
     await reserveAiSpend(500_000, { maxWaitMs: 0 }).catch(() => undefined);
     expect(alerts.map((a) => a.kind)).toEqual(["ai_budget_80", "ai_budget_100"]);
+  });
+});
+
+describe("profit guard: monthly AI budget is a share of the price", () => {
+  it("is 30% of the plan price by default", () => {
+    expect(monthlyAiBudgetInr("starter")).toBe(900); // ₹2,999 × 30%
+    expect(monthlyAiBudgetInr("growth")).toBe(2400);
+    expect(monthlyAiBudgetInr("agency")).toBe(6000);
+  });
+
+  it("adds the done-for-you tier price and gives the free trial a small fixed budget", () => {
+    expect(monthlyAiBudgetInr("agency", "fix")).toBe(Math.round((19_999 + 19_999) * 0.3));
+    expect(monthlyAiBudgetInr("trial")).toBe(150);
+  });
+
+  it("follows AI_COST_SHARE and converts to micro-USD at the configured rate", () => {
+    process.env.AI_COST_SHARE = "0.2";
+    process.env.ADMIN_USD_INR_RATE = "100";
+    expect(monthlyAiBudgetInr("starter")).toBe(600);
+    expect(monthlyAiBudgetMicros("starter")).toBe(6_000_000); // ₹600 / 100 = $6
+    process.env.AI_COST_SHARE = "5"; // invalid → default 30%
+    expect(monthlyAiBudgetInr("starter")).toBe(900);
   });
 });

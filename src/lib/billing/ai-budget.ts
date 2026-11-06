@@ -3,9 +3,11 @@
 //   const r = await reserveAiSpend(estimateMicros);   // throws AiBudgetError when it would not fit
 //   try { ...call...; r.settle(actualMicros) } catch (e) { r.release(); throw e }
 //
-// A call is allowed only when spent + reserved + estimate ≤ cap, for BOTH
-//   - the platform cap  AI_DAILY_BUDGET_USD (all organizations, UTC day), and
-//   - the workspace cap plan.aiDailyBudgetUsd (organization from the AI scope set by the job runner, see runWithAiScope).
+// A call is allowed only when spent + reserved + estimate ≤ cap, for ALL of
+//   - the platform cap  AI_DAILY_BUDGET_USD (all organizations, UTC day),
+//   - the workspace cap plan.aiDailyBudgetUsd (organization from the AI scope set by the job runner, see runWithAiScope),
+//   - the workspace MONTHLY cap = a share of what it pays (src/lib/billing/ai-margin.ts; profit guard).
+//     Month spent = ledger of earlier days this month (read once a day) + today's spend.
 // spent = max(ledger, local):
 //   ledger — sum(UsageLedger.costMicros) of today's "actual" rows (re-read at most every AI_BUDGET_RESERVE_REFRESH_MS
 //            inside the reservation lock; other instances' spend shows up here).
@@ -20,6 +22,7 @@ import { db } from "@/lib/db";
 import { JobError } from "@/lib/types";
 import { sendStaffAlert } from "@/lib/alerts/staff";
 import { getPlanWithAiLimits } from "./plans";
+import { monthlyAiBudgetMicros } from "./ai-margin";
 
 export const DEFAULT_AI_DAILY_BUDGET_USD = 5;
 export const AI_BUDGET_CACHE_MS = 30_000;
@@ -71,6 +74,11 @@ interface OrgState {
   reservedMicros: number;
   capMicros: number | null;
   capFetchedAt: number;
+  /** Monthly cap (micro-USD); null = none. */
+  monthCapMicros: number | null;
+  /** Ledger spend this month before today; refreshed once per UTC day. */
+  monthPrevMicros: number;
+  monthPrevDay: string;
 }
 
 interface BudgetState {
@@ -128,6 +136,10 @@ export function utcDayStart(now = new Date()): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
+export function utcMonthStart(now = new Date()): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
 export function nextUtcDayStart(now = new Date()): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 }
@@ -157,7 +169,11 @@ function rollDay(now: Date) {
 
 function orgState(orgId: string): OrgState {
   let s = state.orgs.get(orgId);
-  if (!s) state.orgs.set(orgId, (s = { ledgerMicros: 0, fetchedAt: 0, localMicros: 0, reservedMicros: 0, capMicros: null, capFetchedAt: 0 }));
+  if (!s)
+    state.orgs.set(
+      orgId,
+      (s = { ledgerMicros: 0, fetchedAt: 0, localMicros: 0, reservedMicros: 0, capMicros: null, capFetchedAt: 0, monthCapMicros: null, monthPrevMicros: 0, monthPrevDay: "" }),
+    );
   return s;
 }
 
@@ -174,9 +190,22 @@ async function queryOrgCapMicros(orgId: string): Promise<number | null> {
   const org = await db.organization.findUnique({ where: { id: orgId }, select: { planId: true } });
   return usdToMicros(getPlanWithAiLimits(org?.planId ?? "trial").aiDailyBudgetUsd);
 }
+async function queryOrgMonthCapMicros(orgId: string): Promise<number | null> {
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { planId: true, serviceTier: true } });
+  return monthlyAiBudgetMicros(org?.planId ?? "trial", org?.serviceTier);
+}
+async function queryLedgerRangeMicros(since: Date, until: Date, orgId: string): Promise<number> {
+  const agg = await db.usageLedger.aggregate({
+    where: { kind: "actual", organizationId: orgId, createdAt: { gte: since, lt: until } },
+    _sum: { costMicros: true },
+  });
+  return agg._sum.costMicros ?? 0;
+}
 // Under vitest nothing is queried unless a test opts in (unmocked test files must not reach a real DB).
 let ledgerQuery: (since: Date, orgId?: string) => Promise<number> = process.env.VITEST ? async () => 0 : queryLedgerMicros;
 let orgCapQuery: (orgId: string) => Promise<number | null> = process.env.VITEST ? async () => null : queryOrgCapMicros;
+let orgMonthCapQuery: (orgId: string) => Promise<number | null> = process.env.VITEST ? async () => null : queryOrgMonthCapMicros;
+let ledgerRangeQuery: (since: Date, until: Date, orgId: string) => Promise<number> = process.env.VITEST ? async () => 0 : queryLedgerRangeMicros;
 
 /** Test seam: "db" uses the (mocked) Prisma client; a function replaces the ledger query. */
 export function __setAiBudgetLedgerQueryForTests(q: "db" | ((since: Date, orgId?: string) => Promise<number>)) {
@@ -185,6 +214,15 @@ export function __setAiBudgetLedgerQueryForTests(q: "db" | ((since: Date, orgId?
 /** Test seam: workspace cap lookup (micro-USD, null = no workspace cap). */
 export function __setAiBudgetOrgCapQueryForTests(q: "db" | ((orgId: string) => Promise<number | null>)) {
   orgCapQuery = q === "db" ? queryOrgCapMicros : q;
+}
+
+/** Test seam: monthly workspace cap (micro-USD, null = none) and the earlier-days-this-month ledger read. */
+export function __setAiBudgetMonthQueriesForTests(
+  cap: "db" | ((orgId: string) => Promise<number | null>),
+  range: "db" | ((since: Date, until: Date, orgId: string) => Promise<number>),
+) {
+  orgMonthCapQuery = cap === "db" ? queryOrgMonthCapMicros : cap;
+  ledgerRangeQuery = range === "db" ? queryLedgerRangeMicros : range;
 }
 
 /** Cached platform ledger read for status display (fails open to the last value: display only). */
@@ -227,9 +265,16 @@ async function orgLedgerFresh(orgId: string, s: OrgState, now: Date): Promise<vo
   try {
     if (!s.capFetchedAt || Date.now() - s.capFetchedAt >= AI_BUDGET_CACHE_MS) {
       s.capMicros = await orgCapQuery(orgId);
+      s.monthCapMicros = await orgMonthCapQuery(orgId);
       s.capFetchedAt = Date.now();
     }
-    if (s.capMicros === null) return;
+    if (s.capMicros === null && s.monthCapMicros === null) return;
+    if (s.monthCapMicros !== null && s.monthPrevDay !== state.day) {
+      const dayStart = utcDayStart(now);
+      const monthStart = utcMonthStart(now);
+      s.monthPrevMicros = monthStart < dayStart ? await ledgerRangeQuery(monthStart, dayStart, orgId) : 0;
+      s.monthPrevDay = state.day;
+    }
     if (!s.fetchedAt || Date.now() - s.fetchedAt >= AI_BUDGET_RESERVE_REFRESH_MS) {
       s.ledgerMicros = await ledgerQuery(utcDayStart(now), orgId);
       s.fetchedAt = Date.now();
@@ -287,7 +332,7 @@ export function noteAiSpend(costMicros: number, now = new Date()): void {
   addLocalSpend(costMicros, currentAiScope()?.organizationId, now);
 }
 
-type Verdict = { ok: true } | { ok: false; scope: "platform" | "workspace"; waitable: boolean };
+type Verdict = { ok: true } | { ok: false; scope: "platform" | "workspace"; waitable: boolean; month?: boolean };
 
 /** Pure fit check (exported for tests): may a call of `estimate` start given spent/reserved/cap (micro-USD)? */
 export function fitsBudget(spent: number, reserved: number, estimate: number, cap: number): { ok: boolean; waitable: boolean } {
@@ -303,6 +348,11 @@ function check(estimate: number, org: OrgState | null): Verdict {
   if (org && org.capMicros !== null) {
     const o = fitsBudget(Math.max(org.ledgerMicros, org.localMicros), org.reservedMicros, estimate, org.capMicros);
     if (!o.ok) return { ok: false, scope: "workspace", waitable: o.waitable };
+  }
+  if (org && org.monthCapMicros !== null) {
+    const today = Math.max(org.ledgerMicros, org.localMicros);
+    const m = fitsBudget(org.monthPrevMicros + today, org.reservedMicros, estimate, org.monthCapMicros);
+    if (!m.ok) return { ok: false, scope: "workspace", waitable: m.waitable, month: true };
   }
   return { ok: true };
 }
@@ -348,7 +398,9 @@ export async function reserveAiSpend(
     throw new AiBudgetError(
       v.scope === "platform"
         ? "Today's AI budget is used up. The rest of the AI check will run tomorrow."
-        : "This workspace's AI budget for today is used up. The rest of the AI check will run tomorrow.",
+        : v.month
+          ? "This workspace's AI budget for this month is used up. AI checks continue next month."
+          : "This workspace's AI budget for today is used up. The rest of the AI check will run tomorrow.",
       v.scope,
     );
   }
