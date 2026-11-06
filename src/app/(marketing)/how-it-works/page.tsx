@@ -57,7 +57,7 @@ const RISK_DEFAULT: Record<string, string> = {
 };
 
 const REPORT_PARTS = [
-  { title: "Scores, before and after", body: "Your overall score and your four scores at the start and end of the month." },
+  { title: "Scores, before and after", body: "Your overall, SEO, AEO, GEO and Brand scores at the start and end of the month." },
   { title: "Questions won and lost", body: "Which customer questions started or stopped naming you in AI answers, and which competitor is named instead." },
   { title: "Wrong answers caught", body: "Where an AI assistant says something about you that your own site contradicts." },
   { title: "What went live", body: "Every fix that went live, and who did it." },

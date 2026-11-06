@@ -145,10 +145,10 @@ export interface ShippedMarker {
 
 const SCORE_SERIES: { key: keyof Omit<ScoreHistoryPoint, "t">; name: string; color: string; width: number }[] = [
   { key: "overall", name: "Overall", color: "var(--chart-1)", width: 3 },
-  { key: "seo", name: "Google health", color: "var(--chart-2)", width: 2 },
-  { key: "aeo", name: "Easy to quote", color: "var(--chart-3)", width: 2 },
-  { key: "geo", name: "Ready for AI", color: "var(--chart-4)", width: 2 },
-  { key: "brand", name: "AI knows you", color: "var(--chart-5)", width: 2 },
+  { key: "seo", name: "SEO", color: "var(--chart-2)", width: 2 },
+  { key: "aeo", name: "AEO", color: "var(--chart-3)", width: 2 },
+  { key: "geo", name: "GEO", color: "var(--chart-4)", width: 2 },
+  { key: "brand", name: "Brand", color: "var(--chart-5)", width: 2 },
 ];
 
 const shortDate = (t: number) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: DEFAULT_TIME_ZONE });

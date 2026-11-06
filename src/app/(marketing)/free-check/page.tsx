@@ -18,9 +18,9 @@ export const metadata: Metadata = {
 };
 
 const WHAT: { icon: ReactNode; title: string; body: string }[] = [
-  { icon: <Search />, title: "Google health", body: "Your Google headlines and summaries, main headings, secure address (the padlock), and whether your pages can appear on Google." },
-  { icon: <Sparkles />, title: "Easy to quote", body: "Whether your pages answer real customer questions clearly enough to be quoted." },
-  { icon: <Bot />, title: "Ready for AI", body: "Whether the robots of ChatGPT, Perplexity and Claude are allowed in, and whether AI can tell who you are." },
+  { icon: <Search />, title: "SEO basics", body: "Your Google headlines and summaries, main headings, secure address (the padlock), and whether your pages can appear on Google." },
+  { icon: <Sparkles />, title: "Answer-readiness (AEO)", body: "Whether your pages answer real customer questions clearly enough to be quoted." },
+  { icon: <Bot />, title: "AI access (GEO)", body: "Whether the robots of ChatGPT, Perplexity and Claude are allowed in, and whether AI can tell who you are." },
   { icon: <ShieldCheck />, title: "Trust signs", body: "Your business details, About and Contact pages, and links to your social profiles." },
 ];
 
@@ -47,8 +47,8 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
         title="Is your website ready for Google and AI?"
         intro={
           <p>
-            Type your website. We&apos;ll read your homepage and up to four main pages, then show your score and your
-            top 3 fixes, in plain words.
+            Type your website. We&apos;ll read your homepage and up to four main pages, then score them for SEO, answer
+            engines (AEO) and AI assistants (GEO) — with your top 3 fixes, in plain words.
           </p>
         }
       />

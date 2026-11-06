@@ -136,7 +136,7 @@ export default function ServicesPage() {
       "@context": "https://schema.org",
       "@type": "Service",
       name: TITLE,
-      serviceType: "Website and AI search help for small businesses",
+      serviceType: "AI search visibility (SEO, AEO and GEO) management",
       description: DESCRIPTION,
       url: `${SITE}/services`,
       areaServed: { "@type": "Country", name: "India" },

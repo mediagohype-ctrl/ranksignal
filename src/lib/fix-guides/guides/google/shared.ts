@@ -1,4 +1,4 @@
-// Small helpers used only by the Google health guides.
+// Small helpers used only by the SEO guides.
 import type { FixContext, FixPage } from "../../types";
 
 /** "1 page" / "3 pages". */

@@ -114,7 +114,7 @@ export default async function HomePage({ params }: { params: Promise<{ id: strin
                 <p className="mt-1 text-body text-fg-soft">{aiLine}</p>
                 <dl className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-small sm:justify-start">
                   <div className="flex gap-1.5">
-                    <dt className="text-muted">Google health</dt>
+                    <dt className="text-muted">SEO</dt>
                     <dd className="font-semibold tabular-nums text-fg">{google === null ? "—" : `${google} / 100`}</dd>
                   </div>
                   <div className="flex gap-1.5">

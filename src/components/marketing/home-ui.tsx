@@ -20,10 +20,10 @@ export function SampleTag({ className }: { className?: string }) {
 }
 
 const PILLARS = [
-  { label: "Google health", score: 78 },
-  { label: "Easy to quote", score: 54 },
-  { label: "Ready for AI", score: 41 },
-  { label: "AI knows you", score: 86 },
+  { label: "SEO", score: 78 },
+  { label: "AEO", score: 54 },
+  { label: "GEO", score: 41 },
+  { label: "Brand", score: 86 },
 ] as const;
 
 /** Hero: an AI answer card overlapping a compact report card. */
@@ -206,7 +206,7 @@ export function FixPanel() {
       <IssueCard
         className="!rounded-[22px] !shadow-lg"
         title="AI can't find a clear answer to “Do you deliver?”"
-        pillarLabel="Easy to quote"
+        pillarLabel="AEO"
         impact="high"
         effort="quick"
         affectedCount={6}

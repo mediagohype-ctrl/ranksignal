@@ -112,10 +112,10 @@ export function SetupVignette() {
 /* ------------------------------------------------------------------ 02 · audit and measure */
 
 const BASELINE_PILLARS = [
-  { label: "Google health", score: 66 },
-  { label: "Easy to quote", score: 31 },
-  { label: "Ready for AI", score: 24 },
-  { label: "AI knows you", score: 72 },
+  { label: "SEO", score: 66 },
+  { label: "AEO", score: 31 },
+  { label: "GEO", score: 24 },
+  { label: "Brand", score: 72 },
 ] as const;
 
 export function BaselineVignette() {

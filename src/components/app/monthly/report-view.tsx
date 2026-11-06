@@ -246,7 +246,7 @@ function SearchCard({ s }: { s: SearchSection }) {
   );
 }
 
-const PILLAR_NAME: Record<string, string> = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" };
+const PILLAR_NAME: Record<string, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", brand: "Brand" };
 const PERFORMER: Record<string, string> = { agency: "By our team", client: "By you", system: "Automatic" };
 
 /** Optional white-label branding (from getBranding(orgId) via toPublicBranding). Omitted = default look. */

@@ -14,8 +14,8 @@ describe("one score, one colour rule", () => {
     expect([scoreLabel(75), scoreLabel(74), scoreLabel(49), scoreLabel(null)]).toEqual(["Good", "Needs work", "Poor", "Not checked yet"]);
   });
 
-  it("names the parts in plain words", () => {
-    expect(Object.values(PILLAR_LABELS).join(" ")).not.toMatch(/\b(SEO|AEO|GEO)\b/);
+  it("names the parts SEO, AEO, GEO and Brand", () => {
+    expect(PILLAR_LABELS).toEqual({ seo: "SEO", aeo: "AEO", geo: "GEO", brand: "Brand" });
   });
 });
 

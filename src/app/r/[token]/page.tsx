@@ -149,7 +149,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
     <Shell branding={branding}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="eyebrow">Website and AI report</p>
+          <p className="eyebrow">SEO · AEO · GEO report</p>
           <h1 className="mt-2 text-h1 text-balance text-fg">
             {r.brand} <span className="text-muted">— {hostOf(r.websiteUrl)}</span>
           </h1>

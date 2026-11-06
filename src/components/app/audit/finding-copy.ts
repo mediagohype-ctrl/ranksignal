@@ -179,7 +179,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
   schema: "Info for Google and AI",
   indexability: "Can appear on Google",
   links: "Links",
-  ai_readiness: "Ready for AI",
+  ai_readiness: "GEO",
 };
 
 export function categoryLabel(c: string): string {

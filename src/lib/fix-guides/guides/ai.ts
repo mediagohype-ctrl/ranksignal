@@ -1,4 +1,4 @@
-// Fix guides for Easy to quote, Ready for AI and AI knows you checks (aeo.*, geo.*, brand.*). Keyed by check id.
+// Fix guides for AEO, GEO and Brand checks (aeo.*, geo.*, brand.*). Keyed by check id.
 // The guides live in ./ai/*: answers (aeo), ready (geo website checks), business (brand website checks),
 // results (AI answer checks); shared.ts and org.ts hold per-platform building blocks.
 import type { FixGuide } from "../types";

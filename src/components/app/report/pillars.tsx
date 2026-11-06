@@ -3,14 +3,14 @@ import type { Pillar } from "@/lib/report/types";
 
 export const PILLAR_ORDER: Pillar[] = ["seo", "aeo", "geo", "brand"];
 
-/** Short tag shown on issues and filter chips (plain words, docs/PLAIN_WORDS.md). */
-export const PILLAR_SHORT: Record<Pillar, string> = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" };
+/** Score names shown everywhere (SEO, AEO, GEO, Brand); PILLAR_EXPLAINER gives the plain-English line under each. */
+export const PILLAR_SHORT: Record<Pillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", brand: "Brand" };
 
-/** Technical name of each pillar — Expert mode only. */
+/** Technical name of each pillar (same as PILLAR_SHORT; kept for callers). */
 export const PILLAR_TECH: Record<Pillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", brand: "Brand" };
 
-/** Pillars shown on customer screens: "Easy to quote" is Expert mode only (docs/PLAIN_WORDS.md). */
-export const EXPERT_ONLY_PILLARS: Pillar[] = ["aeo"];
+/** Pillars hidden unless Expert mode is on (none: all four scores are always shown). */
+export const EXPERT_ONLY_PILLARS: Pillar[] = [];
 
 export function visiblePillars<T extends { pillar: Pillar }>(pillars: T[], expert: boolean): T[] {
   return expert ? pillars : pillars.filter((p) => !EXPERT_ONLY_PILLARS.includes(p.pillar));

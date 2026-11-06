@@ -66,8 +66,8 @@ describe("trimReport", () => {
     expect(r.issues[0].howToFix).toEqual(["one", "two"].slice(0, FREE_MAX_FIX_STEPS));
     expect(r.issues[0]).not.toHaveProperty("affectedUrls");
     expect(r.issues[0]).not.toHaveProperty("whyItMatters");
-    expect(r.issues[0].pillarLabel).toBe("Google health");
-    expect(r.pillars[0].label).toBe("Google health");
+    expect(r.issues[0].pillarLabel).toBe("SEO");
+    expect(r.pillars[0].label).toBe("SEO");
     expect(r.strengths).toHaveLength(5);
     expect(r.pillars.map((p) => p.pillar)).toEqual(["seo", "aeo", "geo", "brand"]);
     expect(r.pillars[0].checks.map((c) => c.id)).toEqual(["c", "a"]); // not_measured dropped, fails first

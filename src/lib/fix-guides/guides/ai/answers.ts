@@ -1,4 +1,4 @@
-// "Easy to quote" guides (aeo.*): question headings, direct answers, Q&A labels, lists/tables, readability,
+// "AEO" guides (aeo.*): question headings, direct answers, Q&A labels, lists/tables, readability,
 // info for Google and AI, and depth of key pages.
 import type { FixGuide, FixPage } from "../../types";
 import { clip, isHome, pageName, topicOf } from "../../helpers";

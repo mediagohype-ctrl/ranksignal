@@ -19,7 +19,7 @@ export function reportToMarkdown(r: SiteReport): string {
 
   L.push("## Scores by area", "", "| Area | Score | Grade | In short |", "|---|---|---|---|");
   for (const p of r.pillars) L.push(`| ${p.label} | ${p.score ?? "—"} | ${p.grade ?? "—"} | ${esc(p.summary)} |`);
-  L.push("", "_Google health = how easily Google can find and read your pages. Easy to quote = how easily Google and AI assistants can lift a short answer from your pages. Ready for AI = whether AI assistants like ChatGPT, Gemini and Perplexity can read your site and name or link to you. AI knows you = how clearly your business is described, and whether AI gets the facts right._", "");
+  L.push("", "_SEO = how easily Google can find and read your pages. AEO = how easily Google and AI assistants can lift a short answer from your pages. GEO = whether AI assistants like ChatGPT, Gemini and Perplexity can read your site and name or link to you. Brand = how clearly your business is described, and whether AI gets the facts right._", "");
 
   if (r.quickWins.length) {
     L.push("## Quick wins (start here)", "");

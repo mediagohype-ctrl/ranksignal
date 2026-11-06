@@ -1,4 +1,4 @@
-// "Ready for AI" guides (geo.* website checks): AI robot access, the optional AI guide file, quotable facts,
+// "GEO" guides (geo.* website checks): AI robot access, the optional AI guide file, quotable facts,
 // trusted sources, dates, authors and whether AI can identify the business.
 import type { FixGuide } from "../../types";
 import { isHome, pageName, topicOf } from "../../helpers";

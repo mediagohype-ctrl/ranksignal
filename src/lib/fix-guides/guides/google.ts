@@ -1,4 +1,4 @@
-// Fix guides for Google health checks (seo.*). Keyed by check id.
+// Fix guides for SEO checks (seo.*). Keyed by check id.
 // The guides themselves live in ./google/ (on-page, content, technical); "seo.titles" is in titles.ts.
 import type { FixGuide } from "../types";
 import { canonicalGuide, h1Guide, imageAltGuide, metaDescriptionGuide, openGraphGuide } from "./google/onpage";

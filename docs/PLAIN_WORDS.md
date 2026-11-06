@@ -4,7 +4,9 @@ Our customer is a small-business owner with no SEO knowledge. Every word on a cu
 sense to them on first read. Source: RankSignal Developer Brief v1, sections 3 and 6.
 
 Rules:
-1. No SEO, AEO, GEO, schema, crawl, "risk class" or model ids on customer screens. Use the table below.
+1. Keep the four score names **SEO, AEO, GEO and Brand** (owner's decision, 6 Nov 2026 — they read clearer to our users
+   than the plain-word names the brief suggested). Always show the one-line meaning next to them (PILLAR_EXPLAINER).
+   No schema, crawl, "risk class" or model ids on customer screens. Use the table below for everything else.
 2. One line per card. Put the detail behind "Why?" or "See details".
 3. Every error has a next step (Upgrade, Retry, Contact us).
 4. Get plurals right: "1 page has", "2 pages have", "1 website" — never "page(s)" or "project(s)".
@@ -17,11 +19,11 @@ Rules:
 |---|---|
 | Overview | Home |
 | Report | Full report |
-| SEO score / SEO | Google health |
-| AEO score | Easy to quote |
-| GEO score (the pillar) | Ready for AI |
+| SEO score | SEO (keep) |
+| AEO score | AEO (keep; always shown, not Expert-only) |
+| GEO score (the pillar) | GEO (keep) |
 | GEO / AI visibility (the mention numbers) | AI mentions |
-| Brand score | AI knows you |
+| Brand score | Brand (keep) |
 | Website scan / crawl / run a scan | Website check / check your website |
 | AI visibility check | AI check |
 | Prompts / tracked questions | Customer questions |

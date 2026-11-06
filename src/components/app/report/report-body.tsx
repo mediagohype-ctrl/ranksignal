@@ -6,7 +6,7 @@ import { fmtDate } from "@/lib/dashboard/format";
 import { AiVisibilitySection } from "@/components/app/report/ai-visibility-section";
 import { IssueList } from "@/components/app/report/issue-list";
 import { issueHref } from "@/components/app/nav";
-import { PILLAR_EXPLAINER, PILLAR_ICON, PILLAR_TECH, visiblePillars } from "@/components/app/report/pillars";
+import { PILLAR_EXPLAINER, PILLAR_ICON, visiblePillars } from "@/components/app/report/pillars";
 import { QuickWins } from "@/components/app/report/quick-wins";
 import { Badge, Card, CheckList, Notice, PillarCard, ScoreRing, SectionHeading } from "@/components/ui";
 
@@ -26,7 +26,7 @@ export function ReportBody({
   visibilityActive?: boolean;
   readOnly?: boolean;
   measuredWith?: React.ReactNode;
-  /** Expert mode: technical pillar names (SEO/AEO/GEO), every pillar incl. Easy to quote, grades and version info. */
+  /** Expert mode: technical pillar names (SEO/AEO/GEO), every pillar incl. AEO, grades and version info. */
   expert?: boolean;
 }) {
   const issuesById = new Map(r.issues.map((i) => [i.id, i]));
@@ -76,7 +76,7 @@ export function ReportBody({
             <PillarCard
               key={p.pillar}
               {...p}
-              label={expert ? `${p.label} (${PILLAR_TECH[p.pillar]})` : p.label}
+              label={p.label}
               grade={expert ? p.grade : null}
               icon={PILLAR_ICON[p.pillar]}
               className="break-inside-avoid"

@@ -1,4 +1,4 @@
-// "AI knows you" website guides (brand.*): business name, business info + logo, About, contact details,
+// "Brand" website guides (brand.*): business name, business info + logo, About, contact details,
 // privacy policy and social profile links.
 import type { Platform } from "@/lib/platform/detect";
 import type { FixGuide } from "../../types";

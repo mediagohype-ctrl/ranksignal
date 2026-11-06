@@ -17,7 +17,6 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
-  // Search engines may still match the expert terms; people never see them on the page.
   keywords: ["SEO", "AEO", "GEO", "AI search", "ChatGPT visibility", "website check", "small business India"],
   alternates: { canonical: "/" },
   openGraph: {
@@ -30,6 +29,13 @@ export const metadata: Metadata = {
 };
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
+
+// The three names the report scores you on, each with what it means in plain words.
+const TERMS = [
+  { term: "SEO", name: "Search engines", line: "Can Google and Bing find, read and trust your pages?" },
+  { term: "AEO", name: "Answer engines", line: "Do your pages give short, direct answers worth quoting?" },
+  { term: "GEO", name: "Generative AI", line: "Do ChatGPT, Gemini and others name you and link to you?" },
+];
 
 const STEPS = [
   { title: "Check", body: "Type your website. We read it and ask ChatGPT, Gemini and others the questions your customers ask." },
@@ -67,7 +73,7 @@ export default function HomePage() {
       url: SITE,
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      description: "Checks small-business websites for Google and AI assistants, and measures how often ChatGPT and others name the business.",
+      description: "Audits websites for SEO, answer-engine (AEO) and generative-AI (GEO) readiness and measures how often AI assistants mention and cite a brand.",
       publisher: { "@id": `${SITE}/#organization` },
     },
     {
@@ -112,6 +118,19 @@ export default function HomePage() {
             <p className="mk-body mt-5 max-w-md text-fg-soft">
               In about 30 seconds you see one score out of 100 and the three fixes that help most — each with how many
               points it can add.
+            </p>
+            <dl className="mt-8 space-y-4">
+              {TERMS.map((t) => (
+                <div key={t.term} className="flex gap-4">
+                  <dt className="w-14 shrink-0 font-semibold text-primary">{t.term}</dt>
+                  <dd className="text-fg-soft">
+                    <span className="font-medium text-fg">{t.name}.</span> {t.line}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mk-body mt-6 max-w-md text-small text-muted">
+              SEO, AEO and GEO are three names for one goal: when someone looks for what you sell, they find you.
             </p>
           </div>
           <div className="mk-reveal min-w-0 lg:col-span-7 lg:col-start-6 xl:col-span-6 xl:col-start-7">

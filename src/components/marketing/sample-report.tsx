@@ -7,10 +7,10 @@ import { Badge, IssueCard, Meter, ScoreRing } from "@/components/ui";
  */
 
 export const SAMPLE_PILLARS = [
-  { key: "seo", label: "Google health", name: "Google", score: 78, hint: "Google can read most pages" },
-  { key: "aeo", label: "Easy to quote", name: "Clear answers", score: 54, hint: "Few short, clear answers" },
-  { key: "geo", label: "Ready for AI", name: "AI assistants", score: 41, hint: "Rarely named in AI answers" },
-  { key: "brand", label: "AI knows you", name: "Business facts", score: 86, hint: "AI describes you correctly" },
+  { key: "seo", label: "SEO", name: "Google", score: 78, hint: "Google can read most pages" },
+  { key: "aeo", label: "AEO", name: "Clear answers", score: 54, hint: "Few short, clear answers" },
+  { key: "geo", label: "GEO", name: "AI assistants", score: 41, hint: "Rarely named in AI answers" },
+  { key: "brand", label: "Brand", name: "Business facts", score: 86, hint: "AI describes you correctly" },
 ] as const;
 
 const SAMPLE_OVERALL = 65;
@@ -76,7 +76,7 @@ export function SampleReport() {
       <div className="lg:col-span-3">
         <IssueCard
           title="AI assistants can't find a clear answer to “Do you deliver?”"
-          pillarLabel="Easy to quote"
+          pillarLabel="AEO"
           impact="high"
           effort="quick"
           quickWin

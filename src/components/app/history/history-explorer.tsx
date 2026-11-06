@@ -107,10 +107,10 @@ export function HistoryExplorer({
               <TH>Date</TH>
               <TH>Check</TH>
               <TH align="right">Overall</TH>
-              <TH align="right">Google health (SEO)</TH>
-              <TH align="right">Easy to quote (AEO)</TH>
-              <TH align="right">Ready for AI (GEO)</TH>
-              <TH align="right">AI knows you</TH>
+              <TH align="right">SEO</TH>
+              <TH align="right">AEO</TH>
+              <TH align="right">GEO</TH>
+              <TH align="right">Brand</TH>
               <TH align="right">Problems to fix</TH>
               <TH align="right">Named you</TH>
               <TH align="right">Linked to your site</TH>

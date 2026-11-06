@@ -6,7 +6,7 @@ import { Card, LinkButton } from "@/components/ui";
 import { DeltaChip } from "./delta-chip";
 import { fmtDate } from "@/lib/dashboard/format";
 
-const PILLAR_NAMES: Record<SnapshotPillar, string> = { seo: "Google health", aeo: "Easy to quote", geo: "Ready for AI", brand: "AI knows you" };
+const PILLAR_NAMES: Record<SnapshotPillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO", brand: "Brand" };
 const pctText = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
 const dayText = (d: Date) => fmtDate(d);
 

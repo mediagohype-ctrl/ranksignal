@@ -11,12 +11,12 @@ import type { CheckResult, Grade, Pillar } from "@/lib/report/types";
 export const METHODOLOGY_VERSION = "report-1";
 export const PILLAR_WEIGHTS: Record<Pillar, number> = { seo: 0.35, aeo: 0.2, geo: 0.3, brand: 0.15 };
 export const PILLAR_ORDER: Pillar[] = ["seo", "aeo", "geo", "brand"];
-/** Plain-word pillar names (docs/PLAIN_WORDS.md). */
+/** Pillar names: SEO, AEO, GEO and Brand (the owner prefers these over plain-word names). */
 export const PILLAR_LABELS: Record<Pillar, string> = {
-  seo: "Google health",
-  aeo: "Easy to quote",
-  geo: "Ready for AI",
-  brand: "AI knows you",
+  seo: "SEO",
+  aeo: "AEO",
+  geo: "GEO",
+  brand: "Brand",
 };
 
 /** Pillars whose checks partly depend on AI answers; shown as "waiting for AI results" until they arrive. */

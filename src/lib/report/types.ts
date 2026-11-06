@@ -34,7 +34,7 @@ export interface ReportIssue {
 
 export interface PillarScore {
   pillar: Pillar;
-  label: string; // plain words: "Google health", "Easy to quote", "Ready for AI", "AI knows you"
+  label: string; // plain words: "SEO", "AEO", "GEO", "Brand"
   score: number | null; // 0-100, null when not measurable yet
   /** True when AI answers aren't in yet and this pillar normally uses them (score covers the website only). */
   partial?: boolean;
