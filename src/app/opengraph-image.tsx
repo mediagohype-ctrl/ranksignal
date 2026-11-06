@@ -1,17 +1,17 @@
-// Default Open Graph / social preview image (1200×630, white background, brand + tagline).
+// Default Open Graph / social preview image (1200×630, white background, logo + tagline + domain).
 import { ImageResponse } from "next/og";
 import { BRAND } from "@/lib/brand";
-import { LOGO_BARS, LOGO_BUBBLE_PATH, LOGO_COLORS, LOGO_SIGNAL, splitBrandName } from "@/components/brand/logo";
+import { logoMarkShapes, wordmarkParts } from "@/components/brand/logo";
 
 export const alt = `${BRAND.name} — ${BRAND.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const OG_TEXT = `${BRAND.name}${BRAND.tagline}SEOAEOGEO AI visibilityFree website check · plain-word fixes · no guaranteed rankings`;
+const OG_TEXT = `${wordmarkParts().join("")}${BRAND.name}${BRAND.domain}${BRAND.tagline}SEOAEOGEO AI visibilityFree website check · plain-word fixes · no guaranteed rankings`;
 
 /** Static Google Sans Flex instances (TTF) for next/og, subset to the text on the card. Falls back to the default font. */
 async function loadBrandFonts() {
-  const weights = [400, 600] as const;
+  const weights = [400, 600, 700] as const;
   try {
     const css = await fetch(
       `https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@${weights.join(";")}&text=${encodeURIComponent(OG_TEXT)}`,
@@ -44,15 +44,11 @@ export default async function OpengraphImage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <svg width="76" height="76" viewBox="0 0 48 48">
-            <path fill={LOGO_COLORS.bubble} d={LOGO_BUBBLE_PATH} />
-            {LOGO_BARS.map((b) => (
-              <rect key={b.x} x={b.x} y={b.y} width={b.width} height={b.height} rx={2.75} fill={LOGO_COLORS.bar} />
-            ))}
-            <circle cx={LOGO_SIGNAL.cx} cy={LOGO_SIGNAL.cy} r={LOGO_SIGNAL.r} fill={LOGO_COLORS.signal} />
+            {logoMarkShapes()}
           </svg>
-          <div style={{ display: "flex", fontSize: 46, fontWeight: 600, letterSpacing: -1.5 }}>
-            <span>{splitBrandName(BRAND.name)[0]}</span>
-            <span style={{ color: "#4338ca" }}>{splitBrandName(BRAND.name)[1]}</span>
+          <div style={{ display: "flex", fontSize: 44, fontWeight: 700, letterSpacing: 0.5 }}>
+            <span>{wordmarkParts()[0]}</span>
+            <span style={{ color: "#4338ca" }}>{wordmarkParts()[1]}</span>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -68,7 +64,10 @@ export default async function OpengraphImage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 26, color: "#475569" }}>Free website check · plain-word fixes · no guaranteed rankings</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#475569" }}>
+          <span>Free website check · plain-word fixes · no guaranteed rankings</span>
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>{BRAND.domain}</span>
+        </div>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 12, display: "flex", background: "linear-gradient(90deg, #4338ca, #0d9488)" }} />
       </div>
     ),

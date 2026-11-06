@@ -160,7 +160,7 @@ step "9/11 App service (website + background jobs)"
 NODE_BIN="$(command -v node)"
 cat > /etc/systemd/system/ranksignal.service <<EOF
 [Unit]
-Description=RankSignal (website + background job worker)
+Description=MyWebRank (website + background job worker)
 After=network-online.target postgresql.service
 Wants=network-online.target postgresql.service
 
@@ -241,7 +241,7 @@ ok "firewall: only SSH, HTTP and HTTPS are open"
 step "11/11 Nightly database backups and final check"
 mkdir -p "$BACKUP_DIR" && chown postgres:postgres "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
 cat > /etc/cron.d/ranksignal-backup <<EOF
-# Nightly backup of the RankSignal database at 02:30, kept for 14 days.
+# Nightly backup of the MyWebRank database at 02:30, kept for 14 days.
 30 2 * * * postgres pg_dump -Fc $DB_NAME > $BACKUP_DIR/$DB_NAME-\$(date +\%F).dump && find $BACKUP_DIR -name '*.dump' -mtime +14 -delete
 EOF
 ok "backups in $BACKUP_DIR"

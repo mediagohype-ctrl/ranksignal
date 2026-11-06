@@ -64,7 +64,7 @@ async function openRouterRequest(key: string, body: Json, timeoutMs: number): Pr
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
           "HTTP-Referer": process.env.APP_URL ?? "http://localhost:3000",
-          "X-Title": "RankSignal",
+          "X-Title": "MyWebRank",
         },
         // usage.include asks OpenRouter to return the real charged cost.
         body: JSON.stringify({ ...body, usage: { include: true } }),

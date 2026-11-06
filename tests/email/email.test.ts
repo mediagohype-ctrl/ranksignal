@@ -65,7 +65,7 @@ describe("sendEmail", () => {
 
   it("posts to Resend with a bearer token when configured", async () => {
     vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("EMAIL_FROM", "RankSignal <hello@example.com>");
+    vi.stubEnv("EMAIL_FROM", "MyWebRank <hello@example.com>");
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ id: "email_123" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchSpy);
     const res = await sendEmail({ to: "a@b.com", subject: "s", html: "<p>h</p>", text: "h", replyTo: "r@b.com" });
@@ -74,7 +74,7 @@ describe("sendEmail", () => {
     expect(url).toBe("https://api.resend.com/emails");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer re_test");
     const body = JSON.parse(String(init.body));
-    expect(body).toMatchObject({ from: "RankSignal <hello@example.com>", to: ["a@b.com"], subject: "s", reply_to: "r@b.com" });
+    expect(body).toMatchObject({ from: "MyWebRank <hello@example.com>", to: ["a@b.com"], subject: "s", reply_to: "r@b.com" });
   });
 
   it("returns ok:false without throwing on HTTP errors", async () => {

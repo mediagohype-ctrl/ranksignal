@@ -78,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {session.staffMode && (
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-small text-fg">
                 <span>
-                  <strong>{session.readOnly ? "View as customer (read-only):" : "Support mode:"}</strong> you are working inside <strong>{org.name}</strong> as RankSignal staff. Every action is
+                  <strong>{session.readOnly ? "View as customer (read-only):" : "Support mode:"}</strong> you are working inside <strong>{org.name}</strong> as MyWebRank staff. Every action is
                   audit-logged.
                 </span>
                 <span className="flex items-center gap-4">

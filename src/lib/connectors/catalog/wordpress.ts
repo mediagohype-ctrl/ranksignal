@@ -29,7 +29,7 @@ export const descriptor: ConnectorDescriptor<WordPressDescriptorConfig, WordPres
   setupSteps: [
     "Sign in to WordPress as a user who can edit pages and posts.",
     "Go to Users → Profile and scroll to “Application Passwords”.",
-    "Type a name (for example “RankSignal”) and click “Add New Application Password”.",
+    "Type a name (for example “MyWebRank”) and click “Add New Application Password”.",
     "Copy the password WordPress shows and paste it here with your username. You can revoke it at any time.",
   ],
   validateConfig(input) {

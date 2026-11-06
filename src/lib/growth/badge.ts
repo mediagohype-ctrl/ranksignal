@@ -1,4 +1,4 @@
-// Public score badge (brief §9): an SVG "AI-ready score 82" that links back to RankSignal. Pure renderer; the route
+// Public score badge (brief §9): an SVG "AI-ready score 82" that links back to MyWebRank. Pure renderer; the route
 // (src/app/badge/[file]/route.ts) checks the share token and reads the stored score.
 import { BRAND } from "@/lib/brand";
 

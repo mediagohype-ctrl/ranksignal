@@ -1,6 +1,6 @@
-// Browser-tab icon (32×32): the RankSignal mark on a transparent background.
+// Browser-tab icon (32×32): the MyWebRank mark.
 import { ImageResponse } from "next/og";
-import { LOGO_BARS, LOGO_BUBBLE_PATH, LOGO_COLORS, LOGO_SIGNAL } from "@/components/brand/logo";
+import { logoMarkShapes } from "@/components/brand/logo";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
@@ -9,11 +9,7 @@ export default function Icon() {
   return new ImageResponse(
     (
       <svg width="32" height="32" viewBox="0 0 48 48">
-        <path fill={LOGO_COLORS.bubble} d={LOGO_BUBBLE_PATH} />
-        {LOGO_BARS.map((b) => (
-          <rect key={b.x} x={b.x} y={b.y} width={b.width} height={b.height} rx={2.75} fill={LOGO_COLORS.bar} />
-        ))}
-        <circle cx={LOGO_SIGNAL.cx} cy={LOGO_SIGNAL.cy} r={LOGO_SIGNAL.r} fill={LOGO_COLORS.signal} />
+        {logoMarkShapes()}
       </svg>
     ),
     size,

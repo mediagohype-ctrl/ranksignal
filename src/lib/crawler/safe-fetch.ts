@@ -46,8 +46,8 @@ export interface SafeFetchResult {
   redirectChain: string[];
 }
 
-export const USER_AGENT = `RankSignalBot/1.0 (+${BRAND.appUrl.replace(/\/$/, "")}/bot)`;
-export const BOT_TOKEN = "RankSignalBot";
+export const USER_AGENT = `MyWebRankBot/1.0 (+${BRAND.appUrl.replace(/\/$/, "")}/bot)`;
+export const BOT_TOKEN = "MyWebRankBot";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_BYTES = 3 * 1024 * 1024;

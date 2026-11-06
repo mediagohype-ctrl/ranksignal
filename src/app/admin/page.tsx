@@ -175,7 +175,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pr
     <div className="space-y-8">
       <PageHeader
         className="mb-0"
-        eyebrow="RankSignal back-office"
+        eyebrow="MyWebRank back-office"
         title="Overview"
         description={`Business and platform health for the last ${r.days} days, compared with the ${r.days} days before.`}
         actions={<RangePicker basePath="/admin" sp={sp} active={r.key} />}

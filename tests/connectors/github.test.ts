@@ -300,7 +300,7 @@ describe("github connector", () => {
     expect(pr.body).toContain(change.after);
     expect(pr.body).toContain("Description is missing the brand name.");
     expect(pr.body).toContain("Crawl 2026-10-20");
-    expect(pr.body).toMatch(/Approved by Priya @​priya in RankSignal/); // mention neutralised
+    expect(pr.body).toMatch(/Approved by Priya @​priya in MyWebRank/); // mention neutralised
     expect(pr.body).toMatch(/never merge/i);
     expect(gh.calls.some((x) => /merge/.test(x.path))).toBe(false);
 

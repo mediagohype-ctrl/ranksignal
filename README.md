@@ -1,4 +1,4 @@
-# AI Visibility & Optimization SaaS (working name: RankSignal)
+# MyWebRank — website & AI search visibility (SEO, AEO, GEO)
 
 This SaaS measures how a brand appears in AI search answers and traditional search. It audits the brand's site and recommends evidence-backed fixes. It executes approved changes safely, then re-measures.
 It is built from the product blueprint v1.0. See [docs/COMPETITIVE_ANALYSIS.md](docs/COMPETITIVE_ANALYSIS.md) for the feature map against Upranke.

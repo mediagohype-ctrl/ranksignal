@@ -9,7 +9,7 @@ import { FEATURES } from "@/components/marketing/content";
 export const metadata: Metadata = {
   title: "Features: website check, AI check and safe fixes",
   description:
-    "Everything RankSignal does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI, a clear to-do list and fixes you approve.",
+    "Everything MyWebRank does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI, a clear to-do list and fixes you approve.",
   alternates: { canonical: "/features" },
 };
 

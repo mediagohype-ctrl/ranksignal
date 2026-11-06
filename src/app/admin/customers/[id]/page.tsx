@@ -588,7 +588,7 @@ async function NotesTab({ orgId }: { orgId: string }) {
   const emails = await userEmails(notes.map((n) => n.authorId));
   return (
     <Card>
-      <CardHeader title="Internal notes" description="Visible to RankSignal staff only. Changes are audit-logged." />
+      <CardHeader title="Internal notes" description="Visible to MyWebRank staff only. Changes are audit-logged." />
       <CardBody>
         <NotesPanel
           orgId={orgId}
