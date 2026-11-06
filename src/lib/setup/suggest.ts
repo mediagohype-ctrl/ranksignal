@@ -72,17 +72,20 @@ export async function suggestQuestions(
   facts: BusinessFacts,
   competitors: { name: string }[],
   count: number,
+  keywords: string[] = [],
 ): Promise<{ items: PromptCandidate[]; source: "llm" | "template" }> {
   const p = projectFieldsFromFacts(facts);
   const { candidates, source } = await researchPrompts(
     {
       brandNames: p.brandNames,
       categories: p.categories,
-      audience: p.audience ?? null,
+      // Who the customers are, without the city (the city is passed on its own for "in <city>" questions).
+      audience: facts.customers.trim() || null,
+      city: facts.city.trim() || null,
       countries: p.countries,
       languages: p.languages,
       competitors,
-      keywords: [],
+      keywords,
     },
     { max: count },
   );

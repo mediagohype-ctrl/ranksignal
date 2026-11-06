@@ -24,6 +24,8 @@ export interface ResearchProfile {
   keywords: string[];
   /** Serves customers in a local area (shop, clinic, trades…). Auto-detected from categories when omitted. */
   local?: boolean;
+  /** City the business serves, used in local questions ("in Pune"). */
+  city?: string | null;
 }
 
 /** Default number of prompts suggested by research (blueprint: 12–20 per project to start). */
@@ -84,59 +86,99 @@ function localeFor(lang: string, country: string) {
 }
 
 /**
- * Deterministic buyer-style prompts (used when no LLM is configured). Ordered by priority so the first
- * N keep a mix of intents; most do NOT name the brand, so they measure organic visibility.
+ * Splits "what you sell" into short search topics, lower case:
+ *   "Free notes for React, Next.js and Java, plus UI templates" → ["notes for react", "ui templates"]
+ *   "Sweets, cakes and snacks" → ["sweets", "cakes", "snacks"]
+ * Single words that are only items of a longer phrase's list (Next.js, Java) are dropped.
+ */
+export function topicPhrases(text: string): string[] {
+  const parts: string[] = [];
+  for (const raw of text.split(/[,;|•/]|\s+(?:and|plus|&|or)\s+/i)) {
+    const t = raw
+      .replace(/^(?:\s*(?:free|the|a|an|our|best|top|in-depth|high[- ]quality|premium)\b[\s,-]*)+/i, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    if (t.length >= 3 && t.split(" ").length <= 6) parts.push(t);
+  }
+  const multi = parts.filter((t) => t.includes(" "));
+  const out = multi.length ? multi : parts;
+  if (out.length === 0 && text.trim()) out.push(text.trim().toLowerCase().split(/\s+/).slice(0, 5).join(" "));
+  return [...new Set(out)];
+}
+
+/** Things sold online, where a city makes no sense in searches ("python notes in Pune"). */
+const ONLINE_HINTS = /\b(online|software|saas|apps?|templates?|notes|courses?|tutorials?|digital|e-?books?|plugins?|themes?|api|tools?|downloads?|programming|coding)\b/i;
+
+/** Local business: a shop/clinic/trade by its category, or any business with a city that doesn't sell online. */
+export function isLocalBusiness(p: Pick<ResearchProfile, "categories" | "keywords" | "local" | "city">): boolean {
+  if (typeof p.local === "boolean") return p.local;
+  if (looksLocal(p)) return true;
+  return !!p.city?.trim() && !ONLINE_HINTS.test([...p.categories, ...p.keywords].join(" "));
+}
+
+/** Questions we never ask: they name a business, compare, or start from a negative angle. */
+const NEGATIVE = /\b(worth it|alternatives?|vs\.?|versus|scams?|legit|complain\w*|problems?|mistakes?|avoid|cheapest|worst|bad|fake|fraud|reviews?)\b/i;
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Keeps only neutral, on-topic discovery questions: no brand or competitor names (so the answer shows whether AI
+ * recommends you on its own) and no negative or comparison framing.
+ */
+export function keepDiscoveryQuestions<T extends { text: string }>(items: T[], names: string[]): T[] {
+  const nameRes = names
+    .map((n) => n.trim())
+    .filter((n) => n.length >= 3)
+    .map((n) => new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRe(n)}($|[^\\p{L}\\p{N}])`, "iu"));
+  return items.filter((q) => !NEGATIVE.test(q.text) && !nameRes.some((re) => re.test(q.text)));
+}
+
+/**
+ * Deterministic customer questions (used when no LLM is available). Neutral discovery questions people ask AI when
+ * looking for this kind of business — never naming the brand or competitors, never negative. Topics come from
+ * the SEO keywords first, then short phrases of "what you sell".
  */
 export function templatePrompts(p: ResearchProfile, max = DEFAULT_PROMPT_COUNT): PromptCandidate[] {
   const country = p.countries[0] ?? "IN";
   const countryName = COUNTRY_NAMES[country] ?? country;
   const locale = localeFor(p.languages[0] ?? "en", country);
-  const topics = [...new Set([...p.categories, ...p.keywords].map((t) => t.trim()).filter(Boolean))];
-  const brand = p.brandNames[0]?.trim();
-  if (topics.length === 0) topics.push(brand ? `products like ${brand}` : "this service");
+  const topics = [
+    ...new Set(
+      [...p.keywords, ...p.categories.flatMap((c) => topicPhrases(c))]
+        .map((t) => t.toLowerCase().replace(/^best\s+/, "").replace(/\s+(?:near me|online|in [\p{L} .-]+)$/iu, "").trim())
+        .filter((t) => t.length >= 3 && t.split(/\s+/).length <= 7),
+    ),
+  ];
+  if (topics.length === 0) topics.push("this kind of service");
   const rawAudience = p.audience?.trim().replace(/[.!?]+$/, "");
   const audience = rawAudience && rawAudience.length <= 60 && !/[.!?;\n]/.test(rawAudience) ? rawAudience : undefined;
-  const local = looksLocal(p);
-  const comps = p.competitors.map((c) => c.name.trim()).filter(Boolean).slice(0, 3);
-  const [t0, t1, t2] = topics;
+  const city = p.city?.trim();
+  const local = isLocalBusiness(p);
+  const where = local ? (city ? `in ${city}` : "near me") : `in ${countryName}`;
+
+  const patterns: [(t: string) => string | undefined, PromptIntent][] = [
+    [(t) => `What are the best ${t} ${where}?`, "commercial"],
+    [(t) => `What should I look for when choosing ${t}?`, "informational"],
+    [(t) => `Where can I find good ${t} ${where}?`, "commercial"],
+    [(t) => audience && `Which ${t} would you recommend for ${audience}?`, "commercial"],
+    [(t) => (local ? `Who offers the best ${t} ${where}?` : `Which ${t} do people recommend most?`), "commercial"],
+    [(t) => `What is the usual price of ${t} ${where}?`, "transactional"],
+    [(t) => `Can you suggest good ${t} ${local ? where : "for beginners"}?`, "commercial"],
+    [(t) => `How do I pick the right ${t}?`, "informational"],
+  ];
 
   const out: PromptCandidate[] = [];
-  const add = (text: string | false | undefined, intent: PromptIntent, topic: string | null) => {
-    if (text) out.push({ text, intent, topic, locale, source: "template" });
-  };
-  const best = (t: string) => (local ? `Best ${t} near me — which would you recommend?` : `Best ${t} in ${countryName} — which would you recommend?`);
-  const choose = (t: string) => `How do I choose the right ${t}? What should I look for?`;
-  const price = (t: string) => `What is the typical price of ${t} in ${countryName}?`;
-  const forAudience = (t: string) => audience && `What's the best ${t} for ${audience}?`;
-
-  add(best(t0), "commercial", t0);
-  add(choose(t0), "informational", t0);
-  add(forAudience(t0), "commercial", t0);
-  add(local ? `Cheapest ${t0} near me with good reviews?` : price(t0), "transactional", t0);
-  add(brand && comps[0] && `${brand} vs ${comps[0]}: which is better for ${t0}?`, "comparison", t0);
-  add(comps[0] && `What are the best alternatives to ${comps[0]}?`, "comparison", t0);
-  add(t1 && best(t1), "commercial", t1 ?? null);
-  add(brand && `Is ${brand} good for ${t0}? Is it worth it?`, "navigational", t0);
-  add(local ? `Which ${t0} near me has the best reviews?` : `Which ${t0} brands are most trusted in ${countryName}?`, "commercial", t0);
-  add(brand && `What are the best alternatives to ${brand}?`, "comparison", t0);
-  add(local && price(t0), "transactional", t0);
-  add(t1 && choose(t1), "informational", t1 ?? null);
-  add(brand && comps[1] && `${brand} vs ${comps[1]}: which is better for ${t0}?`, "comparison", t0);
-  add(comps[1] && `What are the best alternatives to ${comps[1]}?`, "comparison", t0);
-  add(t1 && forAudience(t1), "commercial", t1 ?? null);
-  add(`What mistakes should I avoid when buying ${t0}?`, "informational", t0);
-  add(t2 && best(t2), "commercial", t2 ?? null);
-  add(brand && `${brand} reviews: what do customers say?`, "navigational", null);
-  add(comps[0] && comps[1] && `${comps[0]} vs ${comps[1]} for ${t0}: which should I pick?`, "comparison", t0);
-  add(brand && comps[2] && `${brand} vs ${comps[2]}: which is better for ${t0}?`, "comparison", t0);
-  add(t1 && (local ? `Cheapest ${t1} near me with good reviews?` : price(t1)), "transactional", t1 ?? null);
-  add(`Is it worth paying more for premium ${t0}?`, "informational", t0);
-  add(t2 && choose(t2), "informational", t2 ?? null);
-  for (const t of topics.slice(3, 8)) {
-    add(best(t), "commercial", t);
-    add(choose(t), "informational", t);
+  const used = topics.slice(0, 6);
+  // Each round gives every topic a different pattern, so the first N questions cover many topics and intents.
+  for (let round = 0; round < patterns.length; round++) {
+    used.forEach((t, j) => {
+      const [make, intent] = patterns[(round + j) % patterns.length]!;
+      const text = make(t);
+      if (text) out.push({ text, intent, topic: t, locale, source: "template" });
+    });
   }
-  return dedupePrompts(out).slice(0, max);
+  return keepDiscoveryQuestions(dedupePrompts(out), [...p.brandNames, ...p.competitors.map((c) => c.name)]).slice(0, max);
 }
 
 const llmSchema = z.object({
@@ -158,24 +200,27 @@ export async function researchPrompts(
   const max = opts.max ?? DEFAULT_PROMPT_COUNT;
   const country = profile.countries[0] ?? "IN";
   const locale = localeFor(profile.languages[0] ?? "en", country);
+  const names = [...profile.brandNames, ...profile.competitors.map((c) => c.name)];
   if (isLlmConfigured()) {
     const res = await generateStructured({
       schema: llmSchema,
       system:
-        "You generate realistic questions that potential buyers type into AI assistants (ChatGPT, Gemini, Perplexity) " +
-        "when researching a purchase in this business's category and country. Write them the way a real person would ask, " +
-        "short and natural, using the category words buyers use (not marketing copy). Mix intents: commercial ('best X in " +
-        "<country>', 'X for <audience>'), informational ('how to choose X', 'what to look for in X'), comparison ('<brand> vs " +
-        "<competitor>', 'alternatives to <competitor>', '<brand> alternatives'), transactional (price/cost; 'cheapest X near me' " +
-        "only if the business is local), navigational ('is <brand> good / legit'). At least two thirds must NOT name the brand, " +
-        "so they measure organic visibility. No duplicates or near-duplicates. Write in the requested language.",
+        "You write the questions real customers type into AI assistants (ChatGPT, Gemini, Claude, Perplexity, Grok) when " +
+        "they are looking for this kind of business. Rules: (1) NEVER mention the business's name or any competitor's " +
+        "name — the point is to see whether AI recommends the business on its own. (2) Stay strictly inside what the " +
+        "business sells; use the keywords and plain category words buyers use, never its marketing copy or slogans. " +
+        "(3) Keep every question positive or neutral — no 'is it worth it', 'alternatives to', 'vs', 'scam', 'mistakes to " +
+        "avoid', 'cheapest' or complaint-style questions. (4) Short and natural, like a real person typing (under 18 " +
+        "words). Mix: finding the best option ('best X in <city/country>', 'X for <audience>'), choosing ('how to choose X', " +
+        "'what to look for in X'), and cost ('how much does X cost'). Use the city for local businesses. (5) No duplicates " +
+        "or near-duplicates. Write in the requested language.",
       user: JSON.stringify({
         brand: profile.brandNames[0],
         categories: profile.categories,
         audience: profile.audience ?? null,
         country,
         language: profile.languages[0] ?? "en",
-        competitors: profile.competitors.map((c) => c.name),
+        city: profile.city ?? null,
         local: looksLocal(profile),
         keywords: profile.keywords.slice(0, 30),
         count: Math.min(40, max + 10),
@@ -184,7 +229,10 @@ export async function researchPrompts(
     });
     if (res) {
       const cands: PromptCandidate[] = res.data.prompts.map((p) => ({ text: p.text.trim(), intent: p.intent, topic: p.topic, locale, source: "llm" }));
-      return { candidates: dedupePrompts(cands, opts.existing).slice(0, max), source: "llm", costMicros: res.costMicros };
+      const clean = keepDiscoveryQuestions(dedupePrompts(cands, opts.existing), names);
+      // Too few survived the filter: top up from the templates rather than show a short list.
+      const topUp = clean.length >= max ? [] : dedupePrompts(templatePrompts(profile, 60), [...(opts.existing ?? []), ...clean.map((c) => c.text)]);
+      return { candidates: [...clean, ...topUp].slice(0, max), source: "llm", costMicros: res.costMicros };
     }
   }
   return { candidates: dedupePrompts(templatePrompts(profile, 60), opts.existing).slice(0, max), source: "template", costMicros: 0 };

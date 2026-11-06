@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getPlanWithAiLimits } from "@/lib/billing/plans";
 import { hasRole, requireAppSession } from "@/lib/dashboard/server";
 import { setupQuestionCount } from "@/lib/setup/facts";
+import { assistantNamesForPlan } from "@/lib/setup/assistants";
 import { OnboardingWizard } from "@/components/app/onboarding-wizard";
 
 export const metadata = { title: "Set up your website" };
@@ -22,7 +23,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const { website } = await searchParams;
   const s = await requireAppSession();
   const [org, projects] = await Promise.all([
-    db.organization.findUnique({ where: { id: s.organizationId }, select: { planId: true } }),
+    db.organization.findUnique({ where: { id: s.organizationId }, select: { planId: true, serviceTier: true } }),
     db.project.findMany({
       where: { organizationId: s.organizationId },
       orderBy: { createdAt: "asc" },
@@ -37,6 +38,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       initialWebsite={safeWebsite(website)}
       firstWebsite={projects.length === 0}
       questionCount={setupQuestionCount(plan.maxPromptsPerRun)}
+      assistants={assistantNamesForPlan(org?.planId ?? "trial", org?.serviceTier)}
       limit={
         limitReached
           ? {

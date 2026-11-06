@@ -1,12 +1,14 @@
 "use client";
-// Setup — exactly 4 screens (brief §5.3): Your website → Is this right? → Your competitors → What customers ask,
+// Setup — exactly 4 screens (brief §5.3): Your website → Is this right? → Competitors & SEO keywords →
+// Questions we'll ask AI,
 // then the progress screen. The tool fills in everything it can; the owner only types the website address.
 // Removed from setup on purpose: automatic-fix ticks (off), pages per check (plan maximum), project name and
 // other names (from the business name). Schedules stay on (website weekly, AI monthly).
 import { useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, Check, Globe, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Globe, Plus, Search, Sparkles, Users } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { BRAND } from "@/lib/brand";
+import { joinNames } from "@/lib/setup/names";
 import { COUNTRIES, LANGUAGES, countryLabel, emptyFacts, nameFromHost, projectFieldsFromFacts, type BusinessFacts } from "@/lib/setup/facts";
 import { normalizeWebsite, preferredWebsite, websiteError, websiteHost } from "@/lib/setup/website";
 import { Button, Card, CardBody, Field, Input, Notice, Select, Spinner } from "@/components/ui";
@@ -19,6 +21,10 @@ const SCREEN_NO: Partial<Record<Screen, number>> = { website: 1, facts: 2, compe
 interface Competitor {
   name: string;
   domain?: string;
+  checked: boolean;
+}
+interface Keyword {
+  text: string;
   checked: boolean;
 }
 interface Question {
@@ -37,6 +43,8 @@ export interface SetupWizardProps {
   questionCount: number;
   /** Set when the plan's website limit is already used. */
   limit: LimitInfo | null;
+  /** AI assistants this plan's checks ask, e.g. ["ChatGPT", "Gemini", "Claude"]. */
+  assistants?: string[];
 }
 
 function ContactLink() {
@@ -74,7 +82,10 @@ function Loading({ text }: { text: string }) {
 const tickBox =
   "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-surface-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary";
 
-export function SetupWizard({ initialWebsite = "", firstWebsite = true, questionCount, limit }: SetupWizardProps) {
+const MAX_KEYWORDS = 40;
+const DEFAULT_ASSISTANTS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Grok"];
+
+export function SetupWizard({ initialWebsite = "", firstWebsite = true, questionCount, limit, assistants = DEFAULT_ASSISTANTS }: SetupWizardProps) {
   const [screen, setScreen] = useState<Screen>(limit ? "limit" : "website");
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -92,6 +103,9 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
   const [adding, setAdding] = useState(false);
   const [newComp, setNewComp] = useState({ name: "", domain: "" });
   const [newCompErr, setNewCompErr] = useState<string | null>(null);
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [newKeyword, setNewKeyword] = useState("");
+  const [newKeywordErr, setNewKeywordErr] = useState<string | null>(null);
   // Screen 4
   const [questions, setQuestions] = useState<Question[]>([]);
   const [questionsErr, setQuestionsErr] = useState<string | null>(null);
@@ -148,20 +162,34 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
     }
     setNameErr(null);
     const id = ++reqId.current;
-    setLoading("Finding businesses like yours…");
+    setLoading("Finding your competitors and SEO keywords…");
     setScreen("competitors");
     let items: Competitor[] = [];
     let note: string | null = null;
-    try {
-      const r = await api<{ items: { name: string; domain?: string }[]; source: string }>("/api/setup/competitors", {
-        body: { facts, website: siteUrl || normalizeWebsite(website) },
-      });
-      items = r.items.map((c) => ({ ...c, checked: true }));
-      if (!items.length) note = "We couldn't suggest competitors this time. Add the ones you know, or skip this step.";
-    } catch {
-      note = "We couldn't suggest competitors just now. Add the ones you know, or skip this step.";
+    const body = { facts, website: siteUrl || normalizeWebsite(website) };
+    const [compRes, kwRes] = await Promise.allSettled([
+      api<{ items: { name: string; domain?: string }[]; source: string }>("/api/setup/competitors", { body }),
+      api<{ item: { picked: string[]; more: string[] } }>("/api/setup/keywords", { body }),
+    ]);
+    if (compRes.status === "fulfilled") {
+      items = compRes.value.items.map((c) => ({ ...c, checked: true }));
+      if (!items.length) note = "We couldn't suggest competitors this time. Add the ones you know, or skip this part.";
+    } else {
+      note = "We couldn't suggest competitors just now. Add the ones you know, or skip this part.";
     }
     if (id !== reqId.current) return;
+    if (kwRes.status === "fulfilled") {
+      const suggested = [
+        ...kwRes.value.item.picked.map((text) => ({ text, checked: true })),
+        ...kwRes.value.item.more.map((text) => ({ text, checked: false })),
+      ];
+      // Keep keywords the owner typed or ticked if they came back to this screen.
+      setKeywords((prev) => {
+        const mine = prev.filter((p) => !suggested.some((k) => k.text === p.text));
+        const ticked = new Set(prev.filter((p) => p.checked).map((p) => p.text));
+        return [...suggested.map((k) => (ticked.has(k.text) ? { ...k, checked: true } : k)), ...mine];
+      });
+    }
     // Keep anything the owner already added if they came back to this screen.
     setCompetitors((prev) => {
       const mine = prev.filter((p) => !items.some((i) => i.name.toLowerCase() === p.name.toLowerCase()));
@@ -188,6 +216,21 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
     setAdding(false);
   }
 
+  function addKeyword() {
+    const text = newKeyword.toLowerCase().replace(/\s+/g, " ").trim();
+    if (text.length < 2) {
+      setNewKeywordErr("Type a word or short phrase people search for.");
+      return;
+    }
+    if (text.length > 80) {
+      setNewKeywordErr("Keep it under 80 characters.");
+      return;
+    }
+    setKeywords((xs) => (xs.some((k) => k.text === text) ? xs.map((k) => (k.text === text ? { ...k, checked: true } : k)) : [...xs, { text, checked: true }]));
+    setNewKeyword("");
+    setNewKeywordErr(null);
+  }
+
   /* ---------------- screen 3 → 4: write the customer questions */
 
   async function loadQuestions() {
@@ -197,7 +240,11 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
     setQuestionsErr(null);
     try {
       const r = await api<{ items: Omit<Question, "checked">[] }>("/api/setup/questions", {
-        body: { facts, competitors: competitors.filter((c) => c.checked).map(({ name, domain }) => ({ name, ...(domain ? { domain } : {}) })) },
+        body: {
+          facts,
+          competitors: competitors.filter((c) => c.checked).map(({ name, domain }) => ({ name, ...(domain ? { domain } : {}) })),
+          keywords: keywords.filter((k) => k.checked).map((k) => k.text),
+        },
       });
       if (id !== reqId.current) return;
       setQuestions(r.items.map((q) => ({ ...q, checked: true })));
@@ -222,6 +269,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
 
   const chosenCompetitors = competitors.filter((c) => c.checked);
   const chosenQuestions = questions.filter((q) => q.checked);
+  const chosenKeywords = keywords.filter((k) => k.checked);
 
   /* ---------------- render */
 
@@ -234,7 +282,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
           ...projectFieldsFromFacts(facts),
           websiteUrl: url,
           competitors: chosenCompetitors.map((c) => ({ name: c.name, ...(c.domain ? { domain: c.domain } : {}), aliases: [] })),
-          keywords: [],
+          keywords: chosenKeywords.map((k) => k.text),
           facts,
         }}
         questions={chosenQuestions.map(({ text, intent, topic, locale }) => ({ text, ...(intent ? { intent } : {}), ...(topic ? { topic } : {}), ...(locale ? { locale } : {}) }))}
@@ -392,9 +440,16 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
               <div className="space-y-5">
                 <div>
                   <h1 id="setup-heading" tabIndex={-1} className="text-h3 text-fg outline-none">
-                    Your competitors
+                    Competitors and SEO keywords
                   </h1>
-                  <p className="mt-1 text-body text-muted">We&apos;ll check if AI names them instead of you. Untick any that aren&apos;t real competitors.</p>
+                  <p className="mt-1 text-body text-muted">Who you compete with, and what people search for to find you.</p>
+                </div>
+                <section aria-labelledby="setup-comp-title" className="space-y-3">
+                <div>
+                  <h2 id="setup-comp-title" className="flex items-center gap-2 text-body font-semibold text-fg">
+                    <Users size={17} aria-hidden className="text-primary" /> Your competitors
+                  </h2>
+                  <p className="mt-0.5 text-small text-muted">We&apos;ll check if AI recommends them instead of you. Untick any that aren&apos;t real competitors.</p>
                 </div>
                 {competitorsNote && <Notice tone="info">{competitorsNote}</Notice>}
                 {competitors.length > 0 && (
@@ -463,10 +518,77 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
                 ) : (
                   competitors.length < 20 && (
                     <Button variant="secondary" icon={<Plus />} onClick={() => setAdding(true)} fullWidth>
-                      Add another
+                      Add a competitor
                     </Button>
                   )
                 )}
+                </section>
+
+                <section aria-labelledby="setup-kw-title" className="space-y-3 border-t border-border pt-5">
+                  <div>
+                    <h2 id="setup-kw-title" className="flex items-center gap-2 text-body font-semibold text-fg">
+                      <Search size={17} aria-hidden className="text-primary" /> SEO keywords
+                    </h2>
+                    <p className="mt-0.5 text-small text-muted">
+                      What people type into Google to find a business like yours. We ticked the most important ones — tap any
+                      idea to add it, or tap again to remove it.
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      {chosenKeywords.length} selected
+                    </p>
+                  </div>
+                  {keywords.length === 0 ? (
+                    <Notice tone="info">We couldn&apos;t suggest keywords this time. Add the words people search for below.</Notice>
+                  ) : (
+                    <ul className="flex flex-wrap gap-2" aria-label="SEO keywords">
+                      {keywords.map((k, i) => (
+                        <li key={k.text}>
+                          <button
+                            type="button"
+                            aria-pressed={k.checked}
+                            disabled={!k.checked && chosenKeywords.length >= MAX_KEYWORDS}
+                            onClick={() => setKeywords((xs) => xs.map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)))}
+                            className={
+                              "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-small transition-colors disabled:opacity-50 " +
+                              (k.checked
+                                ? "border-primary bg-primary-soft font-medium text-fg"
+                                : "border-dashed border-border-strong text-fg-soft hover:bg-surface-2")
+                            }
+                          >
+                            {k.checked ? <Check size={14} aria-hidden className="text-primary" /> : <Plus size={14} aria-hidden />}
+                            {k.text}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Field label="Add your own keyword" htmlFor="setup-keyword" error={newKeywordErr}>
+                        <Input
+                          id="setup-keyword"
+                          value={newKeyword}
+                          placeholder={facts.city ? `e.g. bakery in ${facts.city}` : "e.g. wedding cakes"}
+                          invalid={!!newKeywordErr}
+                          onChange={(e) => {
+                            setNewKeyword(e.target.value);
+                            if (newKeywordErr) setNewKeywordErr(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addKeyword();
+                            }
+                          }}
+                        />
+                      </Field>
+                    </div>
+                    <Button variant="secondary" icon={<Plus />} onClick={addKeyword} className="mt-7 self-start" disabled={chosenKeywords.length >= MAX_KEYWORDS}>
+                      Add
+                    </Button>
+                  </div>
+                </section>
+
                 <Button size="lg" fullWidth iconRight={<ArrowRight />} onClick={loadQuestions}>
                   Next
                 </Button>
@@ -488,7 +610,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
             ) : questionsErr ? (
               <div className="space-y-5">
                 <h1 id="setup-heading" tabIndex={-1} className="text-h3 text-fg outline-none">
-                  What customers ask
+                  Questions we&apos;ll ask AI
                 </h1>
                 <Notice tone="danger" title="We couldn't write your questions">
                   {questionsErr} Try again, or <ContactLink /> if it keeps happening.
@@ -504,10 +626,22 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
               <div className="space-y-5">
                 <div>
                   <h1 id="setup-heading" tabIndex={-1} className="text-h3 text-fg outline-none">
-                    What customers ask
+                    Questions we&apos;ll ask AI
                   </h1>
                   <p className="mt-1 text-body text-muted">
-                    We&apos;ll ask AI these questions and see if it names you. Untick any that don&apos;t fit.
+                    We&apos;ll ask {joinNames(assistants)} these questions — the way your customers ask them — and check
+                    whether the answers recommend you.
+                  </p>
+                  <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="AI assistants we ask">
+                    {assistants.map((a) => (
+                      <li key={a} className="rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-fg-soft">
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 text-small text-muted">
+                    None of the questions mention your business name, so you see whether AI finds you on its own. Untick any
+                    that don&apos;t fit your business.
                   </p>
                   <p className="mt-2 text-small text-muted">
                     {chosenQuestions.length} of {questions.length} ticked

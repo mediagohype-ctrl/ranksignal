@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dedupePrompts, jaccard, normalizeTokens, researchPrompts, templatePrompts } from "@/lib/prompts/research";
+import { dedupePrompts, jaccard, keepDiscoveryQuestions, normalizeTokens, researchPrompts, templatePrompts, topicPhrases } from "@/lib/prompts/research";
+import { templateKeywords } from "@/lib/setup/keywords";
 
 const profile = {
   brandNames: ["Acme Tiles"],
@@ -36,45 +37,67 @@ describe("dedupe", () => {
 describe("template research", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("generates tagged, deduped prompts across intents", () => {
+  it("generates tagged, deduped questions across intents", () => {
     const out = templatePrompts(profile);
     expect(out.length).toBeGreaterThan(5);
     const intents = new Set(out.map((p) => p.intent));
     expect(intents.has("commercial")).toBe(true);
-    expect(intents.has("comparison")).toBe(true);
     expect(intents.has("informational")).toBe(true);
+    expect(intents.has("transactional")).toBe(true);
     expect(out.every((p) => p.locale === "en-IN" && p.source === "template")).toBe(true);
     expect(out.some((p) => p.text.includes("in India"))).toBe(true);
     expect(dedupePrompts(out)).toHaveLength(out.length);
   });
 
-  it("defaults to 12–20 buyer-style prompts with the expected patterns", () => {
-    const out = templatePrompts(profile);
-    expect(out.length).toBeGreaterThanOrEqual(12);
-    expect(out.length).toBeLessThanOrEqual(20);
-    const texts = out.map((p) => p.text);
-    expect(texts).toContain("Best ceramic tiles in India — which would you recommend?");
-    expect(texts).toContain("Acme Tiles vs Globex: which is better for ceramic tiles?");
-    expect(texts).toContain("What are the best alternatives to Acme Tiles?");
-    expect(texts).toContain("What's the best ceramic tiles for homeowners?");
-    expect(texts.some((t) => t.startsWith("How do I choose the right"))).toBe(true);
-    expect(texts.some((t) => t.startsWith("Is Acme Tiles good"))).toBe(true);
-    expect(texts.some((t) => t.includes("near me"))).toBe(false);
-    // Most prompts measure organic visibility (don't name the brand).
-    expect(texts.filter((t) => t.includes("Acme Tiles")).length).toBeLessThan(texts.length / 2);
+  it("never names the business or a competitor, and never asks a negative question", () => {
+    const texts = templatePrompts(profile).map((p) => p.text);
+    expect(texts.length).toBeGreaterThanOrEqual(12);
+    expect(texts.length).toBeLessThanOrEqual(20);
+    expect(texts.some((t) => /acme|globex|initech/i.test(t))).toBe(false);
+    expect(texts.some((t) => /worth it|alternatives|\bvs\b|cheapest|mistakes|avoid|reviews/i.test(t))).toBe(false);
+    expect(texts).toContain("What are the best anti-skid tiles in India?");
+    expect(texts).toContain("Which ceramic tiles would you recommend for homeowners?");
   });
 
-  it("adds 'near me' prompts for local businesses", () => {
-    const out = templatePrompts({ ...profile, categories: ["dental clinic"], keywords: [], competitors: [] });
-    const texts = out.map((p) => p.text);
-    expect(texts).toContain("Cheapest dental clinic near me with good reviews?");
-    expect(texts.some((t) => t.startsWith("Best dental clinic near me"))).toBe(true);
-    expect(dedupePrompts(out)).toHaveLength(out.length);
+  it("uses short topics, not the whole 'what you sell' sentence", () => {
+    const sells = "Free, in-depth programming notes for React, Next.js, Java, Python and AI, plus copy-paste UI templates";
+    expect(topicPhrases(sells)).toEqual(["programming notes for react", "copy-paste ui templates"]);
+    expect(topicPhrases("Sweets, cakes and snacks")).toEqual(["sweets", "cakes", "snacks"]);
+    const texts = templatePrompts({ ...profile, categories: [sells], keywords: [], audience: null }).map((p) => p.text);
+    expect(texts.every((t) => !t.includes("Next.js, Java"))).toBe(true);
+  });
+
+  it("asks about the city for local businesses and the country for online ones", () => {
+    const local = templatePrompts({ ...profile, categories: ["dental clinic"], keywords: [], competitors: [], city: "Pune" }).map((p) => p.text);
+    expect(local).toContain("What are the best dental clinic in Pune?");
+    const online = templatePrompts({ ...profile, categories: ["python course"], keywords: [], competitors: [], city: "Pune" }).map((p) => p.text);
+    expect(online.some((t) => t.includes("Pune"))).toBe(false);
+    expect(online).toContain("What are the best python course in India?");
   });
 
   it("skips long free-text audiences instead of producing awkward prompts", () => {
     const out = templatePrompts({ ...profile, audience: "Homeowners renovating bathrooms. Also builders and architects in tier-2 cities across India" });
     expect(out.some((p) => p.text.includes("for Homeowners renovating"))).toBe(false);
+  });
+
+  it("filters AI-written questions that name a business or sound negative", () => {
+    const kept = keepDiscoveryQuestions(
+      [
+        { text: "Is Acme Tiles good? Is it worth it?" },
+        { text: "What are the best alternatives to Globex?" },
+        { text: "Best acme tiles showroom?" },
+        { text: "What are the best bathroom tiles in Pune?" },
+      ],
+      ["Acme Tiles", "Globex"],
+    );
+    expect(kept.map((k) => k.text)).toEqual(["What are the best bathroom tiles in Pune?"]);
+  });
+
+  it("suggests SEO keywords without the business name", () => {
+    const k = templateKeywords({ name: "Sharma Sweets", sells: "Sweets, cakes and snacks", customers: "Families", city: "Pune", country: "IN", language: "en" });
+    expect(k.picked.slice(0, 2)).toEqual(["sweets", "sweets in pune"]);
+    expect(k.more.length).toBeGreaterThan(0);
+    expect([...k.picked, ...k.more].some((x) => x.includes("sharma"))).toBe(false);
   });
 
   it("falls back to templates when no LLM key", async () => {
