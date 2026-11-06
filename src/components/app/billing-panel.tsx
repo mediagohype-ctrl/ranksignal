@@ -44,6 +44,16 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
   const autoPlan = params.get("plan");
   const autoStarted = useRef(false);
 
+  /** Server asks Razorpay directly whether this organization has a paid subscription (covers a missed webhook). */
+  const syncWithRazorpay = useCallback(async (subscriptionId?: string) => {
+    try {
+      const r = await api<{ item: { status: string } }>("/api/billing/sync", { body: subscriptionId ? { subscriptionId } : {} });
+      return r.item.status;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const loadUsage = useCallback(async () => {
     try {
       const r = await api<{ item: UsageResponse }>("/api/usage");
@@ -56,18 +66,21 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
   }, []);
 
   useEffect(() => {
-    void loadUsage();
+    // A payment that went through but never reached us is picked up here, on the next visit to Billing.
+    void syncWithRazorpay().then((st) => (st === "activated" ? router.refresh() : undefined)).finally(() => void loadUsage());
     return () => {
       if (pollRef.current) clearTimeout(pollRef.current);
     };
-  }, [loadUsage]);
+  }, [loadUsage, syncWithRazorpay, router]);
 
   useEffect(() => setPlanId(currentPlanId), [currentPlanId]);
 
   /** Never trust the client callback: wait until the signed webhook has switched the plan on the server. */
-  function waitForActivation(target: string, attempt = 0) {
+  function waitForActivation(target: string, attempt = 0, subscriptionId?: string) {
     setPhase({ kind: "activating", planId: target });
     pollRef.current = setTimeout(async () => {
+      // Every few seconds, also ask the server to check Razorpay directly, in case the webhook is slow or missing.
+      if (attempt % 2 === 1) await syncWithRazorpay(subscriptionId);
       const u = await loadUsage();
       if (u && u.plan.id === target && u.access.active) {
         setPhase({ kind: "idle" });
@@ -79,7 +92,7 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
         setPhase({ kind: "slow" });
         return;
       }
-      waitForActivation(target, attempt + 1);
+      waitForActivation(target, attempt + 1, subscriptionId);
     }, POLL_MS);
   }
 
@@ -106,7 +119,7 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
           description: `${p.name} plan — monthly`,
           onSuccess: () => {
             setBusy(null);
-            waitForActivation(p.id);
+            waitForActivation(p.id, 0, r.item.subscriptionId);
           },
           onDismiss: () => setBusy(null),
           onFailure: (msg) => {

@@ -69,3 +69,29 @@ export async function cancelRazorpaySubscription(subscriptionId: string, atCycle
   }
   return (await res.json()) as RazorpaySubscription;
 }
+
+function authHeader(): string {
+  return `Basic ${Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64")}`;
+}
+
+/** One subscription, read straight from Razorpay (trusted: server-to-server with our secret key). */
+export async function fetchRazorpaySubscription(subscriptionId: string): Promise<RazorpaySubscription | null> {
+  const res = await fetch(`${API}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    headers: { Authorization: authHeader() },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (res.status === 400 || res.status === 404) return null;
+  if (!res.ok) throw new Error(`Razorpay returned ${res.status}`);
+  return (await res.json()) as RazorpaySubscription;
+}
+
+/** The most recent subscriptions on the account (newest first, up to 100). */
+export async function listRazorpaySubscriptions(count = 100): Promise<(RazorpaySubscription & { created_at?: number })[]> {
+  const res = await fetch(`${API}/subscriptions?count=${Math.min(Math.max(count, 1), 100)}`, {
+    headers: { Authorization: authHeader() },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`Razorpay returned ${res.status}`);
+  const data = (await res.json()) as { items?: (RazorpaySubscription & { created_at?: number })[] };
+  return data.items ?? [];
+}

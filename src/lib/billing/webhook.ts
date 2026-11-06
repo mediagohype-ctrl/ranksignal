@@ -65,6 +65,81 @@ interface RazorpayEventBody {
 
 const toDate = (s?: number | null) => (s ? new Date(s * 1000) : null);
 
+type Tx = Prisma.TransactionClient;
+type Mapping = { sub: SubStatus; org: OrgStatus };
+
+/**
+ * Applies one Razorpay subscription's state to our Subscription + Organization rows (inside a transaction).
+ * Used by the signed webhook and by the server-side sync (src/lib/billing/sync.ts), which reads the
+ * subscription straight from the Razorpay API — never from the browser.
+ */
+export async function applySubscriptionEntity(
+  tx: Tx,
+  entity: RazorpaySubscription,
+  mapping: Mapping,
+  action: string,
+): Promise<{ ok: true; organizationId: string } | { ok: false; reason: string }> {
+  const existing = await tx.subscription.findUnique({ where: { providerSubscriptionId: entity.id } });
+  const noteOrg = entity.notes?.organizationId;
+  const organizationId = existing?.organizationId ?? (typeof noteOrg === "string" ? noteOrg : null);
+  if (!organizationId) return { ok: false, reason: "subscription not linked to an organization" };
+  const org = await tx.organization.findUnique({ where: { id: organizationId }, select: { id: true, planId: true, status: true } });
+  if (!org) return { ok: false, reason: "organization not found" };
+
+  const notePlan = entity.notes?.planId;
+  const planId =
+    planIdFromRazorpayPlan(entity.plan_id) ??
+    (typeof notePlan === "string" && isPlanId(notePlan) && notePlan !== "trial" ? notePlan : null) ??
+    existing?.planId ??
+    org.planId;
+
+  const subData = {
+    planId,
+    status: mapping.sub,
+    currentPeriodStart: toDate(entity.current_start) ?? existing?.currentPeriodStart ?? null,
+    currentPeriodEnd: toDate(entity.current_end) ?? existing?.currentPeriodEnd ?? null,
+  };
+  if (existing) {
+    await tx.subscription.update({ where: { id: existing.id }, data: subData });
+  } else {
+    await tx.subscription.create({
+      data: { ...subData, organizationId, provider: "razorpay", providerSubscriptionId: entity.id },
+    });
+  }
+  if (mapping.sub === "active") {
+    // Paid subscription supersedes the trial.
+    await tx.subscription.updateMany({ where: { organizationId, status: "trialing" }, data: { status: "expired" } });
+  }
+  // An old subscription ending (or failing) must not downgrade an org that has a newer active subscription.
+  const supersededBy =
+    mapping.sub === "active"
+      ? null
+      : await tx.subscription.findFirst({
+          where: { organizationId, status: "active", NOT: { providerSubscriptionId: entity.id } },
+          select: { id: true },
+        });
+  if (!supersededBy) {
+    await tx.organization.update({
+      where: { id: organizationId },
+      data: { status: mapping.org, ...(mapping.sub === "active" ? { planId } : {}) },
+    });
+  }
+  await tx.auditLog.create({
+    data: {
+      organizationId,
+      actorType: "system",
+      action,
+      resourceType: "subscription",
+      resourceId: entity.id,
+      before: { planId: org.planId, status: org.status },
+      after: supersededBy
+        ? { planId: org.planId, status: org.status, note: "superseded subscription; organization unchanged" }
+        : { planId: mapping.sub === "active" ? planId : org.planId, status: mapping.org },
+    },
+  });
+  return { ok: true, organizationId };
+}
+
 export async function processRazorpayWebhook(
   rawBody: string,
   headers: { signature: string | null; eventId: string | null },
@@ -94,65 +169,9 @@ export async function processRazorpayWebhook(
       });
       if (!mapping || !entity?.id) return { status: "ignored", eventId, reason: `unhandled event ${type}` } as const;
 
-      const existing = await tx.subscription.findUnique({ where: { providerSubscriptionId: entity.id } });
-      const noteOrg = entity.notes?.organizationId;
-      const organizationId = existing?.organizationId ?? (typeof noteOrg === "string" ? noteOrg : null);
-      if (!organizationId) return { status: "ignored", eventId, reason: "subscription not linked to an organization" } as const;
-      const org = await tx.organization.findUnique({ where: { id: organizationId }, select: { id: true, planId: true, status: true } });
-      if (!org) return { status: "ignored", eventId, reason: "organization not found" } as const;
-
-      const notePlan = entity.notes?.planId;
-      const planId =
-        planIdFromRazorpayPlan(entity.plan_id) ??
-        (typeof notePlan === "string" && isPlanId(notePlan) && notePlan !== "trial" ? notePlan : null) ??
-        existing?.planId ??
-        org.planId;
-
-      const subData = {
-        planId,
-        status: mapping.sub,
-        currentPeriodStart: toDate(entity.current_start) ?? existing?.currentPeriodStart ?? null,
-        currentPeriodEnd: toDate(entity.current_end) ?? existing?.currentPeriodEnd ?? null,
-      };
-      if (existing) {
-        await tx.subscription.update({ where: { id: existing.id }, data: subData });
-      } else {
-        await tx.subscription.create({
-          data: { ...subData, organizationId, provider: "razorpay", providerSubscriptionId: entity.id },
-        });
-      }
-      if (mapping.sub === "active") {
-        // Paid subscription supersedes the trial.
-        await tx.subscription.updateMany({ where: { organizationId, status: "trialing" }, data: { status: "expired" } });
-      }
-      // An old subscription ending (or failing) must not downgrade an org that has a newer active subscription.
-      const supersededBy =
-        mapping.sub === "active"
-          ? null
-          : await tx.subscription.findFirst({
-              where: { organizationId, status: "active", NOT: { providerSubscriptionId: entity.id } },
-              select: { id: true },
-            });
-      if (!supersededBy) {
-        await tx.organization.update({
-          where: { id: organizationId },
-          data: { status: mapping.org, ...(mapping.sub === "active" ? { planId } : {}) },
-        });
-      }
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorType: "system",
-          action: `billing.${type}`,
-          resourceType: "subscription",
-          resourceId: entity.id,
-          before: { planId: org.planId, status: org.status },
-          after: supersededBy
-            ? { planId: org.planId, status: org.status, note: "superseded subscription; organization unchanged" }
-            : { planId: mapping.sub === "active" ? planId : org.planId, status: mapping.org },
-        },
-      });
-      return { status: "processed", eventId, organizationId } as const;
+      const applied = await applySubscriptionEntity(tx, entity, mapping, `billing.${type}`);
+      if (!applied.ok) return { status: "ignored", eventId, reason: applied.reason } as const;
+      return { status: "processed", eventId, organizationId: applied.organizationId } as const;
     });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
