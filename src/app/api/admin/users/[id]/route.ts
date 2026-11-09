@@ -1,5 +1,5 @@
 // /api/admin/users/[id]
-//   PATCH {isStaff, reason}                        — grant/revoke staff (never your own account)
+//   PATCH {isStaff: false, reason}                 — revoke staff (grant on /admin/team); never your own account
 //   POST  {action: "password_reset"|"resend_verification", reason} — send account emails
 import { z } from "zod";
 import { handler, json, parseBody, HttpError } from "@/lib/api";
@@ -8,38 +8,22 @@ import { sendPasswordResetEmail } from "@/lib/auth/password-reset";
 import { sendVerificationEmail } from "@/lib/auth/email-verification";
 import { requireStaffApi } from "@/lib/admin/guard";
 import { reasonSchema, staffAudit } from "@/lib/admin/audit";
-import { wouldRemoveLastSuperAdmin } from "@/lib/admin/team";
+import { removeStaff } from "@/lib/admin/team";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({ isStaff: z.boolean(), reason: reasonSchema });
 const postSchema = z.object({ action: z.enum(["password_reset", "resend_verification"]), reason: reasonSchema });
 
+// Legacy entry point. Granting staff happens on /admin/team (where roles are chosen); revoking goes through the
+// same removeStaff() as the Team page, so the last-super-admin guard and workspace clean-up always apply.
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const staff = await requireStaffApi("team.manage");
   const { id } = await params;
   const { isStaff, reason } = await parseBody(req, patchSchema);
-  if (id === staff.user.id) throw new HttpError(400, "cannot_change_self", "You can't change your own staff access.");
-  const before = await db.user.findUnique({ where: { id }, select: { id: true, isStaff: true } });
-  if (!before) throw new HttpError(404, "not_found", "User not found");
-  if (!isStaff && before.isStaff && (await wouldRemoveLastSuperAdmin(id, null))) {
-    throw new HttpError(409, "last_super_admin", "Keep at least one super admin on the team.");
-  }
-  // Granting here gives no sections yet (roles are chosen on /admin/team); revoking clears roles.
-  const item = await db.user.update({
-    where: { id },
-    data: isStaff ? { isStaff } : { isStaff, staffRoles: [] },
-    select: { id: true, email: true, isStaff: true },
-  });
-  await staffAudit(staff, req, {
-    action: isStaff ? "admin.staff_granted" : "admin.staff_revoked",
-    resourceType: "user",
-    resourceId: id,
-    before: { isStaff: before.isStaff },
-    after: { isStaff },
-    reason,
-  });
-  return json({ item });
+  if (isStaff) throw new HttpError(400, "use_team_page", "Add people to the team on Team & roles, where you choose their roles.");
+  await removeStaff(staff, req, id, reason);
+  return json({ item: { id, isStaff: false } });
 });
 
 export const POST = handler(async (req: Request, { params }: Ctx) => {

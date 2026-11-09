@@ -12,17 +12,18 @@ export const GET = handler(async () => {
   return json({ items: await db.seoKeyword.findMany({ orderBy: [{ priority: "asc" }, { phrase: "asc" }] }) });
 });
 
-const bodySchema = z.union([z.object({ starter: z.literal(true) }), keywordInputSchema]);
 
 export const POST = handler(async (req: Request) => {
   const staff = await requireStaffApi("seo.manage");
-  const body = await parseBody(req, bodySchema);
-  if ("starter" in body) {
+  // Parse with the matching schema (a z.union would hide which keyword field was wrong).
+  const raw = await parseBody(req, z.record(z.unknown()));
+  if (raw.starter === true) {
     const rows = STARTER_KEYWORDS.map((k) => keywordInputSchema.parse(k));
     const r = await db.seoKeyword.createMany({ data: rows, skipDuplicates: true });
     await staffAudit(staff, req, { action: "seo.keywords_seeded", resourceType: "seo_keyword", resourceId: "starter", after: { added: r.count } });
     return json({ item: { added: r.count } });
   }
+  const body = keywordInputSchema.parse(raw);
   try {
     const item = await db.seoKeyword.create({ data: { ...body, checkedAt: body.googlePosition != null || body.aiMentioned != null ? new Date() : null } });
     await staffAudit(staff, req, { action: "seo.keyword_added", resourceType: "seo_keyword", resourceId: item.id, after: { phrase: item.phrase } });

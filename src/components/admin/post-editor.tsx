@@ -26,7 +26,19 @@ export interface EditorPost {
   authorName: string;
   noindex: boolean;
   status: string;
+  /** Set once a post has ever been published: its address is then fixed (changing it would break links). */
+  slugLocked?: boolean;
 }
+
+/** Live slug clean-up that still lets people type dashes and spaces ("my post" → "my-post"). */
+const typingSlug = (v: string) =>
+  v
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 100);
+const MAX_KEYWORDS = 15;
 
 const STARTER_BODY = `## What is [topic]?
 
@@ -74,7 +86,18 @@ export const emptyPost = (authorName: string): EditorPost => ({
 const scoreTone = (s: number): Tone => (s >= 75 ? "success" : s >= 50 ? "warning" : "danger");
 const PILLAR_NAME: Record<Pillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO" };
 
-export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPost; canPublish: boolean; siteUrl: string }) {
+export function PostEditor({
+  initial,
+  canPublish,
+  canWrite = true,
+  siteUrl,
+}: {
+  initial: EditorPost;
+  canPublish: boolean;
+  /** false = read-only view (role has content.view only). */
+  canWrite?: boolean;
+  siteUrl: string;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [p, setP] = useState<EditorPost>(initial);
@@ -96,17 +119,24 @@ export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPo
     [p, blocks],
   );
 
+  /** Keywords incl. one typed but not yet committed with Enter; case-insensitive de-dupe, max ${MAX_KEYWORDS}. */
+  function keywordList() {
+    const all = [...p.keywords, kwDraft].map((k) => k.trim().slice(0, 100)).filter(Boolean);
+    const seen = new Set<string>();
+    return all.filter((k) => !seen.has(k.toLowerCase()) && seen.add(k.toLowerCase())).slice(0, MAX_KEYWORDS);
+  }
+
   function payload() {
     return {
       title: p.title,
       metaTitle: p.metaTitle.trim() || null,
-      slug: p.slug,
+      slug: p.slug.replace(/-+$/, ""),
       description: p.description,
       answer: p.answer,
       body: p.body,
       keyPoints: p.keyPoints.map((k) => k.trim()).filter(Boolean),
       faqs: p.faqs.filter((f) => f.q.trim() && f.a.trim()),
-      keywords: p.keywords,
+      keywords: keywordList(),
       category: p.category,
       coverImageUrl: p.coverImageUrl.trim() || null,
       authorName: p.authorName,
@@ -120,11 +150,25 @@ export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPo
     try {
       if (!p.id) {
         const created = await adminSend<{ id: string }>("/api/admin/content", "POST", payload());
-        if (created && status && status !== "draft") await adminSend(`/api/admin/content/${created.id}`, "PATCH", { status });
-        toast(status === "published" ? "Published" : "Draft saved", "success");
-        if (created) router.replace(`/admin/content/${created.id}`);
+        if (!created) throw new Error("The post could not be created. Please try again.");
+        // Remember the id straight away: if the status change below fails, the next click updates this post
+        // instead of creating a duplicate.
+        setP((x) => ({ ...x, id: created.id }));
+        setKwDraft("");
+        if (status && status !== "draft") {
+          try {
+            await adminSend(`/api/admin/content/${created.id}`, "PATCH", { status });
+          } catch (e) {
+            router.replace(`/admin/content/${created.id}`);
+            throw new Error(`Saved as a draft, but: ${(e as Error).message}`);
+          }
+        }
+        toast(status === "published" ? "Published" : status === "review" ? "Sent for review" : "Draft saved", "success");
+        router.replace(`/admin/content/${created.id}`);
       } else {
         await adminSend(`/api/admin/content/${p.id}`, "PATCH", { ...payload(), ...(status ? { status } : {}) });
+        setKwDraft("");
+        set("keywords", keywordList());
         if (status) set("status", status);
         toast(
           status === "published" ? (live ? "Live post updated" : "Published — sent to Bing via IndexNow") : status === "review" ? "Sent for review" : status === "draft" ? "Moved back to draft" : "Saved",
@@ -153,7 +197,8 @@ export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPo
   }
 
   const titleLen = (p.metaTitle.trim() || p.title).length;
-  const serpTitle = (p.metaTitle.trim() || p.title || "Your post title") + " · MyWebRank";
+  const rawTitle = p.metaTitle.trim() || p.title || "Your post title";
+  const serpTitle = rawTitle.length > 48 ? rawTitle : `${rawTitle} · MyWebRank`;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -179,10 +224,12 @@ export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPo
               <Input
                 id="pe-slug"
                 value={p.slug}
+                readOnly={!!initial.slugLocked}
                 onChange={(e) => {
                   setSlugTouched(true);
-                  set("slug", slugify(e.target.value));
+                  set("slug", typingSlug(e.target.value));
                 }}
+                onBlur={() => set("slug", p.slug.replace(/-+$/, ""))}
               />
             </Field>
             <Field label="Category" htmlFor="pe-cat">
@@ -212,7 +259,7 @@ export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPo
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && kwDraft.trim()) {
                     e.preventDefault();
-                    if (!p.keywords.includes(kwDraft.trim())) set("keywords", [...p.keywords, kwDraft.trim()]);
+                    set("keywords", keywordList());
                     setKwDraft("");
                   }
                 }}
@@ -324,12 +371,13 @@ export function PostEditor({ initial, canPublish, siteUrl }: { initial: EditorPo
             <Badge tone={p.status === "published" ? "success" : p.status === "review" ? "warning" : "neutral"}>{p.status}</Badge>
           </div>
           <div className="grid gap-2">
-            {(!live || canPublish) && (
+            {!canWrite && <p className="text-xs text-muted">Read-only: your role can view posts but not edit them.</p>}
+            {canWrite && (!live || canPublish) && (
               <Button variant="secondary" icon={<Save />} loading={busy === "save"} onClick={() => save()}>
                 {live ? "Save changes (stays live)" : "Save draft"}
               </Button>
             )}
-            {!live && p.status !== "review" && (
+            {canWrite && !live && p.status !== "review" && p.status !== "archived" && (
               <Button variant="secondary" icon={<Send />} loading={busy === "review"} onClick={() => save("review")}>
                 Send for review
               </Button>

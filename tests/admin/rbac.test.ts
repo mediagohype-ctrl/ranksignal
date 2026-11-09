@@ -103,17 +103,19 @@ describe("team management safety", () => {
     await expect(setStaffRoles(me, req(), "me", { roles: ["seo"], reason: "test" })).rejects.toMatchObject({ status: 400 });
   });
 
-  it("won't demote or remove the last super admin", async () => {
+  it("won't demote or remove the last super admin (checked inside a serializable transaction)", async () => {
     mockDb.user.findUnique.mockResolvedValue({ isStaff: true, staffRoles: ["super_admin"] });
-    mockDb.user.count.mockResolvedValue(0);
+    mockDb.user.count.mockResolvedValue(0); // nobody left after the change → the transaction is rolled back
     await expect(setStaffRoles(me, req(), "u2", { roles: ["seo"], reason: "test" })).rejects.toMatchObject({ status: 409 });
     await expect(removeStaff(me, req(), "u2", "test")).rejects.toMatchObject({ status: 409 });
-    expect(mockDb.user.update).not.toHaveBeenCalled();
+    for (const call of mockDb.$transaction.mock.calls) expect(call[1]).toMatchObject({ isolationLevel: "Serializable" });
+    expect(mockDb.auditLog.create).not.toHaveBeenCalled();
   });
 
   it("adds an existing account with roles and audit-logs it", async () => {
     mockDb.user.findUnique.mockResolvedValue({ id: "u3", isStaff: false, staffRoles: [] });
     mockDb.user.update.mockResolvedValue({ id: "u3", email: "seo@x.com", staffRoles: ["seo"] });
+    mockDb.membership.findFirst.mockResolvedValue({ id: "m-own" });
     await addStaff(me, req(), { email: "seo@x.com", roles: ["seo"], reason: "new hire" });
     expect(mockDb.user.update.mock.calls[0][0].data).toEqual({ isStaff: true, staffRoles: ["seo"] });
     expect(mockDb.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: "admin.staff_granted", resourceId: "u3" });
@@ -150,7 +152,7 @@ describe("employee accounts and passwords", () => {
     expect(data).toMatchObject({ email: "priya@x.com", isStaff: true, emailVerified: true, staffRoles: ["content_writer"] });
     expect(await verifyPassword(r.password, data.passwordHash)).toBe(true);
     expect(mockDb.organization.create.mock.calls[0][0].data).toMatchObject({ isInternal: true, planId: "agency" });
-    expect(mockDb.membership.upsert.mock.calls[0][0].create).toMatchObject({ userId: "u9", organizationId: "team", role: "member", status: "active" });
+    expect(mockDb.membership.upsert.mock.calls[0][0].create).toMatchObject({ userId: "u9", organizationId: "team", role: "viewer", status: "active" });
     const audit = mockDb.auditLog.create.mock.calls[0][0].data;
     expect(audit).toMatchObject({ action: "admin.staff_account_created" });
     expect(JSON.stringify(audit)).not.toContain(r.password);
@@ -170,7 +172,8 @@ describe("employee accounts and passwords", () => {
     mockDb.user.findUnique.mockResolvedValue({ id: "c1", email: "c@x.com", isStaff: false });
     await expect(setStaffPassword(me, req(), "c1", { password: "", reason: "forgot" })).rejects.toMatchObject({ status: 404 });
     mockDb.user.findUnique.mockResolvedValue({ id: "u2", email: "u2@x.com", isStaff: true });
-    mockDb.membership.findFirst.mockResolvedValue({ id: "m1" });
+    // First findFirst = "has a customer workspace seat?" (no); second = "can already sign in?" (yes).
+    mockDb.membership.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "m1" });
     const r = await setStaffPassword(me, req(), "u2", { password: "Correct-Horse-9", reason: "forgot" });
     expect(r.password).toBe("Correct-Horse-9");
     const hash = mockDb.user.update.mock.calls[0][0].data.passwordHash;
@@ -185,5 +188,40 @@ describe("employee accounts and passwords", () => {
       where: { userId: "u2", organization: { isInternal: true } },
       data: { status: "removed" },
     });
+  });
+});
+
+describe("takeover and lock-out protections", () => {
+  const me = { user: { id: "me", email: "boss@x.com", name: null } } as StaffContext;
+  const req = () => new Request("http://localhost/api/admin/team", { method: "POST" });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDb.$transaction.mockImplementation(txImpl);
+  });
+
+  it("addStaff refuses yourself and people already on the team", async () => {
+    mockDb.user.findUnique.mockResolvedValue({ id: "me", isStaff: true });
+    await expect(addStaff(me, req(), { email: "boss@x.com", roles: ["seo"], reason: "oops" })).rejects.toMatchObject({ status: 400 });
+    mockDb.user.findUnique.mockResolvedValue({ id: "u5", isStaff: true });
+    await expect(addStaff(me, req(), { email: "u5@x.com", roles: ["seo"], reason: "oops" })).rejects.toMatchObject({ status: 409 });
+    expect(mockDb.user.update).not.toHaveBeenCalled();
+  });
+
+  it("never sets a super admin's or a customer's password", async () => {
+    mockDb.user.findUnique.mockResolvedValue({ id: "sa", email: "sa@x.com", isStaff: true, staffRoles: ["super_admin"] });
+    await expect(setStaffPassword(me, req(), "sa", { password: "", reason: "x y z" })).rejects.toMatchObject({ status: 403 });
+    mockDb.user.findUnique.mockResolvedValue({ id: "u6", email: "u6@x.com", isStaff: true, staffRoles: ["seo"] });
+    mockDb.membership.findFirst.mockResolvedValue({ id: "customer-seat" });
+    await expect(setStaffPassword(me, req(), "u6", { password: "", reason: "x y z" })).rejects.toMatchObject({ status: 403 });
+    expect(mockDb.user.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects weak typed staff passwords; generated ones always pass", async () => {
+    const { staffPasswordProblem } = await import("@/lib/admin/team");
+    expect(staffPasswordProblem("aaaaaaaaaa", "x@y.com")).toMatch(/Mix/);
+    expect(staffPasswordProblem("Password123", "x@y.com")).toMatch(/common/);
+    expect(staffPasswordProblem("Aaaaaaaaaa1", "x@y.com")).toMatch(/repeated/);
+    expect(staffPasswordProblem("Blue-Kettle-42", "x@y.com")).toBeNull();
+    for (let i = 0; i < 20; i++) expect(staffPasswordProblem(generatePassword(), "x@y.com")).toBeNull();
   });
 });

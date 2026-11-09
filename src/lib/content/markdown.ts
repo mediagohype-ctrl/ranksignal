@@ -20,8 +20,10 @@ export type Block =
 
 /** Only http(s), mailto, site-relative and in-page links/images survive; everything else (javascript: …) becomes "#". */
 export function safeHref(href: string): string {
-  const h = href.trim();
-  if (/^(https?:\/\/|mailto:)/i.test(h) || /^\/(?!\/)/.test(h) || h.startsWith("#")) return h;
+  // Browsers drop tabs/newlines and treat "\" like "/" in URLs, so "/\evil.com" or "/\t/evil.com" would become
+  // "//evil.com" (off-site). Strip control characters first and reject a "/" followed by "/" or "\".
+  const h = href.replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  if (/^(https?:\/\/|mailto:)/i.test(h) || /^\/(?![/\\])/.test(h) || h.startsWith("#")) return h;
   return "#";
 }
 
@@ -34,6 +36,8 @@ export function slugify(s: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 }
+
+const LINK = /^\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/;
 
 export function parseInline(src: string): Inline[] {
   const out: Inline[] = [];
@@ -55,7 +59,7 @@ export function parseInline(src: string): Inline[] {
     } else if ((m = rest.match(/^\*(?!\s)(.+?)\*/)) || (m = rest.match(/^_(?!\s)(.+?)_(?![A-Za-z0-9])/))) {
       flush();
       out.push({ t: "em", c: parseInline(m[1]) });
-    } else if ((m = rest.match(/^\[([^\]]+)\]\(([^)\s]+)\)/))) {
+    } else if ((m = rest.match(LINK))) {
       flush();
       out.push({ t: "link", href: safeHref(m[2]), c: parseInline(m[1]) });
     } else {
@@ -76,10 +80,20 @@ const cells = (line: string) =>
     .split("|")
     .map((c) => c.trim());
 
+/** URL inside (…), allowing one level of balanced parentheses (Wikipedia-style links). */
+const URL_IN_PARENS = String.raw`((?:[^()\s]|\([^()\s]*\))+)`;
+const IMG_LINE = new RegExp(String.raw`^!\[([^\]]*)\]\(` + URL_IN_PARENS + String.raw`\)$`);
+
+const isTableStart = (lines: string[], i: number) =>
+  lines[i].trim().startsWith("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1]);
+
+/** Ids the blog page itself uses; body headings get a suffix instead of colliding with them. */
+export const RESERVED_IDS = ["answer", "key-points", "faq", "faq-h", "main"] as const;
+
 export function parseMarkdown(md: string): Block[] {
   const lines = md.replace(/\r\n?/g, "\n").split("\n");
   const blocks: Block[] = [];
-  const used = new Map<string, number>();
+  const used = new Map<string, number>(RESERVED_IDS.map((id) => [id, 1]));
   const uniqueId = (text: string) => {
     const base = slugify(text) || "section";
     const n = used.get(base) ?? 0;
@@ -115,12 +129,15 @@ export function parseMarkdown(md: string): Block[] {
       i++;
       continue;
     }
-    if ((m = trimmed.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/))) {
-      blocks.push({ t: "img", alt: m[1], src: safeHref(m[2]) });
+    if ((m = trimmed.match(IMG_LINE))) {
+      // Images: only https:// or site-relative sources; anything else (data:, //host, javascript:) is dropped
+      // rather than rendered as src="#" (which would re-request the page as an image).
+      const src = safeHref(m[2]);
+      if (/^(https:\/\/|\/(?!\/))/.test(src)) blocks.push({ t: "img", alt: m[1], src });
       i++;
       continue;
     }
-    if (trimmed.startsWith("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1])) {
+    if (isTableStart(lines, i)) {
       const head = cells(trimmed).map(parseInline);
       i += 2;
       const rows: Inline[][][] = [];
@@ -146,12 +163,16 @@ export function parseMarkdown(md: string): Block[] {
       blocks.push({ t: "quote", c: parseInline(q.join(" ")) });
       continue;
     }
-    const para: string[] = [];
+    // Paragraph. The first line is ALWAYS consumed, so the parser can never stop advancing (e.g. on a lone "|"
+    // line that isn't a table); following lines join until something that starts another block.
+    const para: string[] = [trimmed];
+    i++;
     while (
       i < lines.length &&
       lines[i].trim() &&
-      !/^(#{1,3}\s|[-*]\s|\d+[.)]\s|>|```|\|)/.test(lines[i].trim()) &&
-      !/^!\[[^\]]*\]\([^)\s]+\)$/.test(lines[i].trim())
+      !/^(#{1,3}\s|[-*]\s|\d+[.)]\s|>|```)/.test(lines[i].trim()) &&
+      !isTableStart(lines, i) &&
+      !IMG_LINE.test(lines[i].trim())
     ) {
       para.push(lines[i++].trim());
     }

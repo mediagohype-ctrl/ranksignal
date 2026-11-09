@@ -6,5 +6,13 @@ import { publishedPosts } from "@/lib/content/posts";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  return buildSitemap(undefined, undefined, blogRoutes(await publishedPosts()));
+  const posts = await publishedPosts({ take: 5000 });
+  const entries = buildSitemap(undefined, undefined, blogRoutes(posts));
+  // The /blog index changes whenever a post does: give it the newest post's date.
+  const newest = posts.reduce<Date | null>((d, p) => (!d || p.updatedAt > d ? p.updatedAt : d), null);
+  if (newest) {
+    const blog = entries.find((e) => e.url.endsWith("/blog"));
+    if (blog && (!blog.lastModified || newest > new Date(blog.lastModified))) blog.lastModified = newest;
+  }
+  return entries;
 }

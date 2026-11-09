@@ -22,9 +22,11 @@ const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: 
 
 export default async function BlogIndex({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
-  const category = typeof sp.category === "string" ? sp.category.slice(0, 40) : undefined;
   const all = await publishedPosts();
   const categories = [...new Set(all.map((p) => p.category))].sort();
+  // Unknown ?category= values are ignored (no empty, indexable filter pages).
+  const asked = typeof sp.category === "string" ? sp.category.slice(0, 40) : undefined;
+  const category = asked && categories.includes(asked) ? asked : undefined;
   const posts = category ? all.filter((p) => p.category === category) : all;
   const base = siteUrl();
 
@@ -43,6 +45,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
             inLanguage: "en-IN",
             blogPost: posts.slice(0, 30).map((p) => ({
               "@type": "BlogPosting",
+              "@id": `${base}/blog/${p.slug}#article`,
               headline: p.title,
               url: `${base}/blog/${p.slug}`,
               datePublished: p.publishedAt?.toISOString(),

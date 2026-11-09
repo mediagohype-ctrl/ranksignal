@@ -7,7 +7,7 @@ import { hasLivePage, keywordInputSchema, STARTER_KEYWORDS } from "@/lib/seo/key
 import { permissionsFor } from "@/lib/admin/rbac";
 
 const mockDb = vi.hoisted(() => ({
-  blogPost: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  blogPost: { findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), updateMany: vi.fn(), create: vi.fn(), delete: vi.fn() },
   auditLog: { create: vi.fn() },
 }));
 vi.mock("@/lib/db", () => ({ db: mockDb }));
@@ -37,6 +37,28 @@ describe("markdown", () => {
     expect(safeHref("/blog")).toBe("/blog");
     const b = parseMarkdown("[x](javascript:alert(1))");
     expect(links(b)).toEqual(["#"]);
+  });
+
+  it("always terminates on odd input (regression: a lone '|' line looped forever)", { timeout: 2000 }, () => {
+    for (const s of ["| only line", "a\n| x", "|", "| a | b |\n| 1 |", "#\n##\n-\n1.\n>", "```", "![x](", "[a](b"]) {
+      expect(() => parseMarkdown(s), JSON.stringify(s)).not.toThrow();
+    }
+    expect(parseMarkdown("| only line").map((b) => b.t)).toEqual(["p"]);
+    expect(parseMarkdown("intro\n| A | B |\n|---|---|\n| 1 | 2 |").map((b) => b.t)).toEqual(["p", "table"]);
+  });
+
+  it("drops unsafe image sources instead of rendering src='#'", () => {
+    const b = parseMarkdown("![x](data:image/png;base64,AA)\n\n![y](//evil.test/a.png)\n\n![ok](https://e.com/a.png)\n\n![rel](/brand/logo.png)");
+    expect(b).toEqual([
+      { t: "img", alt: "ok", src: "https://e.com/a.png" },
+      { t: "img", alt: "rel", src: "/brand/logo.png" },
+    ]);
+  });
+
+  it("keeps parentheses inside link URLs and never reuses the page's own ids", () => {
+    expect(links(parseMarkdown("[w](https://en.wikipedia.org/wiki/A_(b)) end"))).toEqual(["https://en.wikipedia.org/wiki/A_(b)"]);
+    const ids = parseMarkdown("## FAQ\n\n## Answer\n\n## Key points").map((b) => (b.t === "h2" ? b.id : ""));
+    expect(ids).toEqual(["faq-2", "answer-2", "key-points-2"]);
   });
 
   it("makes unique heading ids and readable slugs", () => {
@@ -130,9 +152,14 @@ describe("writer vs publisher", () => {
   it("content writers can send for review but not publish", async () => {
     mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", status: "draft", slug: "a", publishedAt: null });
     await expect(updatePost(as(["content_writer"]), req(), "p1", { status: "published" })).rejects.toMatchObject({ status: 403 });
-    mockDb.blogPost.update.mockResolvedValue({ id: "p1", status: "review", slug: "a" });
+    mockDb.blogPost.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.blogPost.findUniqueOrThrow.mockResolvedValue({ id: "p1", status: "review", slug: "a" });
     await updatePost(as(["content_writer"]), req(), "p1", { status: "review" });
-    expect(mockDb.blogPost.update.mock.calls[0][0].data.status).toBe("review");
+    // Writers' updates only apply while the post is still not live/archived (race-safe).
+    expect(mockDb.blogPost.updateMany.mock.calls[0][0]).toMatchObject({
+      where: { id: "p1", status: { notIn: ["published", "archived"] } },
+      data: { status: "review" },
+    });
   });
 
   it("content writers cannot edit a live post", async () => {
@@ -142,8 +169,8 @@ describe("writer vs publisher", () => {
   });
 
   it("the SEO team can publish, and the first publish stamps publishedAt", async () => {
-    mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", status: "review", slug: "a", publishedAt: null });
-    mockDb.blogPost.update.mockResolvedValue({ id: "p1", status: "published", slug: "a" });
+    mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", ...good, metaTitle: null, slug: "a", status: "review", publishedAt: null });
+    mockDb.blogPost.update.mockResolvedValue({ id: "p1", status: "published", slug: "a", noindex: false });
     await updatePost(as(["seo"]), req(), "p1", { status: "published" });
     const data = mockDb.blogPost.update.mock.calls[0][0].data;
     expect(data.status).toBe("published");
@@ -151,5 +178,39 @@ describe("writer vs publisher", () => {
     expect(mockDb.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: "content.post_published" });
     // Publishing tells Bing (IndexNow) about the new post.
     expect(indexNow.submitIndexNow).toHaveBeenCalledWith({ paths: ["/blog/a", "/blog", "/sitemap.xml"] });
+  });
+});
+
+describe("publishing safety", () => {
+  const as = (roles: string[]) => {
+    const permissions = permissionsFor(roles);
+    return { user: { id: "s1", email: "s@x.com", name: "S" }, roles, permissions, can: (p: string) => permissions.has(p as never) } as unknown as StaffContext;
+  };
+  const req = () => new Request("http://localhost/api/admin/content/p1", { method: "PATCH" });
+  beforeEach(() => vi.clearAllMocks());
+
+  it("won't publish a post below the minimum content score", async () => {
+    mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", ...good, body: "too short", answer: "", faqs: [], keyPoints: [], metaTitle: null, status: "draft", publishedAt: null });
+    await expect(updatePost(as(["seo"]), req(), "p1", { status: "published" })).rejects.toMatchObject({ status: 400 });
+    expect(mockDb.blogPost.update).not.toHaveBeenCalled();
+  });
+
+  it("locks the address of a post that has been published", async () => {
+    mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", ...good, slug: "old", status: "published", publishedAt: new Date() });
+    await expect(updatePost(as(["seo"]), req(), "p1", { slug: "new-address" })).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("writers can't revive archived posts, and a just-published post rejects a writer's save", async () => {
+    mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", status: "archived", slug: "a", publishedAt: new Date() });
+    await expect(updatePost(as(["content_writer"]), req(), "p1", { status: "draft" })).rejects.toMatchObject({ status: 403 });
+    mockDb.blogPost.findUnique.mockResolvedValue({ id: "p1", status: "draft", slug: "a", publishedAt: null });
+    mockDb.blogPost.updateMany.mockResolvedValue({ count: 0 }); // a publisher published it in between
+    await expect(updatePost(as(["content_writer"]), req(), "p1", { title: "Writer edit" })).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("safeHref blocks backslash and control-character tricks", () => {
+    expect(safeHref("/\\evil.test")).toBe("#");
+    expect(safeHref("/\t/evil.test")).toBe("#");
+    expect(safeHref("/blog/ok")).toBe("/blog/ok");
   });
 });

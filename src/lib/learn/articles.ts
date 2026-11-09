@@ -151,7 +151,7 @@ export const ARTICLES: Article[] = [
         heading: "How do you do GEO? What to fix first",
         paragraphs: ["These steps are ordered by impact for most small and mid-sized businesses."],
         steps: [
-          "Let AI crawlers in: check robots.txt allows GPTBot, OAI-SearchBot, PerplexityBot, ClaudeBot and Google-Extended, and that your firewall or CDN isn’t blocking them.",
+          "Let AI crawlers in: check robots.txt allows GPTBot, OAI-SearchBot, PerplexityBot and ClaudeBot, and that your firewall or CDN isn’t blocking them. Also check robots.txt doesn’t disallow Google-Extended (a control token for Gemini, not a separate crawler).",
           "Get indexed by both Google and Bing — submit your sitemap in Google Search Console and Bing Webmaster Tools, and use IndexNow for fast updates.",
           "Make your entity unmistakable: the same business name, address, phone and description everywhere, an About page, and Organization structured data with links to your official profiles (sameAs).",
           "Write citable pages: specific facts, prices, numbers, dates and named sources; one clear claim per paragraph; comparison tables.",
@@ -222,7 +222,7 @@ export const ARTICLES: Article[] = [
         id: "overlap",
         heading: "Where do SEO, AEO and GEO overlap?",
         paragraphs: [
-          "Roughly 80% of the work is shared. Search engines and AI assistants both reward pages that load fast, are easy to crawl, answer questions directly and come from a source with a clear identity and a good reputation. That’s why a single audit can score all three — which is what the [MyWebRank report](/features) does.",
+          "Most of the work is shared. Search engines and AI assistants both reward pages that load fast, are easy to crawl, answer questions directly and come from a source with a clear identity and a good reputation. That’s why a single audit can score all three — which is what the [MyWebRank report](/features) does.",
         ],
       },
       {
@@ -275,7 +275,7 @@ export const ARTICLES: Article[] = [
         id: "step-1",
         heading: "Step 1: Can AI crawlers read your website?",
         paragraphs: [
-          "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and Google-Extended are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default.",
+          "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and the Google-Extended token are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default.",
           "Also make sure your important content is in the HTML, not only rendered by JavaScript. Many AI crawlers don’t run JavaScript. Our [free AI mention checker](/tools/ai-mention-checker) tests all of this in about 30 seconds.",
         ],
       },
@@ -413,7 +413,7 @@ export const ARTICLES: Article[] = [
         heading: "6. GEO checks (AI assistants)",
         paragraphs: [],
         bullets: [
-          "GPTBot, OAI-SearchBot, PerplexityBot, ClaudeBot and Google-Extended are allowed in robots.txt and not blocked by the firewall.",
+          "GPTBot, OAI-SearchBot, PerplexityBot and ClaudeBot are allowed in robots.txt and not blocked by the firewall; Google-Extended (a robots.txt token, not a crawler) is not disallowed.",
           "Main content is in the HTML, not only rendered by JavaScript.",
           "Business name, address, phone and description are identical across your site and listings.",
           "An llms.txt file summarises the business ([free llms.txt generator](/tools/ai-guide-file-maker)).",

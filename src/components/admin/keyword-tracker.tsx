@@ -33,8 +33,10 @@ function Row({ k, canManage, siteUrl }: { k: KeywordRow; canManage: boolean; sit
     try {
       await adminSend(`/api/admin/seo/keywords/${k.id}`, "PATCH", body);
       router.refresh();
+      return true;
     } catch (e) {
       setErr((e as Error).message);
+      return false;
     }
   }
 
@@ -59,7 +61,12 @@ function Row({ k, canManage, siteUrl }: { k: KeywordRow; canManage: boolean; sit
             value={target}
             placeholder="/blog/…"
             onChange={(e) => setTarget(e.target.value)}
-            onBlur={() => target !== (k.targetPath ?? "") && patch({ targetPath: target.trim() || null })}
+            onBlur={async () => {
+              const next = target.trim();
+              if (next === (k.targetPath ?? "")) return setTarget(next);
+              // On success keep the trimmed value; on error restore the saved one (no repeat requests on each blur).
+              setTarget((await patch({ targetPath: next || null })) ? next : (k.targetPath ?? ""));
+            }}
           />
         ) : (
           <span className="text-xs">{k.targetPath ?? "—"}</span>

@@ -89,10 +89,10 @@ export function postToMarkdown(p: BlogPost, base: string): string {
   return out.join("\n");
 }
 
+/**
+ * One published post, or null when it truly doesn't exist. Database errors are NOT swallowed: the page then
+ * answers 500 (crawlers retry) instead of 404 (crawlers may drop a live post from the index).
+ */
 export async function publishedPost(slug: string) {
-  try {
-    return await db.blogPost.findFirst({ where: { slug, status: "published", publishedAt: { lte: new Date() } } });
-  } catch {
-    return null;
-  }
+  return db.blogPost.findFirst({ where: { slug, status: "published", publishedAt: { lte: new Date() } } });
 }

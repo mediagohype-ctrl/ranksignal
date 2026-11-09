@@ -5,7 +5,8 @@ import { siteBase } from "@/lib/free-check/site-seo";
 
 export const dynamic = "force-dynamic";
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Strip XML-illegal control characters first, so one bad title can never invalidate the whole feed.
+const esc = (s: string) => s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export async function GET() {
   const base = siteBase();
@@ -30,6 +31,7 @@ export async function GET() {
     <link>${base}/blog</link>
     <description>${esc("SEO, AEO and GEO news, research and how-tos.")}</description>
     <language>en-in</language>
+    ${posts[0] ? `<lastBuildDate>${posts[0].updatedAt.toUTCString()}</lastBuildDate>` : ""}
     <atom:link href="${base}/blog/rss.xml" rel="self" type="application/rss+xml" />
 ${items}
   </channel>

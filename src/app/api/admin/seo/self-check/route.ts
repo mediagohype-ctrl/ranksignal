@@ -1,5 +1,6 @@
-// POST /api/admin/seo/self-check {url?} — run the free SEO/AEO/GEO check against our own site (or any page of it).
-// Not stored as a lead. seo.view is enough: it only reads public pages.
+// POST /api/admin/seo/self-check {url?} — run the free SEO/AEO/GEO check on our site (default) or any public URL,
+// e.g. a competitor. Same engine and protections as the public /free-check tool (SSRF-safe fetching that refuses
+// private/internal addresses, size and time limits). Not stored as a lead.
 import { z } from "zod";
 import { handler, json, parseBody, HttpError } from "@/lib/api";
 import { requireStaffApi } from "@/lib/admin/guard";

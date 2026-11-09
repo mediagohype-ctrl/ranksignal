@@ -21,6 +21,7 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
       <PostEditor
         siteUrl={siteBase()}
         canPublish={staff.can("content.publish")}
+        canWrite={staff.can("content.write")}
         initial={{
           id: p.id,
           slug: p.slug,
@@ -37,6 +38,7 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
           authorName: p.authorName,
           noindex: p.noindex,
           status: p.status,
+          slugLocked: !!p.publishedAt,
         }}
       />
     </div>

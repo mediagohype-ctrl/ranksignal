@@ -37,7 +37,7 @@ export interface PostScore {
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 const has = (hay: string, needle: string) => !!needle && norm(hay).includes(norm(needle));
 
-/** Titles are shown with " · MyWebRank" appended; keep the whole thing under ~65 characters. */
+/** Google shows ~60 characters of a title. Titles over 48 characters are published without the " · MyWebRank" suffix. */
 export const TITLE_RANGE = [30, 60] as const;
 export const DESCRIPTION_RANGE = [120, 160] as const;
 export const ANSWER_WORDS = [30, 80] as const;
@@ -79,7 +79,7 @@ export function scorePost(d: PostDraft, blocks: Block[] = parseMarkdown(d.body))
   add("seo", "image-alt", "Images have descriptions (alt text)", imgs.every((i) => i.alt.trim().length >= 5) ? "pass" : "fail", "Describe each image: ![What the image shows](url).");
 
   // --- AEO
-  add("aeo", "answer", `Short answer is ${ANSWER_WORDS[0]}–${ANSWER_WORDS[1]} words (now ${answerWords})`, range(answerWords, ANSWER_WORDS, 0.4), "A direct 40–60 word answer is what featured snippets and AI Overviews quote.", 3);
+  add("aeo", "answer", `Short answer is ${ANSWER_WORDS[0]}–${ANSWER_WORDS[1]} words (now ${answerWords})`, range(answerWords, ANSWER_WORDS, 0.4), "A direct answer (ideally 40–60 words) is what featured snippets and AI Overviews quote.", 3);
   add("aeo", "question-headings", "At least one heading is a question", headings.some((h) => h.text.trim().endsWith("?")) ? "pass" : "warn", "Write headings the way people ask: “How much does an SEO audit cost?”", 2);
   add("aeo", "faqs", `FAQs: ${faqs.length} (aim for 3+)`, faqs.length >= 3 ? "pass" : faqs.length >= 1 ? "warn" : "fail", "Each FAQ becomes FAQ schema that Google and AI tools read.", 2);
   add("aeo", "lists", "Uses a list or table", listsOrTables > 0 ? "pass" : "warn", "Steps, comparisons and prices in lists/tables are easy to lift as answers.");

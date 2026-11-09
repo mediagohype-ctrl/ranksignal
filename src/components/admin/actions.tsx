@@ -30,8 +30,17 @@ export async function adminSend<T = unknown>(url: string, method: string, body?:
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = (await res.json().catch(() => null)) as { item?: T; error?: { message?: string } } | null;
-  if (!res.ok) throw new Error(data?.error?.message ?? `Request failed (${res.status})`);
+  const data = (await res.json().catch(() => null)) as {
+    item?: T;
+    error?: { message?: string; details?: { fieldErrors?: Record<string, string[] | undefined> } };
+  } | null;
+  if (!res.ok) {
+    const fields = Object.entries(data?.error?.details?.fieldErrors ?? {})
+      .filter(([, v]) => v?.length)
+      .map(([k, v]) => `${k}: ${v![0]}`);
+    const message = data?.error?.message ?? `Request failed (${res.status})`;
+    throw new Error(fields.length ? `${message} — ${fields.join("; ")}` : message);
+  }
   return data?.item;
 }
 

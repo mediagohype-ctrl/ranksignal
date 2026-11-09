@@ -60,10 +60,12 @@ const urlFor = (base: string, path: string) => (path === "/" ? `${base}/` : `${b
 
 /** Published blog posts as routes (sitemap + llms.txt). */
 export function blogRoutes(posts: { slug: string; title: string; description: string; updatedAt: Date }[]): MarketingRoute[] {
+  // Titles/summaries come from the database: keep llms.txt's "- [title](url): summary" lines well-formed.
+  const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
   return posts.map((p) => ({
     path: `/blog/${p.slug}`,
-    title: p.title,
-    summary: p.description,
+    title: oneLine(p.title).replace(/[[\]]/g, ""),
+    summary: oneLine(p.description),
     changeFrequency: "monthly",
     priority: 0.7,
     section: "Blog",

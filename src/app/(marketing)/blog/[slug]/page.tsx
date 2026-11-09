@@ -36,10 +36,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const path = `/blog/${p.slug}`;
   const title = p.metaTitle || p.title;
   return {
-    title,
+    // The layout appends " · MyWebRank" (12 chars); skip it when the title alone would already be cut off in Google.
+    title: title.length > 48 ? { absolute: title } : title,
     description: p.description,
     keywords: p.keywords,
-    alternates: { canonical: path },
+    alternates: { canonical: path, types: { "application/rss+xml": [{ url: "/blog/rss.xml", title: `${BRAND.name} blog` }] } },
     authors: [{ name: p.authorName }],
     robots: r.isPreview || p.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
@@ -47,6 +48,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       description: p.description,
       url: path,
       siteName: BRAND.name,
+      locale: "en_IN",
       type: "article",
       publishedTime: p.publishedAt?.toISOString(),
       modifiedTime: p.updatedAt.toISOString(),
@@ -91,8 +93,10 @@ export default async function BlogPostPage({ params, searchParams }: Props) {
     author: { "@type": "Person", name: p.authorName, worksFor: { "@id": `${base}/#organization` } },
     publisher: { "@id": `${base}/#organization` },
     isPartOf: { "@id": `${base}/blog#blog` },
-    speakable: { "@type": "SpeakableSpecification", cssSelector: ["#answer", "#key-points"] },
   };
+  // Speakable only points at blocks that actually render on this post.
+  const speakable = [p.answer ? "#answer" : null, p.keyPoints.length ? "#key-points" : null].filter((s): s is string => !!s);
+  if (speakable.length) Object.assign(postLd, { speakable: { "@type": "SpeakableSpecification", cssSelector: speakable } });
 
   return (
     <>
@@ -154,8 +158,8 @@ export default async function BlogPostPage({ params, searchParams }: Props) {
                 <div id="key-points">
                   <h2>Key points</h2>
                   <ul>
-                    {p.keyPoints.map((k) => (
-                      <li key={k}>{k}</li>
+                    {p.keyPoints.map((k, i) => (
+                      <li key={`${i}-${k}`}>{k}</li>
                     ))}
                   </ul>
                 </div>
@@ -164,8 +168,8 @@ export default async function BlogPostPage({ params, searchParams }: Props) {
               {faqs.length > 0 && (
                 <section id="faq" aria-labelledby="faq-h">
                   <h2 id="faq-h">Frequently asked questions</h2>
-                  {faqs.map((f) => (
-                    <div key={f.q}>
+                  {faqs.map((f, i) => (
+                    <div key={`${i}-${f.q}`}>
                       <h3>{f.q}</h3>
                       <p>{f.a}</p>
                     </div>
