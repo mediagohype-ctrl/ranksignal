@@ -20,7 +20,7 @@ export interface MarketingRoute {
   changeFrequency: "weekly" | "monthly" | "yearly";
   priority: number;
   /** Listed in llms.txt under this section ("Optional" = can be skipped by LLMs with short context). */
-  section: "Product" | "Guides" | "Docs" | "Optional";
+  section: "Product" | "Guides" | "Blog" | "Docs" | "Optional";
   /** YYYY-MM-DD of the last content change (defaults to MARKETING_UPDATED). */
   updated?: string;
 }
@@ -36,6 +36,7 @@ const STATIC_ROUTES: MarketingRoute[] = [
   { path: "/tools/ai-mention-checker", title: "AI visibility checker", summary: "Free check of whether ChatGPT, Gemini and Perplexity can read and recommend your website.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/faq-markup-maker", title: "FAQ schema generator", summary: "Free FAQ schema (FAQPage JSON-LD) generator for Google rich results and AI answers.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/ai-guide-file-maker", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/blog", title: "Blog", summary: "News, research and how-tos on SEO, AEO and GEO from the MyWebRank team.", changeFrequency: "weekly", priority: 0.8, section: "Blog" },
   { path: "/learn", title: "SEO, AEO & GEO guides", summary: "Plain-English guides to ranking on Google and getting mentioned in AI answers.", changeFrequency: "weekly", priority: 0.8, section: "Guides" },
   { path: "/docs", title: "Getting started", summary: "Onboarding, connecting WordPress, the approval policy and known limitations.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/contact", title: "Contact", summary: "Contact form for agency plans, questions and support.", changeFrequency: "yearly", priority: 0.5, section: "Docs" },
@@ -57,9 +58,25 @@ export const MARKETING_ROUTES: MarketingRoute[] = [...STATIC_ROUTES, ...ARTICLE_
 
 const urlFor = (base: string, path: string) => (path === "/" ? `${base}/` : `${base}${path}`);
 
-/** `lastModified` overrides every entry's date (tests); otherwise each route's real last-change date is used. */
-export function buildSitemap(base = siteBase(), lastModified?: Date): MetadataRoute.Sitemap {
-  return MARKETING_ROUTES.map((r) => ({
+/** Published blog posts as routes (sitemap + llms.txt). */
+export function blogRoutes(posts: { slug: string; title: string; description: string; updatedAt: Date }[]): MarketingRoute[] {
+  return posts.map((p) => ({
+    path: `/blog/${p.slug}`,
+    title: p.title,
+    summary: p.description,
+    changeFrequency: "monthly",
+    priority: 0.7,
+    section: "Blog",
+    updated: p.updatedAt.toISOString().slice(0, 10),
+  }));
+}
+
+/**
+ * `lastModified` overrides every entry's date (tests); otherwise each route's real last-change date is used.
+ * `extra` = dynamic routes (published blog posts).
+ */
+export function buildSitemap(base = siteBase(), lastModified?: Date, extra: MarketingRoute[] = []): MetadataRoute.Sitemap {
+  return [...MARKETING_ROUTES, ...extra].map((r) => ({
     url: urlFor(base, r.path),
     lastModified: lastModified ?? new Date(`${r.updated ?? MARKETING_UPDATED}T00:00:00Z`),
     changeFrequency: r.changeFrequency,
@@ -68,8 +85,8 @@ export function buildSitemap(base = siteBase(), lastModified?: Date): MetadataRo
 }
 
 /** Every public URL, for IndexNow submissions. */
-export function publicUrls(base = siteBase()): string[] {
-  return MARKETING_ROUTES.map((r) => urlFor(base, r.path));
+export function publicUrls(base = siteBase(), extra: MarketingRoute[] = []): string[] {
+  return [...MARKETING_ROUTES, ...extra].map((r) => urlFor(base, r.path));
 }
 
 /** AI and answer-engine crawlers we explicitly welcome (we sell AI visibility, so we practise it). */
@@ -122,10 +139,11 @@ function keyFacts(base: string): string[] {
 }
 
 /** llms.txt (https://llmstxt.org): H1 name, blockquote summary, details, then H2 link lists. */
-export function buildLlmsTxt(base = siteBase()): string {
+export function buildLlmsTxt(base = siteBase(), extra: MarketingRoute[] = []): string {
+  const routes = [...MARKETING_ROUTES, ...extra];
   const link = (r: MarketingRoute) => `- [${r.title}](${urlFor(base, r.path)}): ${r.summary}`;
   const section = (name: MarketingRoute["section"]) =>
-    [`## ${name}`, "", ...MARKETING_ROUTES.filter((r) => r.section === name).map(link)].join("\n");
+    [`## ${name}`, "", ...routes.filter((r) => r.section === name).map(link)].join("\n");
   return [
     `# ${BRAND.name}`,
     "",
@@ -140,6 +158,8 @@ export function buildLlmsTxt(base = siteBase()): string {
     "",
     section("Guides"),
     "",
+    section("Blog"),
+    "",
     section("Docs"),
     "",
     section("Optional"),
@@ -148,7 +168,8 @@ export function buildLlmsTxt(base = siteBase()): string {
 }
 
 /** llms-full.txt: the summary plus the complete text of every guide, so AI tools can read it in one fetch. */
-export function buildLlmsFullTxt(base = siteBase()): string {
+/** `extraDocs` = Markdown of published blog posts, appended after the guides. */
+export function buildLlmsFullTxt(base = siteBase(), extraDocs: string[] = []): string {
   return [
     `# ${BRAND.name}`,
     "",
@@ -159,5 +180,6 @@ export function buildLlmsFullTxt(base = siteBase()): string {
     "---",
     "",
     ...ARTICLES.flatMap((a) => [articleToMarkdown(a, base), "---", ""]),
+    ...extraDocs.flatMap((d) => [d, "---", ""]),
   ].join("\n");
 }

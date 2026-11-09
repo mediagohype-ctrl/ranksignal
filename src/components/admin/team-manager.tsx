@@ -2,7 +2,7 @@
 // Team & roles: add staff by email with roles, change roles, remove access. Every change needs a reason (audit log).
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, UserPlus } from "lucide-react";
+import { Copy, KeyRound, Save, Trash2, UserPlus } from "lucide-react";
 import { Badge, Button, Field, Input, Notice, useToast } from "@/components/ui";
 import { adminSend } from "./actions";
 
@@ -47,6 +47,97 @@ function RolePicker({ options, value, onChange, name }: { options: RoleOption[];
         );
       })}
     </fieldset>
+  );
+}
+
+/** Shows a password exactly once with a copy button. */
+export function PasswordReveal({ email, password, onDone }: { email: string; password: string; onDone: () => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="space-y-2 rounded-xl border border-success/40 bg-success-soft p-4 text-small">
+      <p className="font-semibold text-fg">Password for {email}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <code className="rounded-md bg-surface px-3 py-1.5 font-mono text-[1rem] tracking-wide text-fg">{password}</code>
+        <Button
+          size="xs"
+          variant="secondary"
+          icon={<Copy />}
+          onClick={async () => {
+            await navigator.clipboard.writeText(`Login: ${window.location.origin}/login\nEmail: ${email}\nPassword: ${password}`).catch(() => undefined);
+            setCopied(true);
+          }}
+        >
+          {copied ? "Copied" : "Copy login details"}
+        </Button>
+      </div>
+      <p className="text-xs text-fg-soft">
+        Shown only once — we store just a scrambled version. Share it privately (not in a group chat) and ask them to change it in Settings → Account after their first login.
+      </p>
+      <Button size="xs" variant="ghost" onClick={onDone}>
+        I&apos;ve saved it
+      </Button>
+    </div>
+  );
+}
+
+export function CreateAccountForm({ options }: { options: RoleOption[] }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [roles, setRoles] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+
+  if (created) return <PasswordReveal email={created.email} password={created.password} onDone={() => setCreated(null)} />;
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError(null);
+        try {
+          const r = await adminSend<{ email: string; password: string }>("/api/admin/team/accounts", "POST", { name, email, password, roles, reason });
+          if (r) setCreated({ email: r.email, password: r.password });
+          setName("");
+          setEmail("");
+          setPassword("");
+          setRoles([]);
+          setReason("");
+          router.refresh();
+        } catch (err) {
+          setError((err as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Full name" htmlFor="acc-name">
+          <Input id="acc-name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Sharma" />
+        </Field>
+        <Field label="Work email (their login)" htmlFor="acc-email">
+          <Input id="acc-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="priya@mywebrank.tech" />
+        </Field>
+        <Field label="Password" htmlFor="acc-pw" hint="Leave empty and we will generate a strong one. Min 10 characters.">
+          <Input id="acc-pw" type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="(generate for me)" />
+        </Field>
+        <Field label="Reason" htmlFor="acc-reason" hint="Saved in the audit log.">
+          <Input id="acc-reason" required minLength={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="New content writer, joined 10 Nov" />
+        </Field>
+      </div>
+      <RolePicker options={options} value={roles} onChange={setRoles} name="acc-roles" />
+      {error && <Notice tone="danger">{error}</Notice>}
+      <div className="flex justify-end">
+        <Button type="submit" icon={<UserPlus />} loading={busy} disabled={!name || !email || roles.length === 0 || reason.trim().length < 3}>
+          Create account
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -109,9 +200,28 @@ export function TeamMemberRow({ member, options }: { member: TeamMemberView; opt
   const toast = useToast();
   const [roles, setRoles] = useState<string[]>(member.roles);
   const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState<"save" | "remove" | null>(null);
+  const [busy, setBusy] = useState<"save" | "remove" | "password" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<string | null>(null);
   const label = (id: string) => options.find((o) => o.id === id)?.label ?? id;
+
+  async function setPassword() {
+    const typed = window.prompt(`New password for ${member.email} (min 10 characters). Leave empty to generate a strong one:`);
+    if (typed === null) return;
+    const reason = askReason(`setting the password of ${member.email}`);
+    if (!reason) return;
+    setBusy("password");
+    setError(null);
+    try {
+      const r = await adminSend<{ password: string }>(`/api/admin/team/${member.id}/password`, "POST", { password: typed.trim(), reason });
+      if (r) setNewPassword(r.password);
+      toast("Password set — they were signed out everywhere", "success");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function run(kind: "save" | "remove") {
     const reason = askReason(kind === "save" ? `changing ${member.email}'s roles` : `removing ${member.email} from the team`);
@@ -160,6 +270,9 @@ export function TeamMemberRow({ member, options }: { member: TeamMemberView; opt
             <Button size="sm" variant="secondary" onClick={() => setEditing((v) => !v)}>
               {editing ? "Cancel" : "Change roles"}
             </Button>
+            <Button size="sm" variant="secondary" icon={<KeyRound />} loading={busy === "password"} onClick={setPassword}>
+              Set password
+            </Button>
             <Button size="sm" variant="danger" icon={<Trash2 />} loading={busy === "remove"} onClick={() => run("remove")}>
               Remove
             </Button>
@@ -176,6 +289,7 @@ export function TeamMemberRow({ member, options }: { member: TeamMemberView; opt
           </div>
         </div>
       )}
+      {newPassword && <PasswordReveal email={member.email} password={newPassword} onDone={() => setNewPassword(null)} />}
       {error && <Notice tone="danger">{error}</Notice>}
     </li>
   );

@@ -80,7 +80,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pr
     db.workflowRun.groupBy({ by: ["organizationId"], where: { createdAt: prev } }),
     db.auditLog.groupBy({ by: ["organizationId"], where: { createdAt: cur, actorType: "user", organizationId: { not: null } } }),
     db.auditLog.groupBy({ by: ["organizationId"], where: { createdAt: prev, actorType: "user", organizationId: { not: null } } }),
-    db.organization.groupBy({ by: ["planId", "status", "serviceTier"], _count: { _all: true } }),
+    db.organization.groupBy({ by: ["planId", "status", "serviceTier"], where: { isInternal: false }, _count: { _all: true } }),
     loadTrialOrgs(),
     db.subscription.count({ where: { status: { in: ["cancelled", "expired"] }, updatedAt: cur } }),
     db.subscription.count({ where: { status: { in: ["cancelled", "expired"] }, updatedAt: prev } }),

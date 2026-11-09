@@ -46,13 +46,15 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
     setError(null);
     if (!validate()) return;
     setLoading(true);
-    const res = await postJson("/api/auth/login", {
+    const res = await postJson<{ item?: { home?: string } }>("/api/auth/login", {
       email: email.trim(),
       password,
       ...(captchaToken ? { turnstileToken: captchaToken } : {}),
     });
     if (res.ok) {
-      router.replace(next);
+      // Staff land on /admin unless a specific ?next= page was requested.
+      const home = res.data?.item?.home === "/admin" ? "/admin" : "/app";
+      router.replace(params.get("next") ? next : home);
       router.refresh();
       return;
     }

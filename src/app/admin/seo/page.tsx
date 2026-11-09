@@ -13,11 +13,15 @@ import { fmtAgo, oneOf, str, type SearchParams } from "@/lib/admin/params";
 import { Badge, Card, CardBody, CardHeader, EmptyState, PageHeader, SeverityBadge, Stat, Table, TD, TH, THead, TR, type Tone } from "@/components/ui";
 import { LinkTabs } from "@/components/admin/ui";
 import { IndexNowButton, SelfCheckPanel } from "@/components/admin/seo-tools";
+import { KeywordTracker } from "@/components/admin/keyword-tracker";
+import { db } from "@/lib/db";
+import { publishedPosts } from "@/lib/content/posts";
+import { hasLivePage } from "@/lib/seo/keywords";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "SEO command centre" };
 
-const TABS = ["site", "customers", "growth"] as const;
+const TABS = ["site", "keywords", "customers", "growth"] as const;
 
 const scoreTone = (s: number | null | undefined): Tone => (typeof s !== "number" ? "neutral" : s >= 75 ? "success" : s >= 50 ? "warning" : "danger");
 const Score = ({ v }: { v: number | null | undefined }) => <Badge tone={scoreTone(v)}>{typeof v === "number" ? v : "—"}</Badge>;
@@ -41,11 +45,13 @@ export default async function SeoCentre({ searchParams }: { searchParams: Promis
         active={tab}
         tabs={[
           { id: "site", label: "Our website" },
+          { id: "keywords", label: "Keywords" },
           { id: "customers", label: "Customer SEO health" },
           { id: "growth", label: "Growth leads" },
         ]}
       />
       {tab === "site" && <OurSite canManage={staff.can("seo.manage")} />}
+      {tab === "keywords" && <Keywords canManage={staff.can("seo.manage")} />}
       {tab === "customers" && <Customers sort={str(sp, "sort") ?? "worst"} canOpenCustomers={staff.can("customers.view")} />}
       {tab === "growth" && <Growth canOpenLeads={staff.can("leads.view")} />}
     </div>
@@ -379,6 +385,53 @@ async function Growth({ canOpenLeads }: { canOpenLeads: boolean }) {
             </tbody>
           </Table>
         )}
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ keywords */
+
+async function Keywords({ canManage }: { canManage: boolean }) {
+  const [rows, posts] = await Promise.all([
+    db.seoKeyword.findMany({ orderBy: [{ priority: "asc" }, { phrase: "asc" }] }),
+    publishedPosts(),
+  ]);
+  const live = new Set([...MARKETING_ROUTES.map((r) => r.path), ...posts.map((p) => `/blog/${p.slug}`)]);
+  const view = rows.map((k) => ({
+    id: k.id,
+    phrase: k.phrase,
+    pillar: k.pillar,
+    intent: k.intent,
+    targetPath: k.targetPath,
+    priority: k.priority,
+    googlePosition: k.googlePosition,
+    aiMentioned: k.aiMentioned,
+    checkedAt: k.checkedAt?.toISOString() ?? null,
+    hasPage: hasLivePage(k.targetPath, live),
+  }));
+  const top10 = rows.filter((k) => k.googlePosition !== null && k.googlePosition <= 10).length;
+  const top3 = rows.filter((k) => k.googlePosition !== null && k.googlePosition <= 3).length;
+  const named = rows.filter((k) => k.aiMentioned === true).length;
+  const checkedAi = rows.filter((k) => k.aiMentioned !== null).length;
+  const gaps = view.filter((k) => !k.hasPage).length;
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Stat label="Keywords tracked" value={rows.length} />
+        <Stat label="Top 3 on Google" value={top3} />
+        <Stat label="Top 10 on Google" value={top10} />
+        <Stat label="Named by AI" value={checkedAi ? `${named} / ${checkedAi}` : "—"} hint="of the ones checked" />
+        <Stat label="No page yet" value={gaps} hint="Write a post for these" />
+      </div>
+      <Card>
+        <CardHeader
+          title="Keywords we want to own"
+          description="Map each phrase to the page that should rank. Use “Check now” to search Google (India), ChatGPT and Perplexity, then record what you see. For automatic AI tracking, add mywebrank.tech as a project in the team workspace."
+        />
+        <CardBody>
+          <KeywordTracker rows={view} canManage={canManage} siteUrl={siteBase()} />
+        </CardBody>
       </Card>
     </div>
   );

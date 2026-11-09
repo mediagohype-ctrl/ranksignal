@@ -63,5 +63,6 @@ export const POST = handler(async (req: Request) => {
   clearLoginFailures(ip, input.email);
   await setSessionCookie({ userId: user.id, email: user.email, organizationId: membership.organizationId, role: membership.role as Role });
   await writeAuditLog({ organizationId: membership.organizationId, actorId: user.id, action: "auth.login", resourceType: "user", resourceId: user.id, ip });
-  return json({ item: { userId: user.id, organizationId: membership.organizationId, role: membership.role } });
+  // `home` = where to land when no ?next= was given: staff go to the admin back-office.
+  return json({ item: { userId: user.id, organizationId: membership.organizationId, role: membership.role, home: user.isStaff ? "/admin" : "/app" } });
 });

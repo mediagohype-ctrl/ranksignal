@@ -23,6 +23,7 @@ import {
   Webhook,
   X,
   Inbox,
+  PenSquare,
   TrendingUp,
   UsersRound,
   type LucideIcon,
@@ -34,6 +35,7 @@ import { LogoLockup } from "@/components/brand/logo";
 const ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
   "/admin/seo": TrendingUp,
+  "/admin/content": PenSquare,
   "/admin/customers": Building2,
   "/admin/users": Users,
   "/admin/leads": Inbox,

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SafeJsonOptions, SafeJsonResult } from "@/lib/net/safe-request";
 import {
   GitHubConnector, branchFor, readFrontmatterKey, setFrontmatterKey, splitFrontmatter,
@@ -449,6 +449,11 @@ describe("generic connect route", () => {
     );
     return { status: res.status, text: await res.text() };
   };
+  // Cold-loading the route's module graph can exceed the 5s per-test timeout when the whole suite runs in
+  // parallel; warm it once here with a generous allowance so the tests below measure behaviour, not load time.
+  beforeAll(async () => {
+    await import("@/app/api/integrations/[id]/connect/route");
+  }, 60_000);
   beforeEach(() => {
     vi.stubEnv("CREDENTIALS_KEY", "ab".repeat(32));
     routeState.rows.length = 0;

@@ -13,12 +13,26 @@ import {
 import { ownSiteSetup } from "@/lib/admin/seo";
 
 const mockDb = vi.hoisted(() => ({
-  user: { findUnique: vi.fn(), update: vi.fn(), count: vi.fn(), findMany: vi.fn() },
+  user: { findUnique: vi.fn(), update: vi.fn(), count: vi.fn(), findMany: vi.fn(), create: vi.fn() },
+  membership: { findFirst: vi.fn(), upsert: vi.fn(), updateMany: vi.fn() },
+  organization: { findFirst: vi.fn(), create: vi.fn() },
   auditLog: { create: vi.fn() },
+  $transaction: vi.fn(),
 }));
+// Callback form runs with the same mock as the transaction client; array form resolves each promise.
+const txImpl = (arg: unknown) =>
+  typeof arg === "function" ? (arg as (tx: typeof mockDb) => unknown)(mockDb) : Promise.all(arg as Promise<unknown>[]);
 vi.mock("@/lib/db", () => ({ db: mockDb }));
+// Real bcrypt (cost 12) is slow enough to starve other test files running in parallel; a reversible fake keeps
+// the "only a hash is stored, and it matches the returned password" checks meaningful.
+vi.mock("@/lib/auth/password", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth/password")>()),
+  hashPassword: async (p: string) => `fakehash:${Buffer.from(p).toString("base64")}`,
+  verifyPassword: async (p: string, h: string | null | undefined) => h === `fakehash:${Buffer.from(p).toString("base64")}`,
+}));
 
-import { addStaff, removeStaff, setStaffRoles } from "@/lib/admin/team";
+import { addStaff, createStaffAccount, generatePassword, removeStaff, setStaffPassword, setStaffRoles } from "@/lib/admin/team";
+import { verifyPassword } from "@/lib/auth/password";
 import type { StaffContext } from "@/lib/admin/guard";
 
 describe("rbac catalogue", () => {
@@ -80,7 +94,10 @@ describe("own-site SEO set-up checklist", () => {
 describe("team management safety", () => {
   const me = { user: { id: "me", email: "boss@x.com", name: null } } as StaffContext;
   const req = () => new Request("http://localhost/api/admin/team", { method: "POST" });
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDb.$transaction.mockImplementation(txImpl);
+  });
 
   it("can't change your own roles", async () => {
     await expect(setStaffRoles(me, req(), "me", { roles: ["seo"], reason: "test" })).rejects.toMatchObject({ status: 400 });
@@ -105,5 +122,68 @@ describe("team management safety", () => {
   it("asks people to sign up first when the email has no account", async () => {
     mockDb.user.findUnique.mockResolvedValue(null);
     await expect(addStaff(me, req(), { email: "new@x.com", roles: ["seo"], reason: "new hire" })).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe("employee accounts and passwords", () => {
+  const me = { user: { id: "me", email: "boss@x.com", name: null } } as StaffContext;
+  const req = () => new Request("http://localhost/api/admin/team/accounts", { method: "POST" });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDb.$transaction.mockImplementation(txImpl);
+  });
+
+  it("generated passwords are long and unambiguous", () => {
+    const p = generatePassword();
+    expect(p).toMatch(/^[A-HJ-NP-Za-km-z2-9]{4}(-[A-HJ-NP-Za-km-z2-9]{4}){3}$/);
+    expect(generatePassword()).not.toBe(p);
+  });
+
+  it("creates a verified staff account in the internal team workspace and returns the password once", async () => {
+    mockDb.user.findUnique.mockResolvedValue(null);
+    mockDb.user.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: "u9", email: data.email, name: data.name, staffRoles: data.staffRoles }));
+    mockDb.membership.findFirst.mockResolvedValue(null);
+    mockDb.organization.findFirst.mockResolvedValue(null);
+    mockDb.organization.create.mockResolvedValue({ id: "team" });
+    const r = await createStaffAccount(me, req(), { name: "Priya", email: "priya@x.com", password: "", roles: ["content_writer"], reason: "new hire" });
+    const data = mockDb.user.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({ email: "priya@x.com", isStaff: true, emailVerified: true, staffRoles: ["content_writer"] });
+    expect(await verifyPassword(r.password, data.passwordHash)).toBe(true);
+    expect(mockDb.organization.create.mock.calls[0][0].data).toMatchObject({ isInternal: true, planId: "agency" });
+    expect(mockDb.membership.upsert.mock.calls[0][0].create).toMatchObject({ userId: "u9", organizationId: "team", role: "member", status: "active" });
+    const audit = mockDb.auditLog.create.mock.calls[0][0].data;
+    expect(audit).toMatchObject({ action: "admin.staff_account_created" });
+    expect(JSON.stringify(audit)).not.toContain(r.password);
+  });
+
+  it("refuses an email that already has an account, and weak passwords", async () => {
+    mockDb.user.findUnique.mockResolvedValue({ id: "u1" });
+    await expect(createStaffAccount(me, req(), { name: "A", email: "a@x.com", password: "", roles: ["seo"], reason: "x y z" })).rejects.toMatchObject({ status: 409 });
+    mockDb.user.findUnique.mockResolvedValue(null);
+    await expect(
+      createStaffAccount(me, req(), { name: "A", email: "abcdefghij@x.com", password: "abcdefghij", roles: ["seo"], reason: "x y z" }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("sets a staff member password, but never your own or a customer's", async () => {
+    await expect(setStaffPassword(me, req(), "me", { password: "", reason: "forgot" })).rejects.toMatchObject({ status: 400 });
+    mockDb.user.findUnique.mockResolvedValue({ id: "c1", email: "c@x.com", isStaff: false });
+    await expect(setStaffPassword(me, req(), "c1", { password: "", reason: "forgot" })).rejects.toMatchObject({ status: 404 });
+    mockDb.user.findUnique.mockResolvedValue({ id: "u2", email: "u2@x.com", isStaff: true });
+    mockDb.membership.findFirst.mockResolvedValue({ id: "m1" });
+    const r = await setStaffPassword(me, req(), "u2", { password: "Correct-Horse-9", reason: "forgot" });
+    expect(r.password).toBe("Correct-Horse-9");
+    const hash = mockDb.user.update.mock.calls[0][0].data.passwordHash;
+    expect(await verifyPassword("Correct-Horse-9", hash)).toBe(true);
+  });
+
+  it("removing someone also removes them from the team workspace", async () => {
+    mockDb.user.findUnique.mockResolvedValue({ isStaff: true, staffRoles: ["seo"] });
+    mockDb.user.count.mockResolvedValue(1);
+    await removeStaff(me, req(), "u2", "left company");
+    expect(mockDb.membership.updateMany.mock.calls[0][0]).toMatchObject({
+      where: { userId: "u2", organization: { isInternal: true } },
+      data: { status: "removed" },
+    });
   });
 });

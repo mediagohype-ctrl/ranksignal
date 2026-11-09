@@ -27,6 +27,7 @@ model Organization {
   whatsappOptIn     Boolean  @default(false)
   referralCode      String?  @unique
   referredById      String? // organization that referred this one
+  isInternal        Boolean  @default(false) // our own team workspace (staff accounts); excluded from revenue metrics
   createdAt         DateTime @default(now())
 
   memberships   Membership[]
@@ -657,4 +658,48 @@ model SentMessage {
 
   @@unique([kind, key])
   @@index([organizationId, createdAt])
+}
+
+/** Our own blog (mywebrank.tech/blog), written by the team in /admin/content. Body is Markdown. */
+model BlogPost {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  title         String
+  metaTitle     String?
+  description   String
+  /** Short direct answer shown first (AEO): what answer engines and AI Overviews quote. */
+  answer        String    @default("")
+  body          String
+  keyPoints     String[]  @default([])
+  faqs          Json? // [{ q, a }]
+  keywords      String[]  @default([]) // first = primary search phrase
+  category      String    @default("SEO")
+  coverImageUrl String?
+  authorName    String
+  authorId      String?
+  status        String    @default("draft") // draft | review | published | archived
+  noindex       Boolean   @default(false)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+/** Search phrases we want to rank for (Google) and be named for (AI answers). Managed in /admin/seo. */
+model SeoKeyword {
+  id             String    @id @default(cuid())
+  phrase         String    @unique
+  pillar         String    @default("seo") // seo | aeo | geo
+  intent         String    @default("informational") // informational | commercial | transactional | navigational
+  targetPath     String? // our page meant to rank, e.g. /learn/what-is-geo
+  priority       Int       @default(2) // 1 high · 2 medium · 3 low
+  googlePosition Int? // last seen position on Google (1–100), null = not in top 100 / unknown
+  aiMentioned    Boolean? // were we named when this was asked to AI assistants
+  notes          String?
+  checkedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([priority])
 }

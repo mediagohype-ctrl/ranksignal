@@ -16,13 +16,17 @@ export interface IndexNowResult {
 }
 
 /** Submits `paths` (default: every public marketing URL). Throws only on misconfiguration. */
-export async function submitIndexNow(opts: { paths?: string[]; appUrl?: string; fetchImpl?: typeof fetch } = {}): Promise<IndexNowResult> {
+export async function submitIndexNow(
+  opts: { paths?: string[]; appUrl?: string; fetchImpl?: typeof fetch; extraPaths?: string[] } = {},
+): Promise<IndexNowResult> {
   const key = indexNowKey();
   if (!key) throw new Error("Set INDEXNOW_KEY (8–128 letters, digits or dashes).");
   const base = siteBase(opts.appUrl ?? process.env.APP_URL);
   if (!/^https:\/\//.test(base) || base.includes("localhost")) throw new Error(`APP_URL must be the public https URL (got ${base}).`);
   const paths = (opts.paths ?? []).filter((p) => p.startsWith("/"));
-  const urlList = paths.length ? paths.map((p) => `${base}${p}`) : publicUrls(base);
+  const urlList = paths.length
+    ? paths.map((p) => `${base}${p}`)
+    : [...publicUrls(base), ...(opts.extraPaths ?? []).filter((p) => p.startsWith("/")).map((p) => `${base}${p}`)];
 
   const res = await (opts.fetchImpl ?? fetch)("https://api.indexnow.org/indexnow", {
     method: "POST",

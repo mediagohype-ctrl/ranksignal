@@ -4,6 +4,7 @@ import { handler, json, parseBody, HttpError } from "@/lib/api";
 import { requireStaffApi } from "@/lib/admin/guard";
 import { reasonSchema, staffAudit } from "@/lib/admin/audit";
 import { submitIndexNow } from "@/lib/seo/indexnow";
+import { publishedPosts } from "@/lib/content/posts";
 
 const schema = z.object({
   paths: z.array(z.string().regex(/^\/[^\s]*$/).max(512)).max(500).optional(),
@@ -15,7 +16,8 @@ export const POST = handler(async (req: Request) => {
   const { paths, reason } = await parseBody(req, schema);
   let result;
   try {
-    result = await submitIndexNow({ paths });
+    const posts = paths?.length ? [] : await publishedPosts();
+    result = await submitIndexNow({ paths, extraPaths: posts.map((p) => `/blog/${p.slug}`) });
   } catch (e) {
     throw new HttpError(400, "indexnow_not_configured", e instanceof Error ? e.message : "IndexNow is not configured.");
   }

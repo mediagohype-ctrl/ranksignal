@@ -25,7 +25,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
   if (plan) subWhere.planId = plan;
 
   const [groups, subs, subTotal, subStatus, webhooks] = await Promise.all([
-    db.organization.groupBy({ by: ["planId", "status", "serviceTier"], _count: { _all: true } }),
+    db.organization.groupBy({ by: ["planId", "status", "serviceTier"], where: { isInternal: false }, _count: { _all: true } }),
     db.subscription.findMany({ where: subWhere, orderBy: { updatedAt: "desc" }, skip, take }),
     db.subscription.count({ where: subWhere }),
     db.subscription.groupBy({ by: ["status"], _count: { _all: true } }),

@@ -4,7 +4,7 @@ import { ADMIN_SECTIONS, PERMISSIONS, STAFF_ROLE_IDS, STAFF_ROLES, type Permissi
 import { listStaff } from "@/lib/admin/team";
 import { fmtDate, str, type SearchParams } from "@/lib/admin/params";
 import { Card, CardBody, CardHeader, PageHeader, Table, TD, TH, THead, TR } from "@/components/ui";
-import { AddStaffForm, TeamMemberRow, type RoleOption } from "@/components/admin/team-manager";
+import { AddStaffForm, CreateAccountForm, TeamMemberRow, type RoleOption } from "@/components/admin/team-manager";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Team & roles" };
@@ -24,7 +24,20 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
       />
 
       <Card>
-        <CardHeader title="Add a team member" description="Pick one or more roles. A person with several roles gets all of their sections." />
+        <CardHeader
+          title="Create an employee account"
+          description="For new team members: you set (or generate) their password and hand it over. They can sign in at /login straight away."
+        />
+        <CardBody>
+          <CreateAccountForm options={options} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Add an existing account"
+          description="They already signed up themselves — give them staff roles. A person with several roles gets all of their sections."
+        />
         <CardBody>
           <AddStaffForm options={options} initialEmail={str(sp, "email") ?? undefined} />
         </CardBody>

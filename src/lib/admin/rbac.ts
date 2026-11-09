@@ -24,8 +24,11 @@ export const PERMISSIONS = {
   "flags.manage": "Turn feature flags on or off",
   "system.view": "See system health and configuration",
   "seo.view": "See the SEO command centre (our site + customer SEO health)",
-  "seo.manage": "Run self-checks and submit URLs to search engines (IndexNow)",
-  "team.manage": "Add staff, assign roles and remove staff access",
+  "seo.manage": "Run self-checks, manage target keywords and submit URLs to search engines (IndexNow)",
+  "content.view": "See blog posts and drafts",
+  "content.write": "Write and edit blog drafts and send them for review",
+  "content.publish": "Publish, unpublish and delete blog posts",
+  "team.manage": "Create staff accounts, set passwords, assign roles and remove staff access",
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -46,13 +49,18 @@ export const STAFF_ROLES = {
   },
   seo: {
     label: "SEO team",
-    description: "SEO command centre, customer SEO health, monthly reports and job status.",
-    permissions: ["seo.view", "seo.manage", "customers.view", "reports.view", "reports.manage", "jobs.view"],
+    description: "SEO command centre, keywords, blog (write + publish), customer SEO health, monthly reports.",
+    permissions: ["seo.view", "seo.manage", "content.view", "content.write", "content.publish", "customers.view", "reports.view", "reports.manage", "jobs.view"],
   },
   marketing: {
     label: "Marketing",
-    description: "Leads from the website and free tools, our own SEO and the guides.",
-    permissions: ["seo.view", "seo.manage", "leads.view", "leads.manage", "leads.export", "customers.view"],
+    description: "Blog (write + publish), leads from the website and free tools, our own SEO.",
+    permissions: ["seo.view", "seo.manage", "content.view", "content.write", "content.publish", "leads.view", "leads.manage", "leads.export", "customers.view"],
+  },
+  content_writer: {
+    label: "Content writer",
+    description: "Writes blog drafts with the live SEO score and sends them for review. Can't publish.",
+    permissions: ["content.view", "content.write", "seo.view"],
   },
   sales: {
     label: "Sales",
@@ -126,6 +134,7 @@ export function roleLabels(roles: readonly string[] | null | undefined): string[
 export const ADMIN_SECTIONS: { href: string; label: string; permission: Permission; exact?: boolean }[] = [
   { href: "/admin", label: "Overview", permission: "overview.view", exact: true },
   { href: "/admin/seo", label: "SEO command centre", permission: "seo.view" },
+  { href: "/admin/content", label: "Blog & content", permission: "content.view" },
   { href: "/admin/customers", label: "Customers", permission: "customers.view" },
   { href: "/admin/users", label: "Users", permission: "users.view" },
   { href: "/admin/leads", label: "Leads", permission: "leads.view" },

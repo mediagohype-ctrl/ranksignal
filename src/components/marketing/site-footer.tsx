@@ -22,6 +22,7 @@ const COLS = [
   {
     title: "Resources",
     links: [
+      { href: "/blog", label: "Blog" },
       { href: "/learn", label: "SEO, AEO & GEO guides" },
       { href: "/learn/what-is-aeo", label: "What is AEO?" },
       { href: "/learn/what-is-geo", label: "What is GEO?" },
