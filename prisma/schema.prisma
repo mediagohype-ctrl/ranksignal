@@ -47,6 +47,7 @@ model User {
   passwordHash  String
   emailVerified Boolean  @default(false)
   isStaff       Boolean  @default(false)
+  staffRoles    String[] @default([]) // admin back-office roles (src/lib/admin/rbac.ts); only used when isStaff
   timeZone      String? // IANA zone, e.g. "Asia/Kolkata"; dates are stored UTC and shown in this zone
   expertMode    Boolean  @default(false) // show SEO/AEO/GEO scores, risk classes and raw tables
   googleId      String?  @unique // "Continue with Google" sign-in

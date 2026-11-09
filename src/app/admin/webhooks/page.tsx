@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Webhooks" };
 
 export default async function WebhooksPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("webhooks.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp, 50);
   const where: Prisma.WebhookEventWhereInput = {};

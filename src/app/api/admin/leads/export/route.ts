@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const MAX_ROWS = 10_000;
 
 export const GET = handler(async (req: Request) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("leads.export");
   const sp = searchParamsFromUrl(req.url);
   const rows = await db.lead.findMany({ where: leadWhere(sp), orderBy: { createdAt: "desc" }, take: MAX_ROWS });
   await staffAudit(staff, req, {

@@ -16,7 +16,7 @@ const schema = z
   .refine((v) => v.status !== undefined || v.notes !== undefined, "Nothing to change");
 
 export const GET = handler(async (_req: Request, { params }: Ctx) => {
-  await requireStaffApi();
+  await requireStaffApi("leads.view");
   const { id } = await params;
   const item = await db.lead.findUnique({ where: { id } });
   if (!item) throw new HttpError(404, "not_found", "Lead not found");
@@ -24,7 +24,7 @@ export const GET = handler(async (_req: Request, { params }: Ctx) => {
 });
 
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("leads.manage");
   const { id } = await params;
   const input = await parseBody(req, schema);
   const before = await db.lead.findUnique({ where: { id }, select: { status: true, notes: true } });

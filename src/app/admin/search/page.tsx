@@ -18,10 +18,10 @@ const SECTIONS: { type: SearchHit["type"]; title: string }[] = [
 ];
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  const staff = await requireStaffPage();
   const sp = await searchParams;
   const q = str(sp, "q");
-  const hits = await adminSearch(q, 25);
+  const hits = await adminSearch(q, 25, staff.can);
   return (
     <div className="space-y-6">
       <PageHeader className="mb-0" title="Search" description={q ? `Results for “${q}”` : "Search by name, email, domain or id."} />

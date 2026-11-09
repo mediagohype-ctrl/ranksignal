@@ -7,7 +7,7 @@ import { clientIp, getReportForStaff, staffAuditLog } from "@/lib/monthly-report
 export const dynamic = "force-dynamic";
 
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ reportId: string }> }) => {
-  const staff = await requireStaff();
+  const staff = await requireStaff("reports.manage");
   const { reportId } = await params;
   const report = await getReportForStaff(reportId);
   if (report.status === "sent") throw new HttpError(409, "already_sent", "Sent reports can't be regenerated.");

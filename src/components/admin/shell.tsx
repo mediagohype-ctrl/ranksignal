@@ -23,25 +23,30 @@ import {
   Webhook,
   X,
   Inbox,
+  TrendingUp,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import { ADMIN_SECTIONS } from "@/lib/admin/rbac";
 import { Avatar, Badge, Spinner } from "@/components/ui";
 import { LogoLockup } from "@/components/brand/logo";
 
-const NAV: { href: string; label: string; icon: LucideIcon; exact?: boolean }[] = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/customers", label: "Customers", icon: Building2 },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/leads", label: "Leads", icon: Inbox },
-  { href: "/admin/revenue", label: "Revenue & plans", icon: IndianRupee },
-  { href: "/admin/ai", label: "AI usage & costs", icon: Bot },
-  { href: "/admin/jobs", label: "Jobs", icon: Activity },
-  { href: "/admin/monthly-reports", label: "Monthly reports", icon: FileText },
-  { href: "/admin/audit", label: "Audit log", icon: ScrollText },
-  { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
-  { href: "/admin/flags", label: "Feature flags", icon: Flag },
-  { href: "/admin/system", label: "System", icon: ServerCog },
-];
+const ICONS: Record<string, LucideIcon> = {
+  "/admin": LayoutDashboard,
+  "/admin/seo": TrendingUp,
+  "/admin/customers": Building2,
+  "/admin/users": Users,
+  "/admin/leads": Inbox,
+  "/admin/revenue": IndianRupee,
+  "/admin/ai": Bot,
+  "/admin/jobs": Activity,
+  "/admin/monthly-reports": FileText,
+  "/admin/audit": ScrollText,
+  "/admin/webhooks": Webhook,
+  "/admin/flags": Flag,
+  "/admin/system": ServerCog,
+  "/admin/team": UsersRound,
+};
 
 interface Hit {
   type: "org" | "user" | "project" | "lead";
@@ -221,13 +226,20 @@ export function AdminShell({
   staffEmail,
   staffName,
   supportOrgName,
+  permissions,
+  roleLabels,
   children,
 }: {
   staffEmail: string;
   staffName: string | null;
   supportOrgName: string | null;
+  /** Permissions of the signed-in staff member; the nav shows only sections they may open. */
+  permissions: string[];
+  roleLabels: string[];
   children: React.ReactNode;
 }) {
+  const allowed = new Set(permissions);
+  const NAV = ADMIN_SECTIONS.filter((s) => allowed.has(s.permission)).map((s) => ({ ...s, icon: ICONS[s.href] ?? LayoutDashboard }));
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [pathname]);
@@ -278,6 +290,9 @@ export function AdminShell({
           <div className="min-w-0">
             <div className="truncate text-small font-medium text-fg">{staffName ?? "Staff"}</div>
             <div className="truncate text-xs text-muted">{staffEmail}</div>
+            <div className="truncate text-xs text-muted" title={roleLabels.join(", ")}>
+              {roleLabels.length ? roleLabels.join(", ") : "No role yet"}
+            </div>
           </div>
         </div>
         <Link href="/app" className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-small text-fg-soft hover:bg-surface-2 hover:text-fg">

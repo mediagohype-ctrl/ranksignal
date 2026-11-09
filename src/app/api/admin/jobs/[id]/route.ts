@@ -12,7 +12,7 @@ type Ctx = { params: Promise<{ id: string }> };
 const schema = z.object({ action: z.enum(["retry", "cancel"]), reason: reasonSchema });
 
 export const GET = handler(async (_req: Request, { params }: Ctx) => {
-  await requireStaffApi();
+  await requireStaffApi("jobs.view");
   const { id } = await params;
   const item = await db.workflowRun.findUnique({ where: { id }, include: { events: { orderBy: { createdAt: "asc" }, take: 500 } } });
   if (!item) throw new HttpError(404, "not_found", "Job not found");
@@ -20,7 +20,7 @@ export const GET = handler(async (_req: Request, { params }: Ctx) => {
 });
 
 export const POST = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("jobs.manage");
   const { id } = await params;
   const { action, reason } = await parseBody(req, schema);
   const run = await db.workflowRun.findUnique({

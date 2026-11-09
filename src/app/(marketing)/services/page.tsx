@@ -12,8 +12,8 @@ import {
   ServicesCta,
 } from "@/components/marketing/services-ui";
 
-const TITLE = "Done-for-you: we fix your website for Google and AI";
-const DESCRIPTION = `Our team fixes your website, Google Business Profile and listings every month so Google and AI assistants can find and quote you, and sends a monthly report with the evidence. Plans from ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
+const TITLE = "SEO, AEO & GEO Services in India — done-for-you SEO company";
+const DESCRIPTION = `Done-for-you SEO, AEO and GEO services from an India-based team: we fix your website, Google Business Profile and listings every month so Google and ChatGPT can find and quote you, with a monthly proof report. From ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -188,13 +188,15 @@ export default function ServicesPage() {
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="services-title" className="relative overflow-hidden">
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-24">
-          <p className="mk-label mk-rise">Done for you</p>
+          <h1 id="services-title" className="mk-label mk-rise">
+            Done-for-you SEO, AEO &amp; GEO services
+          </h1>
           <div className="mt-6 grid gap-14 lg:grid-cols-12 lg:gap-10">
             <div className="mk-rise mk-delay-1 min-w-0 lg:col-span-7">
-              <h1 id="services-title" className="mk-hero max-w-[14ch] lg:text-[clamp(4rem,1.2rem+4.2vw,6.25rem)] text-fg">
+              <p className="mk-hero max-w-[14ch] lg:text-[clamp(4rem,1.2rem+4.2vw,6.25rem)] text-fg">
                 We fix it. <br />
                 <span className="text-primary">You see the proof every month.</span>
-              </h1>
+              </p>
               <p className="mk-lead mt-9 max-w-[34rem] text-fg-soft">
                 Our team makes the changes that help ChatGPT, Gemini and Google&apos;s AI find, trust and quote your business.
                 Every month you get a report showing exactly what we did and what changed.

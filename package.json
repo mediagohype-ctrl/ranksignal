@@ -14,7 +14,8 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:new": "prisma migrate dev",
-    "make-staff": "tsx scripts/make-staff.ts"
+    "make-staff": "tsx scripts/make-staff.ts",
+    "indexnow": "tsx scripts/indexnow.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

@@ -12,6 +12,11 @@ Rules:
 4. Get plurals right: "1 page has", "2 pages have", "1 website" — never "page(s)" or "project(s)".
 5. Capitalise roles: "Owner", "Admin", "Member".
 6. Code identifiers, routes, API fields, database values and log keys do NOT change. Only the words people see.
+7. **Public marketing pages (SEO exception, 9 Nov 2026):** `<title>`, meta description and the page's H1 may use
+   the phrase people actually type into Google (e.g. "FAQ schema generator", "llms.txt generator", "SEO checker",
+   "SEO, AEO & GEO services"). Nobody searches "FAQ info maker", so plain-word-only titles can't rank. Body copy
+   stays in plain words, with the expert term in brackets where it helps. Guides under `/learn` explain the
+   expert terms on purpose — that's what they're for.
 
 ## Word list
 

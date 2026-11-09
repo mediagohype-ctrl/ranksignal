@@ -188,11 +188,13 @@ export default function PricingPage() {
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="pricing-title">
         <div className="container-marketing pb-14 pt-14 sm:pb-20 sm:pt-20 lg:pt-24">
-          <p className="mk-label mk-rise">Pricing</p>
+          <h1 id="pricing-title" className="mk-label mk-rise">
+            SEO, AEO &amp; GEO pricing
+          </h1>
           <div className="mt-6 grid gap-10 lg:grid-cols-12 lg:items-end lg:gap-10">
-            <h1 id="pricing-title" className="mk-hero mk-rise mk-delay-1 max-w-[12ch] text-fg lg:col-span-8">
+            <p className="mk-hero mk-rise mk-delay-1 max-w-[12ch] text-fg lg:col-span-8">
               Do it yourself, <span className="text-primary">or let us do it.</span>
-            </h1>
+            </p>
             <p className="mk-lead mk-rise mk-delay-2 max-w-md text-fg-soft lg:col-span-4">
               Use the software and make the fixes yourself, or hand the work to our team and get a report on what changed.
               Prices in Indian rupees, excluding GST.

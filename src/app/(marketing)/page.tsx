@@ -10,18 +10,19 @@ import { MARKETING_PLANS, TRIAL_DAYS, inr, planSignupHref } from "@/components/m
 
 // Home page: exactly five blocks (brief §5.1) — hero, sample result, three steps, three plans, five questions.
 
-const TITLE = `${BRAND.name} — Check how Google and AI see your business`;
+// Title leads with the phrases buyers search ("SEO", "website SEO report", "AI search") — the brand comes after.
+const TITLE = `Free SEO, AEO & GEO Website Checker and AI Visibility Report | ${BRAND.name}`;
 const DESCRIPTION =
-  "Free website check for small businesses. See how Google and AI assistants like ChatGPT see your business, get your top fixes in plain words, and fix them with your OK.";
+  "Free website SEO report in 30 seconds. See how Google and AI assistants like ChatGPT, Gemini and Perplexity see your business, get your top SEO, AEO and GEO fixes in plain words — or let our team fix them for you.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
-  keywords: ["SEO", "AEO", "GEO", "AI search", "ChatGPT visibility", "website check", "small business India"],
+  keywords: ["SEO checker", "website SEO report", "AEO", "GEO", "AI search visibility", "ChatGPT SEO", "SEO company India"],
   alternates: { canonical: "/" },
   openGraph: {
     title: TITLE,
-    description: BRAND.tagline,
+    description: DESCRIPTION,
     url: "/",
     siteName: BRAND.name,
     type: "website",
@@ -44,36 +45,39 @@ const STEPS = [
 ];
 
 export default function HomePage() {
+  // Organization + WebSite come from the marketing layout (sitewide); this page adds the product itself.
   const jsonLd = [
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "@id": `${SITE}/#organization`,
-      name: BRAND.name,
-      url: SITE,
-      logo: `${SITE}/brand/logo-mark-512.png`,
-      email: BRAND.supportEmail,
-      description: BRAND.tagline,
-      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: BRAND.supportEmail, url: `${SITE}/contact` },
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "@id": `${SITE}/#website`,
-      name: BRAND.name,
-      url: SITE,
-      description: BRAND.tagline,
-      publisher: { "@id": `${SITE}/#organization` },
-      inLanguage: "en",
+      "@type": "WebPage",
+      "@id": `${SITE}/#webpage`,
+      url: `${SITE}/`,
+      name: TITLE,
+      description: DESCRIPTION,
+      isPartOf: { "@id": `${SITE}/#website` },
+      about: { "@id": `${SITE}/#organization` },
+      inLanguage: "en-IN",
     },
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
+      "@id": `${SITE}/#software`,
       name: BRAND.name,
-      url: SITE,
+      url: `${SITE}/`,
       applicationCategory: "BusinessApplication",
+      applicationSubCategory: "SEO software",
       operatingSystem: "Web",
-      description: "Audits websites for SEO, answer-engine (AEO) and generative-AI (GEO) readiness and measures how often AI assistants mention and cite a brand.",
+      description:
+        "Website SEO audit and report tool that scores SEO, answer-engine (AEO) and generative-AI (GEO) readiness and measures how often ChatGPT, Gemini, Perplexity and Claude mention and cite a brand.",
+      featureList: [
+        "Website SEO audit and report",
+        "AEO (answer engine optimization) score",
+        "GEO (generative engine optimization) score",
+        "AI visibility tracking in ChatGPT, Gemini, Perplexity, Claude and Grok",
+        "Competitor share of voice in AI answers",
+        "Approval-gated fixes with rollback",
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR", description: "Free website check, no sign-up" },
       publisher: { "@id": `${SITE}/#organization` },
     },
     {
@@ -95,9 +99,13 @@ export default function HomePage() {
       <section aria-labelledby="hero-title" className="relative overflow-hidden">
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-24 lg:pt-24">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 id="hero-title" className="mk-hero mk-rise text-fg">
-              Check. Fix. <span className="text-primary">Grow.</span>
+            {/* The H1 carries the searched phrase; the big slogan stays as the visual headline. */}
+            <h1 id="hero-title" className="mk-label mk-rise text-primary">
+              Free SEO, AEO &amp; GEO website checker
             </h1>
+            <p className="mk-hero mk-rise mt-5 text-fg">
+              Check. Fix. <span className="text-primary">Grow.</span>
+            </p>
             <p className="mk-lead mk-rise mk-delay-1 mx-auto mt-8 max-w-[36rem] text-fg-soft">
               See how Google and AI assistants like ChatGPT see your business. Get your top fixes in plain words, so
               customers can find you more easily.

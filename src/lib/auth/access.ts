@@ -2,6 +2,7 @@
 // Used by API routes (requireSession) and app pages (requireAppSession).
 import { db } from "@/lib/db";
 import type { Role, SessionContext } from "@/lib/types";
+import { permissionsFor } from "@/lib/admin/rbac";
 
 /**
  * Re-reads access on every request so removals and role changes apply immediately.
@@ -16,9 +17,12 @@ export async function resolveAccess(token: SessionContext): Promise<SessionConte
   });
   if (membership?.status === "active") return { ...token, role: membership.role as Role, staffMode: false };
   if (token.staffMode) {
-    const user = await db.user.findUnique({ where: { id: token.userId }, select: { isStaff: true } });
+    const user = await db.user.findUnique({ where: { id: token.userId }, select: { isStaff: true, staffRoles: true } });
+    // Re-checked every request: losing the staff role (or the permission) ends the session in the workspace.
+    const perms = user?.isStaff ? permissionsFor(user.staffRoles) : new Set<string>();
     // "View as customer" (readOnly) sessions are viewers; every write API also rejects them (src/middleware.ts).
-    if (user?.isStaff) return token.readOnly ? { ...token, role: "viewer", staffMode: true, readOnly: true } : { ...token, role: "admin", staffMode: true };
+    if (token.readOnly && perms.has("customers.enter")) return { ...token, role: "viewer", staffMode: true, readOnly: true };
+    if (!token.readOnly && perms.has("customers.enter") && perms.has("customers.manage")) return { ...token, role: "admin", staffMode: true };
   }
   return null;
 }

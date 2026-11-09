@@ -29,7 +29,7 @@ async function dbPing(): Promise<{ ok: boolean; ms: number }> {
 }
 
 export default async function SystemPage() {
-  await requireStaffPage();
+  await requireStaffPage("system.view");
   const ping = await dbPing();
   const [depth, oldestQueued, lastScheduled, stuck, lastRecovery] = ping.ok
     ? await Promise.all([

@@ -9,14 +9,14 @@ import { clientIp, generateSchema, listQueue, queueFilterSchema, staffAuditLog }
 export const dynamic = "force-dynamic";
 
 export const GET = handler(async (req: Request) => {
-  await requireStaff();
+  await requireStaff("reports.view");
   const sp = new URL(req.url).searchParams;
   const f = queueFilterSchema.parse({ period: sp.get("period") || undefined, status: sp.get("status") || undefined });
   return json({ items: await listQueue(f) }, { headers: { "Cache-Control": "no-store" } });
 });
 
 export const POST = handler(async (req: Request) => {
-  const staff = await requireStaff();
+  const staff = await requireStaff("reports.manage");
   const body = await parseBody(req, generateSchema);
   const project = await db.project.findUnique({ where: { id: body.projectId }, select: { id: true, organizationId: true } });
   if (!project) throw new HttpError(404, "not_found", "Project not found");

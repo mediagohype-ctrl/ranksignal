@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Leads" };
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("leads.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp);
   const where = leadWhere(sp);

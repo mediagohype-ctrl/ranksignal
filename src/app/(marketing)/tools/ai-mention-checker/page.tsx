@@ -7,7 +7,7 @@ import { LinkButton, SectionHeading } from "@/components/ui";
 import { LeadBox } from "../_components/lead-box";
 
 const PATH = "/tools/ai-mention-checker";
-const TITLE = "Free AI mention checker: can ChatGPT find and name your business?";
+const TITLE = "Free AI Visibility Checker: can ChatGPT find your business?";
 const DESCRIPTION =
   "Free check: can ChatGPT, Gemini and other AI tools read your website well enough to name your business? See your score and what to fix, in plain words. No sign-up.";
 
@@ -43,7 +43,7 @@ export default function AiMentionCheckerPage() {
       />
       <PageHero
         eyebrow="Free tool"
-        title="Can AI find and name your business?"
+        title="Free AI visibility checker: can AI find and name your business?"
         intro={
           <p>
             ChatGPT and other AI tools can only name a business they can read and understand. Type your website to see if

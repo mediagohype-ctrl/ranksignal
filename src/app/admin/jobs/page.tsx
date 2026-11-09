@@ -17,7 +17,7 @@ export const metadata = { title: "Jobs" };
 const KINDS = ["crawl", "visibility", "analyze", "execute_action", "rollback"];
 
 export default async function JobsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("jobs.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp);
   const where: Prisma.WorkflowRunWhereInput = {};

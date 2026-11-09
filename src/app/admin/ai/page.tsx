@@ -51,7 +51,7 @@ function CostTable({ title, description, rows, totalMicros, label }: { title: st
 }
 
 export default async function AiCostsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("ai.view");
   const sp = await searchParams;
   const r = rangeParam(sp);
   const cur = { gte: r.since, lt: r.now };

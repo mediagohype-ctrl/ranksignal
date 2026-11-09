@@ -15,7 +15,7 @@ const schema = z.object({ reason: reasonSchema, mode: z.enum(["view", "support"]
 const SUPPORT_SESSION_MAX_AGE_SECONDS = 2 * 60 * 60;
 
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("customers.enter");
   const { id } = await params;
   const form = isFormPost(req);
   let raw: unknown;
@@ -26,6 +26,9 @@ export const POST = handler(async (req: Request, { params }: { params: Promise<{
   }
   const { reason, mode } = schema.parse(raw);
   const readOnly = mode === "view";
+  if (!readOnly && !staff.can("customers.manage")) {
+    throw new HttpError(403, "forbidden", 'Support mode (making changes) needs the "customers.manage" permission. Use "View as customer" instead.');
+  }
 
   const org = await db.organization.findUnique({ where: { id }, select: { id: true, name: true } });
   if (!org) throw new HttpError(404, "not_found", "Organization not found");

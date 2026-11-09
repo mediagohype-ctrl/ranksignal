@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Users" };
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("users.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp);
   const where: Prisma.UserWhereInput = {};

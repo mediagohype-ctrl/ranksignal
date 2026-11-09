@@ -6,9 +6,9 @@ import { IconTile, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { FreeCheckTool } from "@/components/marketing/free-check-tool";
 import { SectionHeading } from "@/components/ui";
 
-const TITLE = "Free website check: is your site ready for Google and AI?";
+const TITLE = "Free Website SEO Checker: instant SEO, AEO & GEO report";
 const DESCRIPTION =
-  "Free website check in about 30 seconds. See if Google and AI assistants like ChatGPT can read and understand your website — in plain words. No sign-up.";
+  "Free website SEO checker and AI-readiness report in about 30 seconds. Scores your site for SEO, AEO and GEO, shows if Google and ChatGPT can read it, and lists your top fixes in plain words. No sign-up.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -44,7 +44,7 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
       <JsonLd data={jsonLd} />
       <PageHero
         eyebrow="Free tool"
-        title="Is your website ready for Google and AI?"
+        title="Free website SEO checker: is your site ready for Google and AI?"
         intro={
           <p>
             Type your website. We&apos;ll read your homepage and up to four main pages, then score them for SEO, answer

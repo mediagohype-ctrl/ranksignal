@@ -23,7 +23,7 @@ const schema = z
 const SELECT = { id: true, name: true, publishingEnabled: true, status: true, planId: true, serviceTier: true } as const;
 
 export const GET = handler(async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireStaffApi();
+  await requireStaffApi("customers.view");
   const { id } = await params;
   const item = await db.organization.findUnique({ where: { id }, select: { ...SELECT, createdAt: true, region: true } });
   if (!item) throw new HttpError(404, "not_found", "Organization not found");
@@ -31,7 +31,7 @@ export const GET = handler(async (_req: Request, { params }: { params: Promise<{
 });
 
 export const PATCH = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("customers.manage");
   const { id } = await params;
   const input = await parseBody(req, schema);
   const before = await db.organization.findUnique({ where: { id }, select: SELECT });

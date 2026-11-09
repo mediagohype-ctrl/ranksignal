@@ -12,7 +12,7 @@ import { LEAD_FOLLOWUP_KIND, leadFollowupEmail } from "@/lib/admin/lead-followup
 type Ctx = { params: Promise<{ id: string }> };
 
 export const POST = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("leads.manage");
   const { id } = await params;
   const lead = await db.lead.findUnique({ where: { id }, select: { id: true, email: true, url: true, score: true, message: true, status: true } });
   if (!lead) throw new HttpError(404, "not_found", "Lead not found");

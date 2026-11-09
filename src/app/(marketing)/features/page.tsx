@@ -7,7 +7,7 @@ import { FinalCta, IconTile, PageHero } from "@/components/marketing/ui";
 import { FEATURES } from "@/components/marketing/content";
 
 export const metadata: Metadata = {
-  title: "Features: website check, AI check and safe fixes",
+  title: "Features: SEO audit, AI visibility tracking and safe fixes",
   description:
     "Everything MyWebRank does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI, a clear to-do list and fixes you approve.",
   alternates: { canonical: "/features" },
@@ -18,7 +18,7 @@ export default function FeaturesPage() {
     <>
       <PageHero
         eyebrow="Features"
-        title="Every feature, explained"
+        title="SEO, AEO and GEO features, explained"
         intro={
           <p>
             {BRAND.name} checks your website, asks AI about you, and helps you fix what&apos;s wrong — safely. Here&apos;s

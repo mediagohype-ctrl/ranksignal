@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ reportId: string }> };
 
 export const GET = handler(async (_req: Request, { params }: Ctx) => {
-  await requireStaff();
+  await requireStaff("reports.view");
   const { reportId } = await params;
   return json({ item: await getReportForStaff(reportId) }, { headers: { "Cache-Control": "no-store" } });
 });
 
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaff();
+  const staff = await requireStaff("reports.manage");
   const { reportId } = await params;
   const edit = await parseBody(req, reviewEditSchema);
   const { before, after } = await applyReviewEdits(reportId, edit);

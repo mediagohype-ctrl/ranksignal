@@ -37,9 +37,9 @@ function asCustomer() {
   session.getSession.mockResolvedValue({ ...STAFF_SESSION, userId: "u1" });
   mockDb.user.findUnique.mockResolvedValue({ id: "u1", email: "c@acme.com", name: null, isStaff: false });
 }
-function asStaff() {
+function asStaff(staffRoles: string[] = ["super_admin"]) {
   session.getSession.mockResolvedValue(STAFF_SESSION);
-  mockDb.user.findUnique.mockResolvedValue({ id: "staff1", email: STAFF_SESSION.email, name: "Staff", isStaff: true });
+  mockDb.user.findUnique.mockResolvedValue({ id: "staff1", email: STAFF_SESSION.email, name: "Staff", isStaff: true, staffRoles });
 }
 
 describe("admin routes are hidden from non-staff", () => {
@@ -143,5 +143,57 @@ describe("staff access", () => {
     expect(res.status).toBe(409);
     expect(mockDb.workflowRun.updateMany.mock.calls[0][0].where).toEqual({ id: "j1", state: { in: ["failed"] } });
     expect(mockDb.auditLog.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("staff roles limit what each team can do", () => {
+  it("staff with no role get 403 (not 404) on every section", async () => {
+    asStaff([]);
+    expect((await flagsGet()).status).toBe(403);
+    expect(mockDb.featureFlag.findMany).not.toHaveBeenCalled();
+  });
+
+  it("SEO team cannot change customer plans, flip flags or enter workspaces", async () => {
+    asStaff(["seo"]);
+    expect((await flagsGet()).status).toBe(403);
+    const patch = await orgPatch(jsonReq("/api/admin/orgs/o1", "PATCH", { planId: "growth", reason: "ticket 1" }), params("o1"));
+    expect(patch.status).toBe(403);
+    expect(mockDb.organization.update).not.toHaveBeenCalled();
+    const enter = await enterPost(jsonReq("/api/admin/orgs/o1/enter", "POST", { reason: "ticket 1" }), params("o1"));
+    expect(enter.status).toBe(403);
+    expect(session.setSessionCookie).not.toHaveBeenCalled();
+  });
+
+  it("finance cannot retry jobs", async () => {
+    asStaff(["finance"]);
+    const res = await jobPost(jsonReq("/api/admin/jobs/j1", "POST", { action: "retry", reason: "ticket 7" }), params("j1"));
+    expect(res.status).toBe(403);
+    expect(mockDb.workflowRun.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("support can view as customer but not enter support (write) mode", async () => {
+    asStaff(["support"]);
+    mockDb.organization.findUnique.mockResolvedValue({ id: "o1", name: "Acme" });
+    const write = await enterPost(jsonReq("/api/admin/orgs/o1/enter", "POST", { reason: "ticket 9", mode: "support" }), params("o1"));
+    expect(write.status).toBe(403);
+    expect(session.setSessionCookie).not.toHaveBeenCalled();
+    const view = await enterPost(jsonReq("/api/admin/orgs/o1/enter", "POST", { reason: "ticket 9" }), params("o1"));
+    expect(view.status).toBe(200);
+  });
+
+  it("search only returns record types the role may open", async () => {
+    asStaff(["finance"]); // customers.view, no leads.view / users.view
+    mockDb.organization.findMany.mockResolvedValue([{ id: "o1", name: "Acme", planId: "growth", status: "active" }]);
+    mockDb.project.findMany.mockResolvedValue([]);
+    const res = await searchGet(new Request("http://localhost/api/admin/search?q=acme"));
+    expect(res.status).toBe(200);
+    expect(mockDb.lead.findMany).not.toHaveBeenCalled();
+    expect(mockDb.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it("engineering can see feature flags", async () => {
+    asStaff(["engineering"]);
+    mockDb.featureFlag.findMany.mockResolvedValue([]);
+    expect((await flagsGet()).status).toBe(200);
   });
 });

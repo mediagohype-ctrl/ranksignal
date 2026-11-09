@@ -1,5 +1,6 @@
 // Global admin search across organizations, users, projects and leads.
 import { db } from "@/lib/db";
+import type { Permission } from "./rbac";
 
 export interface SearchHit {
   type: "org" | "user" | "project" | "lead";
@@ -9,31 +10,33 @@ export interface SearchHit {
   href: string;
 }
 
-export async function adminSearch(raw: string, perType = 6): Promise<SearchHit[]> {
+/** `can` limits results to the record types the staff member may open (customers, users, leads). */
+export async function adminSearch(raw: string, perType = 6, can: (p: Permission) => boolean = () => true): Promise<SearchHit[]> {
   const q = raw.trim().slice(0, 120);
   if (q.length < 2) return [];
+  const none = Promise.resolve([] as never[]);
   const contains = { contains: q, mode: "insensitive" as const };
   const host = q.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/.*$/, "");
   const [orgs, users, projects, leads] = await Promise.all([
-    db.organization.findMany({
+    !can("customers.view") ? none : db.organization.findMany({
       where: { OR: [{ id: q }, { name: contains }, { billingCustomerId: q }] },
       take: perType,
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, planId: true, status: true },
     }),
-    db.user.findMany({
+    !can("users.view") ? none : db.user.findMany({
       where: { OR: [{ id: q }, { email: contains }, { name: contains }] },
       take: perType,
       orderBy: { createdAt: "desc" },
       select: { id: true, email: true, name: true, isStaff: true },
     }),
-    db.project.findMany({
+    !can("customers.view") ? none : db.project.findMany({
       where: { OR: [{ id: q }, { name: contains }, { websiteUrl: { contains: host || q, mode: "insensitive" } }] },
       take: perType,
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, websiteUrl: true, organizationId: true },
     }),
-    db.lead.findMany({
+    !can("leads.view") ? none : db.lead.findMany({
       where: { OR: [{ id: q }, { email: contains }, { name: contains }, { company: contains }, { url: { contains: host || q, mode: "insensitive" } }] },
       take: perType,
       orderBy: { createdAt: "desc" },

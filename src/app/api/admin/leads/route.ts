@@ -6,7 +6,7 @@ import { leadWhere, searchParamsFromUrl } from "@/lib/admin/lead-filters";
 import { pageParams } from "@/lib/admin/params";
 
 export const GET = handler(async (req: Request) => {
-  await requireStaffApi();
+  await requireStaffApi("leads.view");
   const sp = searchParamsFromUrl(req.url);
   const { skip, take, page } = pageParams(sp);
   const where = leadWhere(sp);

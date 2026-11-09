@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Job" };
 
 export default async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireStaffPage();
+  await requireStaffPage("jobs.view");
   const { id } = await params;
   const run = await db.workflowRun.findUnique({
     where: { id },

@@ -39,7 +39,7 @@ const TABS = ["overview", "projects", "members", "usage", "jobs", "audit", "note
 type Tab = (typeof TABS)[number];
 
 export default async function CustomerDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  const staff = await requireStaffPage("customers.view");
   const { id } = await params;
   const sp = await searchParams;
   const tab = oneOf(sp, "tab", TABS, "overview");
@@ -96,6 +96,8 @@ export default async function CustomerDetail({ params, searchParams }: { params:
             status: org.status,
             publishingEnabled: org.publishingEnabled,
           }}
+          canEnter={staff.can("customers.enter")}
+          canManage={staff.can("customers.manage")}
         />
       </Card>
       <LinkTabs
@@ -113,14 +115,29 @@ export default async function CustomerDetail({ params, searchParams }: { params:
           { id: "notes", label: "Notes", count: notesCount },
         ]}
       />
-      <TabBody tab={tab} org={org} sp={sp} base={base} />
+      <TabBody tab={tab} org={org} sp={sp} base={base} canEdit={staff.can("customers.manage")} showMoney={staff.can("revenue.view")} />
     </div>
   );
 }
 
 type Org = { id: string; name: string; planId: string; serviceTier: string | null; status: string; region: string; publishingEnabled: boolean; billingCustomerId: string | null; createdAt: Date };
 
-async function TabBody({ tab, org, sp, base }: { tab: Tab; org: Org; sp: SearchParams; base: string }) {
+async function TabBody({
+  tab,
+  org,
+  sp,
+  base,
+  canEdit,
+  showMoney,
+}: {
+  tab: Tab;
+  org: Org;
+  sp: SearchParams;
+  base: string;
+  canEdit: boolean;
+  /** Costs, margin and subscription history need revenue.view. */
+  showMoney: boolean;
+}) {
   switch (tab) {
     case "projects":
       return <ProjectsTab orgId={org.id} />;
@@ -133,15 +150,15 @@ async function TabBody({ tab, org, sp, base }: { tab: Tab; org: Org; sp: SearchP
     case "audit":
       return <AuditTab orgId={org.id} sp={sp} base={base} />;
     case "notes":
-      return <NotesTab orgId={org.id} />;
+      return <NotesTab orgId={org.id} canEdit={canEdit} />;
     default:
-      return <OverviewTab org={org} />;
+      return <OverviewTab org={org} showMoney={showMoney} />;
   }
 }
 
 /* ------------------------------------------------------------------ overview */
 
-async function OverviewTab({ org }: { org: Org }) {
+async function OverviewTab({ org, showMoney }: { org: Org; showMoney: boolean }) {
   const [access, usage, subs, monthCost, lastLogin] = await Promise.all([
     getOrgAccess(org.id),
     getUsageSummary(org.id).catch(() => null),
@@ -187,12 +204,16 @@ async function OverviewTab({ org }: { org: Org }) {
                 items={[
                   { label: "Reserved credits", value: usage.reserved.toLocaleString() },
                   ...Object.entries(usage.byTaskType).map(([k, v]) => ({ label: k.replace(/_/g, " "), value: v.toLocaleString() })),
-                  { label: "AI / provider cost", value: `${formatUsd(microsToUsd(micros))} (≈ ${formatInr(microsToInr(micros, rate))})` },
-                  { label: "They pay / month", value: formatInr(money.priceInr) },
-                  { label: "Margin this month", value: formatInr(money.marginInr) },
+                  ...(showMoney
+                    ? [
+                        { label: "AI / provider cost", value: `${formatUsd(microsToUsd(micros))} (≈ ${formatInr(microsToInr(micros, rate))})` },
+                        { label: "They pay / month", value: formatInr(money.priceInr) },
+                        { label: "Margin this month", value: formatInr(money.marginInr) },
+                      ]
+                    : []),
                 ]}
               />
-              {money.costsMore && (
+              {showMoney && money.costsMore && (
                 <Notice tone="danger" title="Costs more than they pay">
                   AI cost this month ({formatInr(money.costInr)} at ₹{rate}/USD) is higher than what this customer pays (
                   {formatInr(money.priceInr)}).
@@ -204,7 +225,7 @@ async function OverviewTab({ org }: { org: Org }) {
           )}
         </CardBody>
       </Card>
-      <Card className="lg:col-span-2">
+      {showMoney && <Card className="lg:col-span-2">
         <CardHeader title="Subscription history" description="Newest first (provider rows are written by the Razorpay webhook)." />
         {subs.length === 0 ? (
           <EmptyState size="sm" title="No subscription rows" />
@@ -242,7 +263,7 @@ async function OverviewTab({ org }: { org: Org }) {
             </tbody>
           </Table>
         )}
-      </Card>
+      </Card>}
     </div>
   );
 }
@@ -583,7 +604,7 @@ async function AuditTab({ orgId, sp, base }: { orgId: string; sp: SearchParams; 
 
 /* ------------------------------------------------------------------ notes */
 
-async function NotesTab({ orgId }: { orgId: string }) {
+async function NotesTab({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const notes = await db.adminNote.findMany({ where: { organizationId: orgId }, orderBy: { createdAt: "desc" }, take: 100 });
   const emails = await userEmails(notes.map((n) => n.authorId));
   return (
@@ -592,6 +613,7 @@ async function NotesTab({ orgId }: { orgId: string }) {
       <CardBody>
         <NotesPanel
           orgId={orgId}
+          canEdit={canEdit}
           notes={notes.map((n) => ({
             id: n.id,
             body: n.body,

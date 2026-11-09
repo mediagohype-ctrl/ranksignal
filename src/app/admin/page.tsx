@@ -18,7 +18,9 @@ import {
 import { db } from "@/lib/db";
 import { billingPeriod } from "@/lib/billing/usage";
 import { getAiDailyBudgetUsd } from "@/lib/billing/ai-budget";
+import { redirect } from "next/navigation";
 import { requireStaffPage } from "@/lib/admin/guard";
+import { firstAllowedPath } from "@/lib/admin/rbac";
 import { estimateMrr, formatInr, formatUsd, microsToInr, microsToUsd, SERVICE_TIERS } from "@/lib/admin/money";
 import { bucketTrials, dailyCostByProvider, dailyCounts, loadTrialOrgs, orgNames, seriesFromMap } from "@/lib/admin/metrics";
 import { DAY_MS, fmtAgo, fmtDate, pctDelta, rangeParam, utcDayStart, type SearchParams } from "@/lib/admin/params";
@@ -32,7 +34,9 @@ export const metadata = { title: "Overview" };
 const sumMicros = (a: { _sum: { costMicros: number | null } }) => a._sum.costMicros ?? 0;
 
 export default async function AdminOverview({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  const staff = await requireStaffPage();
+  // The overview shows MRR and AI spend; other roles land on their first section instead.
+  if (!staff.can("overview.view")) redirect(firstAllowedPath(staff.permissions) ?? "/admin/no-access");
   const sp = await searchParams;
   const r = rangeParam(sp);
   const cur = { gte: r.since, lt: r.now };

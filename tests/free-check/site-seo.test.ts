@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import robotsParser from "robots-parser";
-import { buildLlmsTxt, buildRobots, buildSitemap, MARKETING_ROUTES, siteBase } from "@/lib/free-check/site-seo";
+import {
+  buildLlmsFullTxt,
+  buildLlmsTxt,
+  buildRobots,
+  buildSitemap,
+  MARKETING_ROUTES,
+  publicUrls,
+  siteBase,
+} from "@/lib/free-check/site-seo";
+import { ARTICLES, articleToMarkdown } from "@/lib/learn/articles";
+import { breadcrumbLd, organizationLd } from "@/lib/seo/schema";
 
 const BASE = "https://ranksignal.onrender.com";
 
@@ -58,6 +68,82 @@ describe("site SEO builders", () => {
     expect(txt).toContain("## Product");
     expect(txt).toContain("## Optional");
     for (const r of MARKETING_ROUTES) expect(txt).toContain(`](${BASE}${r.path === "/" ? "/" : r.path})`);
+    expect(txt).toContain("## Guides");
+    expect(txt).toContain(`${BASE}/llms-full.txt`);
     expect(txt).not.toMatch(/guarantee(d)? (rankings|results)/i);
+  });
+
+  it("sitemap includes every guide with its real last-modified date (not request time)", () => {
+    const sm = buildSitemap(BASE);
+    for (const a of ARTICLES) {
+      const e = sm.find((x) => x.url === `${BASE}/learn/${a.slug}`);
+      expect(e, a.slug).toBeDefined();
+      expect((e!.lastModified as Date).toISOString().slice(0, 10)).toBe(a.updated);
+    }
+    expect(sm.find((x) => x.url === `${BASE}/learn`)).toBeDefined();
+  });
+
+  it("llms-full.txt carries the full text of every guide with absolute links", () => {
+    const txt = buildLlmsFullTxt(BASE);
+    for (const a of ARTICLES) {
+      expect(txt).toContain(`# ${a.title}`);
+      expect(txt).toContain(a.answer);
+    }
+    expect(txt).not.toMatch(/\]\(\/[^)]*\)/); // no relative links left
+    expect(txt).toContain("| SEO | AEO | GEO |");
+  });
+
+  it("publicUrls lists every marketing URL once", () => {
+    const urls = publicUrls(BASE);
+    expect(urls.length).toBe(MARKETING_ROUTES.length);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+});
+
+describe("learn articles", () => {
+  it("have unique slugs, valid related links, answer-first copy and FAQs", () => {
+    const slugs = new Set(ARTICLES.map((a) => a.slug));
+    expect(slugs.size).toBe(ARTICLES.length);
+    for (const a of ARTICLES) {
+      expect(a.slug).toMatch(/^[a-z0-9-]+$/);
+      for (const r of a.related) expect(slugs.has(r), `${a.slug} → ${r}`).toBe(true);
+      const words = a.answer.split(/\s+/).length;
+      expect(words, `${a.slug} answer length`).toBeGreaterThanOrEqual(30);
+      expect(words, `${a.slug} answer length`).toBeLessThanOrEqual(80);
+      expect(a.faqs.length).toBeGreaterThanOrEqual(3);
+      expect(a.description.length, `${a.slug} description`).toBeLessThanOrEqual(260);
+      expect(a.updated).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(`${a.title} ${a.answer}`).not.toMatch(/guarantee(d)? (#1|rankings|results)/i);
+    }
+  });
+
+  it("internal links in articles point at real marketing routes", () => {
+    const known = new Set([...MARKETING_ROUTES.map((r) => r.path), "/llms.txt", "/llms-full.txt"]);
+    for (const a of ARTICLES) {
+      const text = JSON.stringify(a);
+      for (const m of text.matchAll(/\]\((\/[^)#]*)/g)) expect(known.has(m[1]), `${a.slug}: ${m[1]}`).toBe(true);
+    }
+  });
+
+  it("markdown export flattens links to absolute URLs", () => {
+    const md = articleToMarkdown(ARTICLES[0], BASE);
+    expect(md).toContain(`${BASE}/`);
+    expect(md).not.toMatch(/\]\(\/[^)]*\)/);
+  });
+});
+
+describe("schema builders", () => {
+  it("breadcrumbs start at Home with absolute URLs", () => {
+    const b = breadcrumbLd([{ name: "Guides", path: "/learn" }], BASE) as { itemListElement: { position: number; item: string }[] };
+    expect(b.itemListElement.map((i) => i.item)).toEqual([`${BASE}/`, `${BASE}/learn`]);
+    expect(b.itemListElement.map((i) => i.position)).toEqual([1, 2]);
+  });
+
+  it("organization has a stable @id and knowsAbout SEO, AEO and GEO", () => {
+    const o = organizationLd(BASE) as { "@id": string; knowsAbout: string[] };
+    expect(o["@id"]).toBe(`${BASE}/#organization`);
+    expect(o.knowsAbout.join(" ")).toMatch(/SEO/);
+    expect(o.knowsAbout.join(" ")).toMatch(/AEO/);
+    expect(o.knowsAbout.join(" ")).toMatch(/GEO/);
   });
 });

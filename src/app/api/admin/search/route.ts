@@ -4,7 +4,7 @@ import { requireStaffApi } from "@/lib/admin/guard";
 import { adminSearch } from "@/lib/admin/search";
 
 export const GET = handler(async (req: Request) => {
-  await requireStaffApi();
+  const staff = await requireStaffApi();
   const q = new URL(req.url).searchParams.get("q") ?? "";
-  return json({ items: await adminSearch(q, 5) });
+  return json({ items: await adminSearch(q, 5, staff.can) });
 });

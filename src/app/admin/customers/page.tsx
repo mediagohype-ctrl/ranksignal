@@ -18,7 +18,7 @@ export const metadata = { title: "Customers" };
 const SORTS = ["createdAt", "name", "planId", "status"] as const;
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("customers.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp);
   const sort = oneOf(sp, "sort", SORTS, "createdAt");

@@ -182,12 +182,14 @@ export interface OrgActionTarget {
   publishingEnabled: boolean;
 }
 
-export function OrgActions({ org }: { org: OrgActionTarget }) {
+/** `canEnter` / `canManage` come from the staff role (src/lib/admin/rbac.ts); the APIs enforce the same rules. */
+export function OrgActions({ org, canEnter = true, canManage = true }: { org: OrgActionTarget; canEnter?: boolean; canManage?: boolean }) {
   const endpoint = `/api/admin/orgs/${org.id}`;
   const suspended = org.status === "suspended";
+  if (!canEnter && !canManage) return <p className="text-small text-muted">Read-only: your role can look but not change this customer.</p>;
   return (
     <div className="flex flex-wrap gap-2">
-      <ReasonAction
+      {canEnter && <ReasonAction
         label="View as customer"
         icon={<Eye />}
         variant="primary"
@@ -198,8 +200,8 @@ export function OrgActions({ org }: { org: OrgActionTarget }) {
         confirmLabel="View as customer"
         successMessage="Opening workspace (read-only)…"
         onSuccess={() => window.location.assign("/app")}
-      />
-      <ReasonAction
+      />}
+      {canEnter && canManage && <ReasonAction
         label="Enter workspace"
         icon={<ArrowRightToLine />}
         title="Enter this workspace in support mode?"
@@ -209,7 +211,9 @@ export function OrgActions({ org }: { org: OrgActionTarget }) {
         confirmLabel="Enter workspace"
         successMessage="Entering workspace…"
         onSuccess={() => window.location.assign("/app")}
-      />
+      />}
+      {canManage && (
+      <>
       <ReasonAction
         label="Change plan"
         icon={<BadgeIndianRupee />}
@@ -288,6 +292,8 @@ export function OrgActions({ org }: { org: OrgActionTarget }) {
         body={{ status: suspended ? "active" : "suspended" }}
         successMessage={suspended ? "Organization reactivated" : "Organization suspended"}
       />
+      </>
+      )}
     </div>
   );
 }
@@ -301,7 +307,7 @@ export interface NoteView {
   createdAt: string;
 }
 
-export function NotesPanel({ orgId, notes }: { orgId: string; notes: NoteView[] }) {
+export function NotesPanel({ orgId, notes, canEdit = true }: { orgId: string; notes: NoteView[]; canEdit?: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const [draft, setDraft] = useState("");
@@ -327,7 +333,7 @@ export function NotesPanel({ orgId, notes }: { orgId: string; notes: NoteView[] 
 
   return (
     <div className="space-y-5">
-      <form
+      {canEdit && <form
         className="space-y-3"
         onSubmit={async (e) => {
           e.preventDefault();
@@ -343,7 +349,7 @@ export function NotesPanel({ orgId, notes }: { orgId: string; notes: NoteView[] 
             Add note
           </Button>
         </div>
-      </form>
+      </form>}
       {error && <Notice tone="danger">{error}</Notice>}
       {notes.length === 0 ? (
         <p className="text-small text-muted">No notes yet.</p>
@@ -355,7 +361,7 @@ export function NotesPanel({ orgId, notes }: { orgId: string; notes: NoteView[] 
                 <span>
                   <span className="font-medium text-fg-soft">{n.author}</span> · {n.createdAt}
                 </span>
-                <span className="flex gap-1">
+                {canEdit && <span className="flex gap-1">
                   <Button size="icon-sm" variant="ghost" aria-label="Edit note" onClick={() => setEditing({ id: n.id, body: n.body })}>
                     <Pencil />
                   </Button>
@@ -370,7 +376,7 @@ export function NotesPanel({ orgId, notes }: { orgId: string; notes: NoteView[] 
                   >
                     <Trash2 />
                   </Button>
-                </span>
+                </span>}
               </div>
               {editing?.id === n.id ? (
                 <div className="space-y-2">
@@ -407,45 +413,59 @@ export function NotesPanel({ orgId, notes }: { orgId: string; notes: NoteView[] 
 
 /* ------------------------------------------------------------------ users */
 
-export function UserActions({ userId, isStaff, isSelf, emailVerified }: { userId: string; isStaff: boolean; isSelf: boolean; emailVerified: boolean }) {
+/** Account emails need users.manage; staff access is managed (with roles) on /admin/team (team.manage). */
+export function UserActions({
+  userId,
+  email,
+  isStaff,
+  isSelf,
+  emailVerified,
+  canManageUser = true,
+  canManageTeam = true,
+}: {
+  userId: string;
+  email: string;
+  isStaff: boolean;
+  isSelf: boolean;
+  emailVerified: boolean;
+  canManageUser?: boolean;
+  canManageTeam?: boolean;
+}) {
   const endpoint = `/api/admin/users/${userId}`;
+  if (!canManageUser && !canManageTeam) return <p className="text-small text-muted">Read-only: your role can look but not change this account.</p>;
   return (
     <div className="flex flex-wrap gap-2">
-      <ReasonAction
-        label="Send password reset"
-        icon={<KeyRound />}
-        title="Email a password-reset link?"
-        description="The user gets a single-use link valid for 60 minutes."
-        endpoint={endpoint}
-        body={{ action: "password_reset" }}
-        successMessage="Password reset email sent"
-      />
-      <ReasonAction
-        label="Resend verification"
-        icon={<MailCheck />}
-        title="Resend the email verification link?"
-        endpoint={endpoint}
-        body={{ action: "resend_verification" }}
-        disabled={emailVerified}
-        successMessage="Verification email sent"
-      />
-      <ReasonAction
-        label={isStaff ? "Remove staff access" : "Make staff"}
-        icon={isStaff ? <ShieldOff /> : <ShieldCheck />}
-        variant={isStaff ? "danger" : "secondary"}
-        tone={isStaff ? "danger" : "warning"}
-        title={isStaff ? "Remove staff access?" : "Grant staff access?"}
-        description={
-          isStaff
-            ? "They lose the admin back-office and support mode immediately."
-            : "Staff can see every customer's data, enter workspaces and change plans. Grant only to team members."
-        }
-        endpoint={endpoint}
-        method="PATCH"
-        body={{ isStaff: !isStaff }}
-        disabled={isSelf}
-        successMessage={isStaff ? "Staff access removed" : "Staff access granted"}
-      />
+      {canManageUser && (
+        <>
+          <ReasonAction
+            label="Send password reset"
+            icon={<KeyRound />}
+            title="Email a password-reset link?"
+            description="The user gets a single-use link valid for 60 minutes."
+            endpoint={endpoint}
+            body={{ action: "password_reset" }}
+            successMessage="Password reset email sent"
+          />
+          <ReasonAction
+            label="Resend verification"
+            icon={<MailCheck />}
+            title="Resend the email verification link?"
+            endpoint={endpoint}
+            body={{ action: "resend_verification" }}
+            disabled={emailVerified}
+            successMessage="Verification email sent"
+          />
+        </>
+      )}
+      {canManageTeam && !isSelf && (
+        <a
+          href={`/admin/team?email=${encodeURIComponent(email)}`}
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-small font-medium text-fg hover:bg-surface-2 [&_svg]:size-4"
+        >
+          {isStaff ? <ShieldOff aria-hidden /> : <ShieldCheck aria-hidden />}
+          {isStaff ? "Change staff roles" : "Add to team (choose roles)"}
+        </a>
+      )}
     </div>
   );
 }

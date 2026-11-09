@@ -15,7 +15,7 @@ async function load(id: string, noteId: string) {
 }
 
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("customers.manage");
   const { id, noteId } = await params;
   const { body } = await parseBody(req, schema);
   const before = await load(id, noteId);
@@ -32,7 +32,7 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
 });
 
 export const DELETE = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("customers.manage");
   const { id, noteId } = await params;
   const before = await load(id, noteId);
   await db.adminNote.delete({ where: { id: noteId } });

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireStaffPage } from "@/lib/admin/guard";
 import { ToastProvider } from "@/components/ui";
 import { AdminShell } from "@/components/admin/shell";
+import { roleLabels } from "@/lib/admin/rbac";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: { default: "Admin", template: "%s · Admin" }, robots: { index: false, follow: false } };
@@ -14,7 +15,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     : null;
   return (
     <ToastProvider>
-      <AdminShell staffEmail={staff.user.email} staffName={staff.user.name} supportOrgName={supportOrg?.name ?? null}>
+      <AdminShell staffEmail={staff.user.email} staffName={staff.user.name} supportOrgName={supportOrg?.name ?? null}
+        permissions={[...staff.permissions]}
+        roleLabels={roleLabels(staff.roles)}
+      >
         {children}
       </AdminShell>
     </ToastProvider>

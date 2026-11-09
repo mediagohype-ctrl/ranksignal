@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Revenue & plans" };
 
 export default async function RevenuePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("revenue.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp, 25);
   const subWhere: Prisma.SubscriptionWhereInput = {};

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStaffPage } from "@/lib/admin/guard";
+import { roleLabels } from "@/lib/admin/rbac";
 import { fmtAgo, fmtDate, fmtDateTime } from "@/lib/admin/params";
 import { Badge, Card, CardBody, CardHeader, EmptyState, KeyValueList, PageHeader, Table, TD, TH, THead, TR } from "@/components/ui";
 import { Mono, PlanBadge, StatusPill, TierBadge } from "@/components/admin/ui";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "User" };
 
 export default async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
-  const staff = await requireStaffPage();
+  const staff = await requireStaffPage("users.view");
   const { id } = await params;
   const user = await db.user.findUnique({
     where: { id },
@@ -21,6 +22,7 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
       email: true,
       name: true,
       isStaff: true,
+      staffRoles: true,
       emailVerified: true,
       createdAt: true,
       memberships: {
@@ -62,7 +64,15 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
         }
       />
       <Card padding="md">
-        <UserActions userId={user.id} isStaff={user.isStaff} isSelf={user.id === staff.user.id} emailVerified={user.emailVerified} />
+        <UserActions
+          userId={user.id}
+          email={user.email}
+          isStaff={user.isStaff}
+          isSelf={user.id === staff.user.id}
+          emailVerified={user.emailVerified}
+          canManageUser={staff.can("users.manage")}
+          canManageTeam={staff.can("team.manage")}
+        />
       </Card>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
@@ -73,7 +83,7 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
                 { label: "Created", value: fmtDate(user.createdAt) },
                 { label: "Last sign-in", value: logins[0] ? `${fmtDateTime(logins[0].createdAt)} (${fmtAgo(logins[0].createdAt)})` : "No sign-in recorded" },
                 { label: "Email verified", value: user.emailVerified ? "Yes" : "No" },
-                { label: "Staff", value: user.isStaff ? "Yes" : "No" },
+                { label: "Staff", value: user.isStaff ? roleLabels(user.staffRoles).join(", ") || "Yes (no role yet)" : "No" },
                 { label: "Memberships", value: user.memberships.length },
               ]}
             />

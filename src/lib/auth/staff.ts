@@ -1,18 +1,21 @@
-// Server-side staff guard. The JWT never carries isStaff; it is always re-read from the database.
-import { HttpError, requireSession } from "@/lib/api";
-import { getSession } from "@/lib/auth/session";
-import { db } from "@/lib/db";
+// Server-side staff guard (older call sites). The JWT never carries isStaff or roles; they are re-read from the DB.
+import { HttpError } from "@/lib/api";
+import { loadStaff } from "@/lib/admin/guard";
+import type { Permission } from "@/lib/admin/rbac";
 
-export async function getStaffUser() {
-  const session = await getSession();
-  if (!session) return null;
-  const user = await db.user.findUnique({ where: { id: session.userId }, select: { id: true, email: true, isStaff: true } });
-  return user?.isStaff ? { session, user } : null;
+/** Staff context when signed in as staff holding `permission` (if given), else null. */
+export async function getStaffUser(permission?: Permission) {
+  const staff = await loadStaff();
+  if (!staff || (permission && !staff.can(permission))) return null;
+  return { ...staff, user: { ...staff.user, isStaff: true as const } };
 }
 
-export async function requireStaff() {
-  const session = await requireSession("viewer");
-  const user = await db.user.findUnique({ where: { id: session.userId }, select: { id: true, email: true, isStaff: true } });
-  if (!user?.isStaff) throw new HttpError(403, "forbidden", "Staff access required");
-  return { session, user };
+/** API guard: 403 unless signed in as staff holding `permission` (if given). */
+export async function requireStaff(permission?: Permission) {
+  const staff = await loadStaff();
+  if (!staff) throw new HttpError(403, "forbidden", "Staff access required");
+  if (permission && !staff.can(permission)) {
+    throw new HttpError(403, "forbidden", "Your staff role doesn't include this. Ask a super admin to add it.");
+  }
+  return { ...staff, user: { ...staff.user, isStaff: true as const } };
 }

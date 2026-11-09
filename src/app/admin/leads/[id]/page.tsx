@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Lead" };
 
 export default async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireStaffPage();
+  await requireStaffPage("leads.view");
   const { id } = await params;
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) notFound();

@@ -13,7 +13,7 @@ const schema = z.object({
 });
 
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("customers.manage");
   const { id } = await params;
   const { days, reason } = await parseBody(req, schema);
   const org = await db.organization.findUnique({

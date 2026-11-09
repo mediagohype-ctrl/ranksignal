@@ -8,6 +8,7 @@ import { sendPasswordResetEmail } from "@/lib/auth/password-reset";
 import { sendVerificationEmail } from "@/lib/auth/email-verification";
 import { requireStaffApi } from "@/lib/admin/guard";
 import { reasonSchema, staffAudit } from "@/lib/admin/audit";
+import { wouldRemoveLastSuperAdmin } from "@/lib/admin/team";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -15,13 +16,21 @@ const patchSchema = z.object({ isStaff: z.boolean(), reason: reasonSchema });
 const postSchema = z.object({ action: z.enum(["password_reset", "resend_verification"]), reason: reasonSchema });
 
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("team.manage");
   const { id } = await params;
   const { isStaff, reason } = await parseBody(req, patchSchema);
   if (id === staff.user.id) throw new HttpError(400, "cannot_change_self", "You can't change your own staff access.");
   const before = await db.user.findUnique({ where: { id }, select: { id: true, isStaff: true } });
   if (!before) throw new HttpError(404, "not_found", "User not found");
-  const item = await db.user.update({ where: { id }, data: { isStaff }, select: { id: true, email: true, isStaff: true } });
+  if (!isStaff && before.isStaff && (await wouldRemoveLastSuperAdmin(id, null))) {
+    throw new HttpError(409, "last_super_admin", "Keep at least one super admin on the team.");
+  }
+  // Granting here gives no sections yet (roles are chosen on /admin/team); revoking clears roles.
+  const item = await db.user.update({
+    where: { id },
+    data: isStaff ? { isStaff } : { isStaff, staffRoles: [] },
+    select: { id: true, email: true, isStaff: true },
+  });
   await staffAudit(staff, req, {
     action: isStaff ? "admin.staff_granted" : "admin.staff_revoked",
     resourceType: "user",
@@ -34,7 +43,7 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
 });
 
 export const POST = handler(async (req: Request, { params }: Ctx) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("users.manage");
   const { id } = await params;
   const { action, reason } = await parseBody(req, postSchema);
   const user = await db.user.findUnique({

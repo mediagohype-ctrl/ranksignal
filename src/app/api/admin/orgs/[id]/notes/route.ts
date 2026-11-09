@@ -8,14 +8,14 @@ import { staffAudit } from "@/lib/admin/audit";
 const noteBodySchema = z.object({ body: z.string().trim().min(1, "Write something first.").max(5000) });
 
 export const GET = handler(async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireStaffApi();
+  await requireStaffApi("customers.view");
   const { id } = await params;
   const items = await db.adminNote.findMany({ where: { organizationId: id }, orderBy: { createdAt: "desc" }, take: 100 });
   return json({ items });
 });
 
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  const staff = await requireStaffApi();
+  const staff = await requireStaffApi("customers.manage");
   const { id } = await params;
   const { body } = await parseBody(req, noteBodySchema);
   const org = await db.organization.findUnique({ where: { id }, select: { id: true } });

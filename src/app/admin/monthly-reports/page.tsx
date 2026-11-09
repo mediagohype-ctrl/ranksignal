@@ -22,7 +22,7 @@ export default async function MonthlyQueuePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  if (!(await getStaffUser())) notFound();
+  if (!(await getStaffUser("reports.view"))) notFound();
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || undefined;
   const parsed = queueFilterSchema.safeParse({ period: one(sp.period), status: one(sp.status) });

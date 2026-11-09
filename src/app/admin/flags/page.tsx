@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Feature flags" };
 
 export default async function FlagsPage() {
-  await requireStaffPage();
+  await requireStaffPage("flags.view");
   const stored = await db.featureFlag.findMany();
   const keys = [...new Set([...Object.keys(FLAG_DEFAULTS), ...stored.map((f) => f.key)])].sort((a, b) =>
     a === "global.publishing" ? -1 : b === "global.publishing" ? 1 : a.localeCompare(b),

@@ -6,7 +6,7 @@ import { FaqMaker } from "../_components/faq-maker";
 import { LeadBox } from "../_components/lead-box";
 
 const PATH = "/tools/faq-markup-maker";
-const TITLE = "Free FAQ code maker: info for Google and AI";
+const TITLE = "Free FAQ Schema Generator (FAQPage JSON-LD) for Google and AI";
 const DESCRIPTION =
   "Type your customers' questions and your answers. Get ready-to-paste code (FAQ schema) that helps Google and AI tools like ChatGPT understand and quote your answers. Free, no sign-up.";
 
@@ -32,7 +32,7 @@ export default function FaqMarkupMakerPage() {
           {
             "@context": "https://schema.org",
             "@type": "WebApplication",
-            name: "FAQ code maker",
+            name: "FAQ schema generator",
             url: `${base}${PATH}`,
             applicationCategory: "BusinessApplication",
             operatingSystem: "Any",
@@ -48,7 +48,7 @@ export default function FaqMarkupMakerPage() {
       />
       <PageHero
         eyebrow="Free tool"
-        title="Info for Google and AI: FAQ code maker"
+        title="Free FAQ schema generator: info for Google and AI"
         intro={<p>Type the questions customers ask and your answers. Copy the code onto your page so Google and AI tools can quote you.</p>}
       />
       <section aria-label="Make your FAQ code" className="bg-bg py-12 sm:py-16">

@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Audit log" };
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireStaffPage();
+  await requireStaffPage("audit.view");
   const sp = await searchParams;
   const { page, size, skip, take } = pageParams(sp, 50);
   const where: Prisma.AuditLogWhereInput = {};

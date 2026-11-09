@@ -8,7 +8,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 const FLAG_KEY_RE = /^(global\.publishing|provider\.[a-z0-9_-]{1,40}|action\.[a-z0-9_]{1,60})$/;
 
 export const GET = handler(async () => {
-  await requireStaff();
+  await requireStaff("flags.view");
   const stored = await db.featureFlag.findMany({ orderBy: { key: "asc" } });
   const keys = new Set([...Object.keys(FLAG_DEFAULTS), ...stored.map((f) => f.key)]);
   const items = await Promise.all(
@@ -27,7 +27,7 @@ const schema = z.object({
 });
 
 export const POST = handler(async (req: Request) => {
-  const { user } = await requireStaff();
+  const { user } = await requireStaff("flags.manage");
   const input = await parseBody(req, schema);
   const before = await isEnabled(input.key);
   const flag = await setFlag(input.key, input.enabled, input.note);

@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Review monthly report" };
 
 export default async function ReviewMonthlyReportPage({ params }: { params: Promise<{ reportId: string }> }) {
-  if (!(await getStaffUser())) notFound();
+  if (!(await getStaffUser("reports.view"))) notFound();
   const { reportId } = await params;
   const report = await db.monthlyReport.findUnique({ where: { id: reportId } });
   if (!report) notFound();

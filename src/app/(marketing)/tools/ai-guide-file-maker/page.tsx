@@ -6,7 +6,7 @@ import { GuideMaker } from "../_components/guide-maker";
 import { LeadBox } from "../_components/lead-box";
 
 const PATH = "/tools/ai-guide-file-maker";
-const TITLE = "Free AI guide file maker (llms.txt generator)";
+const TITLE = "Free llms.txt Generator: make your AI guide file";
 const DESCRIPTION =
   "Make an AI guide file (llms.txt) for your website in two minutes: tell ChatGPT and other AI tools who you are and which pages matter. Free, no sign-up.";
 
@@ -48,7 +48,7 @@ export default function AiGuideFileMakerPage() {
       />
       <PageHero
         eyebrow="Free tool"
-        title="Make an AI guide file for your website"
+        title="Free llms.txt generator: make an AI guide file for your website"
         intro={<p>Tell ChatGPT and other AI tools who you are and which pages matter. Fill in the boxes, then download your file.</p>}
       />
       <section aria-label="Make your AI guide file" className="bg-bg py-12 sm:py-16">

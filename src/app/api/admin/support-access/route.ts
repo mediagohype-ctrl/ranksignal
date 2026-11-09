@@ -15,7 +15,7 @@ const schema = z.object({
  * with the stated reason. Never returns credentials or secrets.
  */
 export const POST = handler(async (req: Request) => {
-  const { user } = await requireStaff();
+  const { user } = await requireStaff("customers.enter");
   const { organizationId, reason } = await parseBody(req, schema);
   const org = await db.organization.findUnique({
     where: { id: organizationId },
