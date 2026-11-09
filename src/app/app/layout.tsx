@@ -76,7 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </header>
           <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-8">
             {session.staffMode && (
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-small text-fg">
+              <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-small text-fg">
                 <span>
                   <strong>{session.readOnly ? "View as customer (read-only):" : "Support mode:"}</strong> you are working inside <strong>{org.name}</strong> as MyWebRank staff. Every action is
                   audit-logged.
@@ -93,7 +93,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </span>
               </div>
             )}
-            {bannerKind === "verify_email" && <VerifyEmailBanner className="mb-6" />}
+            {bannerKind === "verify_email" && <VerifyEmailBanner className="no-print mb-6" />}
             {banner && bannerKind && bannerKind !== "verify_email" && (
               <PlanBanner
                 kind={bannerKind}

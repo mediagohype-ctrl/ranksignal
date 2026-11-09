@@ -413,13 +413,25 @@
   }
 }
 
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
 @media print {
   .no-print {
     display: none !important;
   }
+  html,
   body {
     background: #fff;
     color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* The app shell's main column is padded/centred for screens; give the printout the full page width. */
+  main#main {
+    max-width: none;
+    padding: 0;
   }
 }
 

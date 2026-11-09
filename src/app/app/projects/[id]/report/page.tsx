@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, History } from "lucide-react";
+import { Download, History, Printer } from "lucide-react";
 import { db } from "@/lib/db";
 import { getStoredReport } from "@/lib/report/stored";
 import { log } from "@/lib/log";
@@ -8,7 +8,6 @@ import type { SiteReport } from "@/lib/report/types";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, fmtRelative, hostOf, isActiveStatus } from "@/lib/dashboard/format";
 import { AutoRefresh } from "@/components/app/auto-refresh";
-import { PrintButton } from "@/components/app/print-button";
 import { RunButtons } from "@/components/app/run-buttons";
 import { MeasuredWith } from "@/components/app/providers-status";
 import { ReportBody } from "@/components/app/report/report-body";
@@ -146,7 +145,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                 <Download aria-hidden /> Download as text
               </a>
             )}
-            <PrintButton label="Download PDF" />
+            {/* Opens the complete, print-ready report (every problem, page and AI answer) and its print dialog. */}
+            <a href={`/app/projects/${project.id}/report/print`} target="_blank" rel="noopener" className={buttonClass("secondary")}>
+              <Printer aria-hidden /> Download PDF
+            </a>
             <ShareReportButton projectId={project.id} canManage={hasRole(session, "admin")} label="Share link" />
           </div>
         }
