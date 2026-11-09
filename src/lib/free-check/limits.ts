@@ -31,3 +31,24 @@ export function checkContactLimit(ip: string, now = Date.now()): LimitResult {
 export function checkFreeCheckEmailLimit(ip: string, now = Date.now()): LimitResult {
   return check("free-check-email", FREE_CHECK_EMAIL_LIMITS, ip, now);
 }
+
+/**
+ * Free page tools that fetch ONE public page or file (meta tags, headings, schema, robots.txt, AI crawlers, sitemap):
+ * 20 per IP per hour per tool, 400 per hour per tool overall.
+ */
+export const PAGE_TOOL_LIMITS = { perIp: 20, global: 400, windowMs: HOUR } as const;
+export function checkPageToolLimit(tool: string, ip: string, now = Date.now()): LimitResult {
+  return check(`tool:${tool}`, PAGE_TOOL_LIMITS, ip, now);
+}
+
+/** Broken link checker: each run requests up to ~100 links, so 5 per IP per hour and 60 per hour overall. */
+export const LINK_TOOL_LIMITS = { perIp: 5, global: 60, windowMs: HOUR } as const;
+export function checkLinkToolLimit(ip: string, now = Date.now()): LimitResult {
+  return check("tool:broken-link-checker", LINK_TOOL_LIMITS, ip, now);
+}
+
+/** AI writing tools (title, meta description, FAQ): each run is one paid LLM call — 5 per IP per hour, 150 per hour overall. */
+export const AI_TOOL_LIMITS = { perIp: 5, global: 150, windowMs: HOUR } as const;
+export function checkAiToolLimit(tool: string, ip: string, now = Date.now()): LimitResult {
+  return check(`ai-tool:${tool}`, AI_TOOL_LIMITS, ip, now);
+}

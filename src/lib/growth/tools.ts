@@ -1,6 +1,20 @@
 // Free mini tools (brief §9 / Phase 4). Pure builders shared by the client pages and tests; no DB, no LLM.
 
-export const TOOL_NAMES = ["ai-mention-checker", "faq-markup-maker", "ai-guide-file-maker"] as const;
+export const TOOL_NAMES = [
+  "ai-mention-checker",
+  "faq-markup-maker",
+  "ai-guide-file-maker",
+  "meta-tag-checker",
+  "heading-checker",
+  "schema-checker",
+  "robots-txt-tester",
+  "ai-crawler-checker",
+  "sitemap-checker",
+  "broken-link-checker",
+  "seo-title-generator",
+  "meta-description-generator",
+  "faq-generator",
+] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 
 export function isToolName(v: unknown): v is ToolName {

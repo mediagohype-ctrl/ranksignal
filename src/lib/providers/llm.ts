@@ -78,7 +78,14 @@ function responseFormatFor(schema: z.ZodTypeAny) {
   }
 }
 
-type StructuredInput<T> = { schema: z.ZodType<T>; system: string; user: string; maxTokens?: number };
+type StructuredInput<T> = {
+  schema: z.ZodType<T>;
+  system: string;
+  user: string;
+  maxTokens?: number;
+  /** OpenRouter only: use this single model instead of OPENROUTER_ANALYSIS_MODELS. Other backends ignore it. */
+  model?: string;
+};
 
 function wrapPrompts(o: { system: string; user: string }) {
   return {
@@ -228,7 +235,8 @@ async function generateWithOpenRouter<T>(o: StructuredInput<T>): Promise<{ data:
 JSON Schema for your response:
 ${js}` : wrapped.system;
   let costMicros = 0;
-  for (const model of getOpenRouterAnalysisModels()) {
+  const models = o.model?.trim() ? [o.model.trim()] : getOpenRouterAnalysisModels();
+  for (const model of models) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const payload = await openRouterChat(

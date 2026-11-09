@@ -69,7 +69,7 @@ export const PAGE_SEO = {
   "/tools": {
     title: "Free SEO & AI Visibility Tools, No Sign-up",
     description:
-      "Free, no-sign-up tools for small businesses: an AI visibility checker, an FAQ schema generator and an llms.txt generator for Google and AI search.",
+      "14 free SEO and AI tools, no sign-up: check meta tags, headings, schema, broken links, robots.txt and sitemaps, and write titles and FAQs with AI.",
     published: "2026-11-04",
     updated: TODAY,
   },
@@ -92,6 +92,111 @@ export const PAGE_SEO = {
     description:
       "Make an llms.txt AI guide file in two minutes: tell ChatGPT and other AI tools who you are and which pages matter most. Free, no sign-up needed.",
     published: "2026-11-04",
+    updated: TODAY,
+  },
+  "/tools/meta-tag-checker": {
+    title: "Free Meta Title & Description Checker",
+    description:
+      "Check any page's Google headline and summary for free: length, missing tags, share preview and what to change, in plain words. No sign-up needed.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/heading-checker": {
+    title: "Free Heading Checker: H1 to H6 Outline",
+    description:
+      "See any page's heading outline (H1 to H6) for free. Spot a missing or repeated H1, skipped levels and question headings AI tools can quote. No sign-up.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/schema-checker": {
+    title: "Free Schema Markup Checker (JSON-LD Test)",
+    description:
+      "Find the schema markup (JSON-LD) on any page and check it for free: types found, errors, missing fields and what Google and AI tools can read from it.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/robots-txt-tester": {
+    title: "Free Robots.txt Tester for Google and AI",
+    description:
+      "Test your robots.txt for free: see which pages Googlebot, GPTBot, PerplexityBot and other crawlers may read, and test any address. No sign-up needed.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/ai-crawler-checker": {
+    title: "Is My Site Blocked From AI? Free Checker",
+    description:
+      "Free check: are ChatGPT, Gemini, Perplexity and Claude allowed to read your website? See every AI crawler your robots.txt and pages block, and fixes.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/sitemap-checker": {
+    title: "Free XML Sitemap Checker and Generator",
+    description:
+      "Check your XML sitemap for free: find it, count its pages, spot errors and broken entries, or make a new sitemap from a list of your page addresses.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/broken-link-checker": {
+    title: "Free Broken Link Checker for Any Page",
+    description:
+      "Find broken links on any web page for free: we test every link on the page and list the ones that fail, redirect or time out, with what to do next.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/seo-title-generator": {
+    title: "Free AI SEO Title Generator for Any Page",
+    description:
+      "Get 5 SEO title ideas for any page in seconds, written by AI to fit Google's limit, with your keyword first and your brand last. Free, no sign-up.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/meta-description-generator": {
+    title: "Free AI Meta Description Generator",
+    description:
+      "Write meta descriptions that get clicks: AI drafts 5 Google summaries for your page in the right length, with a clear reason to click. Free, no sign-up.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/tools/faq-generator": {
+    title: "Free AI FAQ Generator for Your Website",
+    description:
+      "Turn a page or topic into real customer questions and short answers with AI, then get FAQ schema code to paste on your site. Free and no sign-up needed.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/compare": {
+    title: "Compare MyWebRank With Other SEO Tools",
+    description:
+      "How MyWebRank compares with Ahrefs, Semrush and SE Ranking on SEO audits, AI visibility tracking, fixes and prices in rupees. Honest, side by side.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/compare/ahrefs": {
+    title: "MyWebRank vs Ahrefs: Features and Pricing",
+    description:
+      "MyWebRank vs Ahrefs compared honestly: SEO audit, AI visibility, backlinks, keyword data, fixes and pricing in INR, and which one suits your business.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/compare/semrush": {
+    title: "MyWebRank vs Semrush: Features and Pricing",
+    description:
+      "MyWebRank vs Semrush compared honestly: site audit, AI search visibility, keyword tools, done-for-you fixes and pricing in rupees. See which fits you.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/compare/se-ranking": {
+    title: "MyWebRank vs SE Ranking: Features and Pricing",
+    description:
+      "MyWebRank vs SE Ranking compared: website audit, AI visibility tracking, rank tracking, fixes and INR pricing for small businesses and agencies in India.",
+    published: TODAY,
+    updated: TODAY,
+  },
+  "/compare/ahrefs-alternatives": {
+    title: "Best Ahrefs Alternatives in India",
+    description:
+      "The best Ahrefs alternatives for Indian businesses compared: Semrush, SE Ranking, Ubersuggest, Google Search Console and MyWebRank, and who each suits.",
+    published: TODAY,
     updated: TODAY,
   },
   "/blog": {

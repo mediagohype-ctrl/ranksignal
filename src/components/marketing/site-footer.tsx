@@ -12,9 +12,25 @@ const COLS = [
       { href: "/services", label: "Done-for-you services" },
       { href: "/pricing", label: "Pricing" },
       { href: "/#sample", label: "Sample result" },
-      { href: "/tools", label: "Free tools" },
+      { href: "/compare", label: "Compare SEO tools" },
+      { href: "/compare/ahrefs", label: "MyWebRank vs Ahrefs" },
+      { href: "/compare/semrush", label: "MyWebRank vs Semrush" },
+      { href: "/compare/ahrefs-alternatives", label: "Ahrefs alternatives" },
+    ],
+  },
+  {
+    title: "Free tools",
+    links: [
+      { href: "/tools", label: "All free tools" },
       { href: "/free-check", label: "Free SEO checker" },
       { href: "/tools/ai-mention-checker", label: "AI visibility checker" },
+      { href: "/tools/ai-crawler-checker", label: "AI crawler checker" },
+      { href: "/tools/meta-tag-checker", label: "Meta tag checker" },
+      { href: "/tools/broken-link-checker", label: "Broken link checker" },
+      { href: "/tools/schema-checker", label: "Schema checker" },
+      { href: "/tools/robots-txt-tester", label: "Robots.txt tester" },
+      { href: "/tools/sitemap-checker", label: "Sitemap checker" },
+      { href: "/tools/seo-title-generator", label: "SEO title generator" },
       { href: "/tools/faq-markup-maker", label: "FAQ schema generator" },
       { href: "/tools/ai-guide-file-maker", label: "llms.txt generator" },
     ],
@@ -84,7 +100,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-bg">
       <div className="container-marketing grid gap-14 pb-14 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-10">
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-4">
           <Logo />
           <p className="mk-body mt-5 max-w-sm text-fg-soft">
             Find out what AI assistants say about your business, and what to fix so they get it right.
@@ -120,7 +136,7 @@ export function SiteFooter() {
             </ul>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:col-span-7">
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:col-span-8 lg:grid-cols-5 lg:gap-8">
           {COLS.map((c) => (
             <nav key={c.title} aria-label={c.title}>
               <p className="mk-label">{c.title}</p>

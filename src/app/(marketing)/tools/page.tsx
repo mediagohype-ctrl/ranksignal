@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Bot, FileText, MessageCircleQuestion, ScanSearch } from "lucide-react";
+import { AlignLeft, ArrowRight, Bot, Braces, FileText, Heading, Link2Off, Map, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
 import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
 import { MAX_ENGINES, PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
@@ -10,11 +10,50 @@ import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 
 export const metadata: Metadata = staticPageMetadata("/tools");
 
-const TOOLS = [
-  { href: "/tools/ai-mention-checker", icon: <Bot />, title: "AI mention checker", body: "Can ChatGPT and other AI tools read your website well enough to name you?" },
-  { href: "/tools/faq-markup-maker", icon: <MessageCircleQuestion />, title: "FAQ code maker", body: "Turn your customers' questions into info for Google and AI." },
-  { href: "/tools/ai-guide-file-maker", icon: <FileText />, title: "AI guide file maker", body: "Tell AI tools who you are and which pages matter (llms.txt)." },
-  { href: "/free-check", icon: <ScanSearch />, title: "Free website check", body: "Your score out of 100 and the top things to fix, in 30 seconds." },
+interface Tool {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}
+
+/** Every free tool, grouped by the job it does. Keep in step with PAGE_SEO (src/lib/seo/pages.ts). */
+const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[] = [
+  {
+    id: "check",
+    title: "Check your website",
+    intro: "Find what's holding a page back on Google, in plain words.",
+    tools: [
+      { href: "/free-check", icon: <ScanSearch />, title: "Free website check", body: "Your score out of 100 for Google and AI, and the top things to fix." },
+      { href: "/tools/meta-tag-checker", icon: <Tag />, title: "Meta title & description checker", body: "Is your Google headline and summary the right length, and do shares show a preview?" },
+      { href: "/tools/heading-checker", icon: <Heading />, title: "Heading checker", body: "See a page's H1 to H6 outline and spot missing, repeated or skipped headings." },
+      { href: "/tools/schema-checker", icon: <Braces />, title: "Schema markup checker", body: "Find the structured data on a page and the fields Google expects for each type." },
+      { href: "/tools/broken-link-checker", icon: <Link2Off />, title: "Broken link checker", body: "Test every link on a page and find the ones that fail, redirect or time out." },
+    ],
+  },
+  {
+    id: "ai",
+    title: "Google and AI crawlers",
+    intro: "Make sure Google, ChatGPT, Gemini and Perplexity can read and list your pages.",
+    tools: [
+      { href: "/tools/ai-mention-checker", icon: <Bot />, title: "AI visibility checker", body: "Can ChatGPT and other AI tools read your website well enough to name you?" },
+      { href: "/tools/ai-crawler-checker", icon: <ShieldCheck />, title: "Is my site blocked from AI?", body: "See which AI crawlers your robots.txt and pages allow or block." },
+      { href: "/tools/robots-txt-tester", icon: <FileText />, title: "Robots.txt tester", body: "Test any address against your robots.txt for Googlebot and AI crawlers." },
+      { href: "/tools/sitemap-checker", icon: <Map />, title: "XML sitemap checker & generator", body: "Check your sitemap for errors and broken entries, or make a new one." },
+      { href: "/tools/ai-guide-file-maker", icon: <FileText />, title: "llms.txt generator", body: "Tell AI tools who you are and which pages matter most." },
+    ],
+  },
+  {
+    id: "write",
+    title: "Write for Google and AI",
+    intro: "Drafts and code you can paste straight into your website.",
+    tools: [
+      { href: "/tools/seo-title-generator", icon: <Type />, title: "SEO title generator", body: "5 AI-written title ideas that fit Google's limit, keyword first." },
+      { href: "/tools/meta-description-generator", icon: <AlignLeft />, title: "Meta description generator", body: "5 AI-written Google summaries in the right length, with a reason to click." },
+      { href: "/tools/faq-generator", icon: <Sparkles />, title: "AI FAQ generator", body: "Turn a page into real customer questions and short answers, plus FAQ code." },
+      { href: "/tools/faq-markup-maker", icon: <MessageCircleQuestion />, title: "FAQ schema generator", body: "Type your own questions and answers and get FAQPage code to paste." },
+    ],
+  },
 ];
 
 export default function ToolsPage() {
@@ -23,22 +62,39 @@ export default function ToolsPage() {
       <JsonLd
         data={[webPageLd("/tools", { type: "CollectionPage" }), faqLdFromQa(TOOLS_FAQ), breadcrumbLd([{ name: "Free tools", path: "/tools" }])]}
       />
-      <PageHero eyebrow="Free tools" title="Free tools to get found on Google and AI" intro={<p>Simple, free and no sign-up. Made for small business owners.</p>} />
-      <section className="bg-bg py-12 sm:py-16">
-        <ul className="container-marketing grid gap-6 sm:grid-cols-2">
-          {TOOLS.map((t) => (
-            <li key={t.href}>
-              <Link href={t.href} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition hover:border-primary">
-                <IconTile>{t.icon}</IconTile>
-                <h2 className="mt-4 text-h4 text-fg">{t.title}</h2>
-                <p className="mt-2 flex-1 text-small text-muted">{t.body}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-small font-medium text-primary">
-                  Open tool <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <PageHero eyebrow="Free tools" title="Free tools to get found on Google and AI" intro={<p>{TOOL_COUNT} simple tools, free and with no sign-up. Made for small business owners and the people who run their websites.</p>} />
+      {TOOL_GROUPS.map((g, gi) => (
+        <section key={g.id} aria-labelledby={`tools-${g.id}`} className={gi === 0 ? "bg-bg pb-6 pt-12 sm:pt-16" : "bg-bg py-6"}>
+          <div className="container-marketing">
+            <h2 id={`tools-${g.id}`} className="text-h3 text-fg">
+              {g.title}
+            </h2>
+            <p className="mt-1 text-small text-muted">{g.intro}</p>
+            <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {g.tools.map((t) => (
+                <li key={t.href}>
+                  <Link href={t.href} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition hover:border-primary">
+                    <IconTile>{t.icon}</IconTile>
+                    <h3 className="mt-4 text-h4 text-fg">{t.title}</h3>
+                    <p className="mt-2 flex-1 text-small text-muted">{t.body}</p>
+                    <span className="mt-4 inline-flex items-center gap-1 text-small font-medium text-primary">
+                      Open tool <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ))}
+      <section className="bg-bg pb-12 pt-6 sm:pb-16">
+        <p className="container-marketing text-small text-muted">
+          Comparing tools? See how MyWebRank compares with Ahrefs, Semrush and SE Ranking on our{" "}
+          <Link href="/compare" className="font-medium text-primary hover:underline">
+            comparison page
+          </Link>
+          .
+        </p>
       </section>
       <QaSection
         id="tools-faq"
@@ -60,6 +116,7 @@ export default function ToolsPage() {
 }
 
 const starter = PLANS.starter;
+const TOOL_COUNT = TOOL_GROUPS.reduce((n, g) => n + g.tools.length, 0);
 
 const TOOLS_FAQ: Qa[] = [
   {
@@ -76,9 +133,9 @@ const TOOLS_FAQ: Qa[] = [
     q: "What do the free tools check and make?",
     a: (
       <>
-        The AI mention checker and the free check read your robots.txt rules, page titles, headings, business details and
-        structured data. The FAQ code maker writes FAQPage code for your questions and answers. The AI guide file maker
-        writes an llms.txt file listing who you are and which pages matter most.
+        The checkers read one public page or file at a time: titles and descriptions, headings, structured data, links,
+        robots.txt rules and sitemaps. The AI writing tools draft titles, descriptions and FAQs for you to review. The FAQ
+        schema generator and llms.txt generator write code you paste into your site.
       </>
     ),
   },
@@ -86,9 +143,9 @@ const TOOLS_FAQ: Qa[] = [
     q: "Are the tools really free, and do you keep my data?",
     a: (
       <>
-        Yes, they are free and need no sign-up. The FAQ code maker and AI guide file maker run in your browser, so what you
-        type stays on your device. The free check reads your public pages to score them and does not store the pages it
-        reads.
+        Yes, they are free and need no sign-up. The FAQ schema generator, llms.txt generator and sitemap generator run in
+        your browser, so what you type stays on your device. The checkers read public pages to test them and do not store
+        the pages they read. Each tool has a fair-use limit per hour.
       </>
     ),
   },

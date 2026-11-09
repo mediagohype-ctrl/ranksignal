@@ -22,6 +22,31 @@ export function parseSitemapXml(xml: string, limit = 50_000): ParsedSitemap {
   return { kind, locs };
 }
 
+export interface SitemapEntry {
+  loc: string;
+  lastmod: string | null;
+}
+
+/**
+ * Like parseSitemapXml, but keeps each entry's <lastmod> and the full entry count (`total` counts every
+ * <url>/<sitemap> element even past `limit`, so callers can report the 50,000-URL protocol limit).
+ */
+export function parseSitemapEntries(xml: string, limit = 50_000): { kind: ParsedSitemap["kind"]; entries: SitemapEntry[]; total: number } {
+  const $ = cheerio.load(xml, { xml: true });
+  const isIndex = $("sitemapindex").length > 0;
+  const items = $(isIndex ? "sitemapindex > sitemap" : "urlset > url");
+  const entries: SitemapEntry[] = [];
+  items.each((_, el) => {
+    if (entries.length >= limit) return false;
+    const loc = $(el).children("loc").first().text().trim();
+    if (!loc) return;
+    const lastmod = $(el).children("lastmod").first().text().trim();
+    entries.push({ loc, lastmod: lastmod || null });
+  });
+  const kind = isIndex ? "index" : $("urlset").length > 0 ? "urlset" : "unknown";
+  return { kind, entries, total: items.length };
+}
+
 export interface SitemapDiscovery {
   sitemapsFound: string[];
   urls: string[];
