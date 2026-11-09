@@ -9,26 +9,9 @@ import { Markdown } from "@/components/marketing/markdown";
 import { parseMarkdown, slugify } from "@/lib/content/markdown";
 import { scorePost, type Pillar } from "@/lib/content/score";
 import { adminSend } from "./actions";
+import type { EditorPost } from "@/lib/content/editor-defaults";
 
-export interface EditorPost {
-  id?: string;
-  slug: string;
-  title: string;
-  metaTitle: string;
-  description: string;
-  answer: string;
-  body: string;
-  keyPoints: string[];
-  faqs: { q: string; a: string }[];
-  keywords: string[];
-  category: string;
-  coverImageUrl: string;
-  authorName: string;
-  noindex: boolean;
-  status: string;
-  /** Set once a post has ever been published: its address is then fixed (changing it would break links). */
-  slugLocked?: boolean;
-}
+export type { EditorPost } from "@/lib/content/editor-defaults";
 
 /** Live slug clean-up that still lets people type dashes and spaces ("my post" → "my-post"). */
 const typingSlug = (v: string) =>
@@ -39,49 +22,6 @@ const typingSlug = (v: string) =>
     .replace(/^-+/, "")
     .slice(0, 100);
 const MAX_KEYWORDS = 15;
-
-const STARTER_BODY = `## What is [topic]?
-
-Explain the idea in plain words. Link to a related page like [our free website check](/free-check).
-
-## Why does it matter?
-
-Give 2–3 specific facts or numbers, and link the source you used.
-
-## How do you do it? (step by step)
-
-1. First step
-2. Second step
-3. Third step
-
-## [Topic] vs [alternative]
-
-| | Option A | Option B |
-|---|---|---|
-| Best for | … | … |
-| Cost | … | … |
-`;
-
-export const emptyPost = (authorName: string): EditorPost => ({
-  slug: "",
-  title: "",
-  metaTitle: "",
-  description: "",
-  answer: "",
-  body: STARTER_BODY,
-  keyPoints: ["", "", ""],
-  faqs: [
-    { q: "", a: "" },
-    { q: "", a: "" },
-    { q: "", a: "" },
-  ],
-  keywords: [],
-  category: "SEO",
-  coverImageUrl: "",
-  authorName,
-  noindex: false,
-  status: "draft",
-});
 
 const scoreTone = (s: number): Tone => (s >= 75 ? "success" : s >= 50 ? "warning" : "danger");
 const PILLAR_NAME: Record<Pillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO" };

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireStaffPage } from "@/lib/admin/guard";
 import { siteBase } from "@/lib/free-check/site-seo";
 import { PageHeader } from "@/components/ui";
-import { PostEditor, emptyPost } from "@/components/admin/post-editor";
+import { PostEditor } from "@/components/admin/post-editor";
+import { emptyPost } from "@/lib/content/editor-defaults";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "New post" };
