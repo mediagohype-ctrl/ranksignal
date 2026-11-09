@@ -5,18 +5,17 @@ import { FinalCta, IconTile, JsonLd, PageHero, Section } from "@/components/mark
 import { FreeCheckTool } from "@/components/marketing/free-check-tool";
 import { LinkButton, SectionHeading } from "@/components/ui";
 import { LeadBox } from "../_components/lead-box";
+import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
+import { PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
+import { TRIAL_AI } from "@/components/marketing/plans";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { PAGE_SEO } from "@/lib/seo/pages";
+import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 
-const PATH = "/tools/ai-mention-checker";
-const TITLE = "Free AI Visibility Checker: can ChatGPT find your business?";
-const DESCRIPTION =
-  "Free check: can ChatGPT, Gemini and other AI tools read your website well enough to name your business? See your score and what to fix, in plain words. No sign-up.";
+const PATH = "/tools/ai-mention-checker" as const;
+const DESCRIPTION = PAGE_SEO[PATH].description;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: PATH },
-  openGraph: { title: `${TITLE} · ${BRAND.name}`, description: DESCRIPTION, url: PATH, siteName: BRAND.name, type: "website" },
-};
+export const metadata: Metadata = staticPageMetadata(PATH);
 
 const STEPS = [
   { icon: <ShieldCheck />, title: "AI robots can get in", body: "Your site's robot rules file lets ChatGPT, Gemini and Perplexity read your pages." },
@@ -40,6 +39,13 @@ export default function AiMentionCheckerPage() {
           offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
           provider: { "@type": "Organization", name: BRAND.name, url: BRAND.appUrl },
         }}
+      />
+      <JsonLd
+        data={[
+          webPageLd(PATH, { base }),
+          faqLdFromQa(MORE),
+          breadcrumbLd([{ name: "Free tools", path: "/tools" }, { name: "AI visibility checker", path: PATH }], base),
+        ]}
       />
       <PageHero
         eyebrow="Free tool"
@@ -78,7 +84,50 @@ export default function AiMentionCheckerPage() {
           </LinkButton>
         </div>
       </Section>
+      <QaSection id="amc-faq" title="Questions about AI mentions" items={MORE}>
+        <SourcesList
+          links={[
+            { href: "https://developers.google.com/search/docs/appearance/ai-features", label: "Google Search Central: AI features and your website" },
+            { href: "https://datatracker.ietf.org/doc/html/rfc9309", label: "IETF RFC 9309: Robots Exclusion Protocol" },
+            { href: "https://schema.org/LocalBusiness", label: "schema.org: LocalBusiness", note: "how to state your business details clearly" },
+          ]}
+        />
+      </QaSection>
       <FinalCta title="See exactly what AI says about you" body={<p>Real answers from ChatGPT, Gemini and Perplexity, plus the fixes that help most. 7 days free.</p>} />
     </>
   );
 }
+
+const MORE: Qa[] = [
+  {
+    q: "Why can't ChatGPT find my business?",
+    a: (
+      <>
+        Usually for one of three reasons: your robots.txt file blocks AI robots, your pages don&apos;t say clearly who you
+        are and where you work, or few other websites mention you. This free check covers the first two. The rules robots
+        follow are set out in the{" "}
+        <SourceLink href="https://datatracker.ietf.org/doc/html/rfc9309">Robots Exclusion Protocol</SourceLink>.
+      </>
+    ),
+  },
+  {
+    q: "How does the full AI check measure mentions?",
+    a: (
+      <>
+        We ask AI assistants the questions your customers ask and record whether each answer names you, links to you or
+        recommends a competitor. The free trial includes {TRIAL_AI.summary}, which is {TRIAL_AI.answers} answers in{" "}
+        {TRIAL_DAYS} days. The Growth plan covers {PLANS.growth.aiAnswersPerMonth.toLocaleString("en-IN")} AI answers a month.
+      </>
+    ),
+  },
+  {
+    q: "How long does it take to start getting mentioned?",
+    a: (
+      <>
+        It varies. Fixing robots.txt rules and business details can be done in a day, but AI assistants update what they know
+        at different speeds, and some rely on live web search. Honest tracking over several weeks shows whether your mention
+        rate is really moving.
+      </>
+    ),
+  },
+];

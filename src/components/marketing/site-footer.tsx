@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND } from "@/lib/brand";
+import { BRAND, brandLocationLine } from "@/lib/brand";
 import { Logo } from "./logo";
 import { ENGINES } from "./ui";
 
@@ -30,6 +30,7 @@ const COLS = [
       { href: "/learn/website-seo-audit-checklist", label: "SEO audit checklist" },
       { href: "/docs", label: "Getting started" },
       { href: "/#faq", label: "FAQ" },
+      { href: "/about", label: "About us" },
       { href: "/contact", label: "Contact us" },
     ],
   },
@@ -49,7 +50,37 @@ const COLS = [
   },
 ];
 
+/** Readable site name for a profile URL (linkedin.com → LinkedIn), from its hostname. */
+const PROFILE_NAMES: Record<string, string> = {
+  "linkedin.com": "LinkedIn",
+  "x.com": "X",
+  "twitter.com": "X",
+  "youtube.com": "YouTube",
+  "facebook.com": "Facebook",
+  "instagram.com": "Instagram",
+  "github.com": "GitHub",
+  "crunchbase.com": "Crunchbase",
+  "g2.com": "G2",
+  "producthunt.com": "Product Hunt",
+  "medium.com": "Medium",
+  "threads.net": "Threads",
+};
+
+function profileName(url: string): string {
+  let host = "";
+  try {
+    host = new URL(url).hostname.replace(/^(www|m)\./, "");
+  } catch {
+    return url;
+  }
+  const known = Object.keys(PROFILE_NAMES).find((h) => host === h || host.endsWith(`.${h}`));
+  if (known) return PROFILE_NAMES[known];
+  const label = host.split(".").slice(-2, -1)[0] ?? host;
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function SiteFooter() {
+  const location = brandLocationLine();
   return (
     <footer className="border-t border-border bg-bg">
       <div className="container-marketing grid gap-14 pb-14 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-10">
@@ -67,6 +98,27 @@ export function SiteFooter() {
               {BRAND.supportEmail}
             </a>
           </p>
+          {location && <p className="mt-2 text-small text-muted">{location}</p>}
+          {BRAND.sameAs.length > 0 && (
+            <ul aria-label={`${BRAND.name} on other sites`} className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
+              {BRAND.sameAs.map((url) => {
+                const name = profileName(url);
+                return (
+                  <li key={url}>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="me noopener noreferrer"
+                      aria-label={`${BRAND.name} on ${name} (opens in a new tab)`}
+                      className="text-small text-fg-soft underline-offset-4 transition-colors hover:text-fg hover:underline"
+                    >
+                      {name}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:col-span-7">
           {COLS.map((c) => (

@@ -1,7 +1,7 @@
 // AEO checks: is content shaped so answer engines (featured snippets, AI overviews, voice) can lift answers?
 import { isHomeUrl, isKeyPageUrl, isUtilityUrl } from "@/lib/audit/page-kind";
 import {
-  findHome, makeCheck, notMeasured, okPages, pct, plural, ratioScore, targetScore, urlOf, v2Pages, NEEDS_RESCAN,
+  findHome, isConsolidated, isV2, makeCheck, notMeasured, okPages, pct, plural, qualityPages, ratioScore, targetScore, urlOf, v2Pages, NEEDS_RESCAN,
   type CheckContext, type EvaluatedCheck, type ReportPage,
 } from "@/lib/report/inputs";
 
@@ -10,8 +10,9 @@ const ANSWER_SCHEMA = ["FAQPage", "QAPage", "HowTo"];
 export const QUESTION_PAGE_TARGET = 0.4;
 export const KEY_PAGE_MIN_WORDS = 300;
 
+/** Indexable, non-utility pages with enough text to judge (URL variants and noindex pages are left out). */
 export const contentPages = (pages: ReportPage[]) =>
-  pages.filter((p) => !isUtilityUrl(urlOf(p)) && p.extracted!.wordCount >= 150);
+  pages.filter((p) => !isUtilityUrl(urlOf(p)) && !isConsolidated(p) && p.extracted!.wordCount >= 150);
 
 const isInvalidLd = (j: unknown) => typeof j === "object" && j !== null && (j as Record<string, unknown>)["@invalid"] === true;
 
@@ -21,13 +22,17 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
   const out: EvaluatedCheck[] = [];
   const v2 = v2Pages(ctx.pages);
   const v2Content = contentPages(v2);
+  // Per-page quality measures skip noindex pages and URL variants canonicalised elsewhere (see qualityPages).
+  const q = qualityPages(ctx.pages);
+  const qv2 = q.filter(isV2);
+  const v2q = qv2.length ? qv2 : v2;
 
   // Question-style headings.
   if (v2.length === 0) {
     out.push(notMeasured(P, "aeo.question_headings", "Headings that ask real questions", 2, NEEDS_RESCAN));
     out.push(notMeasured(P, "aeo.direct_answers", "Short, direct answers", 2.5, NEEDS_RESCAN));
   } else {
-    const base = v2Content.length ? v2Content : v2;
+    const base = v2Content.length ? v2Content : v2q;
     const withQ = base.filter((p) => (p.extracted!.questionHeadings?.length ?? 0) > 0);
     const share = withQ.length / base.length;
     out.push(makeCheck(P, "aeo.question_headings", "Headings that ask real questions", 2, {
@@ -38,9 +43,9 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
       facts: { withQuestions: withQ.length, total: base.length },
     }));
 
-    const questions = v2.reduce((a, p) => a + (p.extracted!.questionHeadings?.length ?? 0), 0);
-    const answered = v2.reduce((a, p) => a + (p.extracted!.questionsWithConciseAnswer ?? 0), 0);
-    const unanswered = v2.filter((p) => (p.extracted!.questionHeadings?.length ?? 0) > (p.extracted!.questionsWithConciseAnswer ?? 0));
+    const questions = v2q.reduce((a, p) => a + (p.extracted!.questionHeadings?.length ?? 0), 0);
+    const answered = v2q.reduce((a, p) => a + (p.extracted!.questionsWithConciseAnswer ?? 0), 0);
+    const unanswered = v2q.filter((p) => (p.extracted!.questionHeadings?.length ?? 0) > (p.extracted!.questionsWithConciseAnswer ?? 0));
     out.push(questions === 0
       ? makeCheck(P, "aeo.direct_answers", "Short, direct answers", 2.5, {
           score: 40,
@@ -58,7 +63,7 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
 
   // FAQ / HowTo / QAPage structured data on question-heavy pages.
   {
-    const qPages = ok.filter((p) => {
+    const qPages = q.filter((p) => {
       const qs = p.extracted!.questionHeadings?.length ?? p.extracted!.headings.filter((h) => h.level >= 2 && h.text.trim().endsWith("?")).length;
       return qs >= 2;
     });
@@ -98,7 +103,7 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
 
   // Readability (Flesch, English only).
   {
-    const scored = v2.filter((p) => typeof p.extracted!.readingEase === "number");
+    const scored = v2q.filter((p) => typeof p.extracted!.readingEase === "number");
     if (scored.length === 0) {
       out.push(notMeasured(P, "aeo.readability", "Easy-to-read writing", 1.5, v2.length ? "Not enough English text to score how easy it is to read." : NEEDS_RESCAN));
     } else {
@@ -115,22 +120,22 @@ export function aeoChecks(ctx: CheckContext): EvaluatedCheck[] {
 
   // Structured data coverage + validity.
   {
-    const invalid = ok.filter((p) => p.extracted!.jsonLd.some(isInvalidLd));
-    const valid = ok.filter((p) => p.extracted!.jsonLd.some((j) => !isInvalidLd(j)));
-    const coverage = valid.length / ok.length;
+    const invalid = q.filter((p) => p.extracted!.jsonLd.some(isInvalidLd));
+    const valid = q.filter((p) => p.extracted!.jsonLd.some((j) => !isInvalidLd(j)));
+    const coverage = valid.length / q.length;
     const score = Math.max(0, targetScore(coverage, 0.8) - invalid.length * 10);
     out.push(makeCheck(P, "aeo.structured_data", "Info for Google and AI", 2, {
       score,
-      detail: `${valid.length} of ${ok.length} pages include info for Google and AI${invalid.length ? `; ${plural(invalid.length, "page")} ${invalid.length === 1 ? "has" : "have"} broken info that can't be read` : ""}.`,
-      affected: [...invalid.map(urlOf), ...ok.filter((p) => !valid.includes(p)).map(urlOf)],
-      facts: { valid: valid.length, invalid: invalid.length, total: ok.length },
+      detail: `${valid.length} of ${q.length} pages include info for Google and AI${invalid.length ? `; ${plural(invalid.length, "page")} ${invalid.length === 1 ? "has" : "have"} broken info that can't be read` : ""}.`,
+      affected: [...invalid.map(urlOf), ...q.filter((p) => !valid.includes(p)).map(urlOf)],
+      facts: { valid: valid.length, invalid: invalid.length, total: q.length },
     }));
   }
 
   // Content depth on key pages.
   {
     const home = findHome(ctx);
-    const key = ok.filter((p) => (home && p === home) || isHomeUrl(urlOf(p)) || isKeyPageUrl(urlOf(p))).filter((p) => !isUtilityUrl(urlOf(p)));
+    const key = q.filter((p) => (home && p === home) || isHomeUrl(urlOf(p)) || isKeyPageUrl(urlOf(p))).filter((p) => !isUtilityUrl(urlOf(p)));
     if (key.length === 0) {
       out.push(notMeasured(P, "aeo.content_depth", "Depth of key pages", 2, "No key pages (home, services, pricing, about) were found in the sample."));
     } else {

@@ -1,12 +1,15 @@
 // Legal entity + contact details shown on the Privacy Policy, Terms and footer.
 // TODO(legal): every value marked TODO is a placeholder — replace with the registered details before launch.
-import { BRAND } from "@/lib/brand";
+import { BRAND, brandAddressLine } from "@/lib/brand";
 
 /** TODO(legal): registered legal name of the company that runs the service. */
 export const LEGAL_ENTITY = "Go Hype Media";
 
-/** TODO(legal): registered office address (as on GST / company registration). */
-export const LEGAL_ADDRESS = "TODO: registered office address, City, State, PIN, India";
+/**
+ * Registered office address (as on GST / company registration), from BRAND_ADDRESS_* — the same values as
+ * Organization.address. Empty string when unset: pages must then render nothing for it.
+ */
+export const LEGAL_ADDRESS = brandAddressLine();
 
 /** Where people send privacy, deletion and legal requests. TODO(legal): confirm the inbox. */
 export const LEGAL_EMAIL = BRAND.supportEmail;

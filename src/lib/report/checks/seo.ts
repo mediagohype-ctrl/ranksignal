@@ -3,7 +3,7 @@ import { TITLE_MAX, TITLE_MIN, DESCRIPTION_MAX, THIN_WORDS } from "@/lib/audit/r
 import { isHomeUrl, isUtilityUrl } from "@/lib/audit/page-kind";
 import { urlKey } from "@/lib/crawler/normalize";
 import {
-  findHome, makeCheck, notMeasured, okPages, plural, ratioScore, urlOf, v2Pages, NEEDS_RESCAN,
+  findHome, isCanonicalisedElsewhere, isNoindex, isV2, makeCheck, notMeasured, okPages, plural, qualityPages, ratioScore, urlOf, v2Pages, NEEDS_RESCAN,
   type CheckContext, type EvaluatedCheck,
 } from "@/lib/report/inputs";
 
@@ -35,13 +35,18 @@ function dupGroups(values: { url: string; v: string | null | undefined }[]) {
 export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   const all = ctx.pages;
   const ok = okPages(all);
+  // Per-page quality checks look only at pages Google indexes in their own right: noindex pages and
+  // URL variants whose canonical points elsewhere are folded into their main page, as Google does.
+  const q = qualityPages(all);
   const out: EvaluatedCheck[] = [];
   if (all.length === 0) return out;
 
   // Indexability: errors, non-200 and noindex.
   {
     const errors = all.filter((p) => p.statusCode === null || p.statusCode >= 400 || !!p.error);
-    const noindex = ok.filter((p) => /\bnoindex\b|\bnone\b/i.test(p.extracted!.robotsMeta ?? ""));
+    // noindex is intended (not a problem) on utility pages (login, legal…) and on variants canonicalised elsewhere.
+    const allNoindex = ok.filter(isNoindex);
+    const noindex = allNoindex.filter((p) => !isUtilityUrl(urlOf(p)) && !isCanonicalisedElsewhere(p));
     const bad = [...errors.map(urlOf), ...noindex.map(urlOf)];
     const parts = [] as string[];
     if (errors.length) parts.push(`${plural(errors.length, "page")} returned an error or could not be loaded`);
@@ -50,7 +55,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
       score: ratioScore(bad.length, all.length),
       detail: parts.length ? `${parts.join("; ")} — out of ${all.length} pages checked.` : `All ${all.length} pages checked load correctly and can appear on Google.`,
       affected: bad,
-      facts: { errors: errors.length, noindex: noindex.length, total: all.length },
+      facts: { errors: errors.length, noindex: noindex.length, intentionalNoindex: allNoindex.length - noindex.length, total: all.length },
     }));
   }
 
@@ -69,12 +74,12 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
 
   // Titles.
   {
-    const missing = ok.filter((p) => !p.extracted!.title);
-    const long = ok.filter((p) => (p.extracted!.title?.length ?? 0) > TITLE_MAX);
-    const short = ok.filter((p) => p.extracted!.title && p.extracted!.title.length < TITLE_MIN);
-    const { dupUrls, groups } = dupGroups(ok.map((p) => ({ url: urlOf(p), v: p.extracted!.title })));
+    const missing = q.filter((p) => !p.extracted!.title);
+    const long = q.filter((p) => (p.extracted!.title?.length ?? 0) > TITLE_MAX);
+    const short = q.filter((p) => p.extracted!.title && p.extracted!.title.length < TITLE_MIN);
+    const { dupUrls, groups } = dupGroups(q.map((p) => ({ url: urlOf(p), v: p.extracted!.title })));
     const badSet = new Set([...missing, ...short].map(urlOf).map(keyOf).concat(Array.from(dupUrls)));
-    const score = ratioScore(badSet.size + long.length * 0.3, ok.length);
+    const score = ratioScore(badSet.size + long.length * 0.3, q.length);
     const parts: string[] = [];
     if (missing.length) parts.push(`${missing.length} missing`);
     if (dupUrls.size) parts.push(`${dupUrls.size} duplicated`);
@@ -82,19 +87,19 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     if (short.length) parts.push(`${short.length} too short`);
     out.push(makeCheck(P, "seo.titles", "Google headlines", 3, {
       score,
-      detail: parts.length ? `Of ${ok.length} pages, Google headlines are ${parts.join(", ")}.` : `All ${ok.length} pages have their own Google headline of a sensible length.`,
+      detail: parts.length ? `Of ${q.length} pages, Google headlines are ${parts.join(", ")}.` : `All ${q.length} pages have their own Google headline of a sensible length.`,
       affected: [...missing.map(urlOf), ...Array.from(dupUrls), ...short.map(urlOf), ...long.map(urlOf)],
       affectedCount: new Set([...badSet, ...long.map((p) => keyOf(urlOf(p)))]).size,
       evidence: long[0]?.extracted?.title ? `Example long Google headline (${long[0].extracted.title.length} characters): "${long[0].extracted.title.slice(0, 90)}"` : undefined,
-      facts: { missing: missing.length, duplicate: dupUrls.size, duplicateGroups: groups, long: long.length, short: short.length, total: ok.length },
+      facts: { missing: missing.length, duplicate: dupUrls.size, duplicateGroups: groups, long: long.length, short: short.length, total: q.length },
     }));
   }
 
   // Meta descriptions.
   {
-    const missing = ok.filter((p) => !p.extracted!.description);
-    const long = ok.filter((p) => (p.extracted!.description?.length ?? 0) > DESCRIPTION_MAX);
-    const { dupUrls } = dupGroups(ok.map((p) => ({ url: urlOf(p), v: p.extracted!.description })));
+    const missing = q.filter((p) => !p.extracted!.description);
+    const long = q.filter((p) => (p.extracted!.description?.length ?? 0) > DESCRIPTION_MAX);
+    const { dupUrls } = dupGroups(q.map((p) => ({ url: urlOf(p), v: p.extracted!.description })));
     const badSet = new Set([...missing.map(urlOf).map(keyOf), ...Array.from(dupUrls)]);
     const parts: string[] = [];
     const verb = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
@@ -102,28 +107,28 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     if (dupUrls.size) parts.push(verb(dupUrls.size, "shares its Google summary with another page", "share their Google summary with another page"));
     if (long.length) parts.push(verb(long.length, `is longer than ${DESCRIPTION_MAX} characters`, `are longer than ${DESCRIPTION_MAX} characters`));
     out.push(makeCheck(P, "seo.meta_description", "Google summaries", 2, {
-      score: ratioScore(badSet.size + long.length * 0.3, ok.length),
-      detail: parts.length ? `Of ${ok.length} pages, ${parts.join(", ")}.` : `All ${ok.length} pages have their own Google summary.`,
+      score: ratioScore(badSet.size + long.length * 0.3, q.length),
+      detail: parts.length ? `Of ${q.length} pages, ${parts.join(", ")}.` : `All ${q.length} pages have their own Google summary.`,
       affected: [...missing.map(urlOf), ...Array.from(dupUrls), ...long.map(urlOf)],
       affectedCount: new Set([...badSet, ...long.map((p) => keyOf(urlOf(p)))]).size,
-      facts: { missing: missing.length, duplicate: dupUrls.size, long: long.length, total: ok.length },
+      facts: { missing: missing.length, duplicate: dupUrls.size, long: long.length, total: q.length },
     }));
   }
 
   // H1.
   {
-    const missing = ok.filter((p) => p.extracted!.h1.length === 0);
-    const multiple = ok.filter((p) => p.extracted!.h1.length > 1);
+    const missing = q.filter((p) => p.extracted!.h1.length === 0);
+    const multiple = q.filter((p) => p.extracted!.h1.length > 1);
     out.push(makeCheck(P, "seo.h1", "Main headings", 2, {
-      score: ratioScore(missing.length + multiple.length * 0.4, ok.length),
+      score: ratioScore(missing.length + multiple.length * 0.4, q.length),
       detail: missing.length || multiple.length
-        ? `Of ${ok.length} pages, ${[
+        ? `Of ${q.length} pages, ${[
             missing.length ? `${missing.length} ${missing.length === 1 ? "has" : "have"} no main heading` : "",
             multiple.length ? `${multiple.length} ${multiple.length === 1 ? "has" : "have"} more than one` : "",
           ].filter(Boolean).join(" and ")}.`
         : `Every page has exactly one main heading.`,
       affected: [...missing.map(urlOf), ...multiple.map(urlOf)],
-      facts: { missing: missing.length, multiple: multiple.length, total: ok.length },
+      facts: { missing: missing.length, multiple: multiple.length, total: q.length },
     }));
   }
 
@@ -210,7 +215,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
 
   // Thin content (excluding contact/legal/utility pages).
   {
-    const content = ok.filter((p) => !isUtilityUrl(urlOf(p)));
+    const content = q.filter((p) => !isUtilityUrl(urlOf(p)));
     const thin = content.filter((p) => p.extracted!.wordCount < THIN_WORDS);
     out.push(content.length === 0
       ? notMeasured(P, "seo.thin_content", "Enough content per page", 2, "Only utility pages (contact, legal) were found.")
@@ -226,7 +231,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   // Duplicate content.
   {
     const groups = new Map<string, string[]>();
-    for (const p of ok) {
+    for (const p of q) {
       if (p.extracted!.wordCount < 30) continue;
       const arr = groups.get(p.extracted!.contentFingerprint) ?? [];
       if (!arr.some((u) => keyOf(u) === keyOf(urlOf(p)))) arr.push(urlOf(p));
@@ -234,7 +239,7 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
     }
     const dups = Array.from(groups.values()).filter((g) => g.length > 1).flat();
     out.push(makeCheck(P, "seo.duplicate_content", "Copied pages", 1.5, {
-      score: ratioScore(dups.length, ok.length),
+      score: ratioScore(dups.length, q.length),
       detail: dups.length ? `${plural(dups.length, "page")} ${dups.length === 1 ? "has" : "have"} exactly the same text as another page.` : "No pages have identical text.",
       affected: dups,
       facts: { duplicates: dups.length },
@@ -311,15 +316,17 @@ export function seoChecks(ctx: CheckContext): EvaluatedCheck[] {
   }
 
   // Open Graph (link previews).
-  if (v2.length === 0) {
+  const qv2 = q.filter(isV2);
+  const ogPages = qv2.length ? qv2 : v2;
+  if (ogPages.length === 0) {
     out.push(notMeasured(P, "seo.open_graph", "Share previews", 1, NEEDS_RESCAN));
   } else {
-    const missing = v2.filter((p) => !p.extracted!.openGraph?.title || !p.extracted!.openGraph?.image);
+    const missing = ogPages.filter((p) => !p.extracted!.openGraph?.title || !p.extracted!.openGraph?.image);
     out.push(makeCheck(P, "seo.open_graph", "Share previews", 1, {
-      score: ratioScore(missing.length, v2.length),
-      detail: missing.length ? `${missing.length} of ${v2.length} pages have no share preview (title and picture for WhatsApp and social media).` : `All ${v2.length} pages have a share preview set up.`,
+      score: ratioScore(missing.length, ogPages.length),
+      detail: missing.length ? `${missing.length} of ${ogPages.length} pages have no share preview (title and picture for WhatsApp and social media).` : `All ${ogPages.length} pages have a share preview set up.`,
       affected: missing.map(urlOf),
-      facts: { missing: missing.length, total: v2.length },
+      facts: { missing: missing.length, total: ogPages.length },
     }));
   }
   return out;

@@ -4,19 +4,18 @@ import { BRAND } from "@/lib/brand";
 import { JURISDICTION_CITY, LEGAL_ADDRESS, LEGAL_EMAIL, LEGAL_ENTITY, LEGAL_UPDATED } from "@/lib/site";
 import { TRIAL_DAYS } from "@/components/marketing/plans";
 import { LegalPage } from "@/components/marketing/legal";
+import { JsonLd } from "@/components/marketing/ui";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { webPageLd } from "@/lib/seo/schema";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description: `The terms for using ${BRAND.name}: your account, plans and payments, fixes to your website, and what we can and can't promise.`,
-  alternates: { canonical: "/terms" },
-  robots: { index: true, follow: true },
-};
+export const metadata: Metadata = staticPageMetadata("/terms");
 
 const mail = <a href={`mailto:${LEGAL_EMAIL}`}>{LEGAL_EMAIL}</a>;
 
 export default function TermsPage() {
   return (
     <LegalPage title="Terms of Service" updated={LEGAL_UPDATED}>
+      <JsonLd data={webPageLd("/terms", { name: "Terms of Service" })} />
       <p>
         These terms are an agreement between you and {LEGAL_ENTITY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;), which runs{" "}
         {BRAND.name}. By creating an account, starting a trial or using the free website check, you agree to them. If
@@ -126,8 +125,12 @@ export default function TermsPage() {
       <p>
         {LEGAL_ENTITY}
         <br />
-        {LEGAL_ADDRESS}
-        <br />
+        {LEGAL_ADDRESS && (
+          <>
+            {LEGAL_ADDRESS}
+            <br />
+          </>
+        )}
         Email: {mail}
       </p>
     </LegalPage>

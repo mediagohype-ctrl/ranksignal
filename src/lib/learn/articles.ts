@@ -34,7 +34,32 @@ export type Article = {
   related: string[];
   /** Where the page sends readers next. */
   cta: { label: string; href: string };
+  /** Primary sources the guide relies on (official docs, standards, research). Rendered as outbound links. */
+  sources: { label: string; url: string }[];
 };
+
+const SRC = {
+  seoStarter: { label: "Google Search Central: SEO Starter Guide", url: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide" },
+  aiFeatures: { label: "Google Search Central: AI features and your website", url: "https://developers.google.com/search/docs/appearance/ai-features" },
+  featuredSnippets: { label: "Google Search Central: featured snippets", url: "https://developers.google.com/search/docs/appearance/featured-snippets" },
+  faqPageGoogle: { label: "Google Search Central: FAQ (FAQPage) structured data", url: "https://developers.google.com/search/docs/appearance/structured-data/faqpage" },
+  faqChanges2023: { label: "Google Search Central blog: changes to HowTo and FAQ rich results (August 2023)", url: "https://developers.google.com/search/blog/2023/08/howto-faq-changes" },
+  structuredData: { label: "Google Search Central: introduction to structured data", url: "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data" },
+  titles: { label: "Google Search Central: title links", url: "https://developers.google.com/search/docs/appearance/title-link" },
+  snippets: { label: "Google Search Central: meta descriptions and snippets", url: "https://developers.google.com/search/docs/appearance/snippet" },
+  sitemaps: { label: "Google Search Central: sitemaps overview", url: "https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview" },
+  robotsIntro: { label: "Google Search Central: introduction to robots.txt", url: "https://developers.google.com/search/docs/crawling-indexing/robots/intro" },
+  doINeedSeo: { label: "Google Search Central: Do you need an SEO?", url: "https://developers.google.com/search/docs/fundamentals/do-i-need-seo" },
+  spamPolicies: { label: "Google Search Central: spam policies", url: "https://developers.google.com/search/docs/essentials/spam-policies" },
+  helpfulContent: { label: "Google Search Central: creating helpful, reliable, people-first content", url: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content" },
+  webVitals: { label: "web.dev: Core Web Vitals", url: "https://web.dev/articles/vitals" },
+  rfc9309: { label: "IETF RFC 9309: Robots Exclusion Protocol", url: "https://datatracker.ietf.org/doc/html/rfc9309" },
+  geoPaper: { label: "Aggarwal et al. (2023): GEO: Generative Engine Optimization (arXiv)", url: "https://arxiv.org/abs/2311.09735" },
+  schemaFaq: { label: "schema.org: FAQPage", url: "https://schema.org/FAQPage" },
+  schemaOrg: { label: "schema.org: Organization", url: "https://schema.org/Organization" },
+  schemaLocal: { label: "schema.org: LocalBusiness", url: "https://schema.org/LocalBusiness" },
+  llmsTxt: { label: "The llms.txt proposal (llmstxt.org)", url: "https://llmstxt.org/" },
+} satisfies Record<string, { label: string; url: string }>;
 
 export const ARTICLES: Article[] = [
   {
@@ -77,6 +102,7 @@ export const ARTICLES: Article[] = [
         paragraphs: [
           "More searches now end on the results page or inside an AI chat, because the answer is shown directly. If your page is not the one quoted, a competitor’s is — even if you rank on page one.",
           "Answers are also where trust is built. When Google or ChatGPT names your business as the answer to “who is the best … in Pune”, that recommendation carries more weight than an ad.",
+          "The shift is recent. Google launched AI Overviews in the United States in May 2024 and expanded them to India and several other countries in August 2024. In August 2023 Google also limited FAQ rich results to well-known government and health websites, so FAQ markup now mainly helps machines understand your answers rather than earning a drop-down in results.",
         ],
       },
       {
@@ -111,6 +137,7 @@ export const ARTICLES: Article[] = [
     ],
     related: ["what-is-geo", "seo-vs-aeo-vs-geo", "how-to-get-mentioned-by-chatgpt"],
     cta: { label: "Check your AEO score free", href: "/free-check" },
+    sources: [SRC.featuredSnippets, SRC.aiFeatures, SRC.faqPageGoogle, SRC.faqChanges2023, SRC.schemaFaq],
   },
   {
     slug: "what-is-geo",
@@ -178,12 +205,13 @@ export const ARTICLES: Article[] = [
     ],
     faqs: [
       { q: "What is the difference between GEO and SEO?", a: "SEO aims to rank pages in search results. GEO aims to get a brand named, described correctly and cited inside AI-generated answers from ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews. GEO depends on SEO but adds entity clarity, citable content and off-site mentions." },
-      { q: "Who coined the term Generative Engine Optimization?", a: "The term was introduced in the 2023 research paper “GEO: Generative Engine Optimization” by Pranjal Aggarwal and colleagues from Princeton University and partner institutions." },
+      { q: "Who coined the term Generative Engine Optimization?", a: "The term was introduced in the 2023 research paper “GEO: Generative Engine Optimization” by Pranjal Aggarwal and colleagues from Princeton University and partner institutions. It is freely available to read on arXiv." },
       { q: "Can you pay to appear in ChatGPT answers?", a: "Organic ChatGPT answers cannot be bought. Brands appear because their pages and third-party mentions are retrieved and trusted. Be wary of anyone who guarantees AI mentions." },
       { q: "Does blocking GPTBot stop my site appearing in ChatGPT?", a: "Blocking GPTBot stops OpenAI using your pages for model training. Appearing in ChatGPT search results depends on OAI-SearchBot, which is a separate user agent. Most businesses that want visibility allow both." },
     ],
     related: ["how-to-get-mentioned-by-chatgpt", "what-is-aeo", "llms-txt-guide"],
     cta: { label: "See if AI mentions you", href: "/tools/ai-mention-checker" },
+    sources: [SRC.geoPaper, SRC.aiFeatures, SRC.rfc9309, SRC.schemaOrg],
   },
   {
     slug: "seo-vs-aeo-vs-geo",
@@ -223,12 +251,13 @@ export const ARTICLES: Article[] = [
         heading: "Where do SEO, AEO and GEO overlap?",
         paragraphs: [
           "Most of the work is shared. Search engines and AI assistants both reward pages that load fast, are easy to crawl, answer questions directly and come from a source with a clear identity and a good reputation. That’s why a single audit can score all three — which is what the [MyWebRank report](/features) does.",
+          "The labels are newer than the work. GEO was named in a 2023 research paper, [“GEO: Generative Engine Optimization”](https://arxiv.org/abs/2311.09735), which found that adding statistics, quotations and cited sources could raise a page’s visibility in AI answers by up to 40%. AEO grew out of Google’s [featured snippets](https://developers.google.com/search/docs/appearance/featured-snippets), and Google began showing AI Overviews in the United States in May 2024.",
         ],
       },
       {
         id: "which-first",
         heading: "Which should a small business do first?",
-        paragraphs: ["Work in this order — each layer depends on the one before it."],
+        paragraphs: ["Work in this order — each layer depends on the one before it. A page that Google cannot crawl or index will not be quoted as an answer, and an AI assistant is unlikely to name a business whose own website is unclear about what it does."],
         steps: [
           "Fix SEO basics: indexing, titles and meta descriptions, page speed, mobile layout, HTTPS, a sitemap ([checklist](/learn/website-seo-audit-checklist)).",
           "Add AEO: rewrite key pages around customer questions with direct answers and FAQ structured data.",
@@ -252,6 +281,7 @@ export const ARTICLES: Article[] = [
     ],
     related: ["what-is-aeo", "what-is-geo", "website-seo-audit-checklist"],
     cta: { label: "Get your SEO, AEO & GEO scores", href: "/free-check" },
+    sources: [SRC.seoStarter, SRC.featuredSnippets, SRC.aiFeatures, SRC.geoPaper],
   },
   {
     slug: "how-to-get-mentioned-by-chatgpt",
@@ -275,7 +305,7 @@ export const ARTICLES: Article[] = [
         id: "step-1",
         heading: "Step 1: Can AI crawlers read your website?",
         paragraphs: [
-          "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and the Google-Extended token are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default.",
+          "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and the Google-Extended token are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default. The rules in robots.txt follow an internet standard, [RFC 9309](https://datatracker.ietf.org/doc/html/rfc9309), published by the IETF in 2022.",
           "Also make sure your important content is in the HTML, not only rendered by JavaScript. Many AI crawlers don’t run JavaScript. Our [free AI mention checker](/tools/ai-mention-checker) tests all of this in about 30 seconds.",
         ],
       },
@@ -304,7 +334,7 @@ export const ARTICLES: Article[] = [
         heading: "Step 4: Do your pages answer buyer questions?",
         paragraphs: [
           "Ask ChatGPT the questions your customers ask — “best accounting software for small business in India”, “how much does a website cost in Delhi” — and look at what it cites. Then make sure you have a page that answers that exact question better: a direct answer first, then prices, numbers, comparisons and named sources.",
-          "Pages with concrete, checkable facts are easier for AI to quote than vague marketing copy.",
+          "Pages with concrete, checkable facts are easier for AI to quote than vague marketing copy. A 2023 study, [“GEO: Generative Engine Optimization”](https://arxiv.org/abs/2311.09735), found that adding statistics, quotations and cited sources could raise a page’s visibility in AI-generated answers by up to 40%.",
         ],
       },
       {
@@ -327,10 +357,11 @@ export const ARTICLES: Article[] = [
       { q: "How long does it take to appear in ChatGPT answers?", a: "If you fix crawler access and indexing, ChatGPT search can pick up pages within days to weeks. Being recommended for competitive questions usually takes several months of content and third-party mentions." },
       { q: "Can I guarantee my business will be recommended by ChatGPT?", a: "No one can guarantee it. AI answers vary and depend on many sources. What you can do is remove barriers, publish citable content and earn mentions — and measure the rate honestly." },
       { q: "Does ChatGPT use Google or Bing?", a: "ChatGPT search uses OpenAI’s own crawler (OAI-SearchBot) together with third-party search providers; Microsoft Bing has historically been a major partner. Being well indexed in Bing as well as Google is a sensible step." },
-      { q: "Does Google AI Overviews use the same signals?", a: "AI Overviews are generated from Google’s own search index, so normal Google SEO — indexing, helpful content, authority — is what gets you included." },
+      { q: "Does Google AI Overviews use the same signals?", a: "AI Overviews are generated from Google’s own search index, so normal Google SEO — indexing, helpful content, authority — is what gets you included. Google says there are no extra requirements or special files needed to appear in them." },
     ],
     related: ["what-is-geo", "llms-txt-guide", "seo-vs-aeo-vs-geo"],
     cta: { label: "Check if AI can find you", href: "/tools/ai-mention-checker" },
+    sources: [SRC.geoPaper, SRC.rfc9309, SRC.aiFeatures, SRC.schemaOrg, SRC.schemaLocal],
   },
   {
     slug: "website-seo-audit-checklist",
@@ -436,6 +467,7 @@ export const ARTICLES: Article[] = [
     ],
     related: ["seo-vs-aeo-vs-geo", "what-is-aeo", "how-to-choose-an-seo-company"],
     cta: { label: "Get your free SEO report", href: "/free-check" },
+    sources: [SRC.seoStarter, SRC.titles, SRC.snippets, SRC.sitemaps, SRC.robotsIntro, SRC.structuredData, SRC.webVitals],
   },
   {
     slug: "llms-txt-guide",
@@ -468,6 +500,7 @@ export const ARTICLES: Article[] = [
         heading: "Do ChatGPT and Google actually use llms.txt?",
         paragraphs: [
           "Honest answer: support is uneven. Some AI coding tools, documentation platforms and agents fetch llms.txt, and adoption is growing, but Google has said its search systems don’t rely on it and no major assistant has committed to using it for ranking. Treat it as a low-cost clarity signal, not a ranking trick.",
+          "Google’s guide to [AI features and your website](https://developers.google.com/search/docs/appearance/ai-features) says you don’t need new machine-readable files to appear in AI Overviews. By contrast, robots.txt has been a formal internet standard, [RFC 9309](https://datatracker.ietf.org/doc/html/rfc9309), since 2022, so get that file right before you worry about llms.txt.",
           "What matters more for AI visibility is crawler access, indexing, clear content and third-party mentions — see [how to get mentioned by ChatGPT](/learn/how-to-get-mentioned-by-chatgpt).",
         ],
       },
@@ -486,11 +519,12 @@ export const ARTICLES: Article[] = [
     ],
     faqs: [
       { q: "Is llms.txt the same as robots.txt?", a: "No. robots.txt tells crawlers what they may or may not fetch. llms.txt is a human- and AI-readable summary of what your site is about and which pages matter. You should have both." },
-      { q: "Does llms.txt improve SEO rankings?", a: "There is no evidence that llms.txt affects Google rankings. Its purpose is to help AI tools understand your site quickly." },
+      { q: "Does llms.txt improve SEO rankings?", a: "There is no evidence that llms.txt affects Google rankings. Its purpose is to help AI tools understand your site quickly. Rankings still depend on crawlable, indexable, genuinely helpful pages, so fix those first and treat llms.txt as a small extra." },
       { q: "Where do I upload llms.txt in WordPress?", a: "Upload it to your site’s root folder (the same folder as wp-config.php) using your host’s file manager or FTP, or use an SEO plugin that supports llms.txt." },
     ],
     related: ["what-is-geo", "how-to-get-mentioned-by-chatgpt", "website-seo-audit-checklist"],
     cta: { label: "Make your llms.txt free", href: "/tools/ai-guide-file-maker" },
+    sources: [SRC.llmsTxt, SRC.aiFeatures, SRC.rfc9309, SRC.robotsIntro],
   },
   {
     slug: "how-to-choose-an-seo-company",
@@ -563,12 +597,13 @@ export const ARTICLES: Article[] = [
     ],
     faqs: [
       { q: "Which is the best SEO company in India?", a: "The best SEO company for you is one that audits first, agrees clear deliverables, gives you full data access, reports honestly and covers AI search (AEO and GEO) as well as Google. Compare two or three on those points rather than on promises." },
-      { q: "Can an SEO company guarantee first-page rankings?", a: "No. Google states that no one can guarantee a #1 ranking. Reputable agencies guarantee the work they will deliver, not the position." },
-      { q: "How long does SEO take to show results?", a: "Technical fixes can show results within weeks; competitive rankings and AI mentions usually take three to six months or more of consistent work." },
+      { q: "Can an SEO company guarantee first-page rankings?", a: "No. Google states that no one can guarantee a #1 ranking. Reputable agencies guarantee the work they will deliver, not the position. Treat any promise of a guaranteed top spot as a red flag and ask exactly what will be done each month instead." },
+      { q: "How long does SEO take to show results?", a: "Technical fixes can show results within weeks; competitive rankings and AI mentions usually take three to six months or more of consistent work. Ask for monthly reports that show the work done next to what changed, so you can judge progress honestly." },
       { q: "Should I hire an agency or use an SEO tool?", a: "If you have time and some skills, a tool that tells you exactly what to fix is cheaper. If you don’t, a done-for-you service saves time. MyWebRank offers both, so you can start with the tool and switch later." },
     ],
     related: ["website-seo-audit-checklist", "seo-vs-aeo-vs-geo", "what-is-geo"],
     cta: { label: "See done-for-you plans", href: "/services" },
+    sources: [SRC.doINeedSeo, SRC.spamPolicies, SRC.helpfulContent, SRC.seoStarter],
   },
 ];
 
@@ -593,5 +628,6 @@ export function articleToMarkdown(a: Article, base: string): string {
   }
   out.push("## FAQ", "");
   for (const f of a.faqs) out.push(`### ${f.q}`, "", f.a, "");
+  if (a.sources.length) out.push("## Sources", "", ...a.sources.map((s) => `- [${s.label}](${s.url})`), "");
   return out.join("\n");
 }

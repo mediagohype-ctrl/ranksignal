@@ -9,6 +9,7 @@ import { loadStaff } from "@/lib/admin/guard";
 import { faqsOf, publishedPost, publishedPosts } from "@/lib/content/posts";
 import { parseMarkdown, plainText, wordCount } from "@/lib/content/markdown";
 import { breadcrumbLd, faqLd, siteUrl } from "@/lib/seo/schema";
+import { fitDescription, pageMetadata } from "@/lib/seo/metadata";
 import { FinalCta, JsonLd, PageHero, Prose, inkPill } from "@/components/marketing/ui";
 import { Markdown } from "@/components/marketing/markdown";
 
@@ -34,28 +35,22 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!r) return {};
   const p = r.post;
   const path = `/blog/${p.slug}`;
-  const title = p.metaTitle || p.title;
   return {
-    // The layout appends " · MyWebRank" (12 chars); skip it when the title alone would already be cut off in Google.
-    title: title.length > 48 ? { absolute: title } : title,
-    description: p.description,
-    keywords: p.keywords,
-    alternates: { canonical: path, types: { "application/rss+xml": [{ url: "/blog/rss.xml", title: `${BRAND.name} blog` }] } },
-    authors: [{ name: p.authorName }],
-    robots: r.isPreview || p.noindex ? { index: false, follow: false } : undefined,
-    openGraph: {
-      title,
-      description: p.description,
-      url: path,
-      siteName: BRAND.name,
-      locale: "en_IN",
+    // pageMetadata keeps the full <title> within 60 characters and falls back to /opengraph-image without a cover.
+    ...pageMetadata({
+      title: p.metaTitle || p.title,
+      description: fitDescription(p.description),
+      path,
       type: "article",
       publishedTime: p.publishedAt?.toISOString(),
       modifiedTime: p.updatedAt.toISOString(),
       authors: [p.authorName],
-      ...(p.coverImageUrl ? { images: [{ url: p.coverImageUrl, width: 1200, height: 630 }] } : {}),
-    },
-    twitter: { card: "summary_large_image", title, description: p.description, ...(p.coverImageUrl ? { images: [p.coverImageUrl] } : {}) },
+      keywords: p.keywords,
+      ...(p.coverImageUrl ? { images: [{ url: p.coverImageUrl, width: 1200, height: 630, alt: p.title }] } : {}),
+      ...(r.isPreview || p.noindex ? { robots: { index: false, follow: false } } : {}),
+    }),
+    alternates: { canonical: path, types: { "application/rss+xml": [{ url: "/blog/rss.xml", title: `${BRAND.name} blog` }] } },
+    authors: [{ name: p.authorName }],
   };
 }
 

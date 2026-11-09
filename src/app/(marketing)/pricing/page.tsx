@@ -17,16 +17,11 @@ import {
   servicesContactHref,
 } from "@/components/marketing/plans";
 import { FaqList, ServiceTierCards, ServicesCta } from "@/components/marketing/services-ui";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { webPageLd } from "@/lib/seo/schema";
 
 const SOFTWARE_FROM = Math.min(...MARKETING_PLANS.map((p) => p.price));
-const DESCRIPTION = `Two ways to get found on Google and in AI answers (SEO and GEO): do it yourself from ${inr(SOFTWARE_FROM)}/mo with a ${TRIAL_DAYS}-day free trial, or done for you from ${inr(SERVICE_FROM_PRICE)}/mo where our team makes the fixes. Prices in INR, excluding GST.`;
-
-export const metadata: Metadata = {
-  title: "Pricing: self-serve software and done-for-you plans",
-  description: DESCRIPTION,
-  alternates: { canonical: "/pricing" },
-  openGraph: { title: `Pricing | ${BRAND.name}`, description: DESCRIPTION, url: "/pricing", siteName: BRAND.name, type: "website" },
-};
+export const metadata: Metadata = staticPageMetadata("/pricing");
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
 
@@ -183,7 +178,7 @@ export default function PricingPage() {
 
   return (
     <>
-      <JsonLd data={[softwareLd, serviceLd, faqLd]} />
+      <JsonLd data={[webPageLd("/pricing", { base: SITE }), softwareLd, serviceLd, faqLd]} />
 
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="pricing-title">
@@ -400,6 +395,25 @@ export default function PricingPage() {
                 Write to us
               </Link>
               .
+            </p>
+            <p className="mk-body mt-5 max-w-sm text-fg-soft">
+              GST is added at the rate set by India&apos;s{" "}
+              <a
+                href="https://cbic-gst.gov.in/"
+                rel="noopener"
+                className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+              >
+                Central Board of Indirect Taxes and Customs
+              </a>
+              . Comparing us with an agency? Google&apos;s own guide,{" "}
+              <a
+                href="https://developers.google.com/search/docs/fundamentals/do-i-need-seo"
+                rel="noopener"
+                className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+              >
+                Do you need an SEO?
+              </a>
+              , lists the questions worth asking.
             </p>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">

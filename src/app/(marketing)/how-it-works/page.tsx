@@ -3,10 +3,13 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import { RiskBadge } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
-import { inkPill } from "@/components/marketing/ui";
+import { JsonLd, inkPill } from "@/components/marketing/ui";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 import { HOW_STEPS, RISK_CLASSES } from "@/components/marketing/content";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
+import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import {
   BaselineVignette,
   FixQueueVignette,
@@ -17,11 +20,7 @@ import {
   WorkLogVignette,
 } from "@/components/marketing/how-it-works-ui";
 
-export const metadata: Metadata = {
-  title: "How it works: check, fix and grow",
-  description: `How ${BRAND.name} works: add your website, we check it for Google and AI, you get a plain to-do list, approve fixes, and we check again — with undo.`,
-  alternates: { canonical: "/how-it-works" },
-};
+export const metadata: Metadata = staticPageMetadata("/how-it-works");
 
 const STEP_DETAILS: string[][] = [
   [
@@ -103,6 +102,44 @@ const LOOP_INDEX = [...HOW_STEPS.map((s, i) => ({ n: String(i + 1).padStart(2, "
   href: "#monthly-report",
 }];
 
+function methodFaq(): Qa[] {
+  const [starter, , agency] = MARKETING_PLANS;
+  return [
+    {
+      q: "How does the website check read my pages?",
+      a: (
+        <>
+          Like a search engine. We start at your homepage and sitemap, follow your internal links and obey your robots.txt
+          rules, as set out in the{" "}
+          <SourceLink href="https://datatracker.ietf.org/doc/html/rfc9309">Robots Exclusion Protocol</SourceLink>. Each check
+          reads up to {num(starter.limits.maxPagesPerCrawl)} pages on the {starter.name} plan and up to{" "}
+          {num(agency.limits.maxPagesPerCrawl)} on {agency.name}.
+        </>
+      ),
+    },
+    {
+      q: "How are the scores worked out?",
+      a: (
+        <>
+          Every check belongs to one of four areas: SEO, AEO, GEO or Brand. Each area gets a score from 0 to 100 and a letter
+          grade, based on how many of your pages pass each check and how much that check matters. A check we could not measure
+          is marked as not measured, never guessed.
+        </>
+      ),
+    },
+    {
+      q: "How do you measure what AI assistants say about me?",
+      a: (
+        <>
+          We ask each AI assistant on your plan your customers&apos; real questions and record whether the answer names you,
+          links to you or names a competitor instead. On {starter.name} that is {num(starter.ai.answersPerMonth)} AI answers a
+          month; every score shows how many answers it is based on.
+        </>
+      ),
+    },
+  ];
+}
+
 const linkClass =
   "inline-flex items-center gap-1.5 text-[1rem] font-medium text-fg underline decoration-border-strong underline-offset-[6px] hover:decoration-fg";
 
@@ -111,6 +148,8 @@ export default function HowItWorksPage() {
 
   return (
     <>
+      {/* FAQPage repeats the visible "Our method" questions and answers word for word. */}
+      <JsonLd data={[webPageLd("/how-it-works"), faqLdFromQa(methodFaq()), breadcrumbLd([{ name: "How it works", path: "/how-it-works" }])]} />
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="hiw-title" className="relative overflow-hidden">
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-24">
@@ -336,6 +375,25 @@ export default function HowItWorksPage() {
           </div>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------ Method: how we measure */}
+      <QaSection
+        id="method"
+        eyebrow="Our method"
+        title="How we measure your website and AI answers"
+        description="The numbers below come from our plan settings, so they match what the app does."
+        items={methodFaq()}
+      >
+        <SourcesList
+          title="Public standards our checks follow"
+          links={[
+            { href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide", label: "Google Search Central: SEO Starter Guide" },
+            { href: "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data", label: "Google Search Central: introduction to structured data" },
+            { href: "https://datatracker.ietf.org/doc/html/rfc9309", label: "IETF RFC 9309: Robots Exclusion Protocol" },
+            { href: "https://schema.org/Organization", label: "schema.org: Organization" },
+          ]}
+        />
+      </QaSection>
 
       {/* ------------------------------------------------------------ Two ways to run the loop */}
       <section id="two-ways" aria-labelledby="ways-title" className="scroll-mt-20 py-24 sm:py-32">

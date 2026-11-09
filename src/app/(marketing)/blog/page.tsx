@@ -3,20 +3,27 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { publishedPosts } from "@/lib/content/posts";
-import { ARTICLES } from "@/lib/learn/articles";
-import { breadcrumbLd, siteUrl } from "@/lib/seo/schema";
+import { ARTICLES, getArticle } from "@/lib/learn/articles";
+import { breadcrumbLd, faqLdFromQa, siteUrl, webPageLd } from "@/lib/seo/schema";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { PAGE_SEO, PAGE_UPDATED } from "@/lib/seo/pages";
 import { JsonLd, PageHero } from "@/components/marketing/ui";
+import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
+import { PLANS } from "@/lib/billing/plans";
 
-const TITLE = "Blog: SEO, AEO & GEO news, research and how-tos";
-const DESCRIPTION =
-  "The MyWebRank blog: practical SEO, answer engine optimization (AEO) and generative engine optimization (GEO) advice for getting found on Google and recommended by ChatGPT, Gemini and Perplexity.";
+const DESCRIPTION = PAGE_SEO["/blog"].description;
 
 export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
+  ...staticPageMetadata("/blog"),
   alternates: { canonical: "/blog", types: { "application/rss+xml": [{ url: "/blog/rss.xml", title: `${BRAND.name} blog` }] } },
-  openGraph: { title: `${TITLE} · ${BRAND.name}`, description: DESCRIPTION, url: "/blog", siteName: BRAND.name, type: "website" },
 };
+
+/** Latest of the post dates and the page's own YYYY-MM-DD date, as an ISO string. */
+function newestDate(dates: Date[], fallback: string): string {
+  const own = new Date(`${fallback}T00:00:00Z`);
+  const newest = dates.reduce((d, x) => (x > d ? x : d), own);
+  return newest === own ? fallback : newest.toISOString();
+}
 
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 
@@ -53,6 +60,13 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
               author: { "@type": "Person", name: p.authorName },
             })),
           },
+          webPageLd("/blog", {
+            type: "CollectionPage",
+            base,
+            // The index changes whenever a post does: newest post date, else the page's own date.
+            extra: { dateModified: newestDate(all.map((p) => p.updatedAt), PAGE_UPDATED["/blog"]), mainEntity: { "@id": `${base}/blog#blog` } },
+          }),
+          faqLdFromQa(BLOG_FAQ),
           breadcrumbLd([{ name: "Blog", path: "/blog" }], base),
         ]}
       />
@@ -123,6 +137,97 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
           )}
         </div>
       </section>
+      <section aria-labelledby="blog-topics" className="border-y border-border bg-surface py-16 sm:py-20">
+        <div className="container-marketing">
+          <div className="max-w-3xl space-y-4 text-body leading-relaxed text-fg-soft [&_a]:font-medium [&_a]:text-primary [&_a]:underline-offset-4 [&_a:hover]:underline">
+            <p className="eyebrow">What we write about</p>
+            <h2 id="blog-topics" className="text-h2 text-fg">
+              What does the {BRAND.name} blog cover?
+            </h2>
+            <p>
+              The blog covers three connected skills: SEO (ranking in Google&apos;s normal results), AEO (being the answer
+              Google, voice assistants and chatbots read out) and GEO (being named and cited by AI assistants like ChatGPT,
+              Gemini and Perplexity). Posts are practical and written for small-business owners, not specialists.
+            </p>
+            <p>
+              Research matters here because the field is young. A 2023 study,{" "}
+              <SourceLink href="https://arxiv.org/abs/2311.09735">GEO: Generative Engine Optimization</SourceLink>, found that
+              adding statistics, quotations and cited sources could raise a page&apos;s visibility in AI answers by up to 40%.
+              We test ideas like that against what our own audits see: on the {PLANS.starter.name} plan a single website check
+              reads up to {PLANS.starter.maxPagesPerCrawl.toLocaleString("en-IN")} pages, so patterns show up quickly.
+            </p>
+          </div>
+          <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {TOPIC_HUBS.map((h) => (
+              <li key={h.title} className="flex flex-col rounded-2xl border border-border bg-bg p-6">
+                <h3 className="text-h4 text-fg">{h.title}</h3>
+                <p className="mt-2 flex-1 text-small leading-relaxed text-muted">{h.body}</p>
+                <ul className="mt-4 space-y-1.5 text-small">
+                  {h.guides.map((slug) => {
+                    const g = getArticle(slug);
+                    return g ? (
+                      <li key={slug}>
+                        <Link href={`/learn/${slug}`} className="font-medium text-primary hover:underline">
+                          {g.title}
+                        </Link>
+                      </li>
+                    ) : null;
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+      <QaSection id="blog-faq" title="About the blog" items={BLOG_FAQ}>
+        <SourcesList
+          links={[
+            { href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide", label: "Google Search Central: SEO Starter Guide" },
+            { href: "https://developers.google.com/search/docs/appearance/ai-features", label: "Google Search Central: AI features and your website" },
+            { href: "https://schema.org/BlogPosting", label: "schema.org: BlogPosting", note: "how each post is described to search engines" },
+          ]}
+        />
+      </QaSection>
     </>
   );
 }
+
+const TOPIC_HUBS: { title: string; body: string; guides: string[] }[] = [
+  { title: "SEO basics", body: "Getting pages crawled, indexed and ranked on Google, and auditing what is holding them back.", guides: ["website-seo-audit-checklist"] },
+  { title: "AEO: being the answer", body: "Question headings, short direct answers and FAQ markup that answer engines can lift.", guides: ["what-is-aeo", "seo-vs-aeo-vs-geo"] },
+  { title: "GEO: AI assistants", body: "How ChatGPT, Gemini and Perplexity pick sources, and how to become one of them.", guides: ["what-is-geo", "how-to-get-mentioned-by-chatgpt", "llms-txt-guide"] },
+  { title: "Choosing help", body: "What good SEO work looks like, what it costs and which promises to walk away from.", guides: ["how-to-choose-an-seo-company"] },
+];
+
+const BLOG_FAQ: Qa[] = [
+  {
+    q: "Who writes the MyWebRank blog?",
+    a: (
+      <>
+        The {BRAND.name} team, the same people who build our website checks and run our done-for-you service. Every post
+        shows the author and date. When we quote a number, it comes from our own product or from a named public source,
+        such as Google&apos;s documentation or published research.
+      </>
+    ),
+  },
+  {
+    q: "How often do you publish new posts?",
+    a: (
+      <>
+        We publish when we have something useful to say rather than on a fixed schedule, and we update older posts and
+        guides when search engines change. To get new posts as they appear, subscribe to the <a href="/blog/rss.xml">RSS feed</a>{" "}
+        or check back here.
+      </>
+    ),
+  },
+  {
+    q: "Where should I start if I am new to this?",
+    a: (
+      <>
+        Start with <Link href="/learn/seo-vs-aeo-vs-geo">SEO vs AEO vs GEO</Link> for the big picture, then run the{" "}
+        <Link href="/free-check">free website check</Link> to see where your own site stands. It needs no sign-up and lists
+        your top fixes in plain words, so you know which guide to read next.
+      </>
+    ),
+  },
+];

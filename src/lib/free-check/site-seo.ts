@@ -2,6 +2,7 @@
 import type { MetadataRoute } from "next";
 import { BRAND } from "@/lib/brand";
 import { ARTICLES, articleToMarkdown } from "@/lib/learn/articles";
+import { PAGE_UPDATED } from "@/lib/seo/pages";
 
 export function siteBase(appUrl: string = BRAND.appUrl): string {
   return appUrl.replace(/\/+$/, "");
@@ -21,11 +22,11 @@ export interface MarketingRoute {
   priority: number;
   /** Listed in llms.txt under this section ("Optional" = can be skipped by LLMs with short context). */
   section: "Product" | "Guides" | "Blog" | "Docs" | "Optional";
-  /** YYYY-MM-DD of the last content change (defaults to MARKETING_UPDATED). */
+  /** YYYY-MM-DD of the last content change (static pages: PAGE_UPDATED in src/lib/seo/pages.ts; else MARKETING_UPDATED). */
   updated?: string;
 }
 
-const STATIC_ROUTES: MarketingRoute[] = [
+const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/", title: "Home", summary: "SEO, AEO and GEO platform: website SEO report, AI visibility tracking in ChatGPT, Gemini, Perplexity and Claude, and approval-gated fixes.", changeFrequency: "weekly", priority: 1, section: "Product" },
   { path: "/free-check", title: "Free website SEO checker", summary: "Free, no-sign-up SEO, AEO and GEO checker that scores a website's homepage and key pages in about 30 seconds and lists the top fixes.", changeFrequency: "monthly", priority: 0.9, section: "Product" },
   { path: "/features", title: "Features", summary: "SEO audit, AI visibility tracking across ChatGPT, Gemini, Perplexity and Google AI Overviews, competitor share of voice, recommendations and safe publishing.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
@@ -38,11 +39,15 @@ const STATIC_ROUTES: MarketingRoute[] = [
   { path: "/tools/ai-guide-file-maker", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/blog", title: "Blog", summary: "News, research and how-tos on SEO, AEO and GEO from the MyWebRank team.", changeFrequency: "weekly", priority: 0.8, section: "Blog" },
   { path: "/learn", title: "SEO, AEO & GEO guides", summary: "Plain-English guides to ranking on Google and getting mentioned in AI answers.", changeFrequency: "weekly", priority: 0.8, section: "Guides" },
+  { path: "/about", title: "About us", summary: "Who runs MyWebRank: the India-based SEO, AEO and GEO team behind the product and service, and how to reach us.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/docs", title: "Getting started", summary: "Onboarding, connecting WordPress, the approval policy and known limitations.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/contact", title: "Contact", summary: "Contact form for agency plans, questions and support.", changeFrequency: "yearly", priority: 0.5, section: "Docs" },
-  { path: "/privacy", title: "Privacy policy", summary: "How customer data is handled.", changeFrequency: "yearly", priority: 0.2, section: "Optional", updated: "2026-11-04" },
-  { path: "/terms", title: "Terms of service", summary: "Terms of use.", changeFrequency: "yearly", priority: 0.2, section: "Optional", updated: "2026-11-04" },
+  { path: "/privacy", title: "Privacy policy", summary: "How customer data is handled.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
+  { path: "/terms", title: "Terms of service", summary: "Terms of use.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
 ];
+
+/** Each static page's lastmod comes from the same map as its WebPage.dateModified (src/lib/seo/pages.ts). */
+const STATIC_ROUTES: MarketingRoute[] = STATIC_ROUTE_LIST.map((r) => ({ ...r, updated: PAGE_UPDATED[r.path] ?? r.updated }));
 
 const ARTICLE_ROUTES: MarketingRoute[] = ARTICLES.map((a) => ({
   path: `/learn/${a.slug}`,
@@ -136,6 +141,7 @@ function keyFacts(base: string): string[] {
     "- AI visibility is reported as rates over many sampled answers with the sample size shown; results are measured, not guaranteed.",
     "- Changes to a customer's website are only published after approval of the exact draft, and every change can be rolled back.",
     `- A free website SEO, AEO and GEO check (no sign-up) is available at ${base}/free-check.`,
+    `- Who runs ${BRAND.name}, and how to contact the team: ${base}/about and ${base}/contact.`,
     `- Two ways to buy: self-serve software plans (with a free trial) or a done-for-you service where the team ships fixes monthly and reports the impact (${base}/services). Prices are in Indian rupees, excluding GST. Contact: ${BRAND.supportEmail}.`,
   ];
 }

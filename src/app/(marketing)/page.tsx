@@ -7,27 +7,16 @@ import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { SampleResult } from "@/components/marketing/home-sample";
 import { FAQS } from "@/components/marketing/content";
 import { MARKETING_PLANS, TRIAL_DAYS, inr, planSignupHref } from "@/components/marketing/plans";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { webPageLd } from "@/lib/seo/schema";
 
 // Home page: exactly five blocks (brief §5.1) — hero, sample result, three steps, three plans, five questions.
 
-// Title leads with the phrases buyers search ("SEO", "website SEO report", "AI search") — the brand comes after.
-const TITLE = `Free SEO, AEO & GEO Website Checker and AI Visibility Report | ${BRAND.name}`;
-const DESCRIPTION =
-  "Free website SEO report in 30 seconds. See how Google and AI assistants like ChatGPT, Gemini and Perplexity see your business, get your top SEO, AEO and GEO fixes in plain words — or let our team fix them for you.";
-
-export const metadata: Metadata = {
-  title: { absolute: TITLE },
-  description: DESCRIPTION,
+// Title leads with the phrases buyers search ("SEO", "AEO", "GEO", "AI visibility") — the brand comes last.
+// Title and description live in src/lib/seo/pages.ts (length- and uniqueness-tested).
+export const metadata: Metadata = staticPageMetadata("/", {
   keywords: ["SEO checker", "website SEO report", "AEO", "GEO", "AI search visibility", "ChatGPT SEO", "SEO company India"],
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: TITLE,
-    description: DESCRIPTION,
-    url: "/",
-    siteName: BRAND.name,
-    type: "website",
-  },
-};
+});
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
 
@@ -47,17 +36,7 @@ const STEPS = [
 export default function HomePage() {
   // Organization + WebSite come from the marketing layout (sitewide); this page adds the product itself.
   const jsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      "@id": `${SITE}/#webpage`,
-      url: `${SITE}/`,
-      name: TITLE,
-      description: DESCRIPTION,
-      isPartOf: { "@id": `${SITE}/#website` },
-      about: { "@id": `${SITE}/#organization` },
-      inLanguage: "en-IN",
-    },
+    webPageLd("/", { base: SITE }),
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
@@ -243,6 +222,37 @@ export default function HomePage() {
                 Something else on your mind?{" "}
                 <Link href="/contact" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
                   Write to us
+                </Link>
+                .
+              </p>
+              <p className="mk-body mt-5 max-w-sm text-fg-soft">
+                Our checks follow public standards, such as Google&apos;s{" "}
+                <a
+                  href="https://developers.google.com/search/docs/fundamentals/seo-starter-guide"
+                  rel="noopener"
+                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+                >
+                  SEO Starter Guide
+                </a>
+                , the{" "}
+                <a
+                  href="https://schema.org/docs/gs.html"
+                  rel="noopener"
+                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+                >
+                  schema.org
+                </a>{" "}
+                vocabulary and the{" "}
+                <a
+                  href="https://datatracker.ietf.org/doc/html/rfc9309"
+                  rel="noopener"
+                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+                >
+                  robots.txt standard
+                </a>
+                . Read more{" "}
+                <Link href="/about" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
+                  about us
                 </Link>
                 .
               </p>

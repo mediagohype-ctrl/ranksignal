@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { BRAND } from "@/lib/brand";
+import { OG_IMAGE } from "@/lib/seo/metadata";
 import { Analytics } from "@/components/analytics";
 import "./globals.css";
 
@@ -9,14 +10,15 @@ const bingVerification = verifyEnv("BING_SITE_VERIFICATION");
 
 export const metadata: Metadata = {
   metadataBase: new URL(BRAND.appUrl),
-  title: { default: `${BRAND.name} — SEO, AEO & GEO platform for AI search visibility`, template: `%s · ${BRAND.name}` },
+  // Keyword first, brand last; pages keep the full title within 60 characters (src/lib/seo/metadata.ts).
+  title: { default: `SEO, AEO & GEO Platform for AI Visibility · ${BRAND.name}`, template: `%s · ${BRAND.name}` },
   description: BRAND.description,
   applicationName: BRAND.name,
   creator: BRAND.name,
   publisher: BRAND.name,
   category: "technology",
   formatDetection: { telephone: false, email: false, address: false },
-  openGraph: { title: BRAND.name, description: BRAND.description, siteName: BRAND.name, type: "website", locale: "en_IN" },
+  openGraph: { title: BRAND.name, description: BRAND.description, siteName: BRAND.name, type: "website", locale: "en_IN", images: [OG_IMAGE] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-snippet": -1, "max-image-preview": "large", "max-video-preview": -1 } },
   verification: {
     google: verifyEnv("GOOGLE_SITE_VERIFICATION"),

@@ -2,7 +2,7 @@
 import { mentionsBrand } from "@/lib/crawler/extract";
 import { productNames } from "@/lib/report/checks/geo";
 import {
-  findHome, hostOf, makeCheck, notMeasured, okPages, pct, plural, urlOf, v2Pages, NEEDS_RESCAN,
+  findHome, hostOf, makeCheck, notMeasured, okPages, pct, plural, qualityPages, urlOf, v2Pages, NEEDS_RESCAN,
   type CheckContext, type EvaluatedCheck,
 } from "@/lib/report/inputs";
 
@@ -22,17 +22,19 @@ export function brandChecks(ctx: CheckContext): EvaluatedCheck[] {
     if (names.length === 0) {
       out.push(notMeasured(P, "brand.name_consistency", "Business name used the same way", 2, "No business name is set for this website yet."));
     } else {
-      const inTitle = ok.filter((p) => mentionsBrand(p.extracted!.title, names));
+      // Per-page share over indexable pages only (URL variants and noindex pages don't show in Google).
+      const q = qualityPages(ctx.pages);
+      const inTitle = q.filter((p) => mentionsBrand(p.extracted!.title, names));
       const homeTitle = !!home && mentionsBrand(home.extracted!.title, names);
       const homeH1 = !!home && (home.extracted!.h1.some((h) => mentionsBrand(h, names)) || mentionsBrand(home.extracted!.openGraph?.siteName, names));
       const homeBody = !!home && (home.extracted!.brandMentions ? home.extracted!.brandMentions.bodyCount > 0 : mentionsBrand(home.extracted!.textSample, names));
-      const titleShare = inTitle.length / ok.length;
+      const titleShare = inTitle.length / q.length;
       const score = (homeTitle ? 35 : 0) + (homeH1 ? 15 : 0) + (homeBody ? 10 : 0) + 40 * Math.min(1, titleShare / 0.7);
       out.push(makeCheck(P, "brand.name_consistency", "Business name used the same way", 2, {
         score,
-        detail: `"${names[0]}" appears in ${inTitle.length} of ${ok.length} Google headlines; in your homepage's Google headline: ${homeTitle ? "yes" : "no"}; in your homepage's main heading or site name: ${homeH1 ? "yes" : "no"}.`,
-        affected: ok.filter((p) => !inTitle.includes(p)).map(urlOf),
-        facts: { inTitle: inTitle.length, total: ok.length, homeTitle, homeH1 },
+        detail: `"${names[0]}" appears in ${inTitle.length} of ${q.length} Google headlines; in your homepage's Google headline: ${homeTitle ? "yes" : "no"}; in your homepage's main heading or site name: ${homeH1 ? "yes" : "no"}.`,
+        affected: q.filter((p) => !inTitle.includes(p)).map(urlOf),
+        facts: { inTitle: inTitle.length, total: q.length, homeTitle, homeH1 },
       }));
     }
 

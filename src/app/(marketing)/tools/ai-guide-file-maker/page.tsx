@@ -4,18 +4,15 @@ import { JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { SectionHeading } from "@/components/ui";
 import { GuideMaker } from "../_components/guide-maker";
 import { LeadBox } from "../_components/lead-box";
+import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { PAGE_SEO } from "@/lib/seo/pages";
+import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 
-const PATH = "/tools/ai-guide-file-maker";
-const TITLE = "Free llms.txt Generator: make your AI guide file";
-const DESCRIPTION =
-  "Make an AI guide file (llms.txt) for your website in two minutes: tell ChatGPT and other AI tools who you are and which pages matter. Free, no sign-up.";
+const PATH = "/tools/ai-guide-file-maker" as const;
+const DESCRIPTION = PAGE_SEO[PATH].description;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: PATH },
-  openGraph: { title: `${TITLE} · ${BRAND.name}`, description: DESCRIPTION, url: PATH, siteName: BRAND.name, type: "website" },
-};
+export const metadata: Metadata = staticPageMetadata(PATH);
 
 const HOW = [
   { q: "What is an AI guide file?", a: "A short text file on your website (yoursite.com/llms.txt) that tells AI tools what your business does and which pages to read first. Experts call it llms.txt." },
@@ -39,11 +36,10 @@ export default function AiGuideFileMakerPage() {
             description: DESCRIPTION,
             offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
           },
-          {
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: HOW.map((h) => ({ "@type": "Question", name: h.q, acceptedAnswer: { "@type": "Answer", text: h.a } })),
-          },
+          // One FAQPage for every visible Q&A block on the page.
+          faqLdFromQa([...HOW, ...MORE]),
+          webPageLd(PATH, { base }),
+          breadcrumbLd([{ name: "Free tools", path: "/tools" }, { name: "llms.txt generator", path: PATH }], base),
         ]}
       />
       <PageHero
@@ -68,6 +64,34 @@ export default function AiGuideFileMakerPage() {
           ))}
         </dl>
       </Section>
+      <QaSection id="guide-more" title="What to put in your AI guide file" items={MORE}>
+        <SourcesList
+          links={[
+            { href: "https://developers.google.com/search/docs/appearance/ai-features", label: "Google Search Central: AI features and your website" },
+            { href: "https://developers.google.com/search/docs/crawling-indexing/robots/intro", label: "Google Search Central: introduction to robots.txt" },
+            { href: "https://datatracker.ietf.org/doc/html/rfc9309", label: "IETF RFC 9309: Robots Exclusion Protocol" },
+          ]}
+        />
+      </QaSection>
     </>
   );
 }
+
+const MORE: Qa[] = [
+  {
+    q: "What should an llms.txt file include?",
+    a: "Your business name, one sentence on what you do, for whom and where, a few key facts such as areas served and opening hours, and links to your most useful pages with a one-line note each. This maker lets you list up to 50 pages and write a summary of up to 500 characters.",
+  },
+  {
+    q: "Where did llms.txt come from?",
+    a: "The llms.txt format was proposed in September 2024 as a simple way for websites to point AI tools at their most useful pages. It is a community proposal, not an official standard, so no AI company has promised to read it. That is why we call it a low-cost extra, not a must-have.",
+  },
+  {
+    q: "Is llms.txt the same as robots.txt?",
+    a: "No. robots.txt decides which robots may read your pages, and it is an official standard published in 2022 as RFC 9309. llms.txt only suggests what to read first. If your robots.txt blocks AI robots, an llms.txt file will not help, so check your robots.txt rules before anything else.",
+  },
+  {
+    q: "Do I need llms.txt to appear in Google's AI answers?",
+    a: "No. Google says you do not need special AI files or markup to appear in its AI features; normal search rules apply. Being crawlable, indexable and genuinely helpful matters far more. An AI guide file is a small extra that may help other AI tools understand your business.",
+  },
+];

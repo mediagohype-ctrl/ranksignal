@@ -6,7 +6,7 @@ const KEY_PAGE_RE = new RegExp(
   `^\\/${LOCALE}(about|about-us|company|team|contact|contact-us|pricing|plans|prices|services?|products?|solutions|features|shop|store|blog|news|articles|resources|faq|faqs|help|support|locations?|reviews|testimonials|case-studies|portfolio|work)(?:\\.html?|\\.php)?\\/?$`,
   "i",
 );
-const UTILITY_RE = /\/(contact|contact-us|privacy|privacy-policy|terms|tos|legal|cookie|cookies|login|log-in|signin|sign-in|signup|sign-up|register|cart|checkout|account|search|404|thank-you|thanks|sitemap)(\/|\.|-|$)/i;
+const UTILITY_RE = /\/(contact|contact-us|privacy|privacy-policy|terms|tos|legal|cookie|cookies|login|log-in|logout|signin|sign-in|signup|sign-up|register|forgot-password|reset-password|password|accept-invite|invite|verify-email|cart|checkout|account|search|404|thank-you|thanks|sitemap)(\/|\.|-|$)/i;
 const ARTICLE_RE = /\/(blog|news|articles?|posts?|guides?|insights|resources|learn|stories|library|knowledge|tutorials?)\/[^/]+/i;
 
 const pathOf = (url: string): string | null => {

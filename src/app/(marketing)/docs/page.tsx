@@ -3,14 +3,13 @@ import Link from "next/link";
 import { BookOpen, Mail } from "lucide-react";
 import { RiskBadge } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
-import { PageHero, Prose } from "@/components/marketing/ui";
+import { JsonLd, PageHero, Prose } from "@/components/marketing/ui";
 import { RISK_CLASSES } from "@/components/marketing/content";
+import { MARKETING_PLANS, TRIAL_AI, TRIAL_DAYS, num } from "@/components/marketing/plans";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbLd, webPageLd } from "@/lib/seo/schema";
 
-export const metadata: Metadata = {
-  title: { absolute: `Getting started — ${BRAND.name} Docs` },
-  description: `Set up ${BRAND.name}: getting started, connecting WordPress, GitHub and other platforms, how approvals work, reading your numbers, white-label branding and known limits.`,
-  alternates: { canonical: "/docs" },
-};
+export const metadata: Metadata = staticPageMetadata("/docs");
 
 const TOC = [
   { id: "onboarding", label: "Getting started" },
@@ -26,6 +25,7 @@ const TOC = [
 export default function DocsPage() {
   return (
     <>
+      <JsonLd data={[webPageLd("/docs", { name: "Getting started guide" }), breadcrumbLd([{ name: "Docs", path: "/docs" }])]} />
       <PageHero
         eyebrow="Docs"
         title="Getting started guide"
@@ -92,6 +92,13 @@ export default function DocsPage() {
               <p>
                 Until you connect your website, {BRAND.name} only reads: it reads your public pages and asks AI
                 assistants your questions. You can copy every fix and make the change by hand.
+              </p>
+              <p>
+                The free trial lasts {TRIAL_DAYS} days and includes {TRIAL_AI.summary} ({TRIAL_AI.answers} AI answers) plus
+                a full website check. On paid plans, each website check reads up to{" "}
+                {num(MARKETING_PLANS[0].limits.maxPagesPerCrawl)} pages on {MARKETING_PLANS[0].name},{" "}
+                {num(MARKETING_PLANS[1].limits.maxPagesPerCrawl)} on {MARKETING_PLANS[1].name} and{" "}
+                {num(MARKETING_PLANS[2].limits.maxPagesPerCrawl)} on {MARKETING_PLANS[2].name}.
               </p>
             </section>
 
@@ -253,8 +260,16 @@ export default function DocsPage() {
                   position, AI mentions or links.
                 </li>
                 <li>
-                  Website checks follow your site&apos;s robot rules file and your plan&apos;s page limit. Pages behind a
-                  login, or built mostly in the browser, may only be partly checked.
+                  Website checks follow your site&apos;s robot rules file (robots.txt, as defined in{" "}
+                  <a href="https://datatracker.ietf.org/doc/html/rfc9309" rel="noopener">
+                    RFC 9309
+                  </a>
+                  ) and your plan&apos;s page limit. Pages behind a login, or built mostly in the browser, may only be partly
+                  checked; Google explains why in its guide to{" "}
+                  <a href="https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics" rel="noopener">
+                    JavaScript SEO basics
+                  </a>
+                  .
                 </li>
                 <li>
                   We can publish to WordPress, GitHub, Shopify, Webflow, Contentful, Sanity and Wix, each limited to

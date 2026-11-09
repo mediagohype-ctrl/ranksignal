@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { getArticle } from "@/lib/learn/articles";
 import { breadcrumbLd, faqLd, siteUrl } from "@/lib/seo/schema";
+import { fitDescription, pageMetadata } from "@/lib/seo/metadata";
 import { FinalCta, JsonLd, PageHero, Prose, inkPill } from "@/components/marketing/ui";
 import { RichText } from "@/components/marketing/rich-text";
 
@@ -15,23 +16,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const a = getArticle(slug);
   if (!a) return {};
-  const path = `/learn/${a.slug}`;
   return {
-    title: a.metaTitle,
-    description: a.description,
-    keywords: a.keywords,
-    alternates: { canonical: path },
-    authors: [{ name: `${BRAND.name} team`, url: "/" }],
-    openGraph: {
+    // pageMetadata keeps the full <title> within 60 characters (drops the brand suffix or shortens when needed).
+    ...pageMetadata({
       title: a.metaTitle,
-      description: a.description,
-      url: path,
-      siteName: BRAND.name,
+      description: fitDescription(a.description),
+      path: `/learn/${a.slug}`,
       type: "article",
       publishedTime: a.published,
       modifiedTime: a.updated,
-    },
-    twitter: { card: "summary_large_image", title: a.metaTitle, description: a.description },
+      authors: [`${BRAND.name} team`],
+      keywords: a.keywords,
+    }),
+    authors: [{ name: `${BRAND.name} team`, url: "/" }],
   };
 }
 
@@ -184,6 +181,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   </div>
                 ))}
               </section>
+              {a.sources.length > 0 && (
+                <section id="sources" aria-labelledby="sources-h">
+                  <h2 id="sources-h">Sources</h2>
+                  <ul>
+                    {a.sources.map((s) => (
+                      <li key={s.url}>
+                        <a href={s.url} rel="noopener">
+                          {s.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             </Prose>
             <p className="mt-10">
               <Link href={a.cta.href} className={inkPill("lg")}>
@@ -208,6 +219,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     FAQ
                   </a>
                 </li>
+                {a.sources.length > 0 && (
+                  <li>
+                    <a href="#sources" className="text-fg-soft hover:text-fg">
+                      Sources
+                    </a>
+                  </li>
+                )}
               </ol>
             </nav>
             {related.length > 0 && (

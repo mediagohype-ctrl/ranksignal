@@ -50,7 +50,7 @@ const AUTHORITATIVE_HOSTS = [
   "wiley.com", "jstor.org", "arxiv.org", "nejm.org", "thelancet.com", "bmj.com", "w3.org", "ietf.org", "iso.org",
   "statista.com", "pewresearch.org", "gartner.com", "mckinsey.com", "reuters.com", "apnews.com",
   "bbc.co.uk", "bbc.com", "nytimes.com", "ft.com", "economist.com", "wsj.com", "hbr.org",
-  "developer.mozilla.org", "schema.org",
+  "developer.mozilla.org", "schema.org", "developers.google.com", "web.dev",
 ];
 const hostOf = (u: string) => {
   try {

@@ -1,6 +1,21 @@
 // Shared schema.org builders for our own marketing site (entity graph for Google and AI assistants).
-import { BRAND } from "@/lib/brand";
+import { BRAND, hasBrandAddress } from "@/lib/brand";
 import { LEGAL_ENTITY } from "@/lib/site";
+import { PAGE_SEO, PAGE_UPDATED, type PageSeo } from "./pages";
+
+/** schema.org PostalAddress from BRAND_ADDRESS_*, or undefined when no street/town is configured. */
+export function postalAddressLd(): Record<string, unknown> | undefined {
+  if (!hasBrandAddress()) return undefined;
+  const a = BRAND.address;
+  return {
+    "@type": "PostalAddress",
+    ...(a.street ? { streetAddress: a.street } : {}),
+    ...(a.locality ? { addressLocality: a.locality } : {}),
+    ...(a.region ? { addressRegion: a.region } : {}),
+    ...(a.postalCode ? { postalCode: a.postalCode } : {}),
+    addressCountry: a.country,
+  };
+}
 
 export function siteUrl(): string {
   return BRAND.appUrl.replace(/\/+$/, "");
@@ -21,6 +36,7 @@ export const KNOWS_ABOUT = [
 ];
 
 export function organizationLd(base = siteUrl()): Record<string, unknown> {
+  const address = postalAddressLd();
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -37,6 +53,7 @@ export function organizationLd(base = siteUrl()): Record<string, unknown> {
     areaServed: [{ "@type": "Country", name: "India" }, "Worldwide"],
     knowsAbout: KNOWS_ABOUT,
     ...(BRAND.sameAs.length ? { sameAs: BRAND.sameAs } : {}),
+    ...(address ? { address } : {}),
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",
@@ -61,6 +78,36 @@ export function websiteLd(base = siteUrl()): Record<string, unknown> {
   };
 }
 
+/**
+ * WebPage (or a subtype) for a static marketing page, with the freshness dates from src/lib/seo/pages.ts.
+ * `@id` is `<url>#webpage`; `extra` adds or overrides fields (e.g. mainEntity on a CollectionPage).
+ */
+export function webPageLd(
+  path: string,
+  opts: { type?: string; name?: string; description?: string; extra?: Record<string, unknown>; base?: string } = {},
+): Record<string, unknown> {
+  const base = opts.base ?? siteUrl();
+  const url = path === "/" ? `${base}/` : `${base}${path}`;
+  const seo = (PAGE_SEO as Record<string, PageSeo | undefined>)[path];
+  const modified = PAGE_UPDATED[path];
+  return {
+    "@context": "https://schema.org",
+    "@type": opts.type ?? "WebPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: opts.name ?? seo?.title ?? BRAND.name,
+    ...(opts.description ?? seo?.description ? { description: opts.description ?? seo?.description } : {}),
+    inLanguage: "en-IN",
+    ...(seo?.published ? { datePublished: seo.published } : {}),
+    ...(modified ? { dateModified: modified } : {}),
+    isPartOf: { "@id": `${base}/#website` },
+    about: { "@id": `${base}/#organization` },
+    publisher: { "@id": `${base}/#organization` },
+    primaryImageOfPage: { "@type": "ImageObject", url: `${base}/opengraph-image`, width: 1200, height: 630 },
+    ...opts.extra,
+  };
+}
+
 export type Crumb = { name: string; path: string };
 
 /** BreadcrumbList; Home is prepended automatically. */
@@ -76,6 +123,25 @@ export function breadcrumbLd(crumbs: Crumb[], base = siteUrl()): Record<string, 
       item: c.path === "/" ? `${base}/` : `${base}${c.path}`,
     })),
   };
+}
+
+/**
+ * Plain text of a rendered answer (string, number, array or React element tree), so FAQPage JSON-LD repeats
+ * exactly the words visitors see. Reads `props.children` recursively; nothing from React is imported.
+ */
+export function nodeText(node: unknown): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join("");
+  if (typeof node === "object" && "props" in node) {
+    return nodeText((node as { props?: { children?: unknown } }).props?.children);
+  }
+  return "";
+}
+
+/** FAQPage from visible Q&A items whose answers may be JSX (e.g. the `Qa[]` arrays rendered by QaSection). */
+export function faqLdFromQa(items: { q: string; a: unknown }[]): Record<string, unknown> {
+  return faqLd(items.map((i) => ({ q: i.q, a: nodeText(i.a).replace(/\s+/g, " ").trim() })));
 }
 
 export function faqLd(faqs: { q: string; a: string }[]): Record<string, unknown> {

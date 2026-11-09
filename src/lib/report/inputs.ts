@@ -2,6 +2,7 @@
 import type { AuditPage, SiteContext } from "@/lib/audit/rules";
 import type { AiVisibilitySummary, CheckResult, Pillar } from "@/lib/report/types";
 import type { JsSiteDetection } from "@/lib/crawler/js-site";
+import { isSameSite, urlKey } from "@/lib/crawler/normalize";
 
 export interface ReportPage extends AuditPage {
   responseBytes?: number | null;
@@ -97,7 +98,59 @@ export const urlOf = (p: AuditPage) => p.finalUrl || p.url;
 export const isHtml = (p: AuditPage) => !p.contentType || /html/i.test(p.contentType);
 export const okPages = (pages: ReportPage[]) => pages.filter((p) => p.statusCode === 200 && p.extracted && isHtml(p));
 /** Pages extracted with the v2 extractor (richer signals). */
-export const v2Pages = (pages: ReportPage[]) => okPages(pages).filter((p) => (p.extracted!.extractorVersion ?? 1) >= 2);
+export const isV2 = (p: AuditPage) => (p.extracted?.extractorVersion ?? 1) >= 2;
+export const v2Pages = (pages: ReportPage[]) => okPages(pages).filter(isV2);
+
+/** Meta robots tells search engines not to index this page. */
+export const isNoindex = (p: AuditPage) => /\bnoindex\b|\bnone\b/i.test(p.extracted?.robotsMeta ?? "");
+
+/** Scheme- and www-insensitive dedupe key, so http/www canonical mismatches don't read as "a different page". */
+function looseKey(u: string, base?: string): string | null {
+  const k = urlKey(u, base);
+  return k ? k.replace(/^https?:\/\/(www\.)?/i, "") : null;
+}
+
+/**
+ * The page names a DIFFERENT page on the same site as its canonical (main) version, e.g.
+ * /contact?topic=sales → /contact. Relative canonicals resolve against the page URL.
+ */
+export function isCanonicalisedElsewhere(p: AuditPage): boolean {
+  const canonical = p.extracted?.canonical;
+  if (!canonical) return false;
+  const own = urlOf(p);
+  let target: URL;
+  try {
+    target = new URL(canonical, own);
+  } catch {
+    return false;
+  }
+  if (!isSameSite(target.toString(), [new URL(own).hostname])) return false;
+  const a = looseKey(target.toString());
+  const b = looseKey(own);
+  return !!a && !!b && a !== b;
+}
+
+/**
+ * Pages Google folds away and never ranks on their own: meta robots noindex/none, or a same-site
+ * canonical pointing at another URL. They are excluded from per-page quality checks so URL variants
+ * (query strings, auth pages) aren't counted as duplicates, thin pages or missing previews.
+ */
+export function isConsolidated(p: AuditPage): boolean {
+  try {
+    return isNoindex(p) || isCanonicalisedElsewhere(p);
+  } catch {
+    return false;
+  }
+}
+
+/** OK HTML pages that Google would index in their own right. */
+export const indexablePages = (pages: ReportPage[]) => okPages(pages).filter((p) => !isConsolidated(p));
+
+/** Indexable pages for per-page quality checks; falls back to every OK page when all are consolidated. */
+export function qualityPages(pages: ReportPage[]): ReportPage[] {
+  const idx = indexablePages(pages);
+  return idx.length ? idx : okPages(pages);
+}
 
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

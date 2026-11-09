@@ -4,15 +4,10 @@ import { Card } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
 import { ContactForm } from "@/components/marketing/contact-form";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { siteUrl, webPageLd } from "@/lib/seo/schema";
 
-const DESCRIPTION = `Contact the ${BRAND.name} team about agency plans, many client sites, onboarding help or anything else. We usually reply within one business day.`;
-
-export const metadata: Metadata = {
-  title: "Contact us",
-  description: DESCRIPTION,
-  alternates: { canonical: "/contact" },
-  openGraph: { title: `Contact ${BRAND.name}`, description: DESCRIPTION, url: "/contact", siteName: BRAND.name, type: "website" },
-};
+export const metadata: Metadata = staticPageMetadata("/contact");
 
 const REASONS = [
   { icon: <Building2 />, title: "Agency plans", body: "Managing many client sites? Tell us roughly how many and we'll suggest limits that fit." },
@@ -27,18 +22,12 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const isServices = one(sp.topic) === "services";
   const tierName = isServices ? SERVICE_TIER_NAMES[one(sp.tier) ?? ""] : undefined;
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ContactPage",
+  // The full Organization (email, phone, address, contactPoint) is in the layout's graph; point at it by @id.
+  const jsonLd = webPageLd("/contact", {
+    type: "ContactPage",
     name: `Contact ${BRAND.name}`,
-    url: `${BRAND.appUrl.replace(/\/$/, "")}/contact`,
-    mainEntity: {
-      "@type": "Organization",
-      name: BRAND.name,
-      url: BRAND.appUrl,
-      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: BRAND.supportEmail, availableLanguage: ["English"] },
-    },
-  };
+    extra: { mainEntity: { "@id": `${siteUrl()}/#organization` } },
+  });
   return (
     <>
       <JsonLd data={jsonLd} />

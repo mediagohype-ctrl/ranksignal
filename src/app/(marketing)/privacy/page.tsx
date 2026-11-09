@@ -3,19 +3,18 @@ import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import { GRIEVANCE_OFFICER, LEGAL_ADDRESS, LEGAL_EMAIL, LEGAL_ENTITY, LEGAL_UPDATED } from "@/lib/site";
 import { LegalPage } from "@/components/marketing/legal";
+import { JsonLd } from "@/components/marketing/ui";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { webPageLd } from "@/lib/seo/schema";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: `How ${BRAND.name} collects, uses, shares and protects your information, and how to ask us to delete it.`,
-  alternates: { canonical: "/privacy" },
-  robots: { index: true, follow: true },
-};
+export const metadata: Metadata = staticPageMetadata("/privacy");
 
 const mail = <a href={`mailto:${LEGAL_EMAIL}`}>{LEGAL_EMAIL}</a>;
 
 export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" updated={LEGAL_UPDATED}>
+      <JsonLd data={webPageLd("/privacy", { name: "Privacy Policy" })} />
       <p>
         {BRAND.name} is run by {LEGAL_ENTITY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). This policy explains, in plain
         words, what information we collect when you use our website and app, why we collect it, who we share it with,
@@ -186,8 +185,12 @@ export default function PrivacyPage() {
       <p>
         {LEGAL_ENTITY}
         <br />
-        {LEGAL_ADDRESS}
-        <br />
+        {LEGAL_ADDRESS && (
+          <>
+            {LEGAL_ADDRESS}
+            <br />
+          </>
+        )}
         Email: {mail}
       </p>
       <p>

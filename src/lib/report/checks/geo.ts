@@ -3,7 +3,7 @@ import { isArticleUrl } from "@/lib/audit/page-kind";
 import { AI_BOTS } from "@/lib/audit/ai-bots";
 import { contentPages } from "@/lib/report/checks/aeo";
 import {
-  findHome, makeCheck, notMeasured, okPages, pct, plural, targetScore, urlOf, v2Pages, NEEDS_RESCAN,
+  findHome, isConsolidated, makeCheck, notMeasured, okPages, pct, plural, targetScore, urlOf, v2Pages, NEEDS_RESCAN,
   type CheckContext, type EvaluatedCheck, type ReportPage,
 } from "@/lib/report/inputs";
 
@@ -154,7 +154,8 @@ export function geoChecks(ctx: CheckContext): EvaluatedCheck[] {
     if (v2.length === 0) {
       out.push(notMeasured(P, "geo.author_signals", "Named authors", 1.5, NEEDS_RESCAN));
     } else {
-      const articles = v2.filter(isArticlePage);
+      // Indexable articles only — a noindex or canonicalised variant of a post would count it twice.
+      const articles = v2.filter((p) => isArticlePage(p) && !isConsolidated(p));
       if (articles.length === 0) {
         out.push(notMeasured(P, "geo.author_signals", "Named authors", 1.5, "No blog posts or articles were found in the pages we checked."));
       } else {

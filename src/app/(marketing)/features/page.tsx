@@ -3,19 +3,19 @@ import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { LinkButton } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
-import { FinalCta, IconTile, PageHero } from "@/components/marketing/ui";
+import { FinalCta, IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 import { FEATURES } from "@/components/marketing/content";
+import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
+import { MARKETING_PLANS, TRIAL_AI, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
 
-export const metadata: Metadata = {
-  title: "Features: SEO audit, AI visibility tracking and safe fixes",
-  description:
-    "Everything MyWebRank does for small businesses: customer questions, AI mentions in ChatGPT and Gemini, a website check for Google and AI, a clear to-do list and fixes you approve.",
-  alternates: { canonical: "/features" },
-};
+export const metadata: Metadata = staticPageMetadata("/features");
 
 export default function FeaturesPage() {
   return (
     <>
+      <JsonLd data={[webPageLd("/features"), faqLdFromQa(featureFacts()), breadcrumbLd([{ name: "Features", path: "/features" }])]} />
       <PageHero
         eyebrow="Features"
         title="SEO, AEO and GEO features, explained"
@@ -101,10 +101,67 @@ export default function FeaturesPage() {
         </div>
       </div>
 
+      <QaSection
+        id="features-numbers"
+        tone="surface"
+        eyebrow="In numbers"
+        title="What each plan measures"
+        description="The limits below come straight from our plan settings, so they match what the app enforces."
+        items={featureFacts()}
+      >
+        <SourcesList
+          title="Standards our checks are based on"
+          className="rounded-2xl border border-border bg-bg p-6"
+          links={[
+            { href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide", label: "Google Search Central: SEO Starter Guide" },
+            { href: "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data", label: "Google Search Central: introduction to structured data" },
+            { href: "https://schema.org/Organization", label: "schema.org: Organization and LocalBusiness" },
+            { href: "https://datatracker.ietf.org/doc/html/rfc9309", label: "IETF RFC 9309: Robots Exclusion Protocol" },
+            { href: "https://web.dev/articles/vitals", label: "web.dev: Core Web Vitals" },
+          ]}
+        />
+      </QaSection>
+
       <FinalCta
         title="Try every feature on your website"
         body={<p>Every feature is included in the free trial, within the trial&apos;s limits.</p>}
       />
     </>
   );
+}
+
+function featureFacts(): Qa[] {
+  const [starter, growth, agency] = MARKETING_PLANS;
+  return [
+    {
+      q: "How many pages does the website check read?",
+      a: (
+        <>
+          Each website check reads up to {num(starter.limits.maxPagesPerCrawl)} pages on the {starter.name} plan,{" "}
+          {num(growth.limits.maxPagesPerCrawl)} on {growth.name} and {num(agency.limits.maxPagesPerCrawl)} on {agency.name}. It
+          scores four areas — SEO, AEO, GEO and Brand — each from 0 to 100, and turns every problem into a plain-English to-do.
+        </>
+      ),
+    },
+    {
+      q: "How many AI answers do I get?",
+      a: (
+        <>
+          {starter.name} covers {num(starter.ai.answersPerMonth)} AI answers a month, asked across {starter.ai.engines} AI
+          assistants. {growth.name} covers {num(growth.ai.answersPerMonth)} answers across {growth.ai.engines} assistants, and{" "}
+          {agency.name} covers {num(agency.ai.answersPerMonth)}. One answer is one customer question asked to one AI assistant.
+        </>
+      ),
+    },
+    {
+      q: "What does it cost to try?",
+      a: (
+        <>
+          Nothing for {TRIAL_DAYS} days: the free trial includes {TRIAL_AI.summary} and a full website check. After that, plans
+          cost {inr(starter.price)}, {inr(growth.price)} or {inr(agency.price)} a month. See{" "}
+          <Link href="/pricing">pricing</Link> for every limit.
+        </>
+      ),
+    },
+  ];
 }

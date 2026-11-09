@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Bot, FileText, MessageCircleQuestion, ScanSearch } from "lucide-react";
-import { BRAND } from "@/lib/brand";
-import { IconTile, PageHero } from "@/components/marketing/ui";
+import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
+import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
+import { MAX_ENGINES, PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
+import { MAX_KEY_PAGES } from "@/lib/free-check/run";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 
-const TITLE = "Free tools to get found on Google and AI";
-const DESCRIPTION = "Free, no-sign-up tools for small businesses: check if AI can name you, make FAQ code for Google and AI, and make an AI guide file (llms.txt).";
-
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: "/tools" },
-  openGraph: { title: `${TITLE} · ${BRAND.name}`, description: DESCRIPTION, url: "/tools", siteName: BRAND.name, type: "website" },
-};
+export const metadata: Metadata = staticPageMetadata("/tools");
 
 const TOOLS = [
   { href: "/tools/ai-mention-checker", icon: <Bot />, title: "AI mention checker", body: "Can ChatGPT and other AI tools read your website well enough to name you?" },
@@ -24,6 +20,9 @@ const TOOLS = [
 export default function ToolsPage() {
   return (
     <>
+      <JsonLd
+        data={[webPageLd("/tools", { type: "CollectionPage" }), faqLdFromQa(TOOLS_FAQ), breadcrumbLd([{ name: "Free tools", path: "/tools" }])]}
+      />
       <PageHero eyebrow="Free tools" title="Free tools to get found on Google and AI" intro={<p>Simple, free and no sign-up. Made for small business owners.</p>} />
       <section className="bg-bg py-12 sm:py-16">
         <ul className="container-marketing grid gap-6 sm:grid-cols-2">
@@ -41,6 +40,77 @@ export default function ToolsPage() {
           ))}
         </ul>
       </section>
+      <QaSection
+        id="tools-faq"
+        tone="surface"
+        title="How to use these free tools"
+        description="Start with the free check, then use the other tools to fix what it finds."
+        items={TOOLS_FAQ}
+      >
+        <SourcesList
+          links={[
+            { href: "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data", label: "Google Search Central: introduction to structured data" },
+            { href: "https://schema.org/FAQPage", label: "schema.org: FAQPage", note: "the format the FAQ code maker writes" },
+            { href: "https://datatracker.ietf.org/doc/html/rfc9309", label: "IETF RFC 9309: Robots Exclusion Protocol", note: "the robots.txt rules our checks read" },
+          ]}
+        />
+      </QaSection>
     </>
   );
 }
+
+const starter = PLANS.starter;
+
+const TOOLS_FAQ: Qa[] = [
+  {
+    q: "Which free tool should I use first?",
+    a: (
+      <>
+        Start with the <Link href="/free-check">free website check</Link>. It reads your homepage and up to{" "}
+        {MAX_KEY_PAGES} main pages, scores them for Google, answer engines and AI assistants, and lists your top 3 fixes. If
+        a fix mentions FAQ code or an AI guide file, the matching tool on this page makes it for you.
+      </>
+    ),
+  },
+  {
+    q: "What do the free tools check and make?",
+    a: (
+      <>
+        The AI mention checker and the free check read your robots.txt rules, page titles, headings, business details and
+        structured data. The FAQ code maker writes FAQPage code for your questions and answers. The AI guide file maker
+        writes an llms.txt file listing who you are and which pages matter most.
+      </>
+    ),
+  },
+  {
+    q: "Are the tools really free, and do you keep my data?",
+    a: (
+      <>
+        Yes, they are free and need no sign-up. The FAQ code maker and AI guide file maker run in your browser, so what you
+        type stays on your device. The free check reads your public pages to score them and does not store the pages it
+        reads.
+      </>
+    ),
+  },
+  {
+    q: "Do I need technical skills to use them?",
+    a: (
+      <>
+        No. Each tool asks plain questions and gives you a file or a block of code to copy. If you use WordPress, Wix or
+        Shopify, you can usually paste the code yourself in a few minutes. Otherwise, send it to whoever looks after your
+        website, along with a link to the tool page.
+      </>
+    ),
+  },
+  {
+    q: "What do I get if I need more than the free tools?",
+    a: (
+      <>
+        The full report reads up to {starter.maxPagesPerCrawl.toLocaleString("en-IN")} pages per check on the {starter.name}{" "}
+        plan and asks up to {MAX_ENGINES} AI assistants your customers&apos; real questions. Paid plans start at ₹
+        {(starter.priceInrMonthly ?? 0).toLocaleString("en-IN")} a month, after a {TRIAL_DAYS}-day free trial. See{" "}
+        <Link href="/pricing">pricing</Link>.
+      </>
+    ),
+  },
+];

@@ -11,6 +11,7 @@ import { fmtDate, hostOf, pct } from "@/lib/dashboard/format";
 import { PILLAR_EXPLAINER, PILLAR_SHORT } from "@/components/app/report/pillars";
 import { PrintToolbar } from "@/components/app/report/auto-print";
 import { Notice } from "@/components/ui";
+import { AnswerText } from "@/components/app/ai-answers/answer-text";
 
 export const metadata = { title: "Full report (PDF)", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -38,6 +39,13 @@ function shortPath(url: string) {
   } catch {
     return url;
   }
+}
+
+/** Long AI answers are cut at a line break near ANSWER_CHARS so tables and lists aren't chopped mid-row. */
+function shorten(text: string) {
+  if (text.length <= ANSWER_CHARS) return text;
+  const cutAt = text.lastIndexOf("\n", ANSWER_CHARS);
+  return `${text.slice(0, cutAt > ANSWER_CHARS / 2 ? cutAt : ANSWER_CHARS).trimEnd()}\n\n_(Answer shortened for the PDF.)_`;
 }
 
 function H2({ id, n, children }: { id: string; n: number; children: React.ReactNode }) {
@@ -229,10 +237,10 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
             {quickWins.length > 0 && <li>Fix these first</li>}
             <li>Every problem we found, and how to fix it ({r.issues.length})</li>
             <li>How AI assistants see you</li>
-            {questions.size > 0 && <li>Every AI question and answer ({answers.length})</li>}
             {pages.length > 0 && <li>Page by page ({pages.length})</li>}
             {r.strengths.length > 0 && <li>What you&apos;re already doing well</li>}
             <li>Limitations and method</li>
+            {questions.size > 0 && <li>Every AI question and answer ({answers.length})</li>}
           </ol>
         </nav>
       </header>
@@ -417,48 +425,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
         )}
       </section>
 
-      {/* 5. Every AI answer */}
-      {questions.size > 0 && (
-        <section>
-          <H2 id="answers" n={++n}>
-            Every AI question and answer
-          </H2>
-          <div className="space-y-6">
-            {[...questions].map(([q, list], qi) => (
-              <div key={q}>
-                <h3 className="break-after-avoid text-h4 text-fg">
-                  Q{qi + 1}. “{q}”
-                </h3>
-                <div className="mt-2 space-y-3">
-                  {list.map((a, k) => {
-                    const cites = ((a.citations as Citation[] | null) ?? []).filter((c) => c && c.url);
-                    const text = a.rawResponse.length > ANSWER_CHARS ? `${a.rawResponse.slice(0, ANSWER_CHARS).trimEnd()}…` : a.rawResponse;
-                    return (
-                      <div key={k} className="break-inside-avoid-page rounded-lg border border-border p-3 text-small">
-                        <p className="text-xs font-semibold text-muted">
-                          {a.platformLabel}
-                          {a.simulated && " · sample data"} · {a.brandMentioned ? "named you" : "didn't name you"}
-                          {a.brandRecommended && " · recommended you"}
-                          {a.brandCited && " · linked your site"}
-                        </p>
-                        <p className="mt-1.5 whitespace-pre-line break-words leading-relaxed text-fg-soft">{text}</p>
-                        {cites.length > 0 && (
-                          <p className="mt-2 break-all text-xs text-muted">
-                            Sources: {cites.map((c) => c.domain || c.url).join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          {answers.length >= MAX_ANSWERS && <p className="mt-3 text-xs text-muted">Showing the first {MAX_ANSWERS} answers.</p>}
-        </section>
-      )}
-
-      {/* 6. Page by page */}
+      {/* Page by page */}
       {pages.length > 0 && (
         <section>
           <H2 id="pages" n={++n}>
@@ -520,7 +487,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
         </section>
       )}
 
-      {/* 7. Strengths */}
+      {/* Strengths */}
       {r.strengths.length > 0 && (
         <section>
           <H2 id="strengths" n={++n}>
@@ -534,7 +501,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
         </section>
       )}
 
-      {/* 8. Limitations */}
+      {/* Limitations */}
       <section className="break-inside-avoid">
         <H2 id="limits" n={++n}>
           Limitations and method
@@ -551,6 +518,48 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
           Methodology v{r.methodologyVersion}. Report made {fmtDate(r.generatedAt, true)} by MyWebRank (mywebrank.tech).
         </p>
       </section>
+
+      {/* Appendix: every AI answer (long, so it comes after the findings) */}
+      {questions.size > 0 && (
+        <section className="print:break-before-page">
+          <H2 id="answers" n={++n}>
+            Every AI question and answer
+          </H2>
+          <div className="space-y-6">
+            {[...questions].map(([q, list], qi) => (
+              <div key={q}>
+                <h3 className="break-after-avoid text-h4 text-fg">
+                  Q{qi + 1}. “{q}”
+                </h3>
+                <div className="mt-2 space-y-3">
+                  {list.map((a, k) => {
+                    const cites = ((a.citations as Citation[] | null) ?? []).filter((c) => c && c.url);
+                    const text = shorten(a.rawResponse);
+                    return (
+                      <div key={k} className="break-inside-avoid-page rounded-lg border border-border p-3 text-small">
+                        <p className="text-xs font-semibold text-muted">
+                          {a.platformLabel}
+                          {a.simulated && " · sample data"} · {a.brandMentioned ? "named you" : "didn't name you"}
+                          {a.brandRecommended && " · recommended you"}
+                          {a.brandCited && " · linked your site"}
+                        </p>
+                        <AnswerText text={text} brandNames={[r.brand, project.name]} className="mt-1.5" />
+                        {cites.length > 0 && (
+                          <p className="mt-2 break-all text-xs text-muted">
+                            Sources: {cites.map((c) => c.domain || c.url).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          {answers.length >= MAX_ANSWERS && <p className="mt-3 text-xs text-muted">Showing the first {MAX_ANSWERS} answers.</p>}
+        </section>
+      )}
+
     </div>
   );
 }

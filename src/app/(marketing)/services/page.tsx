@@ -11,22 +11,14 @@ import {
   ServiceTierCards,
   ServicesCta,
 } from "@/components/marketing/services-ui";
+import { staticPageMetadata } from "@/lib/seo/metadata";
+import { webPageLd } from "@/lib/seo/schema";
 
 const TITLE = "SEO, AEO & GEO Services in India — done-for-you SEO company";
 const DESCRIPTION = `Done-for-you SEO, AEO and GEO services from an India-based team: we fix your website, Google Business Profile and listings every month so Google and ChatGPT can find and quote you, with a monthly proof report. From ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: "/services" },
-  openGraph: {
-    title: `${TITLE} | ${BRAND.name}`,
-    description: DESCRIPTION,
-    url: "/services",
-    siteName: BRAND.name,
-    type: "website",
-  },
-};
+// TITLE / DESCRIPTION above describe the Service in JSON-LD; the search snippet lives in src/lib/seo/pages.ts.
+export const metadata: Metadata = staticPageMetadata("/services");
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
 
@@ -183,7 +175,7 @@ export default function ServicesPage() {
 
   return (
     <>
-      <JsonLd data={jsonLd} />
+      <JsonLd data={[webPageLd("/services", { base: SITE }), ...jsonLd]} />
 
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="services-title" className="relative overflow-hidden">
@@ -331,6 +323,33 @@ export default function ServicesPage() {
               </h2>
               <p className="mk-lead mt-6 max-w-md text-fg-soft">
                 Hiring an agency shouldn&apos;t feel like a leap of faith. These are written into every agreement.
+              </p>
+              <p className="mk-body mt-6 max-w-md text-fg-soft">
+                We work within Google&apos;s own rules: its advice on{" "}
+                <a
+                  href="https://developers.google.com/search/docs/fundamentals/do-i-need-seo"
+                  rel="noopener"
+                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+                >
+                  hiring an SEO
+                </a>{" "}
+                and its{" "}
+                <a
+                  href="https://developers.google.com/search/docs/essentials/spam-policies"
+                  rel="noopener"
+                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+                >
+                  spam policies
+                </a>
+                . Business details we add use the standard{" "}
+                <a
+                  href="https://schema.org/LocalBusiness"
+                  rel="noopener"
+                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+                >
+                  schema.org
+                </a>{" "}
+                vocabulary.
               </p>
             </div>
           </div>
