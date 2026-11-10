@@ -10,7 +10,7 @@ import { getAiAllowance, utcMonthStart } from "./allowance";
 import { formatInr, priceWithGst } from "./gst";
 import { isRazorpayConfigured } from "./razorpay";
 import { createRazorpayOrder } from "./razorpay-orders";
-import { TOPUP_PACKS, TOPUP_VALIDITY_MONTHS, getTopUpPack, topUpExpiry, type TopUpPackId } from "./topups";
+import { TOPUP_VALIDITY_MONTHS, getTopUpPack, offeredTopUpPacks, topUpExpiry, type TopUpPackId } from "./topups";
 
 /** Pending orders one workspace may open per hour (stops checkout spam creating hundreds of Razorpay orders). */
 export const MAX_PENDING_TOPUP_ORDERS_PER_HOUR = 10;
@@ -51,7 +51,7 @@ export function offerFor(id: TopUpPackId, stateCode: string | null): TopUpOffer 
 
 export async function getTopUpOffers(orgId: string): Promise<TopUpOffer[]> {
   const state = await customerStateCode(orgId);
-  return TOPUP_PACKS.map((p) => offerFor(p.id, state));
+  return offeredTopUpPacks().map((p) => offerFor(p.id, state));
 }
 
 export type TopUpOrderStatus = "pending" | "paid" | "failed" | "refunded";
@@ -124,7 +124,8 @@ export async function startTopUpCheckout(o: { organizationId: string; userId: st
   if (recent >= MAX_PENDING_TOPUP_ORDERS_PER_HOUR) {
     throw new HttpError(429, "too_many_orders", "You've opened the payment window many times in the last hour. Please wait a little and try again.");
   }
-  const pack = getTopUpPack(o.packId)!;
+  const pack = offeredTopUpPacks().find((p) => p.id === o.packId);
+  if (!pack) throw new HttpError(400, "pack_unavailable", "That pack isn't available. Please pick another one.");
   const offer = offerFor(pack.id, await customerStateCode(o.organizationId));
   const receipt = `topup_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
   let order;

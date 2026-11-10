@@ -11,7 +11,7 @@
 
 export const TOPUP_VALIDITY_MONTHS = 12;
 
-export const TOPUP_PACK_IDS = ["answers_35", "answers_100", "answers_500", "answers_2000"] as const;
+export const TOPUP_PACK_IDS = ["answers_35", "answers_100", "answers_500", "answers_2000", "answers_test"] as const;
 export type TopUpPackId = (typeof TOPUP_PACK_IDS)[number];
 
 export interface TopUpPackConfig {
@@ -35,6 +35,22 @@ export const TOPUP_PACKS: readonly TopUpPackConfig[] = [
   { id: "answers_2000", answers: 2_000, pricePaise: 9_999_00, name: "2,000 extra AI answers" },
 ];
 
+/**
+ * TEMPORARY owner test pack: ₹10 for 5 answers, to try a real Razorpay payment end to end. Offered ONLY while the server
+ * env TOPUP_TEST_PACK="true" (remove the env line, or set it to false, to hide it). It is never part of TOPUP_PACKS or
+ * the "from ₹…" price; getTopUpPack still knows it so a paid test order is always granted and invoiced.
+ */
+export const TOPUP_TEST_PACK: TopUpPackConfig = { id: "answers_test", answers: 5, pricePaise: 10_00, name: "Test pack: 5 extra AI answers" };
+
+export function topUpTestPackEnabled(): boolean {
+  return process.env.TOPUP_TEST_PACK?.trim().toLowerCase() === "true";
+}
+
+/** Packs shown in the dialog and accepted at checkout (the test pack first, only while enabled). */
+export function offeredTopUpPacks(): readonly TopUpPackConfig[] {
+  return topUpTestPackEnabled() ? [TOPUP_TEST_PACK, ...TOPUP_PACKS] : TOPUP_PACKS;
+}
+
 /** Lowest pack price before GST, in paise ("from ₹250 + GST"). */
 export const TOPUP_FROM_PAISE = Math.min(...TOPUP_PACKS.map((p) => p.pricePaise));
 
@@ -43,7 +59,7 @@ export function isTopUpPackId(id: unknown): id is TopUpPackId {
 }
 
 export function getTopUpPack(id: string): TopUpPackConfig | null {
-  return TOPUP_PACKS.find((p) => p.id === id) ?? null;
+  return [...TOPUP_PACKS, TOPUP_TEST_PACK].find((p) => p.id === id) ?? null;
 }
 
 /** Price per answer before GST, in paise (may be fractional). */
