@@ -41,6 +41,9 @@ model Organization {
   adminNotes    AdminNote[]
   apiKeys       ApiKey[]
   reportTemplates ReportTemplate[]
+  dataForSeoUsage DataForSeoUsage[]
+  competitorSnapshots CompetitorSnapshot[]
+  researchSearches ResearchSearch[]
 }
 
 model User {
@@ -105,6 +108,11 @@ model Project {
   offsiteItems  OffsiteItem[]
   dailyMetrics  MetricDaily[]
   keywordStars  KeywordStar[]
+  backlinkMonitor BacklinkMonitor?
+  backlinkSnapshots BacklinkSnapshot[]
+  linkGapReports LinkGapReport[]
+  trackedKeywords TrackedKeyword[]
+  rankTrackerState RankTrackerState?
   businessProfile BusinessProfile?
   aiBotDaily    AiBotDaily[]
   aiBotImports  AiBotLogImport[]
@@ -114,6 +122,8 @@ model Project {
   alertSettings AlertSettings?
   alertEvents   AlertEvent[]
   reportTemplates ReportTemplate[]
+  competitorSnapshots CompetitorSnapshot[]
+  researchSearches ResearchSearch[]
 
   @@index([organizationId])
 }
@@ -1009,4 +1019,202 @@ model ReportTemplate {
   project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, projectId])
+}
+
+// ---- Paid-data features (DataForSEO): shared usage ledger ----
+/** One row per DataForSEO call: what it was for, plan units used and the provider-reported cost. Read for monthly allowances. */
+model DataForSeoUsage {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  feature        String // rank_tracker | keyword_research | serp_checker | backlinks | competitor_traffic | keyword_gap | link_gap | domain_compare
+  units          Int      @default(1)
+  costMicros     Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, feature, createdAt])
+  @@index([createdAt])
+}
+
+// ---- Rank tracker (DataForSEO SERP) ----
+/** A keyword the customer tracks on Google for one location + device. Checked on the plan's schedule (src/lib/rank-tracker). */
+model TrackedKeyword {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  keyword        String // normalised (lower-case, single spaces)
+  locationId     String    @default("in") // id from src/lib/dataforseo/locations.ts
+  device         String    @default("mobile") // mobile | desktop
+  language       String    @default("en") // en | hi
+  active         Boolean   @default(true)
+  createdById    String?
+  lastCheckedAt  DateTime?
+  lastPosition   Int? // null = not in the top 100 (or never checked: see lastCheckedAt)
+  bestPosition   Int?
+  lastUrl        String? // copies of the latest check, so the table needs no per-keyword history query
+  lastFeatures   Json?
+  lastCompetitors Json?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  checks  RankCheck[]
+
+  @@unique([projectId, keyword, locationId, device])
+  @@index([organizationId, projectId])
+  @@index([projectId, active, lastCheckedAt])
+}
+
+/** One Google check of a tracked keyword: our position (null = not in the top 100), the ranking URL, SERP features and who is above us. */
+model RankCheck {
+  id               String   @id @default(cuid())
+  organizationId   String
+  trackedKeywordId String
+  checkedAt        DateTime @default(now())
+  position         Int?
+  url              String?
+  serpFeatures     Json? // string[]: ai_overview | local_pack | featured_snippet | people_also_ask | ...
+  competitors      Json? // { domain, position }[]: up to 3 domains ranking above us
+  trigger          String   @default("schedule") // schedule | manual
+
+  trackedKeyword TrackedKeyword @relation(fields: [trackedKeywordId], references: [id], onDelete: Cascade)
+
+  @@index([trackedKeywordId, checkedAt])
+  @@index([organizationId, checkedAt])
+}
+
+/** Per-project rank tracker state: paused when the monthly allowance is used up, and the once-a-day "Check now". */
+model RankTrackerState {
+  id                String    @id @default(cuid())
+  organizationId    String
+  projectId         String    @unique
+  status            String    @default("active") // active | paused_allowance
+  message           String?
+  lastRunAt         DateTime?
+  lastManualCheckAt DateTime?
+  updatedAt         DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+// ---- Keyword research + SERP checker (DataForSEO) ----
+/**
+ * Shared cache of paid lookups (public Google data, so it is shared across organizations): normalised request key →
+ * parsed result. Keyword ideas are reused for 30 days, Google top 10 for 24 hours. No tenant data in here.
+ */
+model ResearchCache {
+  id         String   @id @default(cuid())
+  kind       String // keywords | serp
+  requestKey String   @unique
+  result     Json
+  fetchedAt  DateTime @default(now())
+
+  @@index([kind, fetchedAt])
+}
+
+/** Per-organization history of keyword / SERP lookups ("Recent searches"). The result itself lives in ResearchCache. */
+model ResearchSearch {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  userId         String?
+  kind           String // keywords | serp
+  query          String
+  locationId     String
+  languageId     String
+  device         String? // serp only: mobile | desktop
+  mode           String? // keywords only: suggestions | ideas
+  requestKey     String
+  resultCount    Int      @default(0)
+  fromCache      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, kind, createdAt])
+}
+
+// ---- Competitors: traffic estimates, keyword gap, domain comparison, batch traffic ----
+/**
+ * Cached DataForSEO Labs answers for the Competitors page, so viewing never re-bills. One row per (project, kind, key);
+ * a Refresh overwrites it. kind: overview | top_keywords | gap | compare | batch | suggestions.
+ * key: what it was for, e.g. "acme.in|in|en" or "rival.in>acme.in|in|en" (batch: a hash of the domain list).
+ */
+model CompetitorSnapshot {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  kind           String
+  key            String
+  locationId     String   @default("in")
+  language       String   @default("en")
+  data           Json
+  costMicros     Int      @default(0)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, kind, key])
+  @@index([organizationId, projectId, kind, updatedAt])
+}
+
+// ---- Backlinks + link gap (DataForSEO Backlinks API) ----
+/** Backlink monitoring state per project: created on the first refresh; the scheduler refreshes it per plan. */
+model BacklinkMonitor {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String    @unique
+  target         String // normalised domain, e.g. acme.in
+  lastRefreshAt  DateTime?
+  lastAttemptAt  DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+/** One paid backlink refresh: headline numbers as columns (trend) + parsed lists as JSON (src/lib/backlinks/parse.ts). */
+model BacklinkSnapshot {
+  id               String   @id @default(cuid())
+  organizationId   String
+  projectId        String
+  target           String
+  trigger          String   @default("manual") // manual | schedule
+  backlinks        Int?
+  referringDomains Int?
+  rank             Int?
+  data             Json // BacklinkSnapshotData: summary, referringDomains, backlinks, anchors, newLost, sectionErrors
+  createdAt        DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, createdAt])
+}
+
+/** One link-gap lookup: sites linking to competitors but not to the project's domain (domain_intersection). */
+model LinkGapReport {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  target         String
+  competitors    Json // string[] (1-3 domains)
+  items          Json // LinkGapItem[]
+  totalCount     Int?
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, createdAt])
 }

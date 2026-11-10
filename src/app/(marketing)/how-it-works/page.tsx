@@ -19,6 +19,9 @@ import {
   ShipComposition,
   WorkLogVignette,
 } from "@/components/marketing/how-it-works-ui";
+import { JourneyFlow } from "@/components/marketing/flow/journey";
+import { CheckLanes } from "@/components/marketing/flow/lanes";
+import { ReachVisual } from "@/components/marketing/visuals/reach";
 
 export const metadata: Metadata = staticPageMetadata("/how-it-works");
 
@@ -190,6 +193,43 @@ export default function HowItWorksPage() {
               </ol>
             </nav>
           </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ The journey at a glance */}
+      <section id="journey" aria-labelledby="journey-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-24 sm:py-32">
+        <div className="container-marketing">
+          <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
+            <h2 id="journey-title" className="mk-statement max-w-[13ch] text-fg lg:col-span-7">
+              The whole journey at a glance.
+            </h2>
+            <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
+              You add your website and approve the changes. We do the checking, the drafting, the publishing and the monthly
+              report — and every change can be undone.
+            </p>
+          </div>
+          <JourneyFlow className="mt-12 lg:mt-16" />
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ What we check: SEO / AEO / GEO */}
+      <section id="what-we-check" aria-labelledby="check-title" className="scroll-mt-20 border-t border-border py-24 sm:py-32">
+        <div className="container-marketing">
+          <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
+            <h2 id="check-title" className="mk-statement max-w-[13ch] text-fg lg:col-span-7">
+              What we check.
+            </h2>
+            <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
+              {BRAND.name} checks the three places customers find a business today. SEO is about showing up in Google&apos;s
+              results. AEO is about being the short answer Google shows in answer boxes and AI Overviews. GEO is about being
+              named and linked when people ask AI assistants like ChatGPT and Gemini.
+            </p>
+          </div>
+          <ReachVisual headingAs="h3" className="mk-reveal mt-12 lg:mt-16" />
+          <p className="mk-body mt-16 max-w-2xl text-fg-soft lg:mt-20">
+            Every check in the app belongs to one of these areas. Here are a few examples of what we look at in each.
+          </p>
+          <CheckLanes className="mt-8" />
         </div>
       </section>
 

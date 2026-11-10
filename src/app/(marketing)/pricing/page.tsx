@@ -17,6 +17,7 @@ import {
   servicesContactHref,
 } from "@/components/marketing/plans";
 import { FaqList, ServiceTierCards, ServicesCta } from "@/components/marketing/services-ui";
+import { PlanIncludes, PlanMeters } from "@/components/marketing/flow/plan-meters";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 
@@ -291,6 +292,24 @@ export default function PricingPage() {
               </li>
             ))}
           </ul>
+
+          <div className="mk-reveal mt-16 lg:mt-20">
+            <h3 className="text-[clamp(1.5rem,1.25rem+0.9vw,2rem)] font-semibold leading-tight tracking-[-0.03em] text-fg">
+              Compare the plans at a glance
+            </h3>
+            <p className="mk-body mt-3 max-w-2xl text-fg-soft">
+              The biggest differences between plans are how many websites you can add, how many pages each website check
+              reads and how many AI answers you get each month. The detailed comparison below lists every limit.
+            </p>
+            <PlanMeters className="mt-8" />
+          </div>
+
+          <div className="mk-reveal mt-14">
+            <h3 className="text-[clamp(1.5rem,1.25rem+0.9vw,2rem)] font-semibold leading-tight tracking-[-0.03em] text-fg">
+              What every plan includes
+            </h3>
+            <PlanIncludes className="mt-8" />
+          </div>
 
           <details className="group mk-reveal mt-12 rounded-[22px] border border-border bg-surface">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-6 px-6 py-5 sm:px-8 [&::-webkit-details-marker]:hidden">

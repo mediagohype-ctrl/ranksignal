@@ -13,6 +13,8 @@ export interface FreeCheckIssue {
   impact: IssueImpact;
   effort: IssueEffort;
   affectedCount: number;
+  /** "+N points": how much the overall score would rise if this were fixed (estimate, same rule as the full report). */
+  points?: number;
 }
 
 export interface FreeCheckPillar {

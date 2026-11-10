@@ -6,6 +6,8 @@ import { analyzeJob } from "@/lib/recommendations/job";
 import { executeActionJob, rollbackJob } from "@/lib/actions/job";
 import { auditDepthJob } from "@/lib/pagespeed/job";
 import { indexNowJob } from "@/lib/indexnow-customer/job";
+import { rankTrackerJob } from "@/lib/rank-tracker/job";
+import { backlinksRefreshJob } from "@/lib/backlinks/job";
 import { startScheduler } from "@/lib/jobs/scheduler";
 
 let registered = false;
@@ -20,6 +22,8 @@ export function registerAllHandlers() {
   registerHandler("rollback", rollbackJob);
   registerHandler("audit_depth", auditDepthJob);
   registerHandler("indexnow", indexNowJob);
+  registerHandler("rank_tracker", rankTrackerJob);
+  registerHandler("backlinks_refresh", backlinksRefreshJob);
 }
 
 export function bootWorker() {

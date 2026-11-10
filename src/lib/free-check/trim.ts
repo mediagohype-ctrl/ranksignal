@@ -1,5 +1,6 @@
 // Pure: SiteReport → FreeCheckResult (what an anonymous visitor sees).
 import type { SiteReport } from "@/lib/report/types";
+import { pointsForIssue } from "@/lib/report/points";
 import { AI_VISIBILITY_NOTE, FREE_PILLAR_NAMES, type FreeCheckResult } from "@/lib/free-check/types";
 
 /** The free result shows the top 3 fixes; the rest are counted and shown blurred. */
@@ -43,6 +44,8 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
       impact: i.impact,
       effort: i.effort,
       affectedCount: i.affectedCount,
+      // Worked out on the full report: the trimmed checks below can't reproduce it.
+      points: pointsForIssue(report, i),
     })),
     totalIssues: report.issues.length,
     strengths: report.strengths.slice(0, FREE_MAX_STRENGTHS),

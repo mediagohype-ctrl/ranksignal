@@ -10,7 +10,9 @@ export const WORKFLOW_STATES = [
 export type WorkflowState = (typeof WORKFLOW_STATES)[number];
 export type WorkflowKind = "crawl" | "visibility" | "analyze" | "execute_action" | "rollback"
   | "audit_depth" // post-crawl PageSpeed Insights + probes (src/lib/pagespeed/job.ts)
-  | "indexnow"; // IndexNow submissions for a customer's site (src/lib/indexnow-customer/job.ts)
+  | "indexnow" // IndexNow submissions for a customer's site (src/lib/indexnow-customer/job.ts)
+  | "rank_tracker" // Google rank checks for tracked keywords (src/lib/rank-tracker/job.ts)
+  | "backlinks_refresh"; // scheduled backlink refresh (src/lib/backlinks/job.ts)
 export type ErrorClass = "transient" | "permanent" | "policy" | "quota" | "needs_review";
 
 /** Thrown by job handlers to classify failures; transient errors are retried with backoff. */

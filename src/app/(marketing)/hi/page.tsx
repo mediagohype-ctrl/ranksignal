@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { JsonLd } from "@/components/marketing/ui";
-import { SampleResult } from "@/components/marketing/home-sample";
+import { SAMPLE_FIXES, SAMPLE_SCORE } from "@/components/marketing/home-sample";
+import { SampleScoreCard } from "@/components/marketing/showcase/sample-score";
 import { TRIAL_DAYS } from "@/components/marketing/plans";
 import { HOME_FAQ, HI_PLANS } from "@/components/marketing/hi/content";
 import { HiCheckLauncher, HiFaqSection, HiPlanCards } from "@/components/marketing/hi/hi-ui";
@@ -26,6 +27,22 @@ const STEPS = [
   { title: "सुधारें", body: "आपको काम की एक छोटी लिस्ट मिलती है, सबसे ज़रूरी काम सबसे ऊपर। हर सुधार आसान शब्दों में बताता है कि क्या बदलना है।" },
   { title: "आगे बढ़ें", body: "जो सुधार चाहिए उन्हें मंज़ूरी दें। हम हर महीने फिर से चेक करते हैं, ताकि आप देख सकें कि क्या बदला।" },
 ];
+
+// Sample result (same business, score and points as the English sample in home-sample.tsx), in Hindi.
+// Area scores are consistent with the overall score under the report weights (SEO .35, AEO .20, GEO .30, Brand .15).
+const SAMPLE_PILLARS = [
+  { label: "SEO", score: 62 },
+  { label: "AEO", score: 48 },
+  { label: "GEO", score: 38 },
+  { label: "Brand", score: 56 },
+];
+const SAMPLE_FIX_TEXT = [
+  { title: "होमपेज पर साफ़ लिखें कि आप क्या बेचते हैं और कहाँ", why: "Google और ChatGPT समझ नहीं पाते कि आप इंदिरानगर में डिलीवरी करते हैं।" },
+  { title: "6 पेज पर Google समरी जोड़ें", why: "Google अंदाज़ा लगा रहा है कि आपके नाम के नीचे क्या दिखाए।" },
+  { title: "“क्या आप डिलीवरी करते हैं?” का जवाब एक साफ़ लाइन में दें", why: "AI असिस्टेंट ऐसा छोटा जवाब ढूँढते हैं जिसे वे कोट कर सकें।" },
+];
+const SAMPLE_FIXES_HI = SAMPLE_FIX_TEXT.map((f, i) => ({ ...f, points: `+${SAMPLE_FIXES[i].points} पॉइंट` }));
+const SAMPLE_GAIN = SAMPLE_FIXES.reduce((a, f) => a + f.points, 0);
 
 export default function HindiHomePage() {
   return (
@@ -74,11 +91,23 @@ export default function HindiHomePage() {
               ))}
             </dl>
             <p className="mk-body mt-6 max-w-md text-small text-muted">
-              SEO, AEO और GEO एक ही मकसद के तीन नाम हैं: जब कोई आपकी चीज़ या सेवा ढूँढे, तो उसे आप मिलें। नीचे का नमूना अंग्रेज़ी में है।
+              SEO, AEO और GEO एक ही मकसद के तीन नाम हैं: जब कोई आपकी चीज़ या सेवा ढूँढे, तो उसे आप मिलें।
             </p>
           </div>
-          <div lang="en" className="mk-reveal min-w-0 lg:col-span-7 lg:col-start-6 xl:col-span-6 xl:col-start-7">
-            <SampleResult />
+          <div className="mk-reveal min-w-0 lg:col-span-7 lg:col-start-6 xl:col-span-6 xl:col-start-7">
+            <SampleScoreCard
+              site="greenleaf-bakery.example"
+              tag="नमूना"
+              score={SAMPLE_SCORE}
+              ringLabel={`नमूना स्कोर: 100 में से ${SAMPLE_SCORE}, सुधार चाहिए`}
+              bandLabel="सुधार चाहिए"
+              headline={`${SAMPLE_SCORE} / 100 · सुधार चाहिए`}
+              sub={`3 सुधार से स्कोर ${SAMPLE_GAIN} पॉइंट तक बढ़ सकता है।`}
+              pillarsTitle="चार हिस्सों के स्कोर (100 में से)"
+              pillars={SAMPLE_PILLARS}
+              fixes={SAMPLE_FIXES_HI}
+              caption="नमूना नतीजा: एक काल्पनिक बेकरी की वेबसाइट का फ्री चेक। आपके असली नतीजे चेक चलाने पर दिखेंगे।"
+            />
           </div>
         </div>
       </section>

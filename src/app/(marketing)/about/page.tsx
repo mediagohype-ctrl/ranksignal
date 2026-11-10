@@ -8,6 +8,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { ENGINES, FinalCta, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import { SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { DifferenceStrip } from "@/components/marketing/showcase/difference-strip";
 
 // Title and description live in src/lib/seo/pages.ts (length- and uniqueness-tested).
 export const metadata: Metadata = staticPageMetadata("/about");
@@ -59,6 +60,50 @@ export default function AboutPage() {
           </p>
         }
       />
+
+      <Section labelledBy="about-different" tone="surface">
+        <div className="mx-auto mb-10 max-w-3xl text-center">
+          <p className="eyebrow mb-3">How we&apos;re different</p>
+          <h2 id="about-different" className="text-balance text-h2 text-fg">
+            How is {BRAND.name} different?
+          </h2>
+          <p className="mt-4 text-body leading-relaxed text-fg-soft">
+            We explain every problem in plain English, we change your website only after you approve, with an undo, we
+            track what AI assistants like {engineList} say about you, and our prices are in Indian rupees, starting at{" "}
+            {inr(starter.priceInrMonthly ?? 0)} a month.
+          </p>
+        </div>
+        <DifferenceStrip
+          caption={`Four things we do differently. The small pictures show what each looks like inside ${BRAND.name}.`}
+          items={[
+            {
+              title: "Plain English, not jargon",
+              body: "Every problem comes with what is wrong and the steps to fix it, in words a shop owner can follow.",
+              visual: { kind: "plain", before: "Missing meta description", after: "Add a Google summary to 6 pages" },
+            },
+            {
+              title: "Fixes go live only with your OK",
+              body: "We draft the change and you approve it first. The old version is saved, so you can undo it any time.",
+              visual: { kind: "approve", approve: "Approve", undo: "Undo" },
+            },
+            {
+              title: "AI answers tracked",
+              body: `We ask up to ${ENGINES.length} AI assistants your customers' questions and record whether you are named, linked or left out.`,
+              visual: { kind: "ai", engines: ENGINES, named: "Named", linked: "Linked", missed: "Left out" },
+            },
+            {
+              title: "Prices in ₹, up front",
+              body: `Plans are priced in Indian rupees, with GST shown separately and a ${TRIAL_DAYS}-day free trial first.`,
+              visual: {
+                kind: "inr",
+                price: inr(starter.priceInrMonthly ?? 0),
+                per: "/ month",
+                notes: [`${starter.name} plan, GST extra`, `${TRIAL_DAYS}-day free trial`],
+              },
+            },
+          ]}
+        />
+      </Section>
 
       <Section labelledBy="about-who">
         <div className="mx-auto max-w-3xl space-y-10 text-body leading-relaxed text-fg-soft [&_a]:font-medium [&_a]:text-primary [&_a]:underline-offset-4 [&_a:hover]:underline">

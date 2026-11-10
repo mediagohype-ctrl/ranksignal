@@ -1,10 +1,12 @@
 "use client";
-// Result of the free website check: one score, the top 3 fixes, the rest blurred behind an email box,
-// and a button to see every fix in the free trial.
+// Result of the free website check: one score, the four area scores, what the score means, the top 3 fixes with
+// "+N points", the rest blurred behind an email box, and a button to see every fix in the free trial.
 import { useState } from "react";
+import clsx from "clsx";
 import { ArrowRight, Info, Lock, Mail } from "lucide-react";
-import { Button, Card, Field, IssueCard, Input, LinkButton, SCORE_BAND_CLASS, ScoreRing, SectionHeading, fieldDescribedBy, scoreBand } from "@/components/ui";
-import { AI_VISIBILITY_NOTE, FREE_PILLAR_NAMES, type FreeCheckResult } from "@/lib/free-check/types";
+import { Button, Card, Field, IssueCard, Input, LinkButton, Meter, SCORE_BAND_CLASS, ScoreRing, SectionHeading, fieldDescribedBy, scoreBand, type ScoreBand } from "@/components/ui";
+import { AI_VISIBILITY_NOTE, FREE_PILLAR_NAMES, type FreeCheckPillar, type FreeCheckResult } from "@/lib/free-check/types";
+import type { Pillar } from "@/lib/report/types";
 import { TRIAL_DAYS } from "./plans";
 
 export function signupHref(url: string) {
@@ -27,6 +29,7 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
   })();
   const hidden = Math.max(0, result.totalIssues - result.issues.length);
   const pages = result.pagesChecked.length;
+  const gain = result.issues.reduce((a, i) => a + (i.points ?? 0), 0);
 
   return (
     <div className="animate-fade-in space-y-10" aria-live="polite">
@@ -42,6 +45,10 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
             </p>
           </div>
         </div>
+
+        {result.pillars.length > 0 && <PillarBreakdown pillars={result.pillars} />}
+        <MeaningStrip score={result.overall.score} gain={gain} fixes={result.issues.length} />
+
         <p className="mt-6 flex gap-2 rounded-xl bg-surface-2 px-4 py-3 text-small text-fg-soft">
           <Info aria-hidden size={18} className="mt-0.5 shrink-0 text-primary" />
           {AI_VISIBILITY_NOTE}
@@ -58,23 +65,42 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
               : "Nice work — the pages we read cover the basics. The full check reads many more pages and asks ChatGPT about you."
           }
         />
-        <div className="space-y-4">
+        <ol className="space-y-6">
           {result.issues.map((i, n) => (
-            <IssueCard
-              key={i.id}
-              id={i.id}
-              title={i.title}
-              whatsWrong={i.whatsWrong}
-              howToFix={i.howToFix}
-              impact={i.impact}
-              effort={i.effort}
-              affectedCount={i.affectedCount}
-              pillarLabel={FREE_PILLAR_NAMES[i.pillar] ?? i.pillarLabel}
-              collapsible
-              defaultOpen={n === 0}
-            />
+            <li key={i.id} className="relative">
+              <div className="absolute -top-3 left-5 z-10 flex items-center gap-1.5 sm:left-6">
+                <span className="inline-flex h-6 items-center rounded-full bg-fg px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-bg">
+                  Fix {n + 1}
+                </span>
+                {i.points ? (
+                  <span className="inline-flex h-6 items-center rounded-full bg-score-good-soft px-2.5 text-xs font-semibold tabular-nums text-score-good ring-1 ring-score-good/25">
+                    <span className="sr-only">Could add about </span>
+                    {pointsLabel(i.points)}
+                  </span>
+                ) : null}
+              </div>
+              <IssueCard
+                id={i.id}
+                className="pt-7 sm:pt-8"
+                title={i.title}
+                whatsWrong={i.whatsWrong}
+                howToFix={i.howToFix}
+                impact={i.impact}
+                effort={i.effort}
+                affectedCount={i.affectedCount}
+                pillarLabel={FREE_PILLAR_NAMES[i.pillar] ?? i.pillarLabel}
+                collapsible
+                defaultOpen={n === 0}
+              />
+            </li>
           ))}
-        </div>
+        </ol>
+        {gain > 0 && (
+          <p className="mt-4 text-xs text-muted">
+            Points are our estimate of how much your score here would rise after each fix. They are not a promise of a
+            Google position or an AI mention.
+          </p>
+        )}
       </section>
 
       {hidden > 0 && <HiddenFixes count={hidden} leadId={result.leadId ?? null} />}
@@ -95,6 +121,132 @@ export function FreeCheckResultView({ result }: { result: FreeCheckResult }) {
         <p className="mt-4 text-xs text-muted">Nobody can promise a Google position or an AI mention. We measure honestly.</p>
       </div>
     </div>
+  );
+}
+
+/** "+1 point" / "+4 points" (same wording as the full report). */
+function pointsLabel(n: number) {
+  return `+${n} ${n === 1 ? "point" : "points"}`;
+}
+
+/** Plain-English question each score answers. */
+const PILLAR_QUESTION: Record<Pillar, string> = {
+  seo: "Can Google find and show your pages?",
+  aeo: "Do your pages answer questions clearly enough to be quoted?",
+  geo: "Can AI assistants like ChatGPT read and understand you?",
+  brand: "Are your business details easy to find and trust?",
+};
+
+/** The four area scores as labelled bars, each number and sentence as real text. */
+function PillarBreakdown({ pillars }: { pillars: FreeCheckPillar[] }) {
+  return (
+    <figure className="mt-8 border-t border-border pt-6">
+      <h3 className="text-h4 text-fg">Your four scores</h3>
+      <figcaption className="mt-1 text-small text-muted">Each area is scored from 0 to 100. Green is good, yellow needs work, red is poor.</figcaption>
+      <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+        {pillars.map((p) => {
+          const band = scoreBand(p.score);
+          const name = FREE_PILLAR_NAMES[p.pillar] ?? p.label;
+          return (
+            <li key={p.pillar} className="rounded-xl border border-border bg-surface-2/50 p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-small font-semibold text-fg">{name}</p>
+                <p className="shrink-0 text-small tabular-nums text-fg">
+                  {band === "none" ? (
+                    <span className="text-muted">Full check</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold">{Math.round(p.score as number)}</span>
+                      <span className="text-muted"> / 100 · </span>
+                      <span className={clsx("font-medium", SCORE_BAND_CLASS[band].text)}>{SCORE_BAND_CLASS[band].label}</span>
+                    </>
+                  )}
+                </p>
+              </div>
+              <div className="mt-2.5">
+                {band === "none" ? (
+                  <div aria-hidden className="h-2.5 w-full rounded-full border border-dashed border-border-strong" />
+                ) : (
+                  <Meter value={Math.round(p.score as number)} max={100} label={`${name} score`} tone="score" size="md" />
+                )}
+              </div>
+              <p className="mt-3 text-small font-medium text-fg-soft">{PILLAR_QUESTION[p.pillar]}</p>
+              {p.summary && <p className="mt-1 text-xs leading-relaxed text-muted">{p.summary}</p>}
+            </li>
+          );
+        })}
+      </ul>
+    </figure>
+  );
+}
+
+const BAND_MEANING: Record<Exclude<ScoreBand, "none">, string> = {
+  poor: "Google and AI assistants struggle to understand your website. The fixes below are the quickest way up.",
+  ok: "Some of the basics are in place, but gaps make it harder for Google and AI to pick you.",
+  good: "Your pages cover the basics well. The full check looks for the next wins, including what ChatGPT says about you.",
+};
+
+const BANDS = [
+  { band: "poor", label: "Poor", range: "0–49", width: 50 },
+  { band: "ok", label: "Needs work", range: "50–74", width: 25 },
+  { band: "good", label: "Good", range: "75–100", width: 25 },
+] as const;
+
+/** "What this means": where the score sits on the Poor / Needs work / Good scale, and where the top fixes could take it. */
+function MeaningStrip({ score, gain, fixes }: { score: number | null; gain: number; fixes: number }) {
+  const band = scoreBand(score);
+  if (band === "none") return null;
+  const now = Math.max(0, Math.min(100, Math.round(score as number)));
+  const after = Math.min(100, now + gain);
+  const clampPct = (n: number) => Math.max(6, Math.min(94, n));
+  return (
+    <figure className="mt-8 border-t border-border pt-6">
+      <h3 className="text-h4 text-fg">What this means</h3>
+      <figcaption className="mt-1 text-small text-muted">
+        Where your score sits: Poor is below 50, Needs work is 50 to 74, Good is 75 and up.
+      </figcaption>
+      <div aria-hidden className="relative mt-9 h-16">
+        <div className="absolute inset-x-0 top-0 flex h-3 overflow-hidden rounded-full">
+          {BANDS.map((b) => (
+            <span key={b.band} className={SCORE_BAND_CLASS[b.band].soft} style={{ width: `${b.width}%` }} />
+          ))}
+        </div>
+        {after > now && (
+          <span
+            className="absolute top-0 h-3 rounded-full bg-score-good/45"
+            style={{ left: `${now}%`, width: `${after - now}%` }}
+          />
+        )}
+        <span className={clsx("absolute -top-1 h-5 w-1 -translate-x-1/2 rounded-full", SCORE_BAND_CLASS[band].bg)} style={{ left: `${now}%` }} />
+        <span
+          className="absolute -top-7 -translate-x-1/2 whitespace-nowrap rounded-full bg-fg px-2 py-0.5 text-[11px] font-semibold tabular-nums text-bg"
+          style={{ left: `${clampPct(now)}%` }}
+        >
+          You: {now}
+        </span>
+        <div className="absolute inset-x-0 top-5 flex text-[11px] leading-tight text-muted">
+          {BANDS.map((b) => (
+            <span key={b.band} className="min-w-0 pr-1" style={{ width: `${b.width}%` }}>
+              <span className="block font-medium text-fg-soft">{b.label}</span>
+              {b.range}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="mt-2 text-small leading-relaxed text-fg-soft">
+        <strong className="font-semibold text-fg">
+          Your score of {now} is in the {SCORE_BAND_CLASS[band].label} range.
+        </strong>{" "}
+        {BAND_MEANING[band]}
+        {after > now && (
+          <>
+            {" "}
+            Your top {fixes === 1 ? "fix" : `${fixes} fixes`} could add about {after - now} points, taking you to around {after}.
+          </>
+        )}
+        {now < 75 && <> Good starts at 75, which is {75 - now} points away.</>}
+      </p>
+    </figure>
   );
 }
 

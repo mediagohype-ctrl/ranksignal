@@ -11,6 +11,7 @@ import {
   ServiceTierCards,
   ServicesCta,
 } from "@/components/marketing/services-ui";
+import { ServiceFlow } from "@/components/marketing/flow/service-flow";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 
@@ -247,6 +248,16 @@ export default function ServicesPage() {
               </li>
             ))}
           </ol>
+          <div className="mt-20 lg:mt-28">
+            <h3 className="mk-reveal text-[clamp(1.5rem,1.25rem+0.9vw,2rem)] font-semibold leading-tight tracking-[-0.03em] text-fg">
+              How we work with you
+            </h3>
+            <p className="mk-reveal mk-body mt-3 max-w-2xl text-fg-soft">
+              Our team does the work; you give access, agree the customer questions and approve changes. After the first two
+              weeks, your part is quick OKs and about 30 minutes with the monthly report.
+            </p>
+            <ServiceFlow steps={STEPS} className="mt-10" />
+          </div>
         </div>
       </section>
 

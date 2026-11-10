@@ -8,6 +8,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { ENGINES, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
 import { ABOUT_FAQ } from "@/components/marketing/hi/content";
+import { DifferenceStrip } from "@/components/marketing/showcase/difference-strip";
 import { HiFaqSection, HiFinalCta } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
 
@@ -36,6 +37,51 @@ export default function HindiAboutPage() {
           </p>
         }
       />
+
+      <Section labelledBy="hi-about-different" tone="surface">
+        <div className="mx-auto mb-10 max-w-3xl text-center">
+          <p className="eyebrow mb-3">हम अलग कैसे हैं</p>
+          <h2 id="hi-about-different" className="text-balance text-h2 text-fg">
+            {BRAND.name} बाकियों से अलग कैसे है?
+          </h2>
+          <p className="mt-4 text-body leading-relaxed text-fg-soft">
+            हम हर समस्या आसान भाषा में समझाते हैं, आपकी वेबसाइट में बदलाव सिर्फ़ आपकी मंज़ूरी के बाद करते हैं और उसे वापस (undo) भी किया जा सकता है,
+            हम देखते हैं कि {engineList} जैसे AI असिस्टेंट आपके बारे में क्या कहते हैं, और हमारी कीमतें भारतीय रुपये में हैं —{" "}
+            {inr(starter.priceInrMonthly ?? 0)} महीने से शुरू।
+          </p>
+        </div>
+        <DifferenceStrip
+          lang="hi"
+          caption={`चार बातें जो हम अलग तरह से करते हैं। छोटी तस्वीरें दिखाती हैं कि ${BRAND.name} के अंदर हर बात कैसी दिखती है।`}
+          items={[
+            {
+              title: "आसान भाषा, कोई जार्गन नहीं",
+              body: "हर समस्या के साथ बताया जाता है कि क्या गड़बड़ है और उसे ठीक करने के कदम क्या हैं — ऐसे शब्दों में जो कोई भी दुकानदार समझ सके।",
+              visual: { kind: "plain", before: "Missing meta description", after: "6 पेज पर Google समरी जोड़ें" },
+            },
+            {
+              title: "सुधार सिर्फ़ आपकी मंज़ूरी से",
+              body: "हम बदलाव का ड्राफ़्ट बनाते हैं और आप पहले उसे मंज़ूर करते हैं। पुराना वर्शन सेव रहता है, ताकि आप कभी भी उसे वापस कर सकें।",
+              visual: { kind: "approve", approve: "मंज़ूर करें", undo: "वापस करें" },
+            },
+            {
+              title: "AI के जवाबों पर नज़र",
+              body: `हम ${ENGINES.length} तक AI असिस्टेंट से आपके ग्राहकों के सवाल पूछते हैं और दर्ज करते हैं कि आपका नाम आया, लिंक मिला या आप छूट गए।`,
+              visual: { kind: "ai", engines: ENGINES, named: "नाम आया", linked: "लिंक मिला", missed: "छूट गए" },
+            },
+            {
+              title: "कीमतें ₹ में, पहले से साफ़",
+              body: `प्लान की कीमतें भारतीय रुपये में हैं, GST अलग से दिखाया जाता है, और पहले ${TRIAL_DAYS} दिन का फ्री ट्रायल मिलता है।`,
+              visual: {
+                kind: "inr",
+                price: inr(starter.priceInrMonthly ?? 0),
+                per: "/ महीना",
+                notes: [`${starter.name} प्लान, GST अलग`, `${TRIAL_DAYS} दिन का फ्री ट्रायल`],
+              },
+            },
+          ]}
+        />
+      </Section>
 
       <Section labelledBy="hi-about-who">
         <div className="mx-auto max-w-3xl space-y-10 text-body leading-relaxed text-fg-soft [&_a]:font-medium [&_a]:text-primary [&_a]:underline-offset-4 [&_a:hover]:underline">

@@ -1,6 +1,6 @@
-// The app's 4 tabs (Developer Brief v1, section 5). Each tab answers one question and groups the pages that
+// The app's main tabs (Developer Brief v1, section 5). Each tab answers one question and groups the pages that
 // used to be separate menu items; the first page of a tab is where the tab opens.
-import { Home, ListChecks, MessageCircleQuestion, TrendingUp } from "lucide-react";
+import { Home, ListChecks, MessageCircleQuestion, Search, TrendingUp } from "lucide-react";
 
 export interface NavPage {
   /** Route segment under /app/projects/[id] ("" = the project home). */
@@ -9,7 +9,7 @@ export interface NavPage {
 }
 
 export interface NavTab {
-  key: "home" | "todo" | "answers" | "progress";
+  key: "home" | "todo" | "answers" | "google" | "progress";
   label: string;
   /** The question this tab answers, shown as a hint. */
   question: string;
@@ -53,6 +53,19 @@ export const APP_TABS: NavTab[] = [
       { slug: "visibility", label: "AI answers" },
       { slug: "prompts", label: "Customer questions" },
       { slug: "ai-bots", label: "AI crawler visits" },
+    ],
+  },
+  {
+    key: "google",
+    label: "Google",
+    question: "Where do I rank? Who's ahead?",
+    icon: Search,
+    // Paid Google data (DataForSEO): src/lib/dataforseo. Each page explains itself until the data partner is switched on.
+    pages: [
+      { slug: "rankings", label: "Rankings" },
+      { slug: "research", label: "Keyword research" },
+      { slug: "competitors", label: "Competitors" },
+      { slug: "backlinks", label: "Backlinks" },
     ],
   },
   {

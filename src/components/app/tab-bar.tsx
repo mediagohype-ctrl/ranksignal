@@ -10,7 +10,7 @@ function useProjectRoute() {
   return { projectId: match?.[1] ?? null, section: match?.[2] ?? "" };
 }
 
-/** Mobile bottom bar with the same 4 tabs as the sidebar (hidden on desktop). */
+/** Mobile bottom bar with the same main tabs as the sidebar (hidden on desktop). */
 export function MobileTabBar() {
   const { projectId, section } = useProjectRoute();
   if (!projectId) return null;
@@ -20,7 +20,7 @@ export function MobileTabBar() {
       aria-label="Main tabs"
       className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {APP_TABS.map((tab) => {
           const active = tab.key === activeKey;
           const Icon = tab.icon;

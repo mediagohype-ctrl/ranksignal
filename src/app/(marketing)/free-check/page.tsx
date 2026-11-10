@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Bot, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { Bot, MessageSquareQuote, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckLanes, type Lane } from "@/components/marketing/showcase/check-lanes";
 import { BRAND } from "@/lib/brand";
 import { IconTile, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { FreeCheckTool } from "@/components/marketing/free-check-tool";
@@ -21,6 +22,33 @@ const WHAT: { icon: ReactNode; title: string; body: string }[] = [
   { icon: <Sparkles />, title: "Answer-readiness (AEO)", body: "Whether your pages answer real customer questions clearly enough to be quoted." },
   { icon: <Bot />, title: "AI access (GEO)", body: "Whether the robots of ChatGPT, Perplexity and Claude are allowed in, and whether AI can tell who you are." },
   { icon: <ShieldCheck />, title: "Trust signs", body: "Your business details, About and Contact pages, and links to your social profiles." },
+];
+
+const LANES: Lane[] = [
+  {
+    tag: "SEO",
+    title: "Google search",
+    line: "Can Google find your pages and show a clear headline and summary under your name?",
+    icon: <Search />,
+    checks: ["Your Google headline and summary", "Main headings and the secure padlock", "Pages allowed on Google, and your sitemap"],
+    mock: { kind: "search", query: "cake shop near me", site: "yourbusiness.example", title: "Your Business · Fresh cakes in your area" },
+  },
+  {
+    tag: "AEO",
+    title: "Answer boxes",
+    line: "Do your pages answer real customer questions in a short, clear way that can be quoted?",
+    icon: <MessageSquareQuote />,
+    checks: ["Short, direct answers on your pages", "Question-style headings and FAQs", "Business details Google can read"],
+    mock: { kind: "answer", heading: "Answer", answer: "Yes, they deliver every day before 8 pm across the city.", source: "From yourbusiness.example" },
+  },
+  {
+    tag: "GEO",
+    title: "AI assistants",
+    line: "Can ChatGPT, Perplexity and Claude get into your website and tell who you are?",
+    icon: <Bot />,
+    checks: ["AI robots allowed in your robots.txt", "Who you are and what you do, said plainly", "An AI guide file (llms.txt), if you have one"],
+    mock: { kind: "chat", question: "Who delivers cakes near me?", before: "You could try", name: "Your Business", after: "— they deliver same day." },
+  },
 ];
 
 export default async function FreeCheckPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -56,6 +84,28 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
           <FreeCheckTool initialUrl={initialUrl} />
         </div>
       </section>
+      <Section labelledBy="fc-lanes">
+        <SectionHeading
+          id="fc-lanes"
+          size="lg"
+          align="center"
+          eyebrow="SEO, AEO and GEO"
+          title="Three places customers find you"
+          description={
+            <>
+              SEO is being found on Google. AEO (answer engine optimisation) is being the short answer that Google and
+              voice assistants quote. GEO (generative engine optimisation) is being named by AI assistants like ChatGPT and
+              Gemini. The free check scores your website for all three, plus Brand.
+            </>
+          }
+        />
+        <CheckLanes
+          site="yourbusiness.com"
+          siteNote={`We read your homepage and up to ${MAX_KEY_PAGES} main pages`}
+          lanes={LANES}
+          caption="What the free check looks at for each place. The small pictures are illustrations, not your results."
+        />
+      </Section>
       <Section labelledBy="fc-what" tone="surface">
         <SectionHeading id="fc-what" size="lg" align="center" eyebrow="What we check" title="What the free check looks at" />
         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

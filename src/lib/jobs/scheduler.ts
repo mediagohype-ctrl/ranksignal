@@ -194,6 +194,8 @@ export async function schedulerTick(now = new Date()) {
         await step("monthly-reports", () => scheduleMonthlyReports(now));
         await step("google-metrics", () => syncGoogleMetricsDue(now));
         await step("business-profiles", () => import("@/lib/business-profile/service").then((m) => m.snapshotDueBusinessProfiles(now))); // Places API snapshots (per-plan interval)
+        await step("rank-tracker", () => import("@/lib/rank-tracker/job").then((m) => m.scheduleDueRankChecks(now))); // tracked keywords due (DataForSEO SERP)
+        await step("backlinks", () => import("@/lib/backlinks/service").then((m) => m.enqueueDueBacklinkRefreshes(now))); // backlink refresh jobs (weekly/monthly per plan)
         // Trial nudges, fix of the week, WhatsApp updates, competitor alerts (each idempotent via SentMessage).
         await step("growth", () => runGrowthTick(now));
         await step("alert-digests", () => import("@/lib/alerts/deliver").then((m) => m.sendAlertDigests(now))); // daily alert digest (09:00 IST)

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AlignLeft, ArrowRight, Bot, Braces, FileText, Heading, Link2Off, Map, Puzzle, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
 import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
+import { ToolPreview, type ToolPreviewKind } from "@/components/marketing/showcase/tool-preview";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
 import { MAX_ENGINES, PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
 import { MAX_KEY_PAGES } from "@/lib/free-check/run";
@@ -13,6 +14,8 @@ export const metadata: Metadata = staticPageMetadata("/tools");
 interface Tool {
   href: string;
   icon: React.ReactNode;
+  /** Tiny picture of what the tool gives back. */
+  preview: ToolPreviewKind;
   title: string;
   body: string;
 }
@@ -24,12 +27,12 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
     title: "Check your website",
     intro: "Find what's holding a page back on Google, in plain words.",
     tools: [
-      { href: "/free-check", icon: <ScanSearch />, title: "Free website check", body: "Your score out of 100 for Google and AI, and the top things to fix." },
-      { href: "/tools/meta-tag-checker", icon: <Tag />, title: "Meta title & description checker", body: "Is your Google headline and summary the right length, and do shares show a preview?" },
-      { href: "/tools/heading-checker", icon: <Heading />, title: "Heading checker", body: "See a page's H1 to H6 outline and spot missing, repeated or skipped headings." },
-      { href: "/tools/schema-checker", icon: <Braces />, title: "Schema markup checker", body: "Find the structured data on a page and the fields Google expects for each type." },
-      { href: "/tools/broken-link-checker", icon: <Link2Off />, title: "Broken link checker", body: "Test every link on a page and find the ones that fail, redirect or time out." },
-      { href: "/tools/seo-extension", icon: <Puzzle />, title: "SEO browser extension", body: "Check the title, headings, schema and AI readiness of any page you visit." },
+      { href: "/free-check", preview: "score", icon: <ScanSearch />, title: "Free website check", body: "Your score out of 100 for Google and AI, and the top things to fix." },
+      { href: "/tools/meta-tag-checker", preview: "meta", icon: <Tag />, title: "Meta title & description checker", body: "Is your Google headline and summary the right length, and do shares show a preview?" },
+      { href: "/tools/heading-checker", preview: "headings", icon: <Heading />, title: "Heading checker", body: "See a page's H1 to H6 outline and spot missing, repeated or skipped headings." },
+      { href: "/tools/schema-checker", preview: "schema", icon: <Braces />, title: "Schema markup checker", body: "Find the structured data on a page and the fields Google expects for each type." },
+      { href: "/tools/broken-link-checker", preview: "links", icon: <Link2Off />, title: "Broken link checker", body: "Test every link on a page and find the ones that fail, redirect or time out." },
+      { href: "/tools/seo-extension", preview: "extension", icon: <Puzzle />, title: "SEO browser extension", body: "Check the title, headings, schema and AI readiness of any page you visit." },
     ],
   },
   {
@@ -37,11 +40,11 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
     title: "Google and AI crawlers",
     intro: "Make sure Google, ChatGPT, Gemini and Perplexity can read and list your pages.",
     tools: [
-      { href: "/tools/ai-mention-checker", icon: <Bot />, title: "AI visibility checker", body: "Can ChatGPT and other AI tools read your website well enough to name you?" },
-      { href: "/tools/ai-crawler-checker", icon: <ShieldCheck />, title: "Is my site blocked from AI?", body: "See which AI crawlers your robots.txt and pages allow or block." },
-      { href: "/tools/robots-txt-tester", icon: <FileText />, title: "Robots.txt tester", body: "Test any address against your robots.txt for Googlebot and AI crawlers." },
-      { href: "/tools/sitemap-checker", icon: <Map />, title: "XML sitemap checker & generator", body: "Check your sitemap for errors and broken entries, or make a new one." },
-      { href: "/tools/ai-guide-file-maker", icon: <FileText />, title: "llms.txt generator", body: "Tell AI tools who you are and which pages matter most." },
+      { href: "/tools/ai-mention-checker", preview: "ai", icon: <Bot />, title: "AI visibility checker", body: "Can ChatGPT and other AI tools read your website well enough to name you?" },
+      { href: "/tools/ai-crawler-checker", preview: "crawlers", icon: <ShieldCheck />, title: "Is my site blocked from AI?", body: "See which AI crawlers your robots.txt and pages allow or block." },
+      { href: "/tools/robots-txt-tester", preview: "robots", icon: <FileText />, title: "Robots.txt tester", body: "Test any address against your robots.txt for Googlebot and AI crawlers." },
+      { href: "/tools/sitemap-checker", preview: "sitemap", icon: <Map />, title: "XML sitemap checker & generator", body: "Check your sitemap for errors and broken entries, or make a new one." },
+      { href: "/tools/ai-guide-file-maker", preview: "llms", icon: <FileText />, title: "llms.txt generator", body: "Tell AI tools who you are and which pages matter most." },
     ],
   },
   {
@@ -49,10 +52,10 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
     title: "Write for Google and AI",
     intro: "Drafts and code you can paste straight into your website.",
     tools: [
-      { href: "/tools/seo-title-generator", icon: <Type />, title: "SEO title generator", body: "5 AI-written title ideas that fit Google's limit, keyword first." },
-      { href: "/tools/meta-description-generator", icon: <AlignLeft />, title: "Meta description generator", body: "5 AI-written Google summaries in the right length, with a reason to click." },
-      { href: "/tools/faq-generator", icon: <Sparkles />, title: "AI FAQ generator", body: "Turn a page into real customer questions and short answers, plus FAQ code." },
-      { href: "/tools/faq-markup-maker", icon: <MessageCircleQuestion />, title: "FAQ schema generator", body: "Type your own questions and answers and get FAQPage code to paste." },
+      { href: "/tools/seo-title-generator", preview: "titles", icon: <Type />, title: "SEO title generator", body: "5 AI-written title ideas that fit Google's limit, keyword first." },
+      { href: "/tools/meta-description-generator", preview: "descriptions", icon: <AlignLeft />, title: "Meta description generator", body: "5 AI-written Google summaries in the right length, with a reason to click." },
+      { href: "/tools/faq-generator", preview: "faq", icon: <Sparkles />, title: "AI FAQ generator", body: "Turn a page into real customer questions and short answers, plus FAQ code." },
+      { href: "/tools/faq-markup-maker", preview: "faq-code", icon: <MessageCircleQuestion />, title: "FAQ schema generator", body: "Type your own questions and answers and get FAQPage code to paste." },
     ],
   },
 ];
@@ -74,9 +77,12 @@ export default function ToolsPage() {
             <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {g.tools.map((t) => (
                 <li key={t.href}>
-                  <Link href={t.href} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition hover:border-primary">
-                    <IconTile>{t.icon}</IconTile>
-                    <h3 className="mt-4 text-h4 text-fg">{t.title}</h3>
+                  <Link href={t.href} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition hover:border-primary hover:shadow-card">
+                    <ToolPreview kind={t.preview} />
+                    <div className="mt-5 flex items-center gap-3">
+                      <IconTile>{t.icon}</IconTile>
+                      <h3 className="text-h4 text-fg">{t.title}</h3>
+                    </div>
                     <p className="mt-2 flex-1 text-small text-muted">{t.body}</p>
                     <span className="mt-4 inline-flex items-center gap-1 text-small font-medium text-primary">
                       Open tool <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
