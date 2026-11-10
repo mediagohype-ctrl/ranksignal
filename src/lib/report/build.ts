@@ -10,6 +10,7 @@ import type { SiteReport } from "@/lib/report/types";
 import type { CheckContext, ReportFinding, ReportPage } from "@/lib/report/inputs";
 import { composeReport } from "@/lib/report/compose";
 import { getCrawlFacts } from "@/lib/report/site-data";
+import { loadAuditDepth } from "@/lib/pagespeed/store";
 import { emptyVisibility, summarizeVisibility, type VisObservation } from "@/lib/report/visibility";
 import { llmSummary } from "@/lib/report/summary";
 import { getLlmBackend } from "@/lib/providers/llm";
@@ -90,7 +91,7 @@ export async function buildSiteReport(projectId: string, organizationId: string,
     }),
   ]);
 
-  const [pageRows, facts, obsRows] = await Promise.all([
+  const [pageRows, facts, obsRows, depth] = await Promise.all([
     crawlRun
       ? db.crawlPage.findMany({ where: { organizationId, crawlRunId: crawlRun.id }, select: PAGE_SELECT, orderBy: { crawledAt: "asc" }, take: MAX_PAGES })
       : Promise.resolve([]),
@@ -102,6 +103,8 @@ export async function buildSiteReport(projectId: string, organizationId: string,
           take: MAX_OBSERVATIONS,
         })
       : Promise.resolve([]),
+    // Post-crawl PageSpeed + probe results; never fails the report (older crawls simply have none).
+    crawlRun ? loadAuditDepth(organizationId, crawlRun.id).catch(() => null) : Promise.resolve(null),
   ]);
 
   const pages: ReportPage[] = pageRows.map((r) => ({
@@ -140,6 +143,7 @@ export async function buildSiteReport(projectId: string, organizationId: string,
     ai: vis.summary,
     now: new Date(),
     jsSite: facts.jsSite,
+    depth,
   };
 
   const report = composeReport({

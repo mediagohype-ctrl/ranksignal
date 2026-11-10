@@ -84,3 +84,7 @@ export function estimatePerplexityCallMicros(model: string, inputText: string, m
 
 /** DataForSEO LLM Responses bills per task (plus the model's tokens); flat high estimate. */
 export const DATAFORSEO_CALL_ESTIMATE_MICROS = 50_000;
+
+/** DataForSEO SERP (Google organic live/advanced + async AI Overview ≈ USD 0.004; AI Mode live ≈ USD 0.004). High estimates. */
+export const DATAFORSEO_SERP_AIO_ESTIMATE_MICROS = 20_000;
+export const DATAFORSEO_SERP_AI_MODE_ESTIMATE_MICROS = 20_000;

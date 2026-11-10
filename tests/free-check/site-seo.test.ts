@@ -41,7 +41,8 @@ describe("site SEO builders", () => {
     }
     expect(urls.every((u) => u.startsWith(`${BASE}/`))).toBe(true);
     expect(new Set(urls).size).toBe(urls.length);
-    expect(urls.some((u) => /\/(app|admin|api)(\/|$)/.test(u))).toBe(false);
+    // No app, admin or API endpoints (a docs page like /docs/api is fine).
+    expect(urls.some((u) => /^https?:\/\/[^/]+\/(app|admin|api)(\/|$)/.test(u))).toBe(false);
   });
 
   it("robots allows search + AI crawlers, blocks private areas, links the sitemap", () => {

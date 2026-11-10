@@ -6,12 +6,15 @@ import * as cheerio from "cheerio";
 import type { ExtractedPage } from "@/lib/types";
 import { isSameSite, normalizeUrl } from "@/lib/crawler/normalize";
 
-export const EXTRACTOR_VERSION = 2;
+/** v3: hreflang, mixed content, image width/height, vague link text (audit depth). */
+export const EXTRACTOR_VERSION = 3;
 const MAX_LINKS = 500;
 const MAX_IMAGES = 300;
 const MAX_JSONLD_BLOCKS = 20;
 const MAX_JSONLD_CHARS = 200_000;
 const TEXT_SAMPLE_CHARS = 2000;
+const MAX_HREFLANG = 100;
+const MAX_MIXED_EXAMPLES = 20;
 /** Concise "direct answer" length window (featured-snippet style answers are ~40–60 words). */
 export const ANSWER_MIN_WORDS = 25;
 export const ANSWER_MAX_WORDS = 90;
@@ -268,6 +271,8 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
   let hasPhoneLink = false;
   let hasEmailLink = false;
   let relAuthor = false;
+  let vagueLinkCount = 0;
+  const vagueLinkExamples: string[] = [];
   $("a[href]").each((_, el) => {
     const rel = ($(el).attr("rel") ?? "").toLowerCase();
     const href = ($(el).attr("href") ?? "").trim();
@@ -277,6 +282,11 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
     if (!href || /^(mailto:|tel:|javascript:|data:|#)/i.test(href)) return;
     const abs = normalizeUrl(href, baseUrl, { trailingSlash: "keep" });
     if (!abs) return;
+    const linkText = clean($(el).text());
+    if (isVagueLinkText(linkText) && !hasDescriptiveLabel($(el).attr("aria-label"), $(el).attr("title"))) {
+      vagueLinkCount++;
+      if (vagueLinkExamples.length < 5 && !vagueLinkExamples.includes(linkText.slice(0, 60))) vagueLinkExamples.push(linkText.slice(0, 60));
+    }
     if (isSameSite(abs, hosts)) {
       if (internal.size < MAX_LINKS && !rel.includes("nofollow")) internal.add(abs);
       if (navLinks.size < 100 && $(el).closest("nav, header, [role=navigation]").length) navLinks.add(abs);
@@ -305,8 +315,11 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
   });
 
   const images: { src: string; alt: string | null }[] = [];
+  let imagesMissingSize = 0;
+  const imagesMissingSizeExamples: string[] = [];
   $("img").each((_, el) => {
     if (images.length >= MAX_IMAGES) return false;
+    const sized = hasDimension($(el).attr("width")) && hasDimension($(el).attr("height"));
     const src = $(el).attr("src") ?? $(el).attr("data-src") ?? "";
     let resolved = src;
     try {
@@ -316,7 +329,23 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
     }
     const alt = $(el).attr("alt");
     images.push({ src: resolved.slice(0, 1000), alt: alt === undefined ? null : clean(alt) });
+    if (!sized && src && !src.startsWith("data:")) {
+      imagesMissingSize++;
+      if (imagesMissingSizeExamples.length < 5) imagesMissingSizeExamples.push(resolved.slice(0, 300));
+    }
   });
+
+  // hreflang alternates and mixed content (read before <head>/scripts/iframes are stripped below).
+  const hreflang: { lang: string; href: string }[] = [];
+  $("link[hreflang][href]").each((_, el) => {
+    if (hreflang.length >= MAX_HREFLANG) return false;
+    const rels = ($(el).attr("rel") ?? "").toLowerCase().split(/\s+/);
+    if (!rels.includes("alternate")) return;
+    const href = normalizeUrl($(el).attr("href") ?? "", baseUrl, { trailingSlash: "keep" });
+    const code = clean($(el).attr("hreflang")).slice(0, 40);
+    if (href && code) hreflang.push({ lang: code, href });
+  });
+  const mixedContent = findMixedContent($, pageUrl, baseUrl);
 
   const jsonLd: unknown[] = [];
   $('script[type="application/ld+json" i]').each((_, el) => {
@@ -500,6 +529,13 @@ export function extractPage(html: string, pageUrl: string, siteHosts: Iterable<s
     stylesheetCount,
     ...(brandMentions ? { brandMentions } : {}),
     jsShell,
+    hreflang,
+    mixedContent: mixedContent.items,
+    mixedContentCount: mixedContent.count,
+    imagesMissingSize,
+    imagesMissingSizeExamples,
+    vagueLinkCount,
+    vagueLinkExamples,
   };
 }
 
@@ -511,4 +547,61 @@ const APP_ROOTS: [string, string][] = [
 function findAppRoot($: cheerio.CheerioAPI): string | null {
   for (const [sel, name] of APP_ROOTS) if ($(sel).length) return name;
   return null;
+}
+
+// ---------- v3 helpers (pure, exported for tests) ----------
+
+/** width/height attribute with a usable value ("640", "640px"; not "auto" or empty). */
+function hasDimension(v: string | undefined): boolean {
+  return !!v && /^\s*\d+(\.\d+)?\s*(px)?\s*$/i.test(v);
+}
+
+const VAGUE_LINK_TEXTS = new Set([
+  "click here", "click", "here", "read more", "more", "learn more", "more info", "more information", "details",
+  "view details", "see more", "continue", "continue reading", "go", "link", "this", "this link", "this page",
+  "find out more", "know more", "view more", "read", "click this", "tap here", "press here",
+  // Hindi equivalents seen on Indian sites
+  "यहाँ क्लिक करें", "यहां क्लिक करें", "और पढ़ें", "अधिक पढ़ें", "और जानें", "यहाँ", "यहां",
+]);
+/** Link words that say nothing about where the link goes ("click here", "read more"). */
+export function isVagueLinkText(text: string): boolean {
+  const t = text.toLowerCase().replace(/[»›→…>.!:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
+  return t.length > 0 && VAGUE_LINK_TEXTS.has(t);
+}
+/** An aria-label / title that adds real context makes a short link text acceptable. */
+function hasDescriptiveLabel(...labels: (string | undefined)[]): boolean {
+  return labels.some((l) => !!l && clean(l).split(" ").length >= 3 && !isVagueLinkText(clean(l)));
+}
+
+const MIXED_SOURCES: [string, string, string, boolean][] = [
+  // selector, attribute, kind, active (browsers block active mixed content outright)
+  ["script[src]", "src", "script", true],
+  ['link[rel~="stylesheet" i][href]', "href", "stylesheet", true],
+  ["iframe[src]", "src", "iframe", true],
+  ["img[src]", "src", "image", false],
+  ["video[src], audio[src], source[src]", "src", "media", false],
+  ["embed[src]", "src", "embed", true],
+  ["object[data]", "data", "embed", true],
+];
+/** http:// subresources on an https page (mixed content). Links (<a href>) are not subresources. */
+function findMixedContent($: cheerio.CheerioAPI, pageUrl: string, baseUrl: string): { items: { url: string; kind: string; active: boolean }[]; count: number } {
+  const items: { url: string; kind: string; active: boolean }[] = [];
+  let count = 0;
+  if (!/^https:/i.test(pageUrl)) return { items, count };
+  for (const [sel, attr, kind, active] of MIXED_SOURCES) {
+    $(sel).each((_, el) => {
+      const raw = ($(el).attr(attr) ?? "").trim();
+      if (!raw || /^(data:|blob:|about:|javascript:)/i.test(raw)) return;
+      let abs: URL;
+      try {
+        abs = new URL(raw, baseUrl);
+      } catch {
+        return;
+      }
+      if (abs.protocol !== "http:") return;
+      count++;
+      if (items.length < MAX_MIXED_EXAMPLES) items.push({ url: abs.toString().slice(0, 500), kind, active });
+    });
+  }
+  return { items, count };
 }

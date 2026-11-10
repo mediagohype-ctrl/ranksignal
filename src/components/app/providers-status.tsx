@@ -19,6 +19,8 @@ export const API_LIMITATION =
 const PRODUCTS: [RegExp, string][] = [
   [/openai|gpt|chatgpt|dataforseo/i, "ChatGPT"],
   [/anthropic|claude/i, "Claude"],
+  [/google_aio|ai overview/i, "Google AI Overviews"],
+  [/google_ai_mode|ai mode/i, "Google AI Mode"],
   [/gemini|google/i, "Gemini"],
   [/perplexity|sonar/i, "Perplexity"],
   [/x-ai|xai|grok/i, "Grok"],
@@ -46,6 +48,8 @@ function engineNote(p: PublicProvider): string {
     gemini: "Uses Google Search before answering.",
     perplexity: "Always searches the web before answering.",
     dataforseo: "Collects real ChatGPT answers.",
+    google_aio: "Searches Google and reads the AI Overview at the top, when Google shows one.",
+    google_ai_mode: "Asks Google's AI Mode the same question.",
   };
   return base[id] ?? "Asks this AI tool the same questions your customers ask.";
 }

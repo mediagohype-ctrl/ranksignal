@@ -19,6 +19,8 @@ export function productNames(labels: string[]): string {
     if (/simulated/.test(s)) return "demo answers";
     if (/openai|gpt|chatgpt|dataforseo/.test(s)) return "ChatGPT";
     if (/anthropic|claude/.test(s)) return "Claude";
+    if (/google_aio|ai overview/.test(s)) return "Google AI Overviews";
+    if (/google_ai_mode|ai mode/.test(s)) return "Google AI Mode";
     if (/gemini|google/.test(s)) return "Gemini";
     if (/perplexity|sonar/.test(s)) return "Perplexity";
     return "other AI assistants";

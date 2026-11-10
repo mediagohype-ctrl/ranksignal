@@ -9,6 +9,7 @@ import { openaiVisibilityProvider } from "./openai";
 import { geminiVisibilityProvider } from "./gemini";
 import { perplexityVisibilityProvider } from "./perplexity";
 import { dataForSeoVisibilityProvider } from "./dataforseo";
+import { googleAiModeProvider, googleAiOverviewsProvider } from "./google-ai-overviews";
 import { getOpenRouterProviders } from "./openrouter";
 import { createSimulatedProvider, SIMULATED_LABEL, type SimulatedContext } from "./simulated";
 
@@ -24,6 +25,9 @@ const DIRECT_PROVIDERS: VisibilityProvider[] = [
   geminiVisibilityProvider,
   perplexityVisibilityProvider,
   dataForSeoVisibilityProvider,
+  // Google AI Overviews / AI Mode (DataForSEO SERP API) last, so plans with fewer engines per check keep the chat assistants first.
+  googleAiOverviewsProvider,
+  googleAiModeProvider,
 ];
 
 /** Every real provider: direct APIs plus one OpenRouter provider per configured model (read from env at call time). */
@@ -37,6 +41,8 @@ export const PROVIDER_ENV: Record<string, string[]> = {
   gemini: ["GEMINI_API_KEY"],
   perplexity: ["PERPLEXITY_API_KEY"],
   dataforseo: ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"],
+  google_aio: ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"],
+  google_ai_mode: ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"],
   openrouter: ["OPENROUTER_API_KEY", "OPENROUTER_VISIBILITY_MODELS"],
 };
 

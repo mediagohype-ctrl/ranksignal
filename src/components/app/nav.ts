@@ -28,6 +28,7 @@ export const APP_TABS: NavTab[] = [
     pages: [
       { slug: "", label: "Home" },
       { slug: "report", label: "Full report" },
+      { slug: "business-profile", label: "Business profile" },
     ],
   },
   {
@@ -37,7 +38,10 @@ export const APP_TABS: NavTab[] = [
     icon: ListChecks,
     // One list replaces Website problems, Fixes to approve, Outside your website and the Task board. The old
     // routes redirect into it (see legacyTodoTarget in src/lib/tasks/todo.ts).
-    pages: [{ slug: "todo", label: "To-do" }],
+    pages: [
+      { slug: "todo", label: "To-do" },
+      { slug: "links", label: "Internal links" },
+    ],
     aliases: ["audit", "actions", "offsite", "work"],
   },
   {
@@ -48,6 +52,7 @@ export const APP_TABS: NavTab[] = [
     pages: [
       { slug: "visibility", label: "AI answers" },
       { slug: "prompts", label: "Customer questions" },
+      { slug: "ai-bots", label: "AI crawler visits" },
     ],
   },
   {
@@ -57,7 +62,9 @@ export const APP_TABS: NavTab[] = [
     icon: TrendingUp,
     pages: [
       { slug: "reports", label: "Score history" },
+      { slug: "keywords", label: "Keywords" },
       { slug: "monthly", label: "Monthly reports" },
+      { slug: "monthly/builder", label: "Report builder" },
     ],
   },
 ];
@@ -65,6 +72,8 @@ export const APP_TABS: NavTab[] = [
 /** Project pages that live outside the 4 tabs (setup things, reached from the sidebar footer / menu). */
 export const PROJECT_SETUP_PAGES: NavPage[] = [
   { slug: "integrations", label: "Connect website" },
+  { slug: "alerts", label: "Alerts" },
+  { slug: "indexnow", label: "IndexNow" },
   { slug: "settings", label: "Settings" },
 ];
 

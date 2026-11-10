@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlignLeft, ArrowRight, Bot, Braces, FileText, Heading, Link2Off, Map, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
+import { AlignLeft, ArrowRight, Bot, Braces, FileText, Heading, Link2Off, Map, Puzzle, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
 import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
 import { MAX_ENGINES, PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
@@ -29,6 +29,7 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
       { href: "/tools/heading-checker", icon: <Heading />, title: "Heading checker", body: "See a page's H1 to H6 outline and spot missing, repeated or skipped headings." },
       { href: "/tools/schema-checker", icon: <Braces />, title: "Schema markup checker", body: "Find the structured data on a page and the fields Google expects for each type." },
       { href: "/tools/broken-link-checker", icon: <Link2Off />, title: "Broken link checker", body: "Test every link on a page and find the ones that fail, redirect or time out." },
+      { href: "/tools/seo-extension", icon: <Puzzle />, title: "SEO browser extension", body: "Check the title, headings, schema and AI readiness of any page you visit." },
     ],
   },
   {

@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 import { BRAND } from "@/lib/brand";
 import { ARTICLES, articleToMarkdown } from "@/lib/learn/articles";
 import { PAGE_UPDATED } from "@/lib/seo/pages";
+import { hreflangFor } from "@/components/marketing/hi/pairs";
 
 export function siteBase(appUrl: string = BRAND.appUrl): string {
   return appUrl.replace(/\/+$/, "");
@@ -21,7 +22,7 @@ export interface MarketingRoute {
   changeFrequency: "weekly" | "monthly" | "yearly";
   priority: number;
   /** Listed in llms.txt under this section ("Optional" = can be skipped by LLMs with short context). */
-  section: "Product" | "Guides" | "Blog" | "Docs" | "Optional";
+  section: "Product" | "Guides" | "Blog" | "Docs" | "Optional" | "Hindi";
   /** YYYY-MM-DD of the last content change (static pages: PAGE_UPDATED in src/lib/seo/pages.ts; else MARKETING_UPDATED). */
   updated?: string;
 }
@@ -33,7 +34,7 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/how-it-works", title: "How it works", summary: "The workflow: connect a site, audit, measure AI answers, review fixes, approve, publish, roll back and re-measure.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/services", title: "SEO, AEO & GEO services (done for you)", summary: "Managed SEO, AEO and GEO service from an India-based team: we ship agreed fixes every month and send a monthly impact report. Fix, Grow and Authority tiers from ₹19,999/month plus GST; delivery guaranteed, rankings never promised.", changeFrequency: "monthly", priority: 0.9, section: "Product" },
   { path: "/pricing", title: "Pricing", summary: "Self-serve Starter, Growth and Agency software plans with a free trial, plus done-for-you service tiers, in Indian rupees excluding GST.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
-  { path: "/tools", title: "Free SEO and AI tools", summary: "14 free SEO and AI tools: website check, meta tag, heading, schema, broken link, robots.txt, AI crawler and sitemap checkers, and AI title, meta description and FAQ generators.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/tools", title: "Free SEO and AI tools", summary: "15 free SEO and AI tools: website check, meta tag, heading, schema, broken link, robots.txt, AI crawler and sitemap checkers, and AI title, meta description and FAQ generators, plus a browser extension.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/ai-mention-checker", title: "AI visibility checker", summary: "Free check of whether ChatGPT, Gemini and Perplexity can read and recommend your website.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/faq-markup-maker", title: "FAQ schema generator", summary: "Free FAQ schema (FAQPage JSON-LD) generator for Google rich results and AI answers.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/ai-guide-file-maker", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
@@ -56,9 +57,18 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/learn", title: "SEO, AEO & GEO guides", summary: "Plain-English guides to ranking on Google and getting mentioned in AI answers.", changeFrequency: "weekly", priority: 0.8, section: "Guides" },
   { path: "/about", title: "About us", summary: "Who runs MyWebRank: the India-based SEO, AEO and GEO team behind the product and service, and how to reach us.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/docs", title: "Getting started", summary: "Onboarding, connecting WordPress, the approval policy and known limitations.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
+  { path: "/docs/api", title: "API and MCP docs", summary: "Read-only REST API v1, MCP server for AI assistants and a Looker Studio connector for MyWebRank data, authenticated with API keys.", changeFrequency: "monthly", priority: 0.5, section: "Docs" },
+  { path: "/tools/seo-extension", title: "SEO browser extension", summary: "Free Chrome and Edge extension that checks a page's title, headings, schema, share tags and AI readiness in the browser.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
   { path: "/contact", title: "Contact", summary: "Contact form for agency plans, questions and support.", changeFrequency: "yearly", priority: 0.5, section: "Docs" },
   { path: "/privacy", title: "Privacy policy", summary: "How customer data is handled.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
   { path: "/terms", title: "Terms of service", summary: "Terms of use.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
+  // Hindi versions (hreflang pairs in src/components/marketing/hi/pairs.ts).
+  { path: "/hi", title: "होम (Hindi home page)", summary: "Hindi version of the home page: the free SEO, AEO and GEO website check, the three steps and the plans in rupees.", changeFrequency: "monthly", priority: 0.7, section: "Hindi" },
+  { path: "/hi/free-check", title: "फ्री वेबसाइट SEO चेकर (Hindi)", summary: "Hindi page for the free website SEO, AEO and GEO checker (results are shown in English).", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
+  { path: "/hi/services", title: "SEO, AEO और GEO सेवाएँ (Hindi)", summary: "Hindi page for the done-for-you SEO, AEO and GEO service: Fix, Grow and Authority tiers in rupees plus GST.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
+  { path: "/hi/pricing", title: "कीमतें (Hindi pricing)", summary: "Hindi pricing page: software plans with a free trial and done-for-you service tiers, in rupees excluding GST.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
+  { path: "/hi/about", title: "हमारे बारे में (Hindi about page)", summary: "Hindi page about the India-based MyWebRank team, what it does and how it measures websites.", changeFrequency: "monthly", priority: 0.5, section: "Hindi" },
+  { path: "/hi/contact", title: "संपर्क करें (Hindi contact page)", summary: "Hindi contact page for the MyWebRank team.", changeFrequency: "yearly", priority: 0.4, section: "Hindi" },
 ];
 
 /** Each static page's lastmod comes from the same map as its WebPage.dateModified (src/lib/seo/pages.ts). */
@@ -98,12 +108,19 @@ export function blogRoutes(posts: { slug: string; title: string; description: st
  * `extra` = dynamic routes (published blog posts).
  */
 export function buildSitemap(base = siteBase(), lastModified?: Date, extra: MarketingRoute[] = []): MetadataRoute.Sitemap {
-  return [...MARKETING_ROUTES, ...extra].map((r) => ({
-    url: urlFor(base, r.path),
-    lastModified: lastModified ?? new Date(`${r.updated ?? MARKETING_UPDATED}T00:00:00Z`),
-    changeFrequency: r.changeFrequency,
-    priority: r.priority,
-  }));
+  return [...MARKETING_ROUTES, ...extra].map((r) => {
+    // English ↔ Hindi pairs carry reciprocal hreflang alternates (<xhtml:link>) in the sitemap too.
+    const langs = hreflangFor(r.path);
+    return {
+      url: urlFor(base, r.path),
+      lastModified: lastModified ?? new Date(`${r.updated ?? MARKETING_UPDATED}T00:00:00Z`),
+      changeFrequency: r.changeFrequency,
+      priority: r.priority,
+      ...(langs
+        ? { alternates: { languages: Object.fromEntries(Object.entries(langs).map(([l, p]) => [l, urlFor(base, p)])) } }
+        : {}),
+    };
+  });
 }
 
 /** Every public URL, for IndexNow submissions. */
@@ -184,6 +201,8 @@ export function buildLlmsTxt(base = siteBase(), extra: MarketingRoute[] = []): s
     section("Blog"),
     "",
     section("Docs"),
+    "",
+    section("Hindi"),
     "",
     section("Optional"),
     "",

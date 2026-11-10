@@ -95,6 +95,7 @@ export function detectJsOnlySite(pages: PageLike[], rendered: RenderComparison[]
 /** Report checks that only repeat what an empty JavaScript shell causes. Suppressed when detected. */
 export const JS_SYMPTOM_CHECKS: ReadonlySet<string> = new Set([
   "seo.titles", "seo.meta_description", "seo.h1", "seo.thin_content", "seo.duplicate_content", "seo.internal_links", "seo.image_alt",
+  "seo.click_depth", "seo.link_text", "seo.image_dimensions", // need the rendered links / images too
   "aeo.question_headings", "aeo.direct_answers", "aeo.content_depth", "aeo.readability", "aeo.lists_tables",
   "geo.quotable_facts", "geo.cited_sources", "geo.author_signals", "geo.freshness",
   "brand.name_consistency", "brand.about_page", "brand.contact_info", "brand.privacy_policy", "brand.social_profiles",

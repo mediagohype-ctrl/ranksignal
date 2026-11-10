@@ -1,0 +1,22 @@
+{
+  "timeZone": "Asia/Kolkata",
+  "runtimeVersion": "V8",
+  "exceptionLogging": "STACKDRIVER",
+  "dataStudio": {
+    "name": "MyWebRank",
+    "company": "MyWebRank",
+    "companyUrl": "https://mywebrank.tech",
+    "logoUrl": "https://mywebrank.tech/brand/logo-mark-96.png",
+    "addonUrl": "https://mywebrank.tech/docs/api#looker-studio",
+    "supportUrl": "https://mywebrank.tech/contact",
+    "privacyPolicyUrl": "https://mywebrank.tech/privacy",
+    "termsOfServiceUrl": "https://mywebrank.tech/terms",
+    "description": "Your MyWebRank website scores (overall, SEO, AEO, GEO, brand), AI assistant mention rate, open issues and Google Search Console clicks, impressions, CTR and position, one row per day.",
+    "shortDescription": "MyWebRank scores, AI visibility and Search Console by day.",
+    "authType": ["KEY"],
+    "feeType": ["FREE"],
+    "sources": []
+  },
+  "urlFetchWhitelist": ["https://mywebrank.tech/"],
+  "oauthScopes": ["https://www.googleapis.com/auth/script.external_request"]
+}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=380" />
+    <title>MyWebRank SEO Check</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body>
+    <header class="top">
+      <img src="icons/icon-32.png" width="24" height="24" alt="" />
+      <div class="top-text">
+        <h1>MyWebRank SEO check</h1>
+        <p id="page-host" class="muted small">Reading this page…</p>
+      </div>
+    </header>
+
+    <main id="main" aria-live="polite" aria-busy="true">
+      <p id="status" class="status">Reading this page…</p>
+    </main>
+
+    <footer class="actions">
+      <a id="full-check" class="btn btn-primary" href="https://mywebrank.tech/free-check" target="_blank" rel="noopener">
+        Run the full free check
+      </a>
+      <p class="muted small">
+        Checks the homepage and up to four main pages, with scores for Google, answer engines and AI assistants.
+      </p>
+      <nav aria-label="More free tools" class="tools">
+        <h2 class="small">More free tools</h2>
+        <ul id="tool-links"></ul>
+      </nav>
+      <p class="muted tiny privacy">
+        Everything above was worked out in your browser. Nothing is sent to MyWebRank unless you click a link.
+      </p>
+    </footer>
+  </body>
+</html>

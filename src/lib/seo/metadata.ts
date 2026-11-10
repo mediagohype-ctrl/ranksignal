@@ -4,6 +4,7 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/brand";
 import { PAGE_SEO, type PageSeo, type StaticPath } from "./pages";
+import { hreflangFor } from "@/components/marketing/hi/pairs";
 
 /** What the root layout's title template appends. */
 export const TITLE_SUFFIX = ` · ${BRAND.name}`;
@@ -77,17 +78,36 @@ export interface PageMetadataInput {
   images?: OgImage[];
   keywords?: string[];
   robots?: Metadata["robots"];
+  /** Open Graph locale; defaults to "en_IN" (the Hindi pages use "hi_IN"). */
+  locale?: string;
+  /** hreflang alternates: language (e.g. "hi-IN", "x-default") → site-relative path. */
+  languages?: Record<string, string>;
 }
+
+/** "hi-IN" → "hi_IN" (Open Graph locale format). */
+const ogLocale = (lang: string) => lang.replace("-", "_");
 
 export function pageMetadata(o: PageMetadataInput): Metadata {
   const fitted = o.absoluteTitle ? { title: { absolute: o.title }, full: o.title } : fitTitle(o.title);
   const images = o.images?.length ? o.images : [OG_IMAGE];
-  const base = { title: fitted.full, description: o.description, url: o.path, siteName: BRAND.name, locale: "en_IN", images };
+  const locale = o.locale ?? "en_IN";
+  const alternateLocale = o.languages
+    ? Object.keys(o.languages).filter((l) => l !== "x-default").map(ogLocale).filter((l) => l !== locale)
+    : [];
+  const base = {
+    title: fitted.full,
+    description: o.description,
+    url: o.path,
+    siteName: BRAND.name,
+    locale,
+    ...(alternateLocale.length ? { alternateLocale } : {}),
+    images,
+  };
   return {
     title: fitted.title,
     description: o.description,
     ...(o.keywords?.length ? { keywords: o.keywords } : {}),
-    alternates: { canonical: o.path },
+    alternates: { canonical: o.path, ...(o.languages ? { languages: o.languages } : {}) },
     ...(o.robots ? { robots: o.robots } : {}),
     openGraph:
       o.type === "article"
@@ -106,12 +126,15 @@ export function pageMetadata(o: PageMetadataInput): Metadata {
 /** Metadata for a page listed in PAGE_SEO (src/lib/seo/pages.ts). Auth pages come back noindex. */
 export function staticPageMetadata(path: StaticPath, extra: Partial<PageMetadataInput> = {}): Metadata {
   const p: PageSeo = PAGE_SEO[path];
+  const languages = p.hreflang ?? hreflangFor(path);
   return pageMetadata({
     title: p.title,
     description: p.description,
     path,
     absoluteTitle: p.absolute,
     ...(p.noindex ? { robots: { index: false, follow: true } } : {}),
+    ...(p.lang ? { locale: ogLocale(p.lang) } : {}),
+    ...(languages ? { languages } : {}),
     ...extra,
   });
 }

@@ -199,6 +199,7 @@ export const executeActionJob: JobHandler = async (ctx) => {
     await audit(action, "action.execution_succeeded", { executionId: execution.id, validation: v.status });
     // Re-measurement is scheduled from the UI; record the hand-off. Outcomes are measured, not assumed causal.
     await ctx.event("action.remeasure_scheduled", { actionId: action.id, url: target?.url ?? null });
+    await import("@/lib/indexnow-customer/service").then((m) => m.notifyIndexNowFixPublished({ organizationId: action.organizationId, projectId: action.projectId, url: target?.url })).catch(() => undefined); // IndexNow ping when verified; never fails the action
     return { executionId: execution.id, status };
   }
 

@@ -151,8 +151,13 @@ export const crawlJob: JobHandler = async (ctx) => {
     // The queue stores the output only after this handler returns, but the snapshot below builds the stored report
     // now and reads site facts + JavaScript detection from it — so save it first (the queue rewrites the same value).
     await db.workflowRun.update({ where: { id: ctx.run.id }, data: { output } }).catch(() => undefined);
+    // Real page speed (PageSpeed Insights) + image/redirect/canonical probes; queued before the snapshot so the stored
+    // report says "speed test running", then refreshed by that job. Never fails the crawl.
+    await import("@/lib/pagespeed/job").then((m) => m.enqueueAuditDepth({ organizationId, projectId: project.id, crawlRunId })).catch(() => undefined);
     // Measurement history; writeSnapshot never throws, the extra catch guards against import-time surprises.
     await writeSnapshot({ organizationId, projectId: project.id, kind: "crawl", crawlRunId }).catch(() => undefined);
+    await import("@/lib/indexnow-customer/service").then((m) => m.queueIndexNowAfterCrawl({ organizationId, projectId: project.id, crawlRunId })).catch(() => undefined); // IndexNow for changed pages; never fails the crawl
+    await import("@/lib/alerts/hooks").then((m) => m.alertsAfterCrawl({ organizationId, projectId: project.id, crawlRunId })).catch(() => undefined); // customer alerts; never fails the run
 
     await enqueue({
       kind: "analyze",
@@ -169,6 +174,7 @@ export const crawlJob: JobHandler = async (ctx) => {
       where: { id: crawlRunId },
       data: { status: willRetry ? "retry_scheduled" : "failed", error: e.message.slice(0, 500), finishedAt: willRetry ? null : new Date() },
     });
+    if (!willRetry) await import("@/lib/alerts/hooks").then((m) => m.alertsAfterCrawl({ organizationId, projectId: project.id, crawlRunId })).catch(() => undefined); // "site down" alerts
     throw e;
   } finally {
     // Settle the reservation: bill actual pages, release the remainder. Never mask the main error.
