@@ -14,8 +14,12 @@ export interface VisibilityRunAllowance {
   used: number;
   /** AI answers per month on the plan. */
   limit: number;
-  /** AI answers left. */
+  /** AI answers left (plan answers left + extra answers from top-up packs). */
   remaining: number;
+  /** Plan answers left this month. */
+  monthlyLeft: number;
+  /** Extra answers left from top-up packs. */
+  extraLeft: number;
   maxPromptsPerRun: number;
   /** AI answers a full check uses on this plan. */
   answersPerCheck: number;
@@ -31,6 +35,8 @@ export async function getVisibilityRunAllowance(orgId: string, now = new Date())
     used: a.used,
     limit: a.cap,
     remaining: a.left,
+    monthlyLeft: a.monthlyLeft,
+    extraLeft: a.extra.left,
     maxPromptsPerRun: questionsPerCheck(planId),
     answersPerCheck: answersPerCheck(planId),
     period: now.toISOString().slice(0, 7),
@@ -41,9 +47,10 @@ export async function getVisibilityRunAllowance(orgId: string, now = new Date())
 /** Plain sentence for "no AI answers left", with the reset date (or the upgrade path on the trial). */
 export function aiLimitMessage(a: Pick<AiAllowance, "cap" | "resetsAt">): string {
   const n = a.cap.toLocaleString("en-IN");
+  // Only shown when plan answers AND any extra answers are used up (left counts both).
   return a.resetsAt
-    ? `You've used all ${n} AI answers in your plan this month. They reset on ${fmtDate(a.resetsAt)}. Upgrade if you need more before then.`
-    : `You've used the ${n} AI answers in your free trial. Choose a plan to keep checking what AI says about you.`;
+    ? `You've used all ${n} AI answers in your plan this month. They reset on ${fmtDate(a.resetsAt)}. Buy extra answers or upgrade if you need more before then.`
+    : `You've used the ${n} AI answers in your free trial. Choose a plan, or buy extra answers, to keep checking what AI says about you.`;
 }
 
 /** HttpError 402 "plan_limit" when this month's AI answers are used up. */

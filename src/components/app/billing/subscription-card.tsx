@@ -4,6 +4,7 @@ import { CalendarClock, CreditCard, XCircle } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { Badge, Button, Dialog, KeyValueList, Meter, useToast } from "@/components/ui";
 import { fmtDate } from "@/lib/dashboard/format";
+import { answersLeftLabel } from "@/lib/billing/topups";
 
 export interface BillingInfo {
   checkoutAvailable: boolean;
@@ -22,7 +23,7 @@ export interface UsageResponse {
   plan: { id: string; name: string };
   access: { active: boolean; reason?: string; trialEndsAt?: string | null; trialDaysLeft: number | null; message: string; graceEndsAt?: string | null };
   /** AI answers this month (GET /api/usage → getVisibilityRunAllowance): limit = answers per month, remaining = left. */
-  aiChecks: { used: number; limit: number; remaining: number; maxPromptsPerRun: number; answersPerCheck?: number; resetsAt?: string | null };
+  aiChecks: { used: number; limit: number; remaining: number; monthlyLeft?: number; extraLeft?: number; maxPromptsPerRun: number; answersPerCheck?: number; resetsAt?: string | null };
   billing: BillingInfo;
 }
 
@@ -109,7 +110,15 @@ export function SubscriptionSummary({ usage, canManage, onChanged }: { usage: Us
         </h3>
         <Meter value={usage.aiChecks.used} max={Math.max(1, usage.aiChecks.limit)} label="AI answers used" showValue />
         <p className="text-small text-fg">
-          AI answers left: {usage.aiChecks.remaining.toLocaleString("en-IN")} of {usage.aiChecks.limit.toLocaleString("en-IN")}
+          AI answers left:{" "}
+          {answersLeftLabel(
+            {
+              monthlyLeft: usage.aiChecks.monthlyLeft ?? usage.aiChecks.remaining,
+              cap: usage.aiChecks.limit,
+              extraLeft: usage.aiChecks.extraLeft ?? 0,
+            },
+            usage.plan.id === "trial",
+          )}
         </p>
         <p className="text-small text-muted">
           One answer is one question asked to one AI assistant

@@ -8,7 +8,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 import { FEATURES, type Feature } from "@/components/marketing/content";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
-import { MARKETING_PLANS, TRIAL_AI, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { MARKETING_PLANS, TRIAL_AI, TRIAL_DAYS, gstOn, inr, num } from "@/components/marketing/plans";
 import { FEATURE_CATEGORIES, WAITING_FOR, featuresIn, isFeatureLive } from "@/components/marketing/features/categories";
 import { FeatureIllustration } from "@/components/marketing/features/illustrations";
 import { ProductTour } from "@/components/marketing/visuals/tour";
@@ -186,7 +186,7 @@ function featureFacts(): Qa[] {
       a: (
         <>
           Nothing for {TRIAL_DAYS} days: the free trial includes {TRIAL_AI.summary} and a full website check. After that, plans
-          cost {inr(starter.price)}, {inr(growth.price)} or {inr(agency.price)} a month. See{" "}
+          cost {inr(starter.price)}, {inr(growth.price)} or {inr(agency.price)} a month{gstOn() ? " + GST" : ""}. See{" "}
           <Link href="/pricing">pricing</Link> for every limit.
         </>
       ),

@@ -6,7 +6,7 @@
 // - `description` must be 120–155 characters and unique.
 // - `updated` (YYYY-MM-DD) is the last real content change: it feeds the sitemap lastmod, WebPage.dateModified
 //   and the visible freshness signals. Bump it when you change a page's copy — never set it to "today" on every request.
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
+import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr, inrGst, priceNote } from "@/components/marketing/plans";
 
 export interface PageSeo {
   title: string;
@@ -62,7 +62,7 @@ export const PAGE_SEO = {
   },
   "/pricing": {
     title: "Pricing: SEO Software & Done-for-You SEO Plans",
-    description: `SEO software from ${inr(SOFTWARE_FROM)}/mo with a ${TRIAL_DAYS}-day free trial, or done-for-you SEO, AEO and GEO from ${inr(SERVICE_FROM_PRICE)}/mo. Prices in INR, excluding GST.`,
+    description: `SEO software from ${inrGst(SOFTWARE_FROM)}/mo with a ${TRIAL_DAYS}-day free trial, or done-for-you SEO, AEO and GEO from ${inr(SERVICE_FROM_PRICE)}/mo. ${priceNote()}`,
     published: "2026-10-28",
     updated: TODAY,
   },
@@ -281,7 +281,7 @@ export const PAGE_SEO = {
   },
   "/hi/pricing": {
     title: "कीमतें: SEO सॉफ़्टवेयर और SEO सेवा के प्लान",
-    description: `SEO सॉफ़्टवेयर ${inr(SOFTWARE_FROM)}/महीने से, ${TRIAL_DAYS} दिन फ्री ट्रायल के साथ। या हमारी टीम से SEO, AEO, GEO का काम ${inr(SERVICE_FROM_PRICE)}/महीने से। सभी कीमतें रुपये में, GST अलग।`,
+    description: `SEO सॉफ़्टवेयर ${inrGst(SOFTWARE_FROM)}/महीने से, ${TRIAL_DAYS} दिन फ्री ट्रायल के साथ। या हमारी टीम से SEO, AEO, GEO का काम ${inr(SERVICE_FROM_PRICE)}/महीने से। ${priceNote(true)}`,
     published: TODAY,
     updated: TODAY,
     lang: "hi-IN",

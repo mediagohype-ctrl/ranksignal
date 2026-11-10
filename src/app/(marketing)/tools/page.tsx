@@ -5,6 +5,7 @@ import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
 import { ToolPreview, type ToolPreviewKind } from "@/components/marketing/showcase/tool-preview";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
 import { MAX_ENGINES, PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
+import { inrGst } from "@/components/marketing/plans";
 import { MAX_KEY_PAGES } from "@/lib/free-check/run";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
@@ -171,8 +172,8 @@ const TOOLS_FAQ: Qa[] = [
     a: (
       <>
         The full report reads up to {starter.maxPagesPerCrawl.toLocaleString("en-IN")} pages per check on the {starter.name}{" "}
-        plan and asks up to {MAX_ENGINES} AI assistants your customers&apos; real questions. Paid plans start at ₹
-        {(starter.priceInrMonthly ?? 0).toLocaleString("en-IN")} a month, after a {TRIAL_DAYS}-day free trial. See{" "}
+        plan and asks up to {MAX_ENGINES} AI assistants your customers&apos; real questions. Paid plans start at{" "}
+        {inrGst(starter.priceInrMonthly ?? 0)} a month, after a {TRIAL_DAYS}-day free trial. See{" "}
         <Link href="/pricing">pricing</Link>.
       </>
     ),

@@ -12,10 +12,14 @@ import {
   SERVICE_TIERS,
   TRIAL_AI,
   TRIAL_DAYS,
+  gstOn,
   inr,
+  inrGst,
   num,
+  priceNote,
   servicesContactHref,
 } from "@/components/marketing/plans";
+import { formatInr, gstConfig, planPriceWithGst } from "@/lib/billing/gst";
 import { FaqList, ServiceTierCards, ServicesCta } from "@/components/marketing/services-ui";
 import { PlanIncludes, PlanMeters } from "@/components/marketing/flow/plan-meters";
 import { staticPageMetadata } from "@/lib/seo/metadata";
@@ -79,8 +83,8 @@ const WHICH: { label: string; diy: string; dfy: string }[] = [
   },
   {
     label: "Price",
-    diy: `From ${inr(SOFTWARE_FROM)} a month`,
-    dfy: `From ${inr(SERVICE_FROM_PRICE)} a month`,
+    diy: `From ${inrGst(SOFTWARE_FROM)} a month`,
+    dfy: `From ${inrGst(SERVICE_FROM_PRICE)} a month`,
   },
   {
     label: "Best for",
@@ -108,7 +112,9 @@ const PRICING_FAQ = [
   },
   {
     q: "Are prices inclusive of GST?",
-    a: "No. All prices are in Indian rupees and exclude GST, which is added at the applicable rate.",
+    a: gstOn()
+      ? `No. All prices are in Indian rupees and exclude GST. ${gstConfig().ratePercent}% GST is added when you pay — for example Starter is ${inr(MARKETING_PLANS[0].price)} + ${formatInr(planPriceWithGst(MARKETING_PLANS[0].id)?.gstPaise ?? 0)} GST = ${formatInr(planPriceWithGst(MARKETING_PLANS[0].id)?.totalPaise ?? 0)} a month. You get a GST invoice for every payment.`
+      : "Prices are in Indian rupees. We don't charge GST on top at the moment, so the price you see is what you pay.",
   },
 ];
 
@@ -149,7 +155,7 @@ export default function PricingPage() {
         price: String(p.price),
         priceCurrency: "INR",
         unitCode: "MON",
-        valueAddedTaxIncluded: false,
+        ...(gstOn() ? { valueAddedTaxIncluded: false } : {}),
         ...(p.suffix ? { minPrice: String(p.price) } : {}),
       },
     })),
@@ -193,7 +199,7 @@ export default function PricingPage() {
             </p>
             <p className="mk-lead mk-rise mk-delay-2 max-w-md text-fg-soft lg:col-span-4">
               Use the software and make the fixes yourself, or hand the work to our team and get a report on what changed.
-              Prices in Indian rupees, excluding GST.
+              {priceNote()}
             </p>
           </div>
 
@@ -204,7 +210,7 @@ export default function PricingPage() {
                   <span>
                     <span className="block text-small text-muted">Self-serve software</span>
                     <span className="mt-1 block text-[1.375rem] font-semibold tracking-[-0.02em] text-fg">
-                      From {inr(SOFTWARE_FROM)}/mo
+                      From {inr(SOFTWARE_FROM)}/mo{gstOn() ? " + GST" : ""}
                     </span>
                     <span className="mt-1 block text-small text-fg-soft">{TRIAL_DAYS}-day free trial · you make the fixes</span>
                   </span>
@@ -264,9 +270,13 @@ export default function PricingPage() {
                     {inr(p.price)}
                     {p.suffix}
                   </span>
-                  <span className="text-small text-muted">a month</span>
+                  <span className="text-small text-muted">{gstOn() ? "+ GST a month" : "a month"}</span>
                 </p>
-                <p className="mt-4 text-small text-fg-soft">Plus GST · indicative price</p>
+                <p className="mt-4 text-small text-fg-soft">
+                  {gstOn()
+                    ? `${formatInr(planPriceWithGst(p.id)?.totalPaise ?? 0)} a month with ${gstConfig().ratePercent}% GST · billed monthly`
+                    : "Billed monthly"}
+                </p>
                 <Link
                   href={planSignupHref(p.id)}
                   className={clsx(
@@ -446,7 +456,7 @@ export default function PricingPage() {
         body={<p>It reads your homepage and main pages and shows your score and top fixes. Then decide who does them.</p>}
         primary={{ href: "/free-check", label: "Run the free check" }}
         secondary={{ href: servicesContactHref(), label: "Book a strategy call" }}
-        footnote={`${TRIAL_DAYS}-day free trial on software. Prices in INR, excluding GST. We never promise a Google position.`}
+        footnote={`${TRIAL_DAYS}-day free trial on software. ${priceNote()} We never promise a Google position.`}
       />
     </>
   );

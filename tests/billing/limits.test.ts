@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   answersThisMonth: 0,
   inFlight: [] as { sampleSize: number; collected: number; failed: number }[],
   observationCountWhere: null as unknown,
+  packs: [] as Record<string, unknown>[],
   lastCrawlAt: null as Date | null,
   activeCrawl: false,
   promptCount: 5,
@@ -15,6 +16,7 @@ vi.mock("@/lib/db", () => {
   const db = {
     organization: { findUnique: vi.fn(async () => state.org) },
     subscription: { findMany: vi.fn(async () => []) },
+    topUpPack: { findMany: vi.fn(async () => state.packs) },
     observation: {
       count: vi.fn(async (args: { where: unknown }) => {
         state.observationCountWhere = args.where;
@@ -77,6 +79,7 @@ beforeEach(() => {
   state.activeCrawl = false;
   state.promptCount = 5;
   state.enqueued = [];
+  state.packs = [];
 });
 
 describe("plan AI limits", () => {
@@ -108,6 +111,15 @@ describe("plan AI limits", () => {
     expect(a).toMatchObject({ used: 440, limit: 1_200, remaining: 760 });
     expect(a.resetsAt?.toISOString()).toBe("2026-12-01T00:00:00.000Z");
     expect(state.observationCountWhere).toMatchObject({ organizationId: "org_1", simulated: false, createdAt: { gte: new Date("2026-11-01T00:00:00Z") } });
+  });
+  it("counts extra answers from a top-up pack once the plan's answers are used", async () => {
+    state.org.planId = "starter";
+    state.answersThisMonth = 320; // 20 beyond the 300 plan answers come from the pack
+    state.packs = [
+      { id: "pk1", answers: 100, consumed: 0, revokedAnswers: 0, status: "paid", purchasedAt: new Date("2026-11-02T00:00:00Z"), expiresAt: new Date("2027-11-02T00:00:00Z"), settledThrough: new Date("2026-11-01T00:00:00Z") },
+    ];
+    const a = await getVisibilityRunAllowance("org_1", new Date("2026-11-04T00:00:00Z"));
+    expect(a).toMatchObject({ used: 300, limit: 300, monthlyLeft: 0, extraLeft: 80, remaining: 80 });
   });
 });
 

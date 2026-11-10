@@ -8,6 +8,8 @@ import clsx from "clsx";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtRelative } from "@/lib/dashboard/format";
 import { Avatar, Meter, Skeleton, Spinner, useToast } from "@/components/ui";
+import { answersLeftLabel } from "@/lib/billing/topups";
+import { ALLOWANCE_CHANGED_EVENT, BuyAnswersButton } from "@/components/app/billing/topup-dialog";
 
 /* ------------------------------------------------------------- shared popover hook */
 
@@ -38,8 +40,17 @@ const POPOVER =
 interface AllowanceItem {
   used: number;
   cap: number;
+  /** Plan answers left + extra answers (top-up packs). */
   left: number;
+  monthlyLeft?: number;
+  extraLeft?: number;
   resetsAt: string | null;
+  canBuyMore?: boolean;
+}
+
+/** "Low" = at most 10% of the plan's answers left (and nothing extra beyond that). */
+export function answersLow(a: Pick<AllowanceItem, "cap" | "left">): boolean {
+  return a.cap > 0 && a.left <= Math.max(0, Math.floor(a.cap * 0.1));
 }
 
 /** Header widget: "AI answers left N" (brief 5.8). Hidden if it can't be loaded. */
@@ -58,9 +69,11 @@ export function UsageMeter() {
         .catch(() => alive && setFailed(true));
     load();
     const t = setInterval(load, 60_000);
+    window.addEventListener(ALLOWANCE_CHANGED_EVENT, load);
     return () => {
       alive = false;
       clearInterval(t);
+      window.removeEventListener(ALLOWANCE_CHANGED_EVENT, load);
     };
   }, []);
   if (failed) return null;
@@ -71,18 +84,23 @@ export function UsageMeter() {
         <Skeleton className="h-1.5 w-full" rounded="full" />
       </div>
     );
+  const extra = a.extraLeft ?? 0;
+  const label = answersLeftLabel({ monthlyLeft: a.monthlyLeft ?? a.left - extra, cap: a.cap, extraLeft: extra }, a.resetsAt === null);
   return (
-    <Link
-      href="/app/settings?tab=billing"
-      className="hidden w-44 flex-col gap-1.5 rounded-lg px-2 py-1 hover:bg-surface-2 md:flex"
-      title={`${a.left.toLocaleString("en-IN")} of ${a.cap.toLocaleString("en-IN")} AI answers left`}
-    >
-      <span className="flex items-baseline justify-between text-xs">
-        <span className="text-muted">AI answers left</span>
-        <span className="tabular-nums font-medium text-fg">{a.left.toLocaleString("en-IN")}</span>
-      </span>
-      <Meter value={a.used} max={Math.max(a.cap, 1)} label="AI answers used" size="xs" />
-    </Link>
+    <div className="hidden items-center gap-1 md:flex">
+      <Link
+        href="/app/settings?tab=billing"
+        className="flex w-44 flex-col gap-1.5 rounded-lg px-2 py-1 hover:bg-surface-2"
+        title={`AI answers left: ${label}`}
+      >
+        <span className="flex items-baseline justify-between text-xs">
+          <span className="text-muted">AI answers left</span>
+          <span className="tabular-nums font-medium text-fg">{a.left.toLocaleString("en-IN")}</span>
+        </span>
+        <Meter value={a.used} max={Math.max(a.cap, 1)} label="AI answers used" size="xs" />
+      </Link>
+      {a.canBuyMore && answersLow(a) && <BuyAnswersButton size="xs" variant="outline" label="Buy more" />}
+    </div>
   );
 }
 

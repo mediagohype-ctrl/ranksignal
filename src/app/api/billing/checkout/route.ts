@@ -6,6 +6,8 @@ import { createRazorpaySubscription, isRazorpayConfigured } from "@/lib/billing/
 import { writeAuditLog } from "@/lib/audit-log";
 import { BRAND } from "@/lib/brand";
 import { getCurrentProviderSubscription } from "@/lib/billing/subscription";
+import { planPriceWithGst } from "@/lib/billing/gst";
+import { getBillingDetails } from "@/lib/billing/billing-details";
 
 const schema = z.object({ planId: z.enum(PAID_PLAN_IDS) });
 
@@ -60,5 +62,11 @@ export const POST = handler(async (req: Request) => {
     resourceId: sub.id,
     after: { planId },
   });
-  return json({ item: { provider: "razorpay", subscriptionId: sub.id, shortUrl: sub.short_url ?? null, keyId: process.env.RAZORPAY_KEY_ID, planId } });
+  // What Razorpay will charge each month: price + GST (the Razorpay plan amount must equal totalPaise — see the
+  // admin System page check). Shown to the customer before they pay.
+  const details = await getBillingDetails(s.organizationId).catch(() => null);
+  const price = planPriceWithGst(planId, details?.stateCode);
+  return json({
+    item: { provider: "razorpay", subscriptionId: sub.id, shortUrl: sub.short_url ?? null, keyId: process.env.RAZORPAY_KEY_ID, planId, price },
+  });
 });

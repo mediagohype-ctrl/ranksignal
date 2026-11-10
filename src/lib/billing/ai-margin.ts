@@ -1,6 +1,6 @@
 // Profit guard: the most AI spend one workspace may cause in a month is a share of what it pays us.
 //
-//   monthly AI budget = (plan price + done-for-you tier price) × AI_COST_SHARE      (default 30%)
+//   monthly AI budget = (plan price + done-for-you tier price, both BEFORE GST) × AI_COST_SHARE   (default 30%)
 //   free trial        = TRIAL_AI_BUDGET_INR                                          (default ₹150, acquisition cost)
 //
 // Enforced as a hard cap in src/lib/billing/ai-budget.ts (alongside the daily caps). The rest of the price pays
@@ -33,6 +33,15 @@ export function monthlyPriceInr(planId: string, serviceTier?: string | null): nu
 export function monthlyAiBudgetInr(planId: string, serviceTier?: string | null): number {
   const price = monthlyPriceInr(planId, serviceTier);
   return price > 0 ? Math.round(price * aiCostShare()) : trialBudgetInr();
+}
+
+/**
+ * Extra monthly AI budget (micro-USD) for bought AI answers: the same share of the value (INR, before GST) of the
+ * top-up answers still usable this month (src/lib/billing/allowance.ts topUpValueInrThisMonth).
+ */
+export function topUpAiBudgetMicros(topUpValueInr: number): number {
+  if (!(topUpValueInr > 0)) return 0;
+  return Math.round(((topUpValueInr * aiCostShare()) / usdInrRate()) * 1_000_000);
 }
 
 /** Same, in micro-USD (what providers bill and the usage ledger records). */

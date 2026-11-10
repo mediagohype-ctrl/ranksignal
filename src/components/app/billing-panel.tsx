@@ -7,6 +7,7 @@ import { api, ApiClientError, errorMessage } from "@/lib/dashboard/client";
 import { BRAND } from "@/lib/brand";
 import { TRIAL_DAYS } from "@/lib/billing/plans";
 import type { PlanLimits } from "@/lib/types";
+import { formatInr, type GstBreakdown } from "@/lib/billing/gst";
 import { Badge, Button, LinkButton, Notice, Spinner, useToast } from "@/components/ui";
 import { openRazorpaySubscription } from "./billing/razorpay-checkout";
 import { SubscriptionSummary, type UsageResponse } from "./billing/subscription-card";
@@ -32,10 +33,49 @@ function aiLine(p: PlanWithAi): string {
   return `${answers.toLocaleString("en-IN")} AI answers a month${per ? ` (${per} per check)` : ""}`;
 }
 
-export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanLimits[]; currentPlanId: string; canManage: boolean }) {
+/** Price, GST and total the customer pays each month (shown before Razorpay opens). */
+function PriceBreakdown({ price }: { price: GstBreakdown }) {
+  const gst = price.gstPaise > 0;
+  return (
+    <dl className="space-y-1 rounded-xl border border-border bg-surface-2 p-3 text-small">
+      <div className="flex justify-between gap-3">
+        <dt className="text-fg-soft">Plan price</dt>
+        <dd className="tabular-nums text-fg">{formatInr(price.basePaise)}</dd>
+      </div>
+      {gst && (
+        <div className="flex justify-between gap-3">
+          <dt className="text-fg-soft">GST {price.ratePercent}%</dt>
+          <dd className="tabular-nums text-fg">{formatInr(price.gstPaise)}</dd>
+        </div>
+      )}
+      <div className="flex justify-between gap-3 border-t border-border pt-1 font-semibold">
+        <dt className="text-fg">Total payable each month</dt>
+        <dd className="tabular-nums text-fg">{formatInr(price.totalPaise)}</dd>
+      </div>
+    </dl>
+  );
+}
+
+export function BillingPlans({
+  plans,
+  currentPlanId,
+  canManage,
+  prices = {},
+  hasBillingDetails = true,
+}: {
+  plans: PlanLimits[];
+  currentPlanId: string;
+  canManage: boolean;
+  /** Per plan id: price + GST for this customer (computed on the server; null for the free trial). */
+  prices?: Record<string, GstBreakdown | null>;
+  /** False when the organization hasn't entered billing details for GST invoices yet. */
+  hasBillingDetails?: boolean;
+}) {
   const toast = useToast();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  /** Plan whose price breakdown is open, waiting for "Pay". */
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [planId, setPlanId] = useState(currentPlanId);
@@ -142,14 +182,14 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
     }
   }
 
-  // Arriving from the pricing page with ?plan=agency (etc.): open Razorpay checkout for that plan straight away.
+  // Arriving from the pricing page with ?plan=agency (etc.): open that plan's price breakdown straight away.
   useEffect(() => {
     if (autoStarted.current || !autoPlan || !usage || !canManage) return;
     const target = plans.find((p) => p.id === autoPlan && p.id !== "trial");
     autoStarted.current = true;
     if (!target || usage.plan.id === target.id) return;
-    void checkout(target);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Show the price, GST and total first; Razorpay opens when they press Pay.
+    setConfirmId(target.id);
   }, [autoPlan, usage, canManage, plans]);
 
   const currentIdx = plans.findIndex((p) => p.id === planId);
@@ -225,7 +265,9 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
                 <span className="text-h2 tabular-nums text-fg">
                   {p.priceInrMonthly === null ? "Free" : `₹${p.priceInrMonthly.toLocaleString("en-IN")}`}
                 </span>
-                {p.priceInrMonthly !== null && <span className="text-small text-muted">/ month</span>}
+                {p.priceInrMonthly !== null && (
+                  <span className="text-small text-muted">{(prices[p.id]?.gstPaise ?? 0) > 0 ? "+ GST / month" : "/ month"}</span>
+                )}
               </div>
               {p.id === "trial" && <p className="mt-1 text-xs text-muted">{TRIAL_DAYS} days to try everything</p>}
               <ul className="mt-4 flex-1 space-y-2 border-t border-border pt-4 text-small text-fg-soft">
@@ -235,7 +277,30 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
                   </li>
                 ))}
               </ul>
-              {p.id !== "trial" && !current && canManage && (
+              {p.id !== "trial" && !current && canManage && confirmId === p.id && (
+                <div className="mt-5 space-y-3">
+                  {prices[p.id] && <PriceBreakdown price={prices[p.id]!} />}
+                  {!hasBillingDetails && (prices[p.id]?.gstPaise ?? 0) > 0 && (
+                    <p className="text-xs text-muted">
+                      Want your business name or GSTIN on the invoice? Add them under Billing details below before you pay.
+                    </p>
+                  )}
+                  <Button
+                    fullWidth
+                    icon={<Sparkles />}
+                    loading={busy === p.id}
+                    loadingText="Opening checkout…"
+                    disabled={(!!busy && busy !== p.id) || activating}
+                    onClick={() => checkout(p)}
+                  >
+                    {prices[p.id] ? `Pay ${formatInr(prices[p.id]!.totalPaise)} a month` : "Continue to payment"}
+                  </Button>
+                  <Button fullWidth variant="ghost" disabled={busy === p.id} onClick={() => setConfirmId(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              {p.id !== "trial" && !current && canManage && confirmId !== p.id && (
                 <Button
                   className="mt-5"
                   fullWidth
@@ -243,8 +308,8 @@ export function BillingPlans({ plans, currentPlanId, canManage }: { plans: PlanL
                   icon={upgrade ? <Sparkles /> : undefined}
                   loading={busy === p.id}
                   loadingText="Opening checkout…"
-                  disabled={(!!busy && busy !== p.id) || activating}
-                  onClick={() => checkout(p)}
+                  disabled={!!busy || activating}
+                  onClick={() => setConfirmId(p.id)}
                 >
                   {upgrade ? `Upgrade to ${p.name}` : `Switch to ${p.name}`}
                 </Button>

@@ -6,7 +6,7 @@ import { LEGAL_ENTITY } from "@/lib/site";
 import { faqLd, siteUrl } from "@/lib/seo/schema";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { ENGINES, JsonLd, PageHero, Section } from "@/components/marketing/ui";
-import { SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, inrGst, num } from "@/components/marketing/plans";
 import { ABOUT_FAQ } from "@/components/marketing/hi/content";
 import { DifferenceStrip } from "@/components/marketing/showcase/difference-strip";
 import { HiFaqSection, HiFinalCta } from "@/components/marketing/hi/hi-ui";
@@ -47,7 +47,7 @@ export default function HindiAboutPage() {
           <p className="mt-4 text-body leading-relaxed text-fg-soft">
             हम हर समस्या आसान भाषा में समझाते हैं, आपकी वेबसाइट में बदलाव सिर्फ़ आपकी मंज़ूरी के बाद करते हैं और उसे वापस (undo) भी किया जा सकता है,
             हम देखते हैं कि {engineList} जैसे AI असिस्टेंट आपके बारे में क्या कहते हैं, और हमारी कीमतें भारतीय रुपये में हैं —{" "}
-            {inr(starter.priceInrMonthly ?? 0)} महीने से शुरू।
+            {inrGst(starter.priceInrMonthly ?? 0)} महीने से शुरू।
           </p>
         </div>
         <DifferenceStrip
@@ -71,12 +71,14 @@ export default function HindiAboutPage() {
             },
             {
               title: "कीमतें ₹ में, पहले से साफ़",
-              body: `प्लान की कीमतें भारतीय रुपये में हैं, GST अलग से दिखाया जाता है, और पहले ${TRIAL_DAYS} दिन का फ्री ट्रायल मिलता है।`,
+              body: gstOn()
+                ? `प्लान की कीमतें भारतीय रुपये में हैं, GST अलग से दिखाया जाता है, और पहले ${TRIAL_DAYS} दिन का फ्री ट्रायल मिलता है।`
+                : `प्लान की कीमतें भारतीय रुपये में हैं, और पहले ${TRIAL_DAYS} दिन का फ्री ट्रायल मिलता है।`,
               visual: {
                 kind: "inr",
                 price: inr(starter.priceInrMonthly ?? 0),
-                per: "/ महीना",
-                notes: [`${starter.name} प्लान, GST अलग`, `${TRIAL_DAYS} दिन का फ्री ट्रायल`],
+                per: gstOn() ? "+ GST / महीना" : "/ महीना",
+                notes: [gstOn() ? `${starter.name} प्लान, GST अलग` : `${starter.name} प्लान`, `${TRIAL_DAYS} दिन का फ्री ट्रायल`],
               },
             },
           ]}
@@ -112,7 +114,7 @@ export default function HindiAboutPage() {
                 पूछते हैं और दर्ज करते हैं कि आपका नाम आया, लिंक मिला या आप छूट गए।
               </li>
               <li>
-                <strong className="font-semibold text-fg">सॉफ़्टवेयर प्लान:</strong> पेड प्लान {inr(starter.priceInrMonthly ?? 0)} महीने से शुरू होते हैं,
+                <strong className="font-semibold text-fg">सॉफ़्टवेयर प्लान:</strong> पेड प्लान {inrGst(starter.priceInrMonthly ?? 0)} महीने से शुरू होते हैं,
                 और पहले {TRIAL_DAYS} दिन आप इसे फ्री आज़मा सकते हैं।
               </li>
               <li>

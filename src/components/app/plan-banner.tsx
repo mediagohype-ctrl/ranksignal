@@ -7,6 +7,7 @@ import { fmtDate } from "@/lib/dashboard/format";
 import type { BannerKind } from "@/lib/billing/banner";
 import { trialDaysLeft } from "@/lib/billing/banner";
 import { LinkButton, Notice } from "@/components/ui";
+import { BuyAnswersButton } from "@/components/app/billing/topup-dialog";
 
 type DateLike = Date | string | null | undefined;
 
@@ -95,10 +96,21 @@ export function PlanBanner({ kind, access, ai, upgradeHref = "/app/settings?tab=
   } else if (kind === "limit_reached" && ai) {
     const reset = toDate(ai.resetsAt);
     notice = (
-      <Notice tone="warning" title="You've used all your AI answers" actions={upgrade("Upgrade")}>
+      <Notice
+        tone="warning"
+        title="You've used all your AI answers"
+        actions={
+          canManageBilling ? (
+            <>
+              {upgrade("Upgrade")}
+              <BuyAnswersButton />
+            </>
+          ) : null
+        }
+      >
         {reset
-          ? `You've used all ${ai.cap.toLocaleString("en-IN")} AI answers this month. They reset on ${day(reset)}. Upgrade if you need more before then.`
-          : `You've used the ${ai.cap.toLocaleString("en-IN")} AI answers in your free trial. Choose a plan to keep checking what AI says about you.`}{" "}
+          ? `You've used all ${ai.cap.toLocaleString("en-IN")} AI answers this month. They reset on ${day(reset)}. Upgrade, or buy extra answers once (not autopay), if you need more before then.`
+          : `You've used the ${ai.cap.toLocaleString("en-IN")} AI answers in your free trial. Choose a plan, or buy extra answers, to keep checking what AI says about you.`}{" "}
         {askAdmin}
       </Notice>
     );

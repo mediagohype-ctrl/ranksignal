@@ -44,6 +44,11 @@ model Organization {
   dataForSeoUsage DataForSeoUsage[]
   competitorSnapshots CompetitorSnapshot[]
   researchSearches ResearchSearch[]
+  billingDetails BillingDetails?
+  invoices Invoice[]
+  topUpOrders TopUpOrder[]
+  topUpPacks TopUpPack[]
+  topUpSettlements TopUpSettlement[]
 }
 
 model User {
@@ -1217,4 +1222,129 @@ model LinkGapReport {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, projectId, createdAt])
+}
+
+// ---- GST invoices ----
+
+/** Customer billing details printed on GST invoices (one per organization; owner/admin edit). */
+model BillingDetails {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  legalName      String // legal / business name on the invoice
+  gstin          String? // customer GSTIN (B2B input credit); format + checksum validated
+  stateCode      String // GST state code (src/lib/billing/indian-states.ts) = place of supply
+  addressLine    String?
+  invoiceEmail   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+/** One invoice per captured Razorpay payment (subscription charge or top-up). Amounts in paise. */
+model Invoice {
+  id                String   @id @default(cuid())
+  number            String   @unique // e.g. MWR/2026-27/000123
+  financialYear     String // "2026-27" (Indian FY, April–March, IST)
+  organizationId    String? // null once the customer deletes their account (the invoice keeps its own buyer snapshot)
+  kind              String // subscription | topup
+  razorpayPaymentId String   @unique // idempotency key
+  description       String
+  basePaise         Int // taxable value
+  gstPaise          Int
+  cgstPaise         Int      @default(0)
+  sgstPaise         Int      @default(0)
+  igstPaise         Int      @default(0)
+  totalPaise        Int
+  ratePercent       Float // GST rate applied (0 when we were not registered)
+  split             String // cgst_sgst | igst | none
+  seller            Json // snapshot of our GST details at the time (legal name, GSTIN, address, state, SAC)
+  buyer             Json // snapshot of the customer's billing details at the time
+  paidAt            DateTime
+  createdAt         DateTime @default(now())
+
+  // Tax invoices must be kept (CGST Act s.36) even after the customer deletes their account: SetNull keeps the row and
+  // its seller/buyer snapshots while the account itself can still be deleted.
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, paidAt])
+}
+
+/** Sequential invoice numbers per Indian financial year (incremented inside the invoice transaction). */
+model InvoiceCounter {
+  financialYear String   @id // "2026-27"
+  lastNumber    Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+// ---- AI-answer top-up packs (one-time purchases; Agent P2) ----
+
+/** One Razorpay ORDER for a top-up pack. Created when checkout opens; marked paid ONLY by the signed webhook. */
+model TopUpOrder {
+  id                String    @id @default(cuid())
+  organizationId    String
+  packId            String // src/lib/billing/topups.ts pack id
+  answers           Int
+  basePaise         Int // price before GST
+  gstPaise          Int
+  totalPaise        Int // what Razorpay must charge (order amount)
+  ratePercent       Float
+  razorpayOrderId   String    @unique
+  receipt           String    @unique
+  status            String    @default("pending") // pending | paid | failed | refunded
+  razorpayPaymentId String?   @unique
+  failureReason     String?
+  createdById       String?
+  paidAt            DateTime?
+  refundedPaise     Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pack         TopUpPack?
+
+  @@index([organizationId, createdAt])
+}
+
+/** Extra AI answers granted by a paid top-up order. Use is settled per closed month (TopUpSettlement). */
+model TopUpPack {
+  id                String    @id @default(cuid())
+  organizationId    String
+  orderId           String    @unique
+  packId            String
+  answers           Int
+  basePaise         Int // price before GST (for the monthly AI spend cap)
+  razorpayPaymentId String    @unique
+  purchasedAt       DateTime
+  expiresAt         DateTime
+  status            String    @default("paid") // paid | refunded
+  consumed          Int       @default(0) // answers used in closed (settled) months
+  settledThrough    DateTime // months before this (UTC month start) are settled
+  revokedAnswers    Int       @default(0) // unused answers taken back by a refund
+  refundedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  order        TopUpOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, expiresAt])
+  @@index([settledThrough])
+}
+
+/** One closed month's extra-answer use for an organization (idempotency marker + audit trail). */
+model TopUpSettlement {
+  id             String   @id @default(cuid())
+  organizationId String
+  month          String // YYYY-MM (UTC)
+  planId         String
+  cap            Int
+  collected      Int
+  overflow       Int
+  allocated      Int
+  allocations    Json // { packId: answers }
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, month])
 }

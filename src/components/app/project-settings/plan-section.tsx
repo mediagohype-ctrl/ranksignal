@@ -3,6 +3,7 @@ import { CreditCard } from "lucide-react";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
 import { getAiAllowance } from "@/lib/billing/allowance";
+import { answersLeftLabel } from "@/lib/billing/topups";
 import { fmtDate } from "@/lib/dashboard/format";
 import { Card, CardBody, CardHeader, KeyValueList, LinkButton, Meter } from "@/components/ui";
 
@@ -40,7 +41,12 @@ export async function PlanSection({ organizationId, timeZone }: { organizationId
           items={[
             { label: "Plan", value: plan.name },
             ...(allowance
-              ? [{ label: "AI answers left", value: `${allowance.left.toLocaleString("en-IN")} of ${allowance.cap.toLocaleString("en-IN")}` }]
+              ? [
+                  {
+                    label: "AI answers left",
+                    value: answersLeftLabel({ monthlyLeft: allowance.monthlyLeft, cap: allowance.cap, extraLeft: allowance.extra.left }, allowance.resetsAt === null),
+                  },
+                ]
               : []),
             ...(renew ? [renew] : []),
           ]}

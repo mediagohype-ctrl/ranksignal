@@ -2,7 +2,7 @@
 import { CheckCircle2, AlertTriangle, XCircle, Info, Database, Server, Timer, GitCommit } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireStaffPage } from "@/lib/admin/guard";
-import { configChecklist, type CheckStatus, type ConfigCheck } from "@/lib/admin/system";
+import { configChecklist, razorpayPlanChecks, type CheckStatus, type ConfigCheck } from "@/lib/admin/system";
 import { fmtAgo, fmtDateTime } from "@/lib/admin/params";
 import { Card, CardBody, CardHeader, EmptyState, KeyValueList, PageHeader, Stat, StatusBadge, Table, TD, TH, THead, TR } from "@/components/ui";
 import pkg from "../../../../package.json";
@@ -40,7 +40,8 @@ export default async function SystemPage() {
         db.workflowEvent.findFirst({ where: { name: { contains: "interrupt" } }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
       ])
     : [[], null, null, 0, null];
-  const checks = configChecklist();
+  // Razorpay plan amounts vs price + GST (read-only API calls; never throws).
+  const checks = [...configChecklist(), ...(await razorpayPlanChecks())];
   const groups = [...new Set(checks.map((c) => c.group))];
   const counts = (s: CheckStatus) => checks.filter((c) => c.status === s).length;
   const commit = process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? process.env.VERCEL_GIT_COMMIT_SHA;

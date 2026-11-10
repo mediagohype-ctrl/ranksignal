@@ -4,7 +4,7 @@ import { getAiAllowance, getWebsiteCheckAllowance } from "@/lib/billing/allowanc
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/billing/allowance → { item: { ai: { used, cap, left, resetsAt }, website: { allowed, resetsAt } } }.
+ * GET /api/billing/allowance → { item: { ai: { used, cap, left, monthlyLeft, resetsAt, extra }, website: { allowed, resetsAt } } }.
  * What the run buttons need to disable themselves at the plan limit (customer words: AI answers, never credits).
  */
 export const GET = handler(async () => {
@@ -13,7 +13,15 @@ export const GET = handler(async () => {
   return json(
     {
       item: {
-        ai: { ...ai, resetsAt: ai.resetsAt?.toISOString() ?? null },
+        // left = plan answers left + extra answers (top-up packs); extra = { left, expiresAt, packs }.
+        ai: {
+          used: ai.used,
+          cap: ai.cap,
+          left: ai.left,
+          monthlyLeft: ai.monthlyLeft,
+          resetsAt: ai.resetsAt?.toISOString() ?? null,
+          extra: { left: ai.extra.left, expiresAt: ai.extra.expiresAt?.toISOString() ?? null },
+        },
         website: { allowed: website.allowed, resetsAt: website.resetsAt.toISOString() },
       },
     },

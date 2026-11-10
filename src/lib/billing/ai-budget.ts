@@ -22,7 +22,8 @@ import { db } from "@/lib/db";
 import { JobError } from "@/lib/types";
 import { sendStaffAlert } from "@/lib/alerts/staff";
 import { getPlanWithAiLimits } from "./plans";
-import { monthlyAiBudgetMicros } from "./ai-margin";
+import { monthlyAiBudgetMicros, topUpAiBudgetMicros } from "./ai-margin";
+import { topUpValueInrThisMonth } from "./allowance";
 
 export const DEFAULT_AI_DAILY_BUDGET_USD = 5;
 export const AI_BUDGET_CACHE_MS = 30_000;
@@ -192,7 +193,9 @@ async function queryOrgCapMicros(orgId: string): Promise<number | null> {
 }
 async function queryOrgMonthCapMicros(orgId: string): Promise<number | null> {
   const org = await db.organization.findUnique({ where: { id: orgId }, select: { planId: true, serviceTier: true } });
-  return monthlyAiBudgetMicros(org?.planId ?? "trial", org?.serviceTier);
+  // Bought AI answers (top-up packs) raise the cap by the same share of what was paid for them.
+  const topUp = await topUpValueInrThisMonth(orgId).catch(() => 0);
+  return monthlyAiBudgetMicros(org?.planId ?? "trial", org?.serviceTier) + topUpAiBudgetMicros(topUp);
 }
 async function queryLedgerRangeMicros(since: Date, until: Date, orgId: string): Promise<number> {
   const agg = await db.usageLedger.aggregate({

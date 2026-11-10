@@ -3,12 +3,26 @@
 import {
   PAID_PLAN_IDS, TRIAL_DAYS, checksPerMonth, getEngineLimit, getPlan, getPlanWithAiLimits, questionsPerCheck,
 } from "@/lib/billing/plans";
+import { gstConfig, gstSuffix } from "@/lib/billing/gst";
 import type { PlanLimits } from "@/lib/types";
 
 export type PaidPlanId = (typeof PAID_PLAN_IDS)[number];
 
 export const num = (n: number) => n.toLocaleString("en-IN");
 export const inr = (n: number) => `₹${num(n)}`;
+/** True when we are GST-registered (GSTIN set): every price then says "+ GST" (src/lib/billing/gst.ts). */
+export const gstOn = () => gstSuffix() !== "";
+/** "₹1,999 + GST" when GST applies, plain "₹1,999" when we are not GST-registered. Hindi copy uses it as-is. */
+export const inrGst = (n: number) => `${inr(n)}${gstSuffix()}`;
+/** Sentence for "prices are in rupees" notes. */
+export const priceNote = (hi = false) =>
+  hi
+    ? gstOn()
+      ? `सभी कीमतें भारतीय रुपये में हैं, ${gstConfig().ratePercent}% GST अलग।`
+      : "सभी कीमतें भारतीय रुपये में हैं।"
+    : gstOn()
+      ? `Prices in Indian rupees, plus ${gstConfig().ratePercent}% GST.`
+      : "Prices in Indian rupees.";
 export const freq = (days: number) => (days <= 1 ? "Daily" : days <= 7 ? "Weekly" : "Monthly");
 
 const COPY: Record<PaidPlanId, { blurb: string; suffix?: string; featured?: boolean; cta: string }> = {

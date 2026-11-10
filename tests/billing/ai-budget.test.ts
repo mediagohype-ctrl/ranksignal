@@ -306,7 +306,7 @@ describe("reservations: hard cap", () => {
 
 describe("profit guard: monthly AI budget is a share of the price", () => {
   it("is 30% of the plan price by default", () => {
-    expect(monthlyAiBudgetInr("starter")).toBe(900); // ₹2,999 × 30%
+    expect(monthlyAiBudgetInr("starter")).toBe(600); // ₹1,999 × 30% (Starter dropped from ₹2,999 to ₹1,999)
     expect(monthlyAiBudgetInr("growth")).toBe(2400);
     expect(monthlyAiBudgetInr("agency")).toBe(6000);
   });
@@ -319,9 +319,9 @@ describe("profit guard: monthly AI budget is a share of the price", () => {
   it("follows AI_COST_SHARE and converts to micro-USD at the configured rate", () => {
     process.env.AI_COST_SHARE = "0.2";
     process.env.ADMIN_USD_INR_RATE = "100";
-    expect(monthlyAiBudgetInr("starter")).toBe(600);
-    expect(monthlyAiBudgetMicros("starter")).toBe(6_000_000); // ₹600 / 100 = $6
+    expect(monthlyAiBudgetInr("starter")).toBe(400); // ₹1,999 × 20%
+    expect(monthlyAiBudgetMicros("starter")).toBe(4_000_000); // ₹400 / 100 = $4
     process.env.AI_COST_SHARE = "5"; // invalid → default 30%
-    expect(monthlyAiBudgetInr("starter")).toBe(900);
+    expect(monthlyAiBudgetInr("starter")).toBe(600);
   });
 });

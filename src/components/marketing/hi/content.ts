@@ -3,7 +3,7 @@
 // Product names, prices and terms like SEO, AEO, GEO, ChatGPT stay in Latin script, the way Indians write them.
 import { PLANS } from "@/lib/billing/plans";
 import {
-  MARKETING_PLANS, SERVICE_FROM_PRICE, SERVICE_TIERS, TRIAL_AI, TRIAL_DAYS, inr, num,
+  MARKETING_PLANS, SERVICE_FROM_PRICE, SERVICE_TIERS, TRIAL_AI, TRIAL_DAYS, inr, inrGst, num, priceNote,
   type PaidPlanId, type ServiceTierId,
 } from "@/components/marketing/plans";
 
@@ -151,7 +151,7 @@ export const HOME_FAQ: HiFaq[] = [
   },
   {
     q: "कीमत कितनी है?",
-    a: `सॉफ़्टवेयर प्लान ${inr(SOFTWARE_FROM)} महीने से शुरू होते हैं और पहले ${TRIAL_DAYS} दिन फ्री हैं। अगर आप चाहते हैं कि सारा काम हमारी टीम करे, तो सेवा ${inr(SERVICE_FROM_PRICE)} महीने से है। सभी कीमतें रुपये में हैं, GST अलग से।`,
+    a: `सॉफ़्टवेयर प्लान ${inrGst(SOFTWARE_FROM)} महीने से शुरू होते हैं और पहले ${TRIAL_DAYS} दिन फ्री हैं। अगर आप चाहते हैं कि सारा काम हमारी टीम करे, तो सेवा ${inr(SERVICE_FROM_PRICE)} महीने से है। ${priceNote(true)}`,
   },
   {
     q: "क्या आप Google पर पहला नंबर या ChatGPT में नाम आने की गारंटी देते हैं?",
@@ -220,7 +220,7 @@ export const FREE_CHECK_FAQ: HiFaq[] = [
   },
   {
     q: "फ्री चेक और पूरी रिपोर्ट में क्या फ़र्क है?",
-    a: `फ्री चेक कुछ ही पेज पढ़ता है और किसी AI असिस्टेंट से कुछ नहीं पूछता। पूरी रिपोर्ट ${starter.name} प्लान पर हर चेक में ${num(starter.maxPagesPerCrawl)} पेज तक और Agency पर ${num(PLANS.agency.maxPagesPerCrawl)} पेज तक पढ़ती है, और ChatGPT, Gemini जैसे AI से आपके ग्राहकों के असली सवाल पूछती है। प्लान ${TRIAL_DAYS} दिन के फ्री ट्रायल के बाद ${inr(starter.priceInrMonthly ?? 0)} महीने से शुरू होते हैं।`,
+    a: `फ्री चेक कुछ ही पेज पढ़ता है और किसी AI असिस्टेंट से कुछ नहीं पूछता। पूरी रिपोर्ट ${starter.name} प्लान पर हर चेक में ${num(starter.maxPagesPerCrawl)} पेज तक और Agency पर ${num(PLANS.agency.maxPagesPerCrawl)} पेज तक पढ़ती है, और ChatGPT, Gemini जैसे AI से आपके ग्राहकों के असली सवाल पूछती है। प्लान ${TRIAL_DAYS} दिन के फ्री ट्रायल के बाद ${inrGst(starter.priceInrMonthly ?? 0)} महीने से शुरू होते हैं।`,
   },
   {
     q: "क्या मेरी वेबसाइट पर यह चेक चलाना सुरक्षित है?",

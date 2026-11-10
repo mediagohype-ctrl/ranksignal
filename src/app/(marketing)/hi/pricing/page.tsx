@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { JsonLd } from "@/components/marketing/ui";
-import { SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
+import { SERVICE_FROM_PRICE, TRIAL_DAYS, inr, inrGst, priceNote } from "@/components/marketing/plans";
 import { HI_PLANS, HI_SERVICE_TIERS, HI_TRIAL_AI, PRICING_FAQ, SOFTWARE_FROM } from "@/components/marketing/hi/content";
 import { HiFaqSection, HiFinalCta, HiPlanCards } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
@@ -14,7 +14,7 @@ export const metadata: Metadata = staticPageMetadata("/hi/pricing");
 const COMPARE = [
   { label: "काम कौन करता है", diy: "आप या आपकी टीम, हमारे बताए सुधारों के साथ।", dfy: "हमारी टीम, आपकी मंज़ूरी के साथ।" },
   { label: "आपका समय", diy: "हर हफ़्ते थोड़ा समय सुधारों के लिए।", dfy: "शुरू में करीब एक घंटा, फिर सिर्फ़ मंज़ूरियाँ।" },
-  { label: "कीमत", diy: `${inr(SOFTWARE_FROM)} महीने से`, dfy: `${inr(SERVICE_FROM_PRICE)} महीने से` },
+  { label: "कीमत", diy: `${inrGst(SOFTWARE_FROM)} महीने से`, dfy: `${inrGst(SERVICE_FROM_PRICE)} महीने से` },
   { label: "किसके लिए सही", diy: "मालिक, मार्केटर और एजेंसियाँ, जो खुद काम करना पसंद करते हैं।", dfy: "व्यस्त मालिक, जो चाहते हैं कि काम हो जाए और हर महीने सबूत मिले।" },
 ];
 
@@ -30,8 +30,8 @@ export default function HindiPricingPage() {
           </h1>
           <p className="mk-hero mk-rise mt-5 max-w-[16ch] text-fg">खुद करें, या हमसे करवाएँ।</p>
           <p className="mk-lead mk-rise mk-delay-1 mt-8 max-w-[40rem] text-fg-soft">
-            सॉफ़्टवेयर {inr(SOFTWARE_FROM)} महीने से, पहले {TRIAL_DAYS} दिन फ्री। या हमारी टीम हर महीने आपकी वेबसाइट सुधारे —{" "}
-            {inr(SERVICE_FROM_PRICE)} महीने से। सभी कीमतें भारतीय रुपये में हैं, GST अलग।
+            सॉफ़्टवेयर {inrGst(SOFTWARE_FROM)} महीने से, पहले {TRIAL_DAYS} दिन फ्री। या हमारी टीम हर महीने आपकी वेबसाइट सुधारे —{" "}
+            {inr(SERVICE_FROM_PRICE)} महीने से। {priceNote(true)}
           </p>
         </div>
       </section>

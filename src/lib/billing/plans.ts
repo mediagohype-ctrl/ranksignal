@@ -1,4 +1,5 @@
-// Plans & limits (blueprint §10). Prices are INR list prices (placeholder until pricing is final).
+// Plans & limits (blueprint §10). priceInrMonthly = INR list price per month BEFORE GST (GST is added on top when we
+// are GST-registered: src/lib/billing/gst.ts). Prices are defined ONLY here.
 import type { PlanId, PlanLimits } from "@/lib/types";
 
 export const TRIAL_DAYS = 7;
@@ -48,7 +49,7 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
   starter: {
     id: "starter",
     name: "Starter",
-    priceInrMonthly: 2_999,
+    priceInrMonthly: 1_999,
     maxProjects: 1,
     maxTrackedPrompts: 50,
     maxPagesPerCrawl: 250,

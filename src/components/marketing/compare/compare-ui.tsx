@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowRight, Check, CircleDashed, HelpCircle, X } from "lucide-react";
 import { LinkButton, SectionHeading } from "@/components/ui";
 import { Section } from "@/components/marketing/ui";
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr } from "@/components/marketing/plans";
+import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, priceNote } from "@/components/marketing/plans";
 import { formatCheckedOn, formatFrom, trademarkNote, type Competitor } from "@/lib/compare/competitors";
 
 /* ------------------------------------------------------------------ comparison table */
@@ -225,7 +225,7 @@ export function OurPrices() {
       {MARKETING_PLANS.map((p) => (
         <li key={p.id}>
           <span className="font-medium text-fg">{p.name}:</span> {inr(p.price)}
-          {p.suffix ?? ""}/month · {p.limits.maxProjects} website{p.limits.maxProjects === 1 ? "" : "s"} ·{" "}
+          {p.suffix ?? ""}/month{gstOn() ? " + GST" : ""} · {p.limits.maxProjects} website{p.limits.maxProjects === 1 ? "" : "s"} ·{" "}
           {p.ai.answersPerMonth.toLocaleString("en-IN")} AI answers a month
         </li>
       ))}
@@ -233,7 +233,10 @@ export function OurPrices() {
         <span className="font-medium text-fg">Done-for-you service:</span> from {inr(SERVICE_FROM_PRICE)}/month plus a
         one-time setup fee
       </li>
-      <li>{TRIAL_DAYS}-day free trial. Prices in Indian rupees, excluding GST; we issue GST invoices.</li>
+      <li>
+        {TRIAL_DAYS}-day free trial. {priceNote()}
+        {gstOn() ? " We issue a GST invoice for every payment." : ""}
+      </li>
     </ul>
   );
 }

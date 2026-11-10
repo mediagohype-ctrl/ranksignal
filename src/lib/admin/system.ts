@@ -1,5 +1,8 @@
 // Environment / configuration health checklist for the admin System page.
 // NEVER returns secret values — only "set" / "missing" (APP_URL is public and is shown).
+import { PAID_PLAN_IDS, PLANS } from "@/lib/billing/plans";
+import { formatInr, gstConfig, isValidGstin, planPriceWithGst } from "@/lib/billing/gst";
+import { fetchRazorpayPlan, type RazorpayPlan } from "@/lib/billing/razorpay-plans";
 
 export type CheckStatus = "ok" | "warn" | "missing" | "info";
 export interface ConfigCheck {
@@ -87,6 +90,34 @@ export function configChecklist(env: Env = process.env): ConfigCheck[] {
   checks.push({ key: "RAZORPAY_KEY_*", label: "Razorpay API keys", group: "Billing", status: rzp ? "ok" : "warn", detail: rzp ? "set" : "not set — checkout disabled" });
   checks.push(secret(env, "RAZORPAY_WEBHOOK_SECRET", "Razorpay webhook secret", "Billing"));
   for (const p of ["STARTER", "GROWTH", "AGENCY"]) checks.push(secret(env, `RAZORPAY_PLAN_${p}`, `Razorpay plan id (${p.toLowerCase()})`, "Billing"));
+  const gst = gstConfig(env);
+  checks.push({
+    key: "GSTIN",
+    label: "GST registration",
+    group: "Billing",
+    status: !gst.gstin ? "info" : isValidGstin(gst.gstin) ? "ok" : "warn",
+    detail: !gst.gstin
+      ? "not set — prices are shown without GST and invoices carry no GST"
+      : isValidGstin(gst.gstin)
+        ? `${gst.gstin} · ${gst.ratePercent}% GST added to every price · state ${gst.stateCode}`
+        : `${gst.gstin} doesn't look like a valid GSTIN (check the 15 characters)`,
+  });
+  if (gst.registered) {
+    checks.push({
+      key: "GST_LEGAL_NAME",
+      label: "Legal name on invoices",
+      group: "Billing",
+      status: gst.legalName ? "ok" : "warn",
+      detail: gst.legalName ?? "not set — invoices use LEGAL_ENTITY from src/lib/site.ts",
+    });
+    checks.push({
+      key: "GST_SAC_CODE",
+      label: "SAC code on invoices",
+      group: "Billing",
+      status: "info",
+      detail: `${gst.sacCode}${has(env, "GST_SAC_CODE") ? "" : " (default — ask your CA to confirm)"} · invoice prefix ${gst.prefix}`,
+    });
+  }
 
   checks.push({
     key: "RUN_WORKER_IN_APP",
@@ -110,4 +141,51 @@ export function configChecklist(env: Env = process.env): ConfigCheck[] {
     detail: env.ALLOW_SIMULATED_PROVIDER === "true" ? "allowed (demo data possible)" : "not allowed",
   });
   return checks;
+}
+
+/**
+ * For each configured RAZORPAY_PLAN_*: fetch the plan from Razorpay and compare its amount with what the customer
+ * should pay (price + GST from src/lib/billing/plans.ts + gst.ts). Razorpay charges the PLAN's amount, so a mismatch
+ * means customers are charged the wrong total. Read-only; never throws.
+ */
+export async function razorpayPlanChecks(
+  env: Env = process.env,
+  fetchPlan: (id: string) => Promise<RazorpayPlan> = fetchRazorpayPlan,
+): Promise<ConfigCheck[]> {
+  if (!has(env, "RAZORPAY_KEY_ID") || !has(env, "RAZORPAY_KEY_SECRET")) return [];
+  const results = await Promise.all(PAID_PLAN_IDS.map((id) => checkOnePlan(id, env, fetchPlan)));
+  return results.filter((c): c is ConfigCheck => c !== null);
+}
+
+async function checkOnePlan(
+  id: (typeof PAID_PLAN_IDS)[number],
+  env: Env,
+  fetchPlan: (id: string) => Promise<RazorpayPlan>,
+): Promise<ConfigCheck | null> {
+  const key = `RAZORPAY_PLAN_${id.toUpperCase()}`;
+  const rzpId = env[key]?.trim();
+  if (!rzpId) return null;
+  const expected = planPriceWithGst(id, null, gstConfig(env));
+  if (!expected) return null;
+  const label = `Razorpay ${PLANS[id].name} plan amount`;
+  const want = `${formatInr(expected.totalPaise)} a month${expected.gstPaise > 0 ? ` (${formatInr(expected.basePaise)} + ${formatInr(expected.gstPaise)} GST)` : ""}`;
+  try {
+    const plan = await fetchPlan(rzpId);
+    const amount = plan.item?.amount;
+    const monthly = plan.period === "monthly" && (plan.interval ?? 1) === 1;
+    const ok = amount === expected.totalPaise && (plan.item?.currency ?? "INR") === "INR" && monthly;
+    return {
+      key: `${key} amount`,
+      label,
+      group: "Billing",
+      status: ok ? "ok" : "warn",
+      detail: ok
+        ? `${formatInr(amount!)} a month — matches price + GST`
+        : `Razorpay plan ${rzpId} charges ${typeof amount === "number" ? formatInr(amount) : "an unknown amount"}${monthly ? "" : " (not billed every 1 month)"}. ` +
+          `It should be ${want}. Create a new monthly plan in Razorpay with this amount and set ${key} to its id ` +
+          `(Razorpay plan amounts can't be edited; existing subscribers stay on the old plan until moved).`,
+    };
+  } catch {
+    return { key: `${key} amount`, label, group: "Billing", status: "warn", detail: `Couldn't read plan ${rzpId} from Razorpay. Expected ${want}.` };
+  }
 }

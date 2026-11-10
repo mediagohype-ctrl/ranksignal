@@ -8,6 +8,7 @@ import { FreeCheckTool } from "@/components/marketing/free-check-tool";
 import { SectionHeading } from "@/components/ui";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import { PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
+import { inrGst } from "@/components/marketing/plans";
 import { MAX_KEY_PAGES } from "@/lib/free-check/run";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { PAGE_SEO } from "@/lib/seo/pages";
@@ -167,7 +168,7 @@ const FREE_CHECK_FAQ: Qa[] = [
         The free check reads a handful of pages and never asks an AI assistant. The full report reads up to{" "}
         {inrN(starter.maxPagesPerCrawl)} pages per check on the {starter.name} plan, up to{" "}
         {inrN(PLANS.agency.maxPagesPerCrawl)} on Agency, and asks ChatGPT, Gemini and others your customers&apos; real
-        questions. Plans start at ₹{inrN(starter.priceInrMonthly ?? 0)} a month after a {TRIAL_DAYS}-day free trial.
+        questions. Plans start at {inrGst(starter.priceInrMonthly ?? 0)} a month after a {TRIAL_DAYS}-day free trial.
       </>
     ),
   },

@@ -7,7 +7,7 @@ import { breadcrumbLd, faqLdFromQa, siteUrl, webPageLd } from "@/lib/seo/schema"
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { ENGINES, FinalCta, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
-import { SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, inrGst, num } from "@/components/marketing/plans";
 import { DifferenceStrip } from "@/components/marketing/showcase/difference-strip";
 
 // Title and description live in src/lib/seo/pages.ts (length- and uniqueness-tested).
@@ -70,7 +70,7 @@ export default function AboutPage() {
           <p className="mt-4 text-body leading-relaxed text-fg-soft">
             We explain every problem in plain English, we change your website only after you approve, with an undo, we
             track what AI assistants like {engineList} say about you, and our prices are in Indian rupees, starting at{" "}
-            {inr(starter.priceInrMonthly ?? 0)} a month.
+            {inrGst(starter.priceInrMonthly ?? 0)} a month.
           </p>
         </div>
         <DifferenceStrip
@@ -93,12 +93,14 @@ export default function AboutPage() {
             },
             {
               title: "Prices in ₹, up front",
-              body: `Plans are priced in Indian rupees, with GST shown separately and a ${TRIAL_DAYS}-day free trial first.`,
+              body: gstOn()
+                ? `Plans are priced in Indian rupees, with GST shown separately and a ${TRIAL_DAYS}-day free trial first.`
+                : `Plans are priced in Indian rupees, with a ${TRIAL_DAYS}-day free trial first.`,
               visual: {
                 kind: "inr",
                 price: inr(starter.priceInrMonthly ?? 0),
-                per: "/ month",
-                notes: [`${starter.name} plan, GST extra`, `${TRIAL_DAYS}-day free trial`],
+                per: gstOn() ? "+ GST / month" : "/ month",
+                notes: [gstOn() ? `${starter.name} plan, GST extra` : `${starter.name} plan`, `${TRIAL_DAYS}-day free trial`],
               },
             },
           ]}
@@ -138,7 +140,7 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-semibold text-fg">Software plans:</strong> paid plans start at{" "}
-                {inr(starter.priceInrMonthly ?? 0)} a month, and you can try the product free for {TRIAL_DAYS} days first.
+                {inrGst(starter.priceInrMonthly ?? 0)} a month, and you can try the product free for {TRIAL_DAYS} days first.
               </li>
               <li>
                 <strong className="font-semibold text-fg">Done-for-you service:</strong> our team does the work for you,

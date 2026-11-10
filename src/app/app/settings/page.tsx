@@ -4,11 +4,19 @@ import { db } from "@/lib/db";
 import { PLANS, getPlan } from "@/lib/billing/plans";
 import { getAiAllowance } from "@/lib/billing/allowance";
 import { answersPerCheck } from "@/lib/billing/plans";
+import { answersLeftLabel } from "@/lib/billing/topups";
+import { ExtraAnswersCard } from "@/components/app/billing/topup-dialog";
 import { requireAppSession, hasRole } from "@/lib/dashboard/server";
 import { fmtDate, humanize } from "@/lib/dashboard/format";
 import { MembersPanel } from "@/components/app/members-panel";
 import { roleLabel } from "@/components/app/role-label";
 import { BillingPlans } from "@/components/app/billing-panel";
+import { BillingDetailsForm } from "@/components/app/billing/billing-details-form";
+import { InvoicesList } from "@/components/app/billing/invoices-list";
+import { getBillingDetails } from "@/lib/billing/billing-details";
+import { listInvoices } from "@/lib/billing/invoice";
+import { gstConfig, planPriceWithGst } from "@/lib/billing/gst";
+import { INDIAN_STATES } from "@/lib/billing/indian-states";
 import { BrandingPanel } from "@/components/app/settings/branding-panel";
 import { canHidePoweredBy, isBrandingEligible, readStoredBranding } from "@/lib/branding";
 import {
@@ -52,6 +60,12 @@ export default async function SettingsPage() {
   ]);
   const plan = getPlan(org.planId);
   const canManage = hasRole(s, "admin");
+  // GST invoices + billing details are for the Owner/Admin (the people who pay).
+  const [billingDetails, invoices] = canManage
+    ? await Promise.all([getBillingDetails(s.organizationId).catch(() => null), listInvoices(s.organizationId).catch(() => [])])
+    : [null, []];
+  const gst = gstConfig();
+  const planPrices = Object.fromEntries(Object.values(PLANS).map((p) => [p.id, planPriceWithGst(p.id, billingDetails?.stateCode)]));
   const planHint =
     sub?.trialEndsAt && sub.status === "trialing"
       ? `Trial ends ${fmtDate(sub.trialEndsAt)}`
@@ -122,7 +136,7 @@ export default async function SettingsPage() {
             icon={<Bot />}
             value={
               <span className="tabular-nums">
-                {ai ? `${ai.left.toLocaleString("en-IN")} of ${ai.cap.toLocaleString("en-IN")}` : "—"}
+                {ai ? answersLeftLabel({ monthlyLeft: ai.monthlyLeft, cap: ai.cap, extraLeft: ai.extra.left }, org.planId === "trial") : "—"}
               </span>
             }
             hint={ai?.resetsAt ? `Resets on ${fmtDate(ai.resetsAt)}` : org.planId === "trial" ? "These cover your whole free trial" : undefined}
@@ -144,11 +158,53 @@ export default async function SettingsPage() {
             hint={planHint}
           />
         </div>
+        <ExtraAnswersCard canManage={canManage} />
       </section>
       <section aria-labelledby="plans-h" className="space-y-5">
-        <SectionHeading id="plans-h" title="Plans" description="All prices are per month, in Indian Rupees." />
-        <BillingPlans plans={Object.values(PLANS)} currentPlanId={org.planId} canManage={canManage} />
+        <SectionHeading
+          id="plans-h"
+          title="Plans"
+          description={
+            gst.registered
+              ? `All prices are per month, in Indian Rupees, plus ${gst.ratePercent}% GST. You see the total before you pay.`
+              : "All prices are per month, in Indian Rupees."
+          }
+        />
+        <BillingPlans
+          plans={Object.values(PLANS)}
+          currentPlanId={org.planId}
+          canManage={canManage}
+          prices={planPrices}
+          hasBillingDetails={!!billingDetails}
+        />
       </section>
+      {canManage && (
+        <section aria-labelledby="billing-details-h" className="space-y-5">
+          <SectionHeading
+            id="billing-details-h"
+            title="Billing details"
+            description="The business name, GSTIN and state printed on your invoices. Changes apply to future invoices."
+          />
+          <Card>
+            <CardBody>
+              <BillingDetailsForm
+                initial={billingDetails}
+                states={INDIAN_STATES}
+                defaultName={org.name}
+                canManage={canManage}
+              />
+            </CardBody>
+          </Card>
+        </section>
+      )}
+      {canManage && (
+        <section aria-labelledby="invoices-h" className="space-y-5">
+          <SectionHeading id="invoices-h" title="Invoices" description="A GST invoice for every payment. Open one to print or save it as a PDF." />
+          <InvoicesList
+            invoices={invoices.map((i) => ({ id: i.id, number: i.number, description: i.description, totalPaise: i.totalPaise, paidAt: i.paidAt }))}
+          />
+        </section>
+      )}
     </div>
   );
 

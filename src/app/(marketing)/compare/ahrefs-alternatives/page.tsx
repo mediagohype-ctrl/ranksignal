@@ -162,7 +162,7 @@ const FAQ: Qa[] = [
     q: "Is there an Ahrefs alternative priced in rupees?",
     a: (
       <>
-        MyWebRank is priced in Indian rupees, from {OUR.fromPrice} a month plus GST, with GST invoices. Semrush, SE Ranking
+        MyWebRank is priced in Indian rupees, from {OUR.fromPrice} a month, with GST invoices. Semrush, SE Ranking
         and Ahrefs show US dollar prices on their pricing pages. Ubersuggest says it localises prices by region, so the price
         you see may differ.
       </>

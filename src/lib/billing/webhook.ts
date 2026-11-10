@@ -1,12 +1,25 @@
 // Razorpay webhook processing: verify signature -> idempotency (WebhookEvent unique) -> map to Subscription/Organization.
 // Billing state is changed ONLY here (signed server-to-server events); client checkout redirects are never trusted.
+//
+// Also handled here:
+//   - AI-answer top-ups (one-time Razorpay ORDERS): `order.paid` (or `payment.captured` with an order_id) grants the
+//     pack — idempotent, and only when the paid amount equals the stored order total; `payment.failed` with an
+//     order_id marks the order failed; `refund.processed` takes back the pack's unused answers (never negative).
+//   - GST invoices (src/lib/billing/invoice.ts, idempotent per payment) for `subscription.charged` (base derived from
+//     the charged amount and the GST rate) and for paid top-ups. Created after the event commits; a redelivered
+//     (duplicate) event retries a missing invoice.
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sendStaffAlert } from "@/lib/alerts/staff";
-import { isPlanId, planIdFromRazorpayPlan } from "./plans";
+import { getPlan, isPlanId, planIdFromRazorpayPlan } from "./plans";
 import { verifyRazorpaySignature, type RazorpaySubscription } from "./razorpay";
 import { applyReferralReward } from "@/lib/growth/referral";
+import { getAiAllowance } from "./allowance";
+import { formatInr, gstFromTotal } from "./gst";
+import { createInvoiceForPayment } from "./invoice";
+import { getTopUpPack } from "./topups";
+import { grantTopUp, markTopUpFailed, refundTopUp, type GrantResult } from "./topup-service";
 
 type SubStatus = "trialing" | "active" | "past_due" | "cancelled" | "expired";
 type OrgStatus = "active" | "past_due" | "cancelled" | "suspended";
@@ -52,16 +65,41 @@ interface RazorpayPaymentEntity {
   id?: string;
   amount?: number;
   currency?: string;
+  status?: string;
+  order_id?: string | null;
+  created_at?: number | null;
   error_description?: string | null;
   error_reason?: string | null;
   notes?: Record<string, string> | null;
   subscription_id?: string | null;
 }
 
+interface RazorpayOrderEntity {
+  id?: string;
+  amount?: number;
+  amount_paid?: number;
+  currency?: string;
+  notes?: Record<string, string> | null;
+}
+
+interface RazorpayRefundEntity {
+  id?: string;
+  payment_id?: string;
+  amount?: number;
+}
+
 interface RazorpayEventBody {
   event?: string;
-  payload?: { subscription?: { entity?: RazorpaySubscription }; payment?: { entity?: RazorpayPaymentEntity } };
+  payload?: {
+    subscription?: { entity?: RazorpaySubscription };
+    payment?: { entity?: RazorpayPaymentEntity };
+    order?: { entity?: RazorpayOrderEntity };
+    refund?: { entity?: RazorpayRefundEntity };
+  };
 }
+
+/** Events that may pay a top-up order. */
+export const TOPUP_PAID_EVENTS = ["order.paid", "payment.captured"];
 
 const toDate = (s?: number | null) => (s ? new Date(s * 1000) : null);
 
@@ -159,7 +197,14 @@ export async function processRazorpayWebhook(
 
   const entity = body.payload?.subscription?.entity;
   const mapping = mappingFor(type, entity?.status);
+  const payment = body.payload?.payment?.entity;
+  const order = body.payload?.order?.entity;
+  const refund = body.payload?.refund?.entity;
+  const topUpOrderId = TOPUP_PAID_EVENTS.includes(type) || type === "payment.failed" ? (order?.id ?? payment?.order_id ?? null) : null;
+  // A refund needs the pack's unused answers right now (read before the transaction; this also settles closed months).
+  const unusedNow = type === "refund.processed" && refund?.payment_id ? await unusedAnswersForPayment(refund.payment_id) : 0;
 
+  let grant: GrantResult | null = null;
   let result: WebhookResult;
   try {
     result = await db.$transaction(async (tx) => {
@@ -167,6 +212,29 @@ export async function processRazorpayWebhook(
       await tx.webhookEvent.create({
         data: { provider: "razorpay", eventId, type, payload: body as unknown as Prisma.InputJsonValue },
       });
+
+      if (TOPUP_PAID_EVENTS.includes(type) && topUpOrderId && payment?.id) {
+        const amount = typeof payment.amount === "number" ? payment.amount : typeof order?.amount_paid === "number" ? order.amount_paid : -1;
+        const g = await grantTopUp(tx, {
+          razorpayOrderId: topUpOrderId,
+          razorpayPaymentId: payment.id,
+          amountPaise: amount,
+          currency: payment.currency ?? order?.currency ?? null,
+          noteOrganizationId: order?.notes?.organizationId ?? payment.notes?.organizationId ?? null,
+        });
+        grant = g;
+        if (g.ok) return { status: "processed", eventId, organizationId: g.organizationId } as const;
+        if (g.reason !== "not_topup") return { status: "ignored", eventId, reason: `top-up ${g.reason}` } as const;
+      }
+      if (type === "payment.failed" && topUpOrderId) {
+        const orgId = await markTopUpFailed(tx, topUpOrderId, payment?.error_description ?? payment?.error_reason ?? null);
+        if (orgId) return { status: "ignored", eventId, reason: "top-up payment failed" } as const;
+      }
+      if (type === "refund.processed" && refund?.payment_id) {
+        const r = await refundTopUp(tx, { razorpayPaymentId: refund.payment_id, refundPaise: refund.amount ?? 0, unusedNow });
+        if (r.ok) return { status: "processed", eventId, organizationId: r.organizationId } as const;
+      }
+
       if (!mapping || !entity?.id) return { status: "ignored", eventId, reason: `unhandled event ${type}` } as const;
 
       const applied = await applySubscriptionEntity(tx, entity, mapping, `billing.${type}`);
@@ -175,6 +243,8 @@ export async function processRazorpayWebhook(
     });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      // A redelivery: the state change is done, but make sure its invoice exists (idempotent per payment).
+      await ensureInvoiceAfterDuplicate(type, body, topUpOrderId);
       return { status: "duplicate", eventId };
     }
     throw err;
@@ -182,7 +252,146 @@ export async function processRazorpayWebhook(
   if (PAYMENT_FAILED_EVENTS.includes(type)) await alertPaymentFailed(type, eventId, body, result);
   // Referral: a paid subscription went active → one free month for the referrer (idempotent; never fails the webhook).
   if (result.status === "processed" && mapping?.sub === "active") await applyReferralReward(result.organizationId).catch(() => undefined);
+
+  const g = grant as GrantResult | null;
+  if (g?.ok && payment?.id) {
+    await invoiceTopUp(g.organizationId, payment.id, g, paidAtOf(payment));
+    await alertTopUpPaid(eventId, g, payment.id);
+  } else if (g && !g.ok && g.reason === "amount_mismatch") {
+    await safeAlert({
+      kind: "topup_amount_mismatch",
+      key: eventId,
+      organizationId: g.organizationId ?? null,
+      subject: "Top-up payment amount didn't match — answers NOT added",
+      text: `Razorpay reported ${formatInr(g.got ?? 0)} for top-up order ${topUpOrderId}, but the order total is ${formatInr(g.expected ?? 0)}. No answers were added. Check the payment in Razorpay, then refund it or add the answers by hand.`,
+    });
+  }
+  if (type === "subscription.charged" && result.status === "processed" && payment?.id && typeof payment.amount === "number") {
+    await invoiceSubscriptionCharge(result.organizationId, payment, entity);
+  }
   return result;
+}
+
+const paidAtOf = (p?: RazorpayPaymentEntity) => (p?.created_at ? new Date(p.created_at * 1000) : new Date());
+
+/** Unused answers of the top-up pack bought with this payment (0 when it isn't a top-up). Never throws. */
+async function unusedAnswersForPayment(paymentId: string): Promise<number> {
+  try {
+    const pack = await db.topUpPack.findUnique({ where: { razorpayPaymentId: paymentId }, select: { id: true, organizationId: true } });
+    if (!pack) return 0;
+    const a = await getAiAllowance(pack.organizationId);
+    return a.extra.packs.find((p) => p.id === pack.id)?.left ?? 0;
+  } catch (e) {
+    console.warn("[billing] refund: could not read unused answers", (e as Error)?.name);
+    return 0;
+  }
+}
+
+async function safeAlert(a: Parameters<typeof sendStaffAlert>[0]): Promise<void> {
+  try {
+    await sendStaffAlert(a);
+  } catch (err) {
+    console.warn("[billing] staff alert failed", (err as Error)?.name);
+  }
+}
+
+/** Invoice for a paid top-up. An invoice failure never fails the webhook: staff are told, a redelivery retries. */
+async function invoiceTopUp(
+  organizationId: string,
+  paymentId: string,
+  o: { basePaise: number; gstPaise: number; totalPaise: number; packId: string; answers: number },
+  paidAt: Date,
+): Promise<void> {
+  try {
+    await createInvoiceForPayment({
+      organizationId,
+      kind: "topup",
+      razorpayPaymentId: paymentId,
+      description: `${getTopUpPack(o.packId)?.name ?? `${o.answers} extra AI answers`} (one-time top-up)`,
+      basePaise: o.basePaise,
+      gstPaise: o.gstPaise,
+      totalPaise: o.totalPaise,
+      paidAt,
+    });
+  } catch (err) {
+    console.error("[billing] top-up invoice failed", (err as Error)?.name);
+    await safeAlert({
+      kind: "invoice_failed",
+      key: paymentId,
+      organizationId,
+      subject: "Invoice not created for a top-up payment",
+      text: `The GST invoice for payment ${paymentId} could not be created. The answers were added. Create the invoice by hand, or it is retried when Razorpay redelivers the event.`,
+    });
+  }
+}
+
+/** Invoice for a subscription charge: base = charged amount ÷ (1 + GST rate), GST = the rest. Never throws. */
+async function invoiceSubscriptionCharge(organizationId: string, payment: RazorpayPaymentEntity, sub?: RazorpaySubscription): Promise<void> {
+  if (!payment.id || typeof payment.amount !== "number") return;
+  try {
+    const subId = sub?.id ?? payment.subscription_id ?? null;
+    const row = subId ? await lookup(() => db.subscription.findUnique({ where: { providerSubscriptionId: subId }, select: { planId: true } })) : null;
+    const b = gstFromTotal(payment.amount);
+    await createInvoiceForPayment({
+      organizationId,
+      kind: "subscription",
+      razorpayPaymentId: payment.id,
+      description: row ? `${getPlan(row.planId).name} plan — monthly subscription` : "Monthly subscription",
+      basePaise: b.basePaise,
+      gstPaise: b.gstPaise,
+      totalPaise: b.totalPaise,
+      paidAt: paidAtOf(payment),
+    });
+  } catch (err) {
+    console.error("[billing] subscription invoice failed", (err as Error)?.name);
+    await safeAlert({
+      kind: "invoice_failed",
+      key: payment.id,
+      organizationId,
+      subject: "Invoice not created for a subscription payment",
+      text: `The GST invoice for subscription payment ${payment.id} could not be created. Create it by hand, or it is retried when Razorpay redelivers the event.`,
+    });
+  }
+}
+
+/** Redelivered invoice-bearing event: create the invoice if the first delivery couldn't. Never throws. */
+async function ensureInvoiceAfterDuplicate(type: string, body: RazorpayEventBody, topUpOrderId: string | null): Promise<void> {
+  const payment = body.payload?.payment?.entity;
+  if (!payment?.id || !(TOPUP_PAID_EVENTS.includes(type) || type === "subscription.charged")) return;
+  const paymentId = payment.id;
+  try {
+    if (await db.invoice.findUnique({ where: { razorpayPaymentId: paymentId }, select: { id: true } })) return;
+    if (TOPUP_PAID_EVENTS.includes(type) && topUpOrderId) {
+      const o = await db.topUpOrder.findUnique({ where: { razorpayOrderId: topUpOrderId } });
+      if (o && (o.status === "paid" || o.status === "refunded") && o.razorpayPaymentId === paymentId) {
+        await invoiceTopUp(o.organizationId, paymentId, o, o.paidAt ?? paidAtOf(payment));
+      }
+    } else if (type === "subscription.charged") {
+      const sub = body.payload?.subscription?.entity;
+      const row = sub?.id ? await db.subscription.findUnique({ where: { providerSubscriptionId: sub.id }, select: { organizationId: true } }) : null;
+      if (row) await invoiceSubscriptionCharge(row.organizationId, payment, sub);
+    }
+  } catch (err) {
+    console.warn("[billing] invoice retry failed", (err as Error)?.name);
+  }
+}
+
+/** Staff alert for a paid top-up (deduped per payment). Never throws. */
+async function alertTopUpPaid(eventId: string, g: Extract<GrantResult, { ok: true }>, paymentId: string): Promise<void> {
+  const org = await lookup(() => db.organization.findUnique({ where: { id: g.organizationId }, select: { name: true, planId: true } }));
+  await safeAlert({
+    kind: "topup_paid",
+    key: paymentId,
+    organizationId: g.organizationId,
+    subject: `Top-up paid${org ? `: ${org.name}` : ""} — ${g.answers.toLocaleString("en-IN")} AI answers`,
+    text: [
+      `${org?.name ?? g.organizationId} bought ${g.answers.toLocaleString("en-IN")} extra AI answers for ${formatInr(g.totalPaise)} (${formatInr(g.basePaise)} + ${formatInr(g.gstPaise)} GST).`,
+      org ? `Plan: ${getPlan(org.planId).name}.` : "",
+      `Payment: ${paymentId}. Event: ${eventId}.`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  });
 }
 
 /** Best-effort read for alert context: a lookup failure must never stop the alert. */

@@ -8,7 +8,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 import { HOW_STEPS, RISK_CLASSES } from "@/components/marketing/content";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, num } from "@/components/marketing/plans";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import {
   BaselineVignette,
@@ -445,13 +445,13 @@ export default function HowItWorksPage() {
             <div className="flex flex-col p-8 sm:p-12">
               <p className="text-small font-medium text-muted">Do it yourself</p>
               <p className="mt-3 text-[clamp(1.75rem,1.4rem+1.3vw,2.5rem)] font-semibold leading-[1.05] tracking-[-0.04em] text-fg">
-                From <span className="tabular-nums">{inr(selfServeFrom)}</span> a month.
+                From <span className="tabular-nums">{inr(selfServeFrom)}</span>{gstOn() ? " + GST" : ""} a month.
               </p>
               <p className="mk-body mt-5 max-w-md flex-1 text-fg-soft">
                 You use {BRAND.name} yourself: the scores, the to-do list and ready-made fixes to approve. Publish through
                 WordPress or GitHub, or make the fixes by hand.
               </p>
-              <p className="mt-4 text-small text-muted">Every plan starts with a {TRIAL_DAYS}-day free trial. Plus GST.</p>
+              <p className="mt-4 text-small text-muted">Every plan starts with a {TRIAL_DAYS}-day free trial.{gstOn() ? " Plus GST." : ""}</p>
               <Link href="/pricing" className={inkPill("lg", false, "mt-9 self-start")}>
                 Compare plans
                 <ArrowUpRight aria-hidden />

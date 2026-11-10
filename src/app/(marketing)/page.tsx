@@ -6,7 +6,7 @@ import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { SampleResult } from "@/components/marketing/home-sample";
 import { FAQS } from "@/components/marketing/content";
-import { MARKETING_PLANS, TRIAL_DAYS, inr, planSignupHref } from "@/components/marketing/plans";
+import { MARKETING_PLANS, TRIAL_DAYS, gstOn, inr, planSignupHref } from "@/components/marketing/plans";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 import { backlinksEnabled, dfsConfigured } from "@/lib/dataforseo/status";
@@ -268,7 +268,7 @@ export default function HomePage() {
                 <p className="mt-4 text-[2.25rem] font-semibold leading-none tracking-[-0.03em] tabular-nums text-fg">
                   {inr(p.price)}
                   {p.suffix}
-                  <span className="ml-1 text-small font-normal tracking-normal text-muted">/ month</span>
+                  <span className="ml-1 text-small font-normal tracking-normal text-muted">{gstOn() ? "+ GST / month" : "/ month"}</span>
                 </p>
                 <p className="mt-4 text-small text-fg-soft">{p.blurb}</p>
                 <ul className="mt-6 flex-1 space-y-3">

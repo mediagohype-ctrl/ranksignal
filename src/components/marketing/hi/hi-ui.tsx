@@ -5,7 +5,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { ArrowRight, Check } from "lucide-react";
 import { inkPill } from "@/components/marketing/ui";
-import { inr, planSignupHref, TRIAL_DAYS } from "@/components/marketing/plans";
+import { gstOn, inr, planSignupHref, TRIAL_DAYS } from "@/components/marketing/plans";
 import type { HiFaq, HindiPlan, HindiServiceTier } from "./content";
 
 const linkCls = "font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg";
@@ -66,7 +66,7 @@ export function HiPlanCards({ plans, limit }: { plans: HindiPlan[]; limit?: numb
           <p className="mt-4 text-[2.25rem] font-semibold leading-none tracking-[-0.03em] tabular-nums text-fg">
             {inr(p.price)}
             {p.suffix}
-            <span className="ml-1 text-small font-normal tracking-normal text-muted">/ महीना</span>
+            <span className="ml-1 text-small font-normal tracking-normal text-muted">{gstOn() ? "+ GST / महीना" : "/ महीना"}</span>
           </p>
           <p className="mt-4 text-small text-fg-soft">{p.blurb}</p>
           <ul className="mt-6 flex-1 space-y-3">

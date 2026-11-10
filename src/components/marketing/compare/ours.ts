@@ -1,6 +1,6 @@
 // MyWebRank's side of every comparison, derived from the plan config the app enforces (never typed in by hand),
 // so the /compare pages can't drift from /pricing.
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr, num } from "@/components/marketing/plans";
+import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inrGst, num } from "@/components/marketing/plans";
 import type { Cell } from "./compare-ui";
 
 const [starter, growth, agency] = MARKETING_PLANS;
@@ -9,8 +9,9 @@ export const OUR = {
   starter,
   growth,
   agency,
-  fromPrice: inr(starter.price),
-  serviceFrom: inr(SERVICE_FROM_PRICE),
+  /** "₹1,999 + GST" (plain price when we are not GST-registered). */
+  fromPrice: inrGst(starter.price),
+  serviceFrom: inrGst(SERVICE_FROM_PRICE),
   trialDays: TRIAL_DAYS,
   connectors: "WordPress, Shopify, Webflow, Wix, GitHub, Contentful and Sanity",
   pages: `${num(starter.limits.maxPagesPerCrawl)} / ${num(growth.limits.maxPagesPerCrawl)} / ${num(agency.limits.maxPagesPerCrawl)}`,

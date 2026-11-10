@@ -186,6 +186,8 @@ export async function schedulerTick(now = new Date()) {
         const rows = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_KEY}::bigint) AS locked`;
         if (!rows[0]?.locked) return;
         await step("recovery", () => recoverInterruptedRuns(now));
+        // Close last month's extra-AI-answer use (top-up packs) before anything sizes new checks (idempotent).
+        await step("topup-settle", () => import("@/lib/billing/allowance").then((m) => m.settleAllTopUps(now)));
         await step("schedule", () => scheduleDueScans(now));
         const since = new Date((state.notifyCursor ?? now).getTime() - NOTIFY_LOOKBACK_MS);
         const ok = await step("notifications", () => dispatchRunNotifications({ since, now }));
