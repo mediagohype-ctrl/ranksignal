@@ -193,8 +193,10 @@ export async function schedulerTick(now = new Date()) {
         // Days 1-3 (UTC): last month's impact reports, a few projects per tick (idempotent per project + period).
         await step("monthly-reports", () => scheduleMonthlyReports(now));
         await step("google-metrics", () => syncGoogleMetricsDue(now));
+        await step("business-profiles", () => import("@/lib/business-profile/service").then((m) => m.snapshotDueBusinessProfiles(now))); // Places API snapshots (per-plan interval)
         // Trial nudges, fix of the week, WhatsApp updates, competitor alerts (each idempotent via SentMessage).
         await step("growth", () => runGrowthTick(now));
+        await step("alert-digests", () => import("@/lib/alerts/deliver").then((m) => m.sendAlertDigests(now))); // daily alert digest (09:00 IST)
       },
       { maxWait: 10_000, timeout: SCHEDULER_INTERVAL_MS - 30_000 },
     );

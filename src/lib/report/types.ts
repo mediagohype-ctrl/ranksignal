@@ -80,4 +80,6 @@ export interface SiteReport {
   executiveSummarySource: "llm" | "template";
   limitations: string[]; // honest caveats (sample size, simulated data, pages not crawled...)
   methodologyVersion: string;
+  /** Real page speed from Google PageSpeed Insights for this crawl; absent on older reports or before the test ran. */
+  coreWebVitals?: import("@/lib/pagespeed/types").CoreWebVitalsSummary;
 }

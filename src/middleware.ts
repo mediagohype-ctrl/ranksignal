@@ -44,6 +44,9 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/")) {
     if (pathname.startsWith("/api/webhooks/")) return NextResponse.next(); // authenticated by signature
     if (pathname === "/api/health") return NextResponse.next(); // Render health check
+    if (/^\/api\/projects\/[^/]+\/ai-bots\/ingest$/.test(pathname)) return NextResponse.next(); // per-project bearer token, checked in the route
+    // Public API + MCP: API-key auth (Bearer mwr_…) in the route. No cookies are read there, so no CSRF risk.
+    if (pathname.startsWith("/api/v1/") || pathname === "/api/mcp") return NextResponse.next();
     if (MUTATING.has(req.method) && !sameOrigin(req)) {
       return apiError(403, "csrf_rejected", "Cross-origin request rejected");
     }

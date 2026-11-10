@@ -39,6 +39,8 @@ model Organization {
   workflowRuns  WorkflowRun[]
   notifications Notification[]
   adminNotes    AdminNote[]
+  apiKeys       ApiKey[]
+  reportTemplates ReportTemplate[]
 }
 
 model User {
@@ -102,6 +104,16 @@ model Project {
   monthlyReports MonthlyReport[]
   offsiteItems  OffsiteItem[]
   dailyMetrics  MetricDaily[]
+  keywordStars  KeywordStar[]
+  businessProfile BusinessProfile?
+  aiBotDaily    AiBotDaily[]
+  aiBotImports  AiBotLogImport[]
+  aiBotIngestKey AiBotIngestKey?
+  indexNowSite  IndexNowSite?
+  indexNowSubmissions IndexNowSubmission[]
+  alertSettings AlertSettings?
+  alertEvents   AlertEvent[]
+  reportTemplates ReportTemplate[]
 
   @@index([organizationId])
 }
@@ -159,6 +171,8 @@ model CrawlRun {
 
   project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   pages   CrawlPage[]
+  auditDepth AuditDepthRun?
+  pageSpeedResults PageSpeedResult[]
 
   @@index([organizationId, projectId, createdAt])
 }
@@ -702,4 +716,297 @@ model SeoKeyword {
   updatedAt      DateTime  @updatedAt
 
   @@index([priority])
+}
+
+// ---- Public API + MCP + Looker Studio (agent 4) ----
+
+/** Organization-level API key for the read-only public API (/api/v1) and MCP (/api/mcp). Only a SHA-256 hash is stored. */
+model ApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  prefix         String // first characters of the key, shown in settings to tell keys apart (e.g. "mwr_AbC123xy")
+  keyHash        String    @unique // SHA-256 hex of the full key; the key itself is shown once and never stored
+  scopes         String[]  @default(["read"]) // read only for now
+  createdById    String?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  revokedById    String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, revokedAt])
+}
+
+// ---- Search Console keywords + Google Business Profile monitor (agent 6) ----
+
+/** A Search Console query the user starred to watch on the Keywords "Tracked" tab (limit per plan, per organization). */
+model KeywordStar {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  query          String
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, query])
+  @@index([organizationId, projectId])
+}
+
+/** The Google Maps place (Places API) the owner picked as their business. One per project. */
+model BusinessProfile {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String    @unique
+  placeId        String
+  name           String
+  address        String?
+  createdById    String?
+  lastSnapshotAt DateTime?
+  lastAttemptAt  DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project   Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  snapshots BusinessProfileSnapshot[]
+
+  @@index([organizationId])
+}
+
+/** One Places API (New) read of the business: headline numbers + normalized details (data) + checklist. */
+model BusinessProfileSnapshot {
+  id             String   @id @default(cuid())
+  organizationId String
+  profileId      String
+  placeId        String
+  rating         Float?
+  reviewCount    Int?
+  businessStatus String?
+  data           Json // normalized PlaceSnapshot (src/lib/business-profile/places.ts)
+  trigger        String   @default("schedule") // schedule | manual | select
+  takenAt        DateTime @default(now())
+
+  profile BusinessProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, profileId, takenAt])
+}
+
+// ---- Audit depth: real page speed (PageSpeed Insights) + post-crawl probes ----
+/** One post-crawl "audit depth" pass per crawl: PageSpeed Insights tests, image-size / redirect / canonical probes, sitemap-vs-noindex. */
+model AuditDepthRun {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  crawlRunId     String    @unique
+  status         String    @default("queued") // queued | running | succeeded | partial | failed
+  psiPlanned     Int       @default(0)
+  psiDone        Int       @default(0)
+  probes         Json? // ProbeResult[] (src/lib/pagespeed/types.ts): image sizes, link and canonical targets
+  sitemapNoindex Json? // string[]: crawled noindex pages listed in the sitemap; null = not checked
+  error          String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  crawlRun CrawlRun @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, createdAt])
+}
+
+/** One Google PageSpeed Insights result for a page (mobile, plus desktop for the homepage). Times in ms. */
+model PageSpeedResult {
+  id               String   @id @default(cuid())
+  organizationId   String
+  projectId        String
+  crawlRunId       String
+  url              String
+  strategy         String // mobile | desktop
+  status           String   @default("pending") // pending | ok | failed
+  attempts         Int      @default(0)
+  isHome           Boolean  @default(false)
+  performanceScore Int? // Lighthouse performance 0-100 (lab)
+  labLcpMs         Int?
+  labCls           Float?
+  labTbtMs         Int?
+  labFcpMs         Int?
+  fieldLcpMs       Int? // CrUX p75 (real Chrome users, last 28 days)
+  fieldInpMs       Int?
+  fieldCls         Float?
+  fieldFcpMs       Int?
+  fieldScope       String? // url | origin | null (no field data)
+  error            String?
+  fetchedAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  crawlRun CrawlRun @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
+
+  @@unique([crawlRunId, url, strategy])
+  @@index([organizationId, projectId, createdAt])
+}
+
+// ---- AI bot visits + IndexNow (Agent 5) ----
+
+/** Daily AI/search crawler visits per bot, aggregated from uploaded server logs or the ingest endpoint. Never raw lines or IPs. */
+model AiBotDaily {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  date           String // YYYY-MM-DD (UTC)
+  bot            String // user-agent token, e.g. GPTBot
+  hits           Int      @default(0)
+  verifiedHits   Int      @default(0) // IP inside the operator's published ranges
+  unverifiedHits Int      @default(0) // ranges known, IP outside them (likely a fake bot)
+  statusCounts   Json // { "200": n, "404": m, ... }
+  topPaths       Json // [{ path, hits, errors }] top 100 by hits
+  updatedAt      DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, date, bot])
+  @@index([organizationId, projectId, date])
+}
+
+/** One processed log file or ingest batch (dedupe by content hash; summary counts only). */
+model AiBotLogImport {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  source         String // upload | ingest
+  fileName       String?
+  sha256         String?
+  bytes          Int      @default(0)
+  linesTotal     Int      @default(0)
+  linesParsed    Int      @default(0)
+  botHits        Int      @default(0)
+  firstDate      String?
+  lastDate       String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sha256])
+  @@index([organizationId, projectId, createdAt])
+}
+
+/** Per-project secret for POST /api/projects/[id]/ai-bots/ingest. Only a SHA-256 hash is stored. */
+model AiBotIngestKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String    @unique
+  tokenHash      String    @unique
+  tokenPrefix    String // first characters, shown so people can tell keys apart
+  createdById    String?
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+/** IndexNow set-up for a customer's site: the key (public by design) and whether its key file was verified. */
+model IndexNowSite {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String    @unique
+  host           String
+  key            String
+  status         String    @default("pending") // pending | verified | failed
+  enabled        Boolean   @default(false) // only true after the key file was verified
+  onFixPublished Boolean   @default(true)
+  onCrawlChanges Boolean   @default(true)
+  verifiedAt     DateTime?
+  lastCheckAt    DateTime?
+  lastCheckError String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+/** IndexNow submission log: queued URLs, then the result of the (batched) POST. */
+model IndexNowSubmission {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  host           String
+  trigger        String // fix_published | crawl_changes | manual
+  urls           Json // string[]
+  urlCount       Int       @default(0)
+  status         String    @default("queued") // queued | sent | merged (sent with an earlier batch) | failed | skipped
+  httpStatus     Int?
+  message        String?
+  attempts       Int       @default(0)
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, createdAt])
+  @@index([host, status, sentAt])
+}
+
+// ---- Alerts + report builder (agent 3) ----
+/** Per-project alert rules, channels, recipients and digest choice (src/lib/alerts/config.ts). Absent = defaults (all on). */
+model AlertSettings {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String   @unique
+  config         Json // { rules: { <ruleId>: { enabled, threshold? } }, channels: { inApp, email, whatsapp }, recipients: userId[], digest }
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+/** One alert that fired (history + 24h de-duplication + daily digest queue). */
+model AlertEvent {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  rule           String // score_drop | new_urgent_problem | site_down | ai_mention_drop | ai_question_change | indexing_blocked | search_clicks_drop
+  dedupeKey      String // same rule + key is not sent again within the rule's cooldown (24h; 7 days for weekly clicks)
+  severity       String    @default("warning") // urgent | warning | info
+  title          String
+  body           String
+  link           String?
+  data           Json?
+  status         String    @default("sent") // sent | pending_digest | in_app_only
+  channels       Json? // channels actually used, e.g. ["in_app","email"]
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId, createdAt])
+  @@index([projectId, rule, dedupeKey, createdAt])
+  @@index([status, createdAt])
+}
+
+/** Saved client-report layout (sections + order, intro, agency notes, date range). projectId null = organization default. */
+model ReportTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  name           String
+  sections       Json // [{ id, enabled }] in display order
+  intro          String?
+  notes          String? // "notes from the agency" section
+  range          Json? // { preset, from?, to? }
+  isOrgDefault   Boolean  @default(false)
+  shareEnabled   Boolean  @default(false) // reachable through the project's share link (src/lib/share)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, projectId])
 }

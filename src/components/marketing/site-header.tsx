@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
 import { inkPill } from "./ui";
+import { LanguageSwitch } from "./hi/language-switch";
 
 const NAV = [
   { href: "/features", label: "Features" },
@@ -59,6 +60,7 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
+          <LanguageSwitch className="text-[0.9375rem]" />
           {signedIn ? (
             <Link href="/app" className={inkPill("md")}>
               Open app
@@ -118,6 +120,9 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
               <Link href="/docs" onClick={() => setOpen(false)} className="block py-4 text-[1.375rem] font-medium tracking-[-0.02em] text-fg">
                 Docs
               </Link>
+            </li>
+            <li className="border-b border-border">
+              <LanguageSwitch onClick={() => setOpen(false)} className="w-full py-4 text-[1.375rem] tracking-[-0.02em] text-fg" />
             </li>
             <li className="mt-8 grid gap-3 sm:grid-cols-2">
               {signedIn ? (

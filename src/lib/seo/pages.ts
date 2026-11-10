@@ -19,6 +19,13 @@ export interface PageSeo {
   updated: string;
   /** Not indexable (auth pages): excluded from freshness / sitemap checks. */
   noindex?: boolean;
+  /** Page language (BCP 47). Defaults to "en-IN"; the Hindi pages under /hi set "hi-IN". */
+  lang?: "en-IN" | "hi-IN";
+  /**
+   * hreflang alternates (language → site-relative path). Optional: when absent, staticPageMetadata derives it from
+   * the English ↔ Hindi pairs in src/components/marketing/hi/pairs.ts (hreflangFor).
+   */
+  hreflang?: Record<string, string>;
 }
 
 const TODAY = "2026-11-09";
@@ -69,7 +76,7 @@ export const PAGE_SEO = {
   "/tools": {
     title: "Free SEO & AI Visibility Tools, No Sign-up",
     description:
-      "14 free SEO and AI tools, no sign-up: check meta tags, headings, schema, broken links, robots.txt and sitemaps, and write titles and FAQs with AI.",
+      "15 free SEO and AI tools, no sign-up: check meta tags, headings, schema, broken links, robots.txt and sitemaps, and write titles and FAQs with AI.",
     published: "2026-11-04",
     updated: TODAY,
   },
@@ -199,6 +206,20 @@ export const PAGE_SEO = {
     published: TODAY,
     updated: TODAY,
   },
+  "/tools/seo-extension": {
+    title: "Free SEO Browser Extension for Chrome and Edge",
+    description:
+      "Check any page's SEO and AI readiness in one click: titles, headings, schema, share tags and AI robot rules. Runs in your browser. Free, no sign-up.",
+    published: "2026-11-10",
+    updated: "2026-11-10",
+  },
+  "/docs/api": {
+    title: "API, MCP server and Looker Studio guide",
+    description:
+      "Read your MyWebRank scores, issues, AI visibility and Search Console data with a read-only REST API, an MCP server for AI tools and Looker Studio.",
+    published: "2026-11-10",
+    updated: "2026-11-10",
+  },
   "/blog": {
     title: "SEO, AEO & GEO Blog: News, Research, How-tos",
     description:
@@ -247,6 +268,54 @@ export const PAGE_SEO = {
       "The terms for using MyWebRank: your account, plans and payments, fixes we make to your website with your approval, and what we can and can't promise.",
     published: "2026-10-28",
     updated: LEGAL,
+  },
+  // Hindi versions of the key pages (src/app/(marketing)/hi). Full titles count JS string length (UTF-16 code units,
+  // so Devanagari vowel signs count too — stricter than what Google shows). Prices come from the same constants.
+  "/hi": {
+    title: "SEO, AEO और GEO चेकर: Google और AI में दिखें",
+    description:
+      "फ्री वेबसाइट SEO रिपोर्ट 30 सेकंड में। देखें कि Google, ChatGPT और Gemini आपके बिज़नेस को कैसे देखते हैं, और SEO, AEO, GEO के सबसे ज़रूरी सुधार पाएँ।",
+    published: TODAY,
+    updated: TODAY,
+    lang: "hi-IN",
+  },
+  "/hi/pricing": {
+    title: "कीमतें: SEO सॉफ़्टवेयर और SEO सेवा के प्लान",
+    description: `SEO सॉफ़्टवेयर ${inr(SOFTWARE_FROM)}/महीने से, ${TRIAL_DAYS} दिन फ्री ट्रायल के साथ। या हमारी टीम से SEO, AEO, GEO का काम ${inr(SERVICE_FROM_PRICE)}/महीने से। सभी कीमतें रुपये में, GST अलग।`,
+    published: TODAY,
+    updated: TODAY,
+    lang: "hi-IN",
+  },
+  "/hi/services": {
+    title: "भारत में SEO कंपनी: SEO, AEO और GEO सेवाएँ",
+    description: `भारत की SEO टीम आपकी वेबसाइट और Google लिस्टिंग हर महीने ठीक करती है और रिपोर्ट भेजती है। SEO, AEO और GEO सेवा ${inr(SERVICE_FROM_PRICE)}/महीने + GST से।`,
+    published: TODAY,
+    updated: TODAY,
+    lang: "hi-IN",
+  },
+  "/hi/free-check": {
+    title: "फ्री वेबसाइट SEO चेकर: SEO, AEO, GEO रिपोर्ट",
+    description:
+      "फ्री वेबसाइट SEO चेकर: 30 सेकंड में SEO, AEO और GEO स्कोर देखें, जानें कि Google और ChatGPT आपकी साइट पढ़ पाते हैं या नहीं, और टॉप सुधार पाएँ।",
+    published: TODAY,
+    updated: TODAY,
+    lang: "hi-IN",
+  },
+  "/hi/about": {
+    title: "हमारे बारे में: भारत की SEO, AEO और GEO टीम",
+    description:
+      "MyWebRank नई दिल्ली की SEO, AEO और GEO कंपनी है, जो छोटे बिज़नेस को Google पर मिलने और ChatGPT जैसे AI जवाबों में नाम आने में मदद करती है।",
+    published: TODAY,
+    updated: TODAY,
+    lang: "hi-IN",
+  },
+  "/hi/contact": {
+    title: "संपर्क करें: SEO और AI विज़िबिलिटी टीम",
+    description:
+      "MyWebRank टीम से बात करें: SEO सेवा, कई क्लाइंट साइटों वाले एजेंसी प्लान, शुरुआत या सपोर्ट के बारे में। हम आम तौर पर एक कामकाजी दिन में जवाब देते हैं।",
+    published: TODAY,
+    updated: TODAY,
+    lang: "hi-IN",
   },
   // Auth pages: noindex, but they still get unique snippets (shared links, browser tabs).
   "/login": {

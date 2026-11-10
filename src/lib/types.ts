@@ -8,7 +8,9 @@ export const WORKFLOW_STATES = [
   "retry_scheduled", "failed", "rollback_pending", "rolled_back", "rollback_failed", "cancelled",
 ] as const;
 export type WorkflowState = (typeof WORKFLOW_STATES)[number];
-export type WorkflowKind = "crawl" | "visibility" | "analyze" | "execute_action" | "rollback";
+export type WorkflowKind = "crawl" | "visibility" | "analyze" | "execute_action" | "rollback"
+  | "audit_depth" // post-crawl PageSpeed Insights + probes (src/lib/pagespeed/job.ts)
+  | "indexnow"; // IndexNow submissions for a customer's site (src/lib/indexnow-customer/job.ts)
 export type ErrorClass = "transient" | "permanent" | "policy" | "quota" | "needs_review";
 
 /** Thrown by job handlers to classify failures; transient errors are retried with backoff. */
@@ -122,6 +124,18 @@ export interface ExtractedPage {
   platform?: import("@/lib/platform/detect").Platform;
   /** JavaScript app-shell signals from the raw HTML (src/lib/crawler/js-site.ts); absent on older crawls. */
   jsShell?: { appRoot: string | null; scripts: number };
+  // ---- Extractor v3 (audit depth). Absent on pages crawled before v3. ----
+  /** <link rel="alternate" hreflang> entries (href absolute, normalised). */
+  hreflang?: { lang: string; href: string }[];
+  /** http:// subresources (img/script/stylesheet/iframe/media) on an https page; active = script/stylesheet/iframe. */
+  mixedContent?: { url: string; kind: string; active: boolean }[];
+  mixedContentCount?: number;
+  /** <img> without both width and height attributes (layout-shift risk); examples are image URLs. */
+  imagesMissingSize?: number;
+  imagesMissingSizeExamples?: string[];
+  /** Links whose words say nothing about the target ("click here", "read more"). */
+  vagueLinkCount?: number;
+  vagueLinkExamples?: string[];
 }
 
 export interface FindingInput {

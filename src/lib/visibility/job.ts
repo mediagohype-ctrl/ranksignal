@@ -9,6 +9,7 @@ import { isAiBudgetExhausted, nextUtcDayStart } from "@/lib/billing/ai-budget";
 import { recordUsage, releaseReservation, reserveCredits } from "@/lib/billing/usage";
 import { getAvailableProviders } from "@/lib/providers/visibility/registry";
 import { withTimeout } from "@/lib/providers/visibility/errors";
+import { isSerpProviderId } from "@/lib/providers/visibility/google-ai-overviews";
 import { JobError, type ProviderAnswer, type VisibilityProvider } from "@/lib/types";
 import { writeSnapshot } from "@/lib/snapshots";
 import { log } from "@/lib/log";
@@ -328,7 +329,8 @@ export const visibilityJob: JobHandler = async (ctx) => {
 
   // Brand knowledge probe (GEO signal) — real providers only; failures never fail the run.
   let brandKnowledge: BrandKnowledgeResult[] | undefined;
-  const realProviders = providers.filter((p) => !p.simulated);
+  // SERP engines (Google AI Overviews / AI Mode) answer searches, not "what do you know about X" questions: not probed.
+  const realProviders = providers.filter((p) => !p.simulated && !isSerpProviderId(p.id));
   if (status !== "failed" && realProviders.length > 0) {
     brandKnowledge = await runBrandProbeStep(ctx, {
       orgId,
@@ -368,6 +370,7 @@ export const visibilityJob: JobHandler = async (ctx) => {
   if (status === "succeeded_with_warnings") await ctx.transition("succeeded_with_warnings", "visibility_run.partial", { failed: failures.length });
   // Measurement history; writeSnapshot never throws.
   await writeSnapshot({ organizationId: orgId, projectId: project.id, kind: "visibility", visibilityRunId: run.id }).catch(() => undefined);
+  await import("@/lib/alerts/hooks").then((m) => m.alertsAfterVisibility({ organizationId: orgId, projectId: project.id, visibilityRunId: run.id })).catch(() => undefined); // customer alerts; never fails the run
 
   await enqueue({
     kind: "analyze",

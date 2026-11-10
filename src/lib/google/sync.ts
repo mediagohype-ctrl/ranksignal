@@ -18,6 +18,12 @@ export const FAILURE_BACKOFF_MS = 6 * HOUR;
 export const RECENT_DAYS = 3;
 export const BACKFILL_DAYS = 90;
 export const TOP_N = 250;
+/**
+ * Queries kept per day (the Keywords page needs the long tail, not just the top). GSC already returns these rows in the
+ * same API calls (up to GSC_PAGE x GSC_MAX_PAGES rows per window), so this costs no extra API quota; it caps storage at
+ * ~1,000 query rows/day/project (~90k rows for 90 days). Pages stay at TOP_N.
+ */
+export const QUERY_TOP_N = 1000;
 const MAX_PER_TICK = 10;
 const MAX_KEY = 1000;
 const GSC_PAGE = 25_000;
@@ -157,7 +163,7 @@ export async function fetchGscMetrics(token: string, siteUrl: string, w: { start
   const pages = await gscAll(token, siteUrl, w, ["date", "page"]);
   return [
     ...gscRowsToMetrics(totals, "total"),
-    ...topPerDate(gscRowsToMetrics(queries, "query")),
+    ...topPerDate(gscRowsToMetrics(queries, "query"), QUERY_TOP_N),
     ...topPerDate(gscRowsToMetrics(pages, "page")),
   ];
 }
@@ -262,6 +268,7 @@ export async function syncGoogleIntegration(row: Integration, now = new Date()):
     };
     await db.integration.update({ where: { id: row.id }, data: { lastSyncAt: now, health: "healthy", config: toJson(next) } });
     log.info("google.sync.ok", { integrationId: row.id, source, rows: written, from: w.startDate, to: w.endDate });
+    await import("@/lib/alerts/hooks").then((m) => m.alertsAfterGoogleSync({ organizationId: row.organizationId, projectId: row.projectId, source })).catch(() => undefined); // clicks-drop alert
     return { status: "synced", rows: written };
   } catch (e) {
     const f = failureMessage(e);

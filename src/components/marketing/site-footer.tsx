@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BRAND, brandLocationLine } from "@/lib/brand";
 import { Logo } from "./logo";
 import { ENGINES } from "./ui";
+import { LanguageSwitch } from "./hi/language-switch";
 
 const COLS = [
   {
@@ -33,6 +34,7 @@ const COLS = [
       { href: "/tools/seo-title-generator", label: "SEO title generator" },
       { href: "/tools/faq-markup-maker", label: "FAQ schema generator" },
       { href: "/tools/ai-guide-file-maker", label: "llms.txt generator" },
+      { href: "/tools/seo-extension", label: "SEO browser extension" },
     ],
   },
   {
@@ -45,6 +47,7 @@ const COLS = [
       { href: "/learn/how-to-get-mentioned-by-chatgpt", label: "Rank in ChatGPT" },
       { href: "/learn/website-seo-audit-checklist", label: "SEO audit checklist" },
       { href: "/docs", label: "Getting started" },
+      { href: "/docs/api", label: "API & MCP docs" },
       { href: "/#faq", label: "FAQ" },
       { href: "/about", label: "About us" },
       { href: "/contact", label: "Contact us" },
@@ -155,9 +158,12 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border">
         <div className="container-marketing grid gap-4 py-8 text-xs leading-relaxed text-muted lg:grid-cols-12">
-          <p className="lg:col-span-3">
-            © {new Date().getFullYear()} {BRAND.name}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 lg:col-span-3 lg:flex-col lg:items-start">
+            <p>
+              © {new Date().getFullYear()} {BRAND.name}
+            </p>
+            <LanguageSwitch className="text-small" />
+          </div>
           <p className="max-w-4xl lg:col-span-9">
             AI answers change over time, and we measure them from samples. We can&apos;t promise a Google position, an AI
             mention or a link to your site. ChatGPT, Gemini, Perplexity, Claude, Grok and Google AI Overviews are trademarks of their

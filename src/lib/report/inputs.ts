@@ -3,6 +3,7 @@ import type { AuditPage, SiteContext } from "@/lib/audit/rules";
 import type { AiVisibilitySummary, CheckResult, Pillar } from "@/lib/report/types";
 import type { JsSiteDetection } from "@/lib/crawler/js-site";
 import { isSameSite, urlKey } from "@/lib/crawler/normalize";
+import type { AuditDepthData } from "@/lib/pagespeed/types";
 
 export interface ReportPage extends AuditPage {
   responseBytes?: number | null;
@@ -30,6 +31,11 @@ export interface CheckContext {
   now: Date;
   /** JavaScript-only detection stored with the crawl (rendered comparison); absent → heuristic from pages. */
   jsSite?: JsSiteDetection | null;
+  /**
+   * Post-crawl "audit depth" pass for this crawl (src/lib/pagespeed): PageSpeed Insights results and image /
+   * redirect / canonical probes. Absent/null = never ran (older crawls) → speed falls back to the size estimate.
+   */
+  depth?: AuditDepthData | null;
 }
 
 /** A check plus the evidence the issue writer needs (stripped before it reaches the SiteReport). */
@@ -100,6 +106,8 @@ export const okPages = (pages: ReportPage[]) => pages.filter((p) => p.statusCode
 /** Pages extracted with the v2 extractor (richer signals). */
 export const isV2 = (p: AuditPage) => (p.extracted?.extractorVersion ?? 1) >= 2;
 export const v2Pages = (pages: ReportPage[]) => okPages(pages).filter(isV2);
+/** Pages extracted with the v3 extractor (hreflang, mixed content, image sizes, link text). */
+export const isV3 = (p: AuditPage) => (p.extracted?.extractorVersion ?? 1) >= 3;
 
 /** Meta robots tells search engines not to index this page. */
 export const isNoindex = (p: AuditPage) => /\bnoindex\b|\bnone\b/i.test(p.extracted?.robotsMeta ?? "");

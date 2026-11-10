@@ -3,12 +3,17 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, ChevronRight, ExternalLink, Globe, Wrench } from "lucide-react";
 import { requireAppProject } from "@/lib/dashboard/server";
 import { loadIssue } from "@/lib/report/issue-page";
+import { checkIdOfIssue } from "@/lib/report/page-notes";
 import type { IssueImpact } from "@/lib/report/types";
 import { issueHref, issuePageHref, todoItemHref } from "@/components/app/nav";
 import { PILLAR_SHORT } from "@/components/app/report/pillars";
+import { CoreWebVitalsCard } from "@/components/app/report/core-web-vitals";
 import { Card, LinkButton } from "@/components/ui";
 
 export const metadata = { title: "Problem" };
+
+/** Speed problems also show the measured Core Web Vitals (when this crawl has PageSpeed results). */
+const SPEED_ISSUES = new Set(["seo.core_web_vitals", "seo.page_speed_proxy"]);
 
 const PRIORITY: Record<IssueImpact, { label: string; tone: string; line: string }> = {
   high: { label: "Urgent", tone: "bg-danger-soft text-danger", line: "This one matters most. It's worth looking at first." },
@@ -77,6 +82,8 @@ export default async function IssuePage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </Card>
+
+      {SPEED_ISSUES.has(checkIdOfIssue(issue.id) ?? "") && <CoreWebVitalsCard vitals={report.coreWebVitals} />}
 
       <Card as="section" aria-labelledby="affected-pages">
         <div className="border-b border-border px-5 py-4 sm:px-6">

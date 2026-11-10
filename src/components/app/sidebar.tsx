@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ChevronsUpDown, FileText, FolderKanban, Menu, Plug, Plus, Settings, SlidersHorizontal, X } from "lucide-react";
+import { Bell, ChevronsUpDown, Code2, FileText, FolderKanban, LayoutGrid, Menu, Plug, Plus, Send, Settings, SlidersHorizontal, X } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { Avatar } from "@/components/ui";
 import { LogoLockup } from "@/components/brand/logo";
@@ -15,7 +15,8 @@ interface ProjectLite {
   websiteUrl: string;
 }
 
-const SETUP_ICONS = { integrations: Plug, settings: SlidersHorizontal } as const;
+const SETUP_ICONS = { integrations: Plug, alerts: Bell, indexnow: Send, settings: SlidersHorizontal } as const;
+const SETUP_LABELS: Record<keyof typeof SETUP_ICONS, string> = { integrations: "Connect website", alerts: "Alerts", indexnow: "IndexNow", settings: "Settings" };
 
 const LAST_PROJECT_KEY = "app.lastProjectId";
 
@@ -161,14 +162,14 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
             </ul>
             <div className="mb-1.5 mt-6 px-3 text-caption uppercase tracking-[0.06em] text-muted">Setup</div>
             <ul className="space-y-0.5">
-              {(["integrations", "settings"] as const).map((slug) => (
+              {(["integrations", "alerts", "indexnow", "settings"] as const).map((slug) => (
                 <li key={slug}>
                   <NavLink
                     href={projectHref(current.id, slug)}
                     active={routeProjectId === current.id && section === slug}
                     icon={SETUP_ICONS[slug]}
                   >
-                    {slug === "integrations" ? "Connect website" : "Settings"}
+                    {SETUP_LABELS[slug]}
                   </NavLink>
                 </li>
               ))}
@@ -181,11 +182,17 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
         <NavLink href="/app" active={pathname === "/app"} icon={FolderKanban}>
           All websites
         </NavLink>
+        <NavLink href="/app/portfolio" active={pathname.startsWith("/app/portfolio")} icon={LayoutGrid}>
+          Portfolio
+        </NavLink>
         <NavLink href="/app/prospect" active={pathname.startsWith("/app/prospect")} icon={FileText}>
           Prospect report
         </NavLink>
-        <NavLink href="/app/settings" active={pathname.startsWith("/app/settings")} icon={Settings}>
+        <NavLink href="/app/settings" active={pathname === "/app/settings"} icon={Settings}>
           Settings & billing
+        </NavLink>
+        <NavLink href="/app/settings/api" active={pathname.startsWith("/app/settings/api")} icon={Code2}>
+          API keys
         </NavLink>
       </div>
     </nav>

@@ -5,6 +5,7 @@ import { buildIssues, quickWins, strengths } from "@/lib/report/issues";
 import { AI_PILLARS, gradeFor, METHODOLOGY_VERSION, overallScore, PILLAR_LABELS, PILLAR_ORDER, pillarScore, pillarSummary, scoreLabel } from "@/lib/report/score";
 import { v2Pages, okPages, pct, type CheckContext, type EvaluatedCheck } from "@/lib/report/inputs";
 import { templateSummary } from "@/lib/report/summary";
+import { summarizeVitals } from "@/lib/pagespeed/vitals";
 import { applyJsSite, jsFilteredFindings, jsSiteCheck, jsSiteDetection, jsSiteIssue } from "@/lib/report/checks/js-site";
 
 export interface ComposeInput {
@@ -87,6 +88,8 @@ export function composeReport(input: ComposeInput): SiteReport {
     limitations: limitations(input),
     methodologyVersion: METHODOLOGY_VERSION,
   };
+  const vitals = summarizeVitals(ctx.depth);
+  if (vitals) report.coreWebVitals = vitals;
   report.executiveSummary = templateSummary(report);
   return report;
 }

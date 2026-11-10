@@ -8,6 +8,7 @@ import { IssueList } from "@/components/app/report/issue-list";
 import { issueHref } from "@/components/app/nav";
 import { PILLAR_EXPLAINER, PILLAR_ICON, visiblePillars } from "@/components/app/report/pillars";
 import { QuickWins } from "@/components/app/report/quick-wins";
+import { CoreWebVitalsCard } from "@/components/app/report/core-web-vitals";
 import { Badge, Card, CheckList, Notice, PillarCard, ScoreRing, SectionHeading } from "@/components/ui";
 
 export function ReportBody({
@@ -92,6 +93,9 @@ export function ReportBody({
           ))}
         </div>
       </section>
+
+      {/* Real page speed (Google PageSpeed Insights), when this crawl has it */}
+      <CoreWebVitalsCard vitals={r.coreWebVitals} />
 
       {/* Quick wins */}
       {quickWins.length > 0 && (
