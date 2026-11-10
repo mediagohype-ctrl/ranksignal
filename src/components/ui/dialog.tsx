@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { X } from "lucide-react";
 
@@ -72,8 +73,10 @@ export function Dialog({
     };
   }, [open]);
 
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  // Portal to <body>: a parent with backdrop-filter/transform (e.g. the blurred top bar) would otherwise become the
+  // containing block for `fixed`, clipping the dialog to that parent instead of the viewport.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
       <div className="absolute inset-0 animate-fade-in bg-overlay backdrop-blur-[2px]" aria-hidden onClick={onClose} />
       <div
@@ -129,6 +132,7 @@ export function Dialog({
           <div className="h-3" />
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

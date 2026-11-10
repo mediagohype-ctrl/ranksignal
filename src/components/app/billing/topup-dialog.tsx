@@ -194,7 +194,7 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
               <span className="min-w-0">
                 <span className="block font-medium text-fg">{n(o.answers)} AI answers</span>
                 <span className="block text-xs text-muted">
-                  {o.gstPaise > 0 ? `${formatInr(o.basePaise)} + ${formatInr(o.gstPaise)} GST (${o.ratePercent}%)` : "No GST"} · valid {o.validityMonths} months
+                  {o.gstPaise > 0 ? `${formatInr(o.basePaise)} + ${formatInr(o.gstPaise)} GST (${o.ratePercent}%) · ` : ""}Valid {o.validityMonths} months
                 </span>
               </span>
               <span className="shrink-0 text-right">
@@ -206,7 +206,7 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
         </div>
         <p className="text-xs text-muted">
           One-time payment — not autopay, and your plan doesn&apos;t change. Extra answers are used only after your plan&apos;s
-          monthly answers run out, oldest pack first, and expire 12 months after purchase. A GST invoice is added to Billing.
+          monthly answers run out, oldest pack first, and expire 12 months after purchase. Your invoice is added to Settings &amp; billing.
         </p>
         {!data.checkoutAvailable && <Notice tone="info">Payments are coming soon. Write to {BRAND.supportEmail} to buy extra answers.</Notice>}
       </div>
