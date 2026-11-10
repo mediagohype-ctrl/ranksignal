@@ -18,6 +18,14 @@ interface ProjectLite {
 const SETUP_ICONS = { integrations: Plug, alerts: Bell, indexnow: Send, settings: SlidersHorizontal } as const;
 const SETUP_LABELS: Record<keyof typeof SETUP_ICONS, string> = { integrations: "Connect website", alerts: "Alerts", indexnow: "IndexNow", settings: "Settings" };
 
+const ACCOUNT_LINKS = [
+  { href: "/app", label: "All websites", icon: FolderKanban, exact: true },
+  { href: "/app/portfolio", label: "Portfolio", icon: LayoutGrid, exact: false },
+  { href: "/app/prospect", label: "Prospect report", icon: FileText, exact: false },
+  { href: "/app/settings", label: "Settings & billing", icon: Settings, exact: true },
+  { href: "/app/settings/api", label: "API keys", icon: Code2, exact: false },
+] as const;
+
 const LAST_PROJECT_KEY = "app.lastProjectId";
 
 function hostOf(url: string) {
@@ -176,24 +184,20 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
             </ul>
           </div>
         )}
-      </div>
 
-      <div className="space-y-0.5 border-t border-border px-3 py-3">
-        <NavLink href="/app" active={pathname === "/app"} icon={FolderKanban}>
-          All websites
-        </NavLink>
-        <NavLink href="/app/portfolio" active={pathname.startsWith("/app/portfolio")} icon={LayoutGrid}>
-          Portfolio
-        </NavLink>
-        <NavLink href="/app/prospect" active={pathname.startsWith("/app/prospect")} icon={FileText}>
-          Prospect report
-        </NavLink>
-        <NavLink href="/app/settings" active={pathname === "/app/settings"} icon={Settings}>
-          Settings & billing
-        </NavLink>
-        <NavLink href="/app/settings/api" active={pathname.startsWith("/app/settings/api")} icon={Code2}>
-          API keys
-        </NavLink>
+        {/* Account links live in the same scrolling list (a pinned footer squeezed the menu on laptop screens). */}
+        <div>
+          <div className="mb-1.5 px-3 text-caption uppercase tracking-[0.06em] text-muted">Account</div>
+          <ul className="space-y-0.5">
+            {ACCOUNT_LINKS.map(({ href, label, icon, exact }) => (
+              <li key={href}>
+                <NavLink href={href} active={exact ? pathname === href : pathname.startsWith(href)} icon={icon}>
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </nav>
   );
