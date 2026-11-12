@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Bell, ChevronsUpDown, Code2, FileText, FolderKanban, LayoutGrid, Menu, Plug, Plus, Send, Settings, SlidersHorizontal, X } from "lucide-react";
+import { Bell, ChevronDown, ChevronsUpDown, Code2, FileText, FolderKanban, LayoutGrid, Menu, Plug, Plus, Send, Settings, SlidersHorizontal, X } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { Avatar } from "@/components/ui";
 import { LogoLockup } from "@/components/brand/logo";
@@ -16,6 +16,7 @@ interface ProjectLite {
 }
 
 const SETUP_ICONS = { integrations: Plug, alerts: Bell, indexnow: Send, settings: SlidersHorizontal } as const;
+const SETUP_SLUGS = ["integrations", "alerts", "indexnow", "settings"] as const;
 const SETUP_LABELS: Record<keyof typeof SETUP_ICONS, string> = { integrations: "Connect website", alerts: "Alerts", indexnow: "IndexNow", settings: "Settings" };
 
 const ACCOUNT_LINKS = [
@@ -69,6 +70,58 @@ function NavLink({
   );
 }
 
+const GROUP_KEY = "app.navGroups";
+
+/**
+ * A collapsible menu group (Setup, Account). Closed by default to keep the menu short; opens by itself while one
+ * of its pages is open, and remembers what the person opened or closed (per browser).
+ */
+function NavGroup({ id, title, hasActive, children }: { id: string; title: string; hasActive: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(hasActive);
+  useEffect(() => {
+    if (hasActive) {
+      setOpen(true);
+      return;
+    }
+    try {
+      const saved = JSON.parse(localStorage.getItem(GROUP_KEY) ?? "{}") as Record<string, boolean>;
+      if (typeof saved[id] === "boolean") setOpen(saved[id]);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [id, hasActive]);
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    try {
+      const saved = JSON.parse(localStorage.getItem(GROUP_KEY) ?? "{}") as Record<string, boolean>;
+      localStorage.setItem(GROUP_KEY, JSON.stringify({ ...saved, [id]: next }));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  const listId = `nav-group-${id}`;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-controls={listId}
+        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-caption uppercase tracking-[0.06em] text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+      >
+        {title}
+        <ChevronDown size={15} aria-hidden className={clsx("transition-transform duration-200", open ? "rotate-180" : "rotate-0")} />
+      </button>
+      <ul id={listId} hidden={!open} className="mt-0.5 space-y-0.5">
+        {children}
+      </ul>
+    </div>
+  );
+}
+
 export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -94,6 +147,9 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  const isAccountActive = (href: string, exact: boolean) => (exact ? pathname === href : pathname.startsWith(href));
+  const accountActive = ACCOUNT_LINKS.some(({ href, exact }) => isAccountActive(href, exact));
 
   const current =
     projects.find((p) => p.id === routeProjectId) ?? projects.find((p) => p.id === remembered) ?? projects[0] ?? null;
@@ -168,36 +224,38 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
                 );
               })}
             </ul>
-            <div className="mb-1.5 mt-6 px-3 text-caption uppercase tracking-[0.06em] text-muted">Setup</div>
-            <ul className="space-y-0.5">
-              {(["integrations", "alerts", "indexnow", "settings"] as const).map((slug) => (
-                <li key={slug}>
-                  <NavLink
-                    href={projectHref(current.id, slug)}
-                    active={routeProjectId === current.id && section === slug}
-                    icon={SETUP_ICONS[slug]}
-                  >
-                    {SETUP_LABELS[slug]}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-6">
+              <NavGroup
+                id="setup"
+                title="Setup"
+                hasActive={routeProjectId === current.id && (SETUP_SLUGS as readonly string[]).includes(section)}
+              >
+                {SETUP_SLUGS.map((slug) => (
+                  <li key={slug}>
+                    <NavLink
+                      href={projectHref(current.id, slug)}
+                      active={routeProjectId === current.id && section === slug}
+                      icon={SETUP_ICONS[slug]}
+                    >
+                      {SETUP_LABELS[slug]}
+                    </NavLink>
+                  </li>
+                ))}
+              </NavGroup>
+            </div>
           </div>
         )}
 
         {/* Account links live in the same scrolling list (a pinned footer squeezed the menu on laptop screens). */}
-        <div>
-          <div className="mb-1.5 px-3 text-caption uppercase tracking-[0.06em] text-muted">Account</div>
-          <ul className="space-y-0.5">
-            {ACCOUNT_LINKS.map(({ href, label, icon, exact }) => (
-              <li key={href}>
-                <NavLink href={href} active={exact ? pathname === href : pathname.startsWith(href)} icon={icon}>
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <NavGroup id="account" title="Account" hasActive={accountActive}>
+          {ACCOUNT_LINKS.map(({ href, label, icon, exact }) => (
+            <li key={href}>
+              <NavLink href={href} active={isAccountActive(href, exact)} icon={icon}>
+                {label}
+              </NavLink>
+            </li>
+          ))}
+        </NavGroup>
       </div>
     </nav>
   );
