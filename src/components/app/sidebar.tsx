@@ -224,29 +224,32 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
                 );
               })}
             </ul>
-            <div className="mt-6">
-              <NavGroup
-                id="setup"
-                title="Setup"
-                hasActive={routeProjectId === current.id && (SETUP_SLUGS as readonly string[]).includes(section)}
-              >
-                {SETUP_SLUGS.map((slug) => (
-                  <li key={slug}>
-                    <NavLink
-                      href={projectHref(current.id, slug)}
-                      active={routeProjectId === current.id && section === slug}
-                      icon={SETUP_ICONS[slug]}
-                    >
-                      {SETUP_LABELS[slug]}
-                    </NavLink>
-                  </li>
-                ))}
-              </NavGroup>
-            </div>
           </div>
         )}
+      </div>
 
-        {/* Account links live in the same scrolling list (a pinned footer squeezed the menu on laptop screens). */}
+      {/* Setup and Account sit at the bottom of the menu. Both groups start closed, so the footer stays small; when
+          opened it scrolls on its own (max ~half the screen) instead of squeezing the main menu on laptop screens. */}
+      <div className="max-h-[50vh] shrink-0 space-y-0.5 overflow-y-auto border-t border-border px-3 py-3">
+        {current && (
+          <NavGroup
+            id="setup"
+            title="Setup"
+            hasActive={routeProjectId === current.id && (SETUP_SLUGS as readonly string[]).includes(section)}
+          >
+            {SETUP_SLUGS.map((slug) => (
+              <li key={slug}>
+                <NavLink
+                  href={projectHref(current.id, slug)}
+                  active={routeProjectId === current.id && section === slug}
+                  icon={SETUP_ICONS[slug]}
+                >
+                  {SETUP_LABELS[slug]}
+                </NavLink>
+              </li>
+            ))}
+          </NavGroup>
+        )}
         <NavGroup id="account" title="Account" hasActive={accountActive}>
           {ACCOUNT_LINKS.map(({ href, label, icon, exact }) => (
             <li key={href}>
