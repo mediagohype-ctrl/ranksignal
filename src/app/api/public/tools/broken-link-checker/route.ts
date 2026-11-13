@@ -4,6 +4,7 @@
 // partial results.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody } from "@/lib/api";
+import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
 import { clientIp } from "@/lib/auth/rate-limit";
 import { checkLinkToolLimit } from "@/lib/free-check/limits";
 import { normalizeInputUrl } from "@/lib/free-check/validate";
@@ -19,9 +20,10 @@ const BUDGET_MS = 25_000;
 
 const bodySchema = z.object({ url: z.string().max(2048) });
 
-export const POST = handler(async (req: Request) => {
+export const POST = handler(withToolUsage("broken-link-checker", async (req: Request) => {
   const started = Date.now();
   const body = await parseBody(req, bodySchema);
+  setToolUsage({ url: body.url.trim() });
   // Cheap syntax check first so a typo doesn't use up one of the visitor's checks.
   if (!normalizeInputUrl(body.url)) throw new HttpError(400, "invalid_url", "Enter a page address like example.com/about.");
 
@@ -37,4 +39,4 @@ export const POST = handler(async (req: Request) => {
   const page = await fetchPublicHtml(body.url);
   const report = await runLinkCheck(page, { deadline: started + BUDGET_MS });
   return json({ report }, { headers: { "Cache-Control": "no-store" } });
-});
+}));

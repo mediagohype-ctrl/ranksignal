@@ -138,6 +138,7 @@ export const ADMIN_SECTIONS: { href: string; label: string; permission: Permissi
   { href: "/admin/customers", label: "Customers", permission: "customers.view" },
   { href: "/admin/users", label: "Users", permission: "users.view" },
   { href: "/admin/leads", label: "Leads", permission: "leads.view" },
+  { href: "/admin/tools", label: "Free tool usage", permission: "leads.view" },
   { href: "/admin/revenue", label: "Revenue & plans", permission: "revenue.view" },
   { href: "/admin/ai", label: "AI usage & costs", permission: "ai.view" },
   { href: "/admin/jobs", label: "Jobs", permission: "jobs.view" },

@@ -3,6 +3,7 @@
 // to 20 sample URLs. All fetching is SSRF-safe. 20/IP/hour (400/hour overall), no DB writes.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody } from "@/lib/api";
+import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
 import { clientIp } from "@/lib/auth/rate-limit";
 import { checkPageToolLimit } from "@/lib/free-check/limits";
 import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/validate";
@@ -15,8 +16,9 @@ export const maxDuration = 30;
 const TOOL = "sitemap-checker";
 const bodySchema = z.object({ url: z.string().max(2048) });
 
-export const POST = handler(async (req: Request) => {
+export const POST = handler(withToolUsage("sitemap-checker", async (req: Request) => {
   const body = await parseBody(req, bodySchema);
+  setToolUsage({ url: body.url.trim() });
   if (!normalizeInputUrl(body.url)) throw new HttpError(400, "invalid_url", "Enter a website address like example.com.");
 
   const limit = checkPageToolLimit(TOOL, clientIp(req));
@@ -32,4 +34,4 @@ export const POST = handler(async (req: Request) => {
   if (!valid.ok) throw new HttpError(400, valid.code, valid.message);
   const report = await runSitemapCheck(new URL(valid.url).origin);
   return json({ result: report }, { headers: { "Cache-Control": "no-store" } });
-});
+}));

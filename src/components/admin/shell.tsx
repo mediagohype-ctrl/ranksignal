@@ -21,6 +21,7 @@ import {
   UserRound,
   Users,
   Webhook,
+  Wrench,
   X,
   Inbox,
   PenSquare,
@@ -39,6 +40,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/admin/customers": Building2,
   "/admin/users": Users,
   "/admin/leads": Inbox,
+  "/admin/tools": Wrench,
   "/admin/revenue": IndianRupee,
   "/admin/ai": Bot,
   "/admin/jobs": Activity,
@@ -230,6 +232,7 @@ export function AdminShell({
   supportOrgName,
   permissions,
   roleLabels,
+  badges = {},
   children,
 }: {
   staffEmail: string;
@@ -238,6 +241,8 @@ export function AdminShell({
   /** Permissions of the signed-in staff member; the nav shows only sections they may open. */
   permissions: string[];
   roleLabels: string[];
+  /** Small count next to a nav item, e.g. { "/admin/tools": 12 } = 12 free tool runs in the last 24 hours. */
+  badges?: Record<string, number>;
   children: React.ReactNode;
 }) {
   const allowed = new Set(permissions);
@@ -281,6 +286,14 @@ export function AdminShell({
                 {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-primary" />}
                 <Icon size={17} aria-hidden className={clsx(active ? "text-primary" : "text-muted group-hover:text-fg")} />
                 <span className="truncate">{label}</span>
+                {badges[href] ? (
+                  <span
+                    className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold tabular-nums text-primary-fg"
+                    aria-label={`${badges[href]} new in the last 24 hours`}
+                  >
+                    {badges[href]! > 99 ? "99+" : badges[href]}
+                  </span>
+                ) : null}
               </Link>
             </li>
           );

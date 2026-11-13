@@ -56,10 +56,16 @@ export default function PrivacyPage() {
         </li>
         <li>From Google Search Console and Google Analytics we read summary numbers about your website, such as searches and visits.</li>
       </ul>
-      <h3>The free website check</h3>
+      <h3>The free website check and free tools</h3>
       <ul>
         <li>The website address you type, the score we work out, and a scrambled code made from your internet (IP) address so we can stop misuse. We do not store your IP address itself.</li>
         <li>Your email address, only if you choose to give it to get your result.</li>
+        <li>
+          Which free tool you used and when, what you typed into it, and basic details your browser sends: the type of
+          device and browser, your language, your country if we can tell, and the page that sent you. If you are
+          signed in to {BRAND.name}, we also note your account. Our team may see this to improve the tools and to
+          follow up with people who asked for their result.
+        </li>
         <li>We do not store the pages we read during a free check.</li>
       </ul>
       <h3>Payments</h3>

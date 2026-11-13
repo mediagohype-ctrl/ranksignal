@@ -3,6 +3,7 @@
 // so pasted robots.txt text never needs the network. 20/IP/hour (400/hour overall), no DB writes.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody } from "@/lib/api";
+import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
 import { clientIp } from "@/lib/auth/rate-limit";
 import { checkPageToolLimit } from "@/lib/free-check/limits";
 import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/validate";
@@ -26,8 +27,9 @@ function fetchError(e: unknown): string {
   return "We couldn't connect to your website. It may be down or blocking visitors.";
 }
 
-export const POST = handler(async (req: Request) => {
+export const POST = handler(withToolUsage("robots-txt-tester", async (req: Request) => {
   const body = await parseBody(req, bodySchema);
+  setToolUsage({ url: body.url.trim() });
   if (!normalizeInputUrl(body.url)) throw new HttpError(400, "invalid_url", "Enter a website address like example.com.");
 
   const limit = checkPageToolLimit(TOOL, clientIp(req));
@@ -61,4 +63,4 @@ export const POST = handler(async (req: Request) => {
     result.error = fetchError(e);
   }
   return json({ result }, { headers: { "Cache-Control": "no-store" } });
-});
+}));

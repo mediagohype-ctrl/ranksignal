@@ -11,6 +11,7 @@ import { fetchPublicHtml } from "./fetch-page";
 import { extractPage } from "@/lib/crawler/extract";
 import { generateStructured } from "@/lib/providers/llm";
 import { TITLE_MAX, TITLE_MIN } from "@/lib/audit/rules";
+import { addToolAiCost } from "@/lib/admin/tool-usage";
 import {
   AI_INPUT_LIMITS as L,
   FAQ_ANSWER_MAX_WORDS,
@@ -200,7 +201,7 @@ function unusable(what: string): never {
 }
 
 async function call<T>(schema: z.ZodType<T>, system: string, user: string): Promise<T> {
-  let res: { data: T } | null = null;
+  let res: { data: T; costMicros: number } | null = null;
   try {
     res = await generateStructured({ schema, system, user, maxTokens: AI_TOOL_MAX_TOKENS, model: aiToolsModel() });
   } catch (err) {
@@ -208,6 +209,7 @@ async function call<T>(schema: z.ZodType<T>, system: string, user: string): Prom
     busy();
   }
   if (!res) busy(); // budget exhausted or no LLM configured
+  addToolAiCost(res.costMicros, aiToolsModel()); // admin "Free tool usage" cost column
   return res.data;
 }
 

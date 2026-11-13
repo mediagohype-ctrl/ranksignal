@@ -30,25 +30,25 @@ model Organization {
   isInternal        Boolean  @default(false) // our own team workspace (staff accounts); excluded from revenue metrics
   createdAt         DateTime @default(now())
 
-  memberships   Membership[]
-  projects      Project[]
-  integrations  Integration[]
-  subscriptions Subscription[]
-  usage         UsageLedger[]
-  auditLogs     AuditLog[]
-  workflowRuns  WorkflowRun[]
-  notifications Notification[]
-  adminNotes    AdminNote[]
-  apiKeys       ApiKey[]
-  reportTemplates ReportTemplate[]
-  dataForSeoUsage DataForSeoUsage[]
+  memberships         Membership[]
+  projects            Project[]
+  integrations        Integration[]
+  subscriptions       Subscription[]
+  usage               UsageLedger[]
+  auditLogs           AuditLog[]
+  workflowRuns        WorkflowRun[]
+  notifications       Notification[]
+  adminNotes          AdminNote[]
+  apiKeys             ApiKey[]
+  reportTemplates     ReportTemplate[]
+  dataForSeoUsage     DataForSeoUsage[]
   competitorSnapshots CompetitorSnapshot[]
-  researchSearches ResearchSearch[]
-  billingDetails BillingDetails?
-  invoices Invoice[]
-  topUpOrders TopUpOrder[]
-  topUpPacks TopUpPack[]
-  topUpSettlements TopUpSettlement[]
+  researchSearches    ResearchSearch[]
+  billingDetails      BillingDetails?
+  invoices            Invoice[]
+  topUpOrders         TopUpOrder[]
+  topUpPacks          TopUpPack[]
+  topUpSettlements    TopUpSettlement[]
 }
 
 model User {
@@ -88,47 +88,47 @@ model Project {
   organizationId String
   name           String
   websiteUrl     String
-  brandNames     Json?      // string[] brand name + aliases
-  categories     Json?      // product/service categories
+  brandNames     Json? // string[] brand name + aliases
+  categories     Json? // product/service categories
   audience       String?
-  countries      Json?     
-  languages      Json?     
-  competitors    Json?      // {name, domain, aliases[]}[]
-  keywords       Json?     
-  settings       Json?      // crawl limits, schedules, automation permissions
-  facts          Json?      // business facts the owner confirmed in setup: {name, sells, customers, city, country, language}
+  countries      Json?
+  languages      Json?
+  competitors    Json? // {name, domain, aliases[]}[]
+  keywords       Json?
+  settings       Json? // crawl limits, schedules, automation permissions
+  facts          Json? // business facts the owner confirmed in setup: {name, sells, customers, city, country, language}
   createdAt      DateTime @default(now())
 
-  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  resources     Resource[]
-  crawlRuns     CrawlRun[]
-  findings      AuditFinding[]
-  prompts       TrackedPrompt[]
-  visibilityRuns VisibilityRun[]
-  actions       Action[]
-  integrations  Integration[]
-  snapshots     ReportSnapshot[]
-  tasks         Task[]
-  monthlyReports MonthlyReport[]
-  offsiteItems  OffsiteItem[]
-  dailyMetrics  MetricDaily[]
-  keywordStars  KeywordStar[]
-  backlinkMonitor BacklinkMonitor?
-  backlinkSnapshots BacklinkSnapshot[]
-  linkGapReports LinkGapReport[]
-  trackedKeywords TrackedKeyword[]
-  rankTrackerState RankTrackerState?
-  businessProfile BusinessProfile?
-  aiBotDaily    AiBotDaily[]
-  aiBotImports  AiBotLogImport[]
-  aiBotIngestKey AiBotIngestKey?
-  indexNowSite  IndexNowSite?
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resources           Resource[]
+  crawlRuns           CrawlRun[]
+  findings            AuditFinding[]
+  prompts             TrackedPrompt[]
+  visibilityRuns      VisibilityRun[]
+  actions             Action[]
+  integrations        Integration[]
+  snapshots           ReportSnapshot[]
+  tasks               Task[]
+  monthlyReports      MonthlyReport[]
+  offsiteItems        OffsiteItem[]
+  dailyMetrics        MetricDaily[]
+  keywordStars        KeywordStar[]
+  backlinkMonitor     BacklinkMonitor?
+  backlinkSnapshots   BacklinkSnapshot[]
+  linkGapReports      LinkGapReport[]
+  trackedKeywords     TrackedKeyword[]
+  rankTrackerState    RankTrackerState?
+  businessProfile     BusinessProfile?
+  aiBotDaily          AiBotDaily[]
+  aiBotImports        AiBotLogImport[]
+  aiBotIngestKey      AiBotIngestKey?
+  indexNowSite        IndexNowSite?
   indexNowSubmissions IndexNowSubmission[]
-  alertSettings AlertSettings?
-  alertEvents   AlertEvent[]
-  reportTemplates ReportTemplate[]
+  alertSettings       AlertSettings?
+  alertEvents         AlertEvent[]
+  reportTemplates     ReportTemplate[]
   competitorSnapshots CompetitorSnapshot[]
-  researchSearches ResearchSearch[]
+  researchSearches    ResearchSearch[]
 
   @@index([organizationId])
 }
@@ -139,11 +139,11 @@ model Integration {
   projectId           String?
   provider            String // wordpress | github | gsc | manual | crawler
   credentialEncrypted String? // AES-GCM ciphertext; never logged or sent to client
-  scopes              Json?      
-  capabilities        Json?       // capability snapshot
+  scopes              Json?
+  capabilities        Json? // capability snapshot
   health              String    @default("unknown") // healthy | degraded | failed | unknown
   connectorVersion    String    @default("1")
-  config              Json?       // non-secret config, e.g. siteUrl
+  config              Json? // non-secret config, e.g. siteUrl
   connectedBy         String?
   lastSyncAt          DateTime?
   createdAt           DateTime  @default(now())
@@ -184,27 +184,27 @@ model CrawlRun {
   finishedAt     DateTime?
   createdAt      DateTime  @default(now())
 
-  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pages   CrawlPage[]
-  auditDepth AuditDepthRun?
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pages            CrawlPage[]
+  auditDepth       AuditDepthRun?
   pageSpeedResults PageSpeedResult[]
 
   @@index([organizationId, projectId, createdAt])
 }
 
 model CrawlPage {
-  id              String   @id @default(cuid())
-  organizationId  String
-  crawlRunId      String
-  url             String
-  finalUrl        String?
-  statusCode      Int?
-  redirectChain   Json?     
-  contentType     String?
-  responseBytes   Int?
-  extracted       Json?      // title, description, headings, canonical, robotsMeta, links, images, jsonLd, wordCount
-  error           String?
-  crawledAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  organizationId String
+  crawlRunId     String
+  url            String
+  finalUrl       String?
+  statusCode     Int?
+  redirectChain  Json?
+  contentType    String?
+  responseBytes  Int?
+  extracted      Json? // title, description, headings, canonical, robotsMeta, links, images, jsonLd, wordCount
+  error          String?
+  crawledAt      DateTime @default(now())
 
   crawlRun CrawlRun       @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
   findings AuditFinding[]
@@ -223,7 +223,7 @@ model AuditFinding {
   severity       String // critical | high | medium | low | info
   confidence     Float     @default(1)
   message        String
-  evidence       Json?      
+  evidence       Json?
   status         String    @default("open") // open | resolved | ignored
   detectedAt     DateTime  @default(now())
   resolvedAt     DateTime?
@@ -235,18 +235,18 @@ model AuditFinding {
 }
 
 model TrackedPrompt {
-  id             String   @id @default(cuid())
-  organizationId String
-  projectId      String
-  text           String
-  intent         String   @default("informational") // informational | commercial | comparison | navigational | transactional
-  topic          String?
-  locale         String   @default("en-IN")
-  targetProvider String   @default("all")
-  priority       Int      @default(2)
-  active         Boolean  @default(true)
-  promptSetVersion Int    @default(1)
-  createdAt      DateTime @default(now())
+  id               String   @id @default(cuid())
+  organizationId   String
+  projectId        String
+  text             String
+  intent           String   @default("informational") // informational | commercial | comparison | navigational | transactional
+  topic            String?
+  locale           String   @default("en-IN")
+  targetProvider   String   @default("all")
+  priority         Int      @default(2)
+  active           Boolean  @default(true)
+  promptSetVersion Int      @default(1)
+  createdAt        DateTime @default(now())
 
   project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   observations Observation[]
@@ -260,13 +260,13 @@ model VisibilityRun {
   projectId        String
   workflowRunId    String?
   status           String    @default("queued")
-  providers        Json?      
+  providers        Json?
   promptSetVersion Int       @default(1)
   sampleSize       Int       @default(0)
   collected        Int       @default(0)
   failed           Int       @default(0)
   costMicros       Int       @default(0) // cost in micro-USD
-  metrics          Json?       // computed VisibilityMetrics snapshot
+  metrics          Json? // computed VisibilityMetrics snapshot
   startedAt        DateTime?
   finishedAt       DateTime?
   createdAt        DateTime  @default(now())
@@ -278,27 +278,27 @@ model VisibilityRun {
 }
 
 model Observation {
-  id                String   @id @default(cuid())
-  organizationId    String
-  visibilityRunId   String
-  promptId          String
-  provider          String // e.g. openai, dataforseo, simulated
-  platformLabel     String // e.g. "ChatGPT (API: gpt-4o-mini)"
-  model             String?
-  locale            String?
-  rawResponse       String // raw answer text (large payloads → object storage later)
-  rawPayloadRef     String?
-  citations         Json?      // {url, domain, title?, ownedByCustomer}[]
-  brandMentioned    Boolean  @default(false)
-  brandRecommended  Boolean  @default(false)
-  brandCited        Boolean  @default(false)
-  competitorMentions Json?     // name -> count
-  sentiment         String?  // positive | neutral | negative
-  parseConfidence   Float    @default(1)
-  limitations       String?
-  costMicros        Int      @default(0)
-  simulated         Boolean  @default(false) // true for demo provider — always labelled in UI
-  createdAt         DateTime @default(now())
+  id                 String   @id @default(cuid())
+  organizationId     String
+  visibilityRunId    String
+  promptId           String
+  provider           String // e.g. openai, dataforseo, simulated
+  platformLabel      String // e.g. "ChatGPT (API: gpt-4o-mini)"
+  model              String?
+  locale             String?
+  rawResponse        String // raw answer text (large payloads → object storage later)
+  rawPayloadRef      String?
+  citations          Json? // {url, domain, title?, ownedByCustomer}[]
+  brandMentioned     Boolean  @default(false)
+  brandRecommended   Boolean  @default(false)
+  brandCited         Boolean  @default(false)
+  competitorMentions Json? // name -> count
+  sentiment          String? // positive | neutral | negative
+  parseConfidence    Float    @default(1)
+  limitations        String?
+  costMicros         Int      @default(0)
+  simulated          Boolean  @default(false) // true for demo provider — always labelled in UI
+  createdAt          DateTime @default(now())
 
   visibilityRun VisibilityRun @relation(fields: [visibilityRunId], references: [id], onDelete: Cascade)
   prompt        TrackedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
@@ -309,28 +309,28 @@ model Observation {
 }
 
 model Action {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   organizationId String
   projectId      String
   type           String // update_meta_description | update_title | add_faq_schema | content_brief | ...
-  target         Json?       // {resourceType, resourceId, url}
+  target         Json? // {resourceType, resourceId, url}
   rationale      String
-  evidenceRefs   Json?      
-  priority       String    @default("medium") // critical | high | medium | low
-  priorityScore  Float     @default(0)
+  evidenceRefs   Json?
+  priority       String   @default("medium") // critical | high | medium | low
+  priorityScore  Float    @default(0)
   expectedImpact String?
-  effort         String    @default("low")
-  confidence     Float     @default(0.5)
-  riskClass      String    @default("C") // A | B | C | D
-  policyDecision String    @default("approval_required") // auto_execute | approval_required | blocked
+  effort         String   @default("low")
+  confidence     Float    @default(0.5)
+  riskClass      String   @default("C") // A | B | C | D
+  policyDecision String   @default("approval_required") // auto_execute | approval_required | blocked
   policyReason   String?
-  policyVersion  String    @default("1")
-  proposedChange Json?       // {field, before, after}
+  policyVersion  String   @default("1")
+  proposedChange Json? // {field, before, after}
   draftHash      String?
-  status         String    @default("proposed") // proposed | awaiting_approval | approved | rejected | expired | executing | succeeded | succeeded_with_warnings | failed | rollback_pending | rolled_back | rollback_failed | blocked | cancelled
+  status         String   @default("proposed") // proposed | awaiting_approval | approved | rejected | expired | executing | succeeded | succeeded_with_warnings | failed | rollback_pending | rolled_back | rollback_failed | blocked | cancelled
   integrationId  String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   approvals  Approval[]
@@ -340,17 +340,17 @@ model Action {
 }
 
 model Approval {
-  id          String    @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String
-  actionId    String
-  requestedBy String?
-  approverId  String?
-  draftHash   String
-  decision    String    @default("pending") // pending | approved | rejected | expired | invalidated
-  comments    String?
-  expiresAt   DateTime
-  decidedAt   DateTime?
-  createdAt   DateTime  @default(now())
+  actionId       String
+  requestedBy    String?
+  approverId     String?
+  draftHash      String
+  decision       String    @default("pending") // pending | approved | rejected | expired | invalidated
+  comments       String?
+  expiresAt      DateTime
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
 
   action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
 
@@ -366,9 +366,9 @@ model ActionExecution {
   beforeState     Json?
   expectedVersion String?
   result          String    @default("pending") // pending | success | partial | failure
-  resultDetail    Json?      
-  validation      String?   // passed | warning | failed
-  rollbackStatus  String?   // not_needed | pending | rolled_back | failed | manual_required
+  resultDetail    Json?
+  validation      String? // passed | warning | failed
+  rollbackStatus  String? // not_needed | pending | rolled_back | failed | manual_required
   startedAt       DateTime  @default(now())
   finishedAt      DateTime?
 
@@ -383,16 +383,16 @@ model WorkflowRun {
   version        String    @default("1")
   state          String    @default("queued") // see WorkflowState in src/lib/types.ts
   idempotencyKey String?   @unique
-  input          Json?      
-  output         Json?      
+  input          Json?
+  output         Json?
   attempts       Int       @default(0)
   maxAttempts    Int       @default(3)
   runAfter       DateTime  @default(now())
   lockedAt       DateTime?
   lockedBy       String?
   error          String?
-  errorClass     String?   // transient | permanent | policy | quota
-  usage          Json?      
+  errorClass     String? // transient | permanent | policy | quota
+  usage          Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -409,7 +409,7 @@ model WorkflowEvent {
   name          String // e.g. crawl.started — see Appendix A event names
   fromState     String?
   toState       String?
-  data          Json?     
+  data          Json?
   createdAt     DateTime @default(now())
 
   workflowRun WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
@@ -483,7 +483,7 @@ model AuditLog {
 }
 
 model Notification {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String
   userId         String?
   type           String // approval_requested | change_completed | job_failed | usage_threshold | monthly_report
@@ -491,7 +491,7 @@ model Notification {
   body           String
   link           String?
   readAt         DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -508,7 +508,9 @@ model FeatureFlag {
 // ---------------------------------------------------------------------------------------------
 // Round 4: measurement history, service delivery, monthly impact reports, admin records.
 
-/** Frozen scores after each successful crawl / visibility run, so change over time can be shown. */
+/**
+ * Frozen scores after each successful crawl / visibility run, so change over time can be shown.
+ */
 model ReportSnapshot {
   id                 String   @id @default(cuid())
   organizationId     String
@@ -533,7 +535,9 @@ model ReportSnapshot {
   @@index([projectId, kind, createdAt])
 }
 
-/** Work items for the service team or the client (on-site fixes, content, off-site, reporting). */
+/**
+ * Work items for the service team or the client (on-site fixes, content, off-site, reporting).
+ */
 model Task {
   id             String    @id @default(cuid())
   organizationId String
@@ -577,7 +581,9 @@ model TaskComment {
   @@index([taskId])
 }
 
-/** One impact report per project per month: drafted automatically, reviewed by staff, then sent. */
+/**
+ * One impact report per project per month: drafted automatically, reviewed by staff, then sent.
+ */
 model MonthlyReport {
   id             String    @id @default(cuid())
   organizationId String
@@ -598,7 +604,9 @@ model MonthlyReport {
   @@index([organizationId, period])
 }
 
-/** Inbound leads: free checks and contact-form messages (admin CRM). */
+/**
+ * Inbound leads: free checks and contact-form messages (admin CRM).
+ */
 model Lead {
   id        String   @id @default(cuid())
   source    String // free_check | contact | signup_intent
@@ -618,7 +626,9 @@ model Lead {
   @@index([status, createdAt])
 }
 
-/** Internal staff notes on a customer organization. */
+/**
+ * Internal staff notes on a customer organization.
+ */
 model AdminNote {
   id             String   @id @default(cuid())
   organizationId String
@@ -631,7 +641,9 @@ model AdminNote {
   @@index([organizationId, createdAt])
 }
 
-/** Off-site GEO work: directory listings, review platforms, PR mentions, forums, entity profiles. */
+/**
+ * Off-site GEO work: directory listings, review platforms, PR mentions, forums, entity profiles.
+ */
 model OffsiteItem {
   id             String    @id @default(cuid())
   organizationId String
@@ -653,7 +665,9 @@ model OffsiteItem {
   @@index([organizationId, projectId, status])
 }
 
-/** Daily first-party metrics from Google Search Console / GA4 (and later others). */
+/**
+ * Daily first-party metrics from Google Search Console / GA4 (and later others).
+ */
 model MetricDaily {
   id             String   @id @default(cuid())
   organizationId String
@@ -676,7 +690,9 @@ model MetricDaily {
   @@index([organizationId, projectId, source, date])
 }
 
-/** Idempotency log for outbound messages (trial nudges, weekly emails, WhatsApp, alerts): one row per kind+key. */
+/**
+ * Idempotency log for outbound messages (trial nudges, weekly emails, WhatsApp, alerts): one row per kind+key.
+ */
 model SentMessage {
   id             String   @id @default(cuid())
   organizationId String?
@@ -689,14 +705,18 @@ model SentMessage {
   @@index([organizationId, createdAt])
 }
 
-/** Our own blog (mywebrank.tech/blog), written by the team in /admin/content. Body is Markdown. */
+/**
+ * Our own blog (mywebrank.tech/blog), written by the team in /admin/content. Body is Markdown.
+ */
 model BlogPost {
   id            String    @id @default(cuid())
   slug          String    @unique
   title         String
   metaTitle     String?
   description   String
-  /** Short direct answer shown first (AEO): what answer engines and AI Overviews quote. */
+  /**
+   * Short direct answer shown first (AEO): what answer engines and AI Overviews quote.
+   */
   answer        String    @default("")
   body          String
   keyPoints     String[]  @default([])
@@ -715,7 +735,9 @@ model BlogPost {
   @@index([status, publishedAt])
 }
 
-/** Search phrases we want to rank for (Google) and be named for (AI answers). Managed in /admin/seo. */
+/**
+ * Search phrases we want to rank for (Google) and be named for (AI answers). Managed in /admin/seo.
+ */
 model SeoKeyword {
   id             String    @id @default(cuid())
   phrase         String    @unique
@@ -735,7 +757,9 @@ model SeoKeyword {
 
 // ---- Public API + MCP + Looker Studio (agent 4) ----
 
-/** Organization-level API key for the read-only public API (/api/v1) and MCP (/api/mcp). Only a SHA-256 hash is stored. */
+/**
+ * Organization-level API key for the read-only public API (/api/v1) and MCP (/api/mcp). Only a SHA-256 hash is stored.
+ */
 model ApiKey {
   id             String    @id @default(cuid())
   organizationId String
@@ -756,7 +780,9 @@ model ApiKey {
 
 // ---- Search Console keywords + Google Business Profile monitor (agent 6) ----
 
-/** A Search Console query the user starred to watch on the Keywords "Tracked" tab (limit per plan, per organization). */
+/**
+ * A Search Console query the user starred to watch on the Keywords "Tracked" tab (limit per plan, per organization).
+ */
 model KeywordStar {
   id             String   @id @default(cuid())
   organizationId String
@@ -771,7 +797,9 @@ model KeywordStar {
   @@index([organizationId, projectId])
 }
 
-/** The Google Maps place (Places API) the owner picked as their business. One per project. */
+/**
+ * The Google Maps place (Places API) the owner picked as their business. One per project.
+ */
 model BusinessProfile {
   id             String    @id @default(cuid())
   organizationId String
@@ -792,7 +820,9 @@ model BusinessProfile {
   @@index([organizationId])
 }
 
-/** One Places API (New) read of the business: headline numbers + normalized details (data) + checklist. */
+/**
+ * One Places API (New) read of the business: headline numbers + normalized details (data) + checklist.
+ */
 model BusinessProfileSnapshot {
   id             String   @id @default(cuid())
   organizationId String
@@ -811,7 +841,9 @@ model BusinessProfileSnapshot {
 }
 
 // ---- Audit depth: real page speed (PageSpeed Insights) + post-crawl probes ----
-/** One post-crawl "audit depth" pass per crawl: PageSpeed Insights tests, image-size / redirect / canonical probes, sitemap-vs-noindex. */
+/**
+ * One post-crawl "audit depth" pass per crawl: PageSpeed Insights tests, image-size / redirect / canonical probes, sitemap-vs-noindex.
+ */
 model AuditDepthRun {
   id             String    @id @default(cuid())
   organizationId String
@@ -832,17 +864,19 @@ model AuditDepthRun {
   @@index([organizationId, projectId, createdAt])
 }
 
-/** One Google PageSpeed Insights result for a page (mobile, plus desktop for the homepage). Times in ms. */
+/**
+ * One Google PageSpeed Insights result for a page (mobile, plus desktop for the homepage). Times in ms.
+ */
 model PageSpeedResult {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   organizationId   String
   projectId        String
   crawlRunId       String
   url              String
   strategy         String // mobile | desktop
-  status           String   @default("pending") // pending | ok | failed
-  attempts         Int      @default(0)
-  isHome           Boolean  @default(false)
+  status           String    @default("pending") // pending | ok | failed
+  attempts         Int       @default(0)
+  isHome           Boolean   @default(false)
   performanceScore Int? // Lighthouse performance 0-100 (lab)
   labLcpMs         Int?
   labCls           Float?
@@ -855,7 +889,7 @@ model PageSpeedResult {
   fieldScope       String? // url | origin | null (no field data)
   error            String?
   fetchedAt        DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   crawlRun CrawlRun @relation(fields: [crawlRunId], references: [id], onDelete: Cascade)
 
@@ -865,7 +899,9 @@ model PageSpeedResult {
 
 // ---- AI bot visits + IndexNow (Agent 5) ----
 
-/** Daily AI/search crawler visits per bot, aggregated from uploaded server logs or the ingest endpoint. Never raw lines or IPs. */
+/**
+ * Daily AI/search crawler visits per bot, aggregated from uploaded server logs or the ingest endpoint. Never raw lines or IPs.
+ */
 model AiBotDaily {
   id             String   @id @default(cuid())
   organizationId String
@@ -885,7 +921,9 @@ model AiBotDaily {
   @@index([organizationId, projectId, date])
 }
 
-/** One processed log file or ingest batch (dedupe by content hash; summary counts only). */
+/**
+ * One processed log file or ingest batch (dedupe by content hash; summary counts only).
+ */
 model AiBotLogImport {
   id             String   @id @default(cuid())
   organizationId String
@@ -908,7 +946,9 @@ model AiBotLogImport {
   @@index([organizationId, projectId, createdAt])
 }
 
-/** Per-project secret for POST /api/projects/[id]/ai-bots/ingest. Only a SHA-256 hash is stored. */
+/**
+ * Per-project secret for POST /api/projects/[id]/ai-bots/ingest. Only a SHA-256 hash is stored.
+ */
 model AiBotIngestKey {
   id             String    @id @default(cuid())
   organizationId String
@@ -922,7 +962,9 @@ model AiBotIngestKey {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
-/** IndexNow set-up for a customer's site: the key (public by design) and whether its key file was verified. */
+/**
+ * IndexNow set-up for a customer's site: the key (public by design) and whether its key file was verified.
+ */
 model IndexNowSite {
   id             String    @id @default(cuid())
   organizationId String
@@ -942,7 +984,9 @@ model IndexNowSite {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
-/** IndexNow submission log: queued URLs, then the result of the (batched) POST. */
+/**
+ * IndexNow submission log: queued URLs, then the result of the (batched) POST.
+ */
 model IndexNowSubmission {
   id             String    @id @default(cuid())
   organizationId String
@@ -965,7 +1009,9 @@ model IndexNowSubmission {
 }
 
 // ---- Alerts + report builder (agent 3) ----
-/** Per-project alert rules, channels, recipients and digest choice (src/lib/alerts/config.ts). Absent = defaults (all on). */
+/**
+ * Per-project alert rules, channels, recipients and digest choice (src/lib/alerts/config.ts). Absent = defaults (all on).
+ */
 model AlertSettings {
   id             String   @id @default(cuid())
   organizationId String
@@ -980,7 +1026,9 @@ model AlertSettings {
   @@index([organizationId])
 }
 
-/** One alert that fired (history + 24h de-duplication + daily digest queue). */
+/**
+ * One alert that fired (history + 24h de-duplication + daily digest queue).
+ */
 model AlertEvent {
   id             String    @id @default(cuid())
   organizationId String
@@ -1004,7 +1052,9 @@ model AlertEvent {
   @@index([status, createdAt])
 }
 
-/** Saved client-report layout (sections + order, intro, agency notes, date range). projectId null = organization default. */
+/**
+ * Saved client-report layout (sections + order, intro, agency notes, date range). projectId null = organization default.
+ */
 model ReportTemplate {
   id             String   @id @default(cuid())
   organizationId String
@@ -1027,7 +1077,9 @@ model ReportTemplate {
 }
 
 // ---- Paid-data features (DataForSEO): shared usage ledger ----
-/** One row per DataForSEO call: what it was for, plan units used and the provider-reported cost. Read for monthly allowances. */
+/**
+ * One row per DataForSEO call: what it was for, plan units used and the provider-reported cost. Read for monthly allowances.
+ */
 model DataForSeoUsage {
   id             String   @id @default(cuid())
   organizationId String
@@ -1044,25 +1096,27 @@ model DataForSeoUsage {
 }
 
 // ---- Rank tracker (DataForSEO SERP) ----
-/** A keyword the customer tracks on Google for one location + device. Checked on the plan's schedule (src/lib/rank-tracker). */
+/**
+ * A keyword the customer tracks on Google for one location + device. Checked on the plan's schedule (src/lib/rank-tracker).
+ */
 model TrackedKeyword {
-  id             String    @id @default(cuid())
-  organizationId String
-  projectId      String
-  keyword        String // normalised (lower-case, single spaces)
-  locationId     String    @default("in") // id from src/lib/dataforseo/locations.ts
-  device         String    @default("mobile") // mobile | desktop
-  language       String    @default("en") // en | hi
-  active         Boolean   @default(true)
-  createdById    String?
-  lastCheckedAt  DateTime?
-  lastPosition   Int? // null = not in the top 100 (or never checked: see lastCheckedAt)
-  bestPosition   Int?
-  lastUrl        String? // copies of the latest check, so the table needs no per-keyword history query
-  lastFeatures   Json?
+  id              String    @id @default(cuid())
+  organizationId  String
+  projectId       String
+  keyword         String // normalised (lower-case, single spaces)
+  locationId      String    @default("in") // id from src/lib/dataforseo/locations.ts
+  device          String    @default("mobile") // mobile | desktop
+  language        String    @default("en") // en | hi
+  active          Boolean   @default(true)
+  createdById     String?
+  lastCheckedAt   DateTime?
+  lastPosition    Int? // null = not in the top 100 (or never checked: see lastCheckedAt)
+  bestPosition    Int?
+  lastUrl         String? // copies of the latest check, so the table needs no per-keyword history query
+  lastFeatures    Json?
   lastCompetitors Json?
-  lastError      String?
-  createdAt      DateTime  @default(now())
+  lastError       String?
+  createdAt       DateTime  @default(now())
 
   project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   checks  RankCheck[]
@@ -1072,7 +1126,9 @@ model TrackedKeyword {
   @@index([projectId, active, lastCheckedAt])
 }
 
-/** One Google check of a tracked keyword: our position (null = not in the top 100), the ranking URL, SERP features and who is above us. */
+/**
+ * One Google check of a tracked keyword: our position (null = not in the top 100), the ranking URL, SERP features and who is above us.
+ */
 model RankCheck {
   id               String   @id @default(cuid())
   organizationId   String
@@ -1090,7 +1146,9 @@ model RankCheck {
   @@index([organizationId, checkedAt])
 }
 
-/** Per-project rank tracker state: paused when the monthly allowance is used up, and the once-a-day "Check now". */
+/**
+ * Per-project rank tracker state: paused when the monthly allowance is used up, and the once-a-day "Check now".
+ */
 model RankTrackerState {
   id                String    @id @default(cuid())
   organizationId    String
@@ -1121,7 +1179,9 @@ model ResearchCache {
   @@index([kind, fetchedAt])
 }
 
-/** Per-organization history of keyword / SERP lookups ("Recent searches"). The result itself lives in ResearchCache. */
+/**
+ * Per-organization history of keyword / SERP lookups ("Recent searches"). The result itself lives in ResearchCache.
+ */
 model ResearchSearch {
   id             String   @id @default(cuid())
   organizationId String
@@ -1172,7 +1232,9 @@ model CompetitorSnapshot {
 }
 
 // ---- Backlinks + link gap (DataForSEO Backlinks API) ----
-/** Backlink monitoring state per project: created on the first refresh; the scheduler refreshes it per plan. */
+/**
+ * Backlink monitoring state per project: created on the first refresh; the scheduler refreshes it per plan.
+ */
 model BacklinkMonitor {
   id             String    @id @default(cuid())
   organizationId String
@@ -1189,7 +1251,9 @@ model BacklinkMonitor {
   @@index([organizationId])
 }
 
-/** One paid backlink refresh: headline numbers as columns (trend) + parsed lists as JSON (src/lib/backlinks/parse.ts). */
+/**
+ * One paid backlink refresh: headline numbers as columns (trend) + parsed lists as JSON (src/lib/backlinks/parse.ts).
+ */
 model BacklinkSnapshot {
   id               String   @id @default(cuid())
   organizationId   String
@@ -1207,7 +1271,9 @@ model BacklinkSnapshot {
   @@index([organizationId, projectId, createdAt])
 }
 
-/** One link-gap lookup: sites linking to competitors but not to the project's domain (domain_intersection). */
+/**
+ * One link-gap lookup: sites linking to competitors but not to the project's domain (domain_intersection).
+ */
 model LinkGapReport {
   id             String   @id @default(cuid())
   organizationId String
@@ -1226,7 +1292,9 @@ model LinkGapReport {
 
 // ---- GST invoices ----
 
-/** Customer billing details printed on GST invoices (one per organization; owner/admin edit). */
+/**
+ * Customer billing details printed on GST invoices (one per organization; owner/admin edit).
+ */
 model BillingDetails {
   id             String   @id @default(cuid())
   organizationId String   @unique
@@ -1241,7 +1309,9 @@ model BillingDetails {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
-/** One invoice per captured Razorpay payment (subscription charge or top-up). Amounts in paise. */
+/**
+ * One invoice per captured Razorpay payment (subscription charge or top-up). Amounts in paise.
+ */
 model Invoice {
   id                String   @id @default(cuid())
   number            String   @unique // e.g. MWR/2026-27/000123
@@ -1270,7 +1340,9 @@ model Invoice {
   @@index([organizationId, paidAt])
 }
 
-/** Sequential invoice numbers per Indian financial year (incremented inside the invoice transaction). */
+/**
+ * Sequential invoice numbers per Indian financial year (incremented inside the invoice transaction).
+ */
 model InvoiceCounter {
   financialYear String   @id // "2026-27"
   lastNumber    Int      @default(0)
@@ -1279,7 +1351,9 @@ model InvoiceCounter {
 
 // ---- AI-answer top-up packs (one-time purchases; Agent P2) ----
 
-/** One Razorpay ORDER for a top-up pack. Created when checkout opens; marked paid ONLY by the signed webhook. */
+/**
+ * One Razorpay ORDER for a top-up pack. Created when checkout opens; marked paid ONLY by the signed webhook.
+ */
 model TopUpOrder {
   id                String    @id @default(cuid())
   organizationId    String
@@ -1306,7 +1380,9 @@ model TopUpOrder {
   @@index([organizationId, createdAt])
 }
 
-/** Extra AI answers granted by a paid top-up order. Use is settled per closed month (TopUpSettlement). */
+/**
+ * Extra AI answers granted by a paid top-up order. Use is settled per closed month (TopUpSettlement).
+ */
 model TopUpPack {
   id                String    @id @default(cuid())
   organizationId    String
@@ -1331,7 +1407,9 @@ model TopUpPack {
   @@index([settledThrough])
 }
 
-/** One closed month's extra-answer use for an organization (idempotency marker + audit trail). */
+/**
+ * One closed month's extra-answer use for an organization (idempotency marker + audit trail).
+ */
 model TopUpSettlement {
   id             String   @id @default(cuid())
   organizationId String
@@ -1347,4 +1425,50 @@ model TopUpSettlement {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, month])
+}
+
+/**
+ * One run of the free check or a free public tool (admin "Free tool usage" page + team alert emails).
+ */
+model ToolUse {
+  id           String   @id @default(cuid())
+  tool         String // free-check | meta-tag-checker | faq-generator | ...
+  url          String?
+  /**
+   * Short summary of non-URL input (keyword / topic), clipped.
+   */
+  input        String?
+  ok           Boolean  @default(true)
+  status       Int      @default(200)
+  errorCode    String?
+  score        Int?
+  /**
+   * AI spend for this run, in USD micros (0 for tools that make no AI call).
+   */
+  aiCostMicros Int      @default(0)
+  aiModel      String?
+  durationMs   Int      @default(0)
+  ipHash       String?
+  /**
+   * Signed-in MyWebRank user who ran it, if any.
+   */
+  userId       String?
+  userEmail    String?
+  /**
+   * Email the visitor left for their result (free check).
+   */
+  email        String?
+  leadId       String?
+  device       String?
+  browser      String?
+  country      String?
+  language     String?
+  referrer     String?
+  alerted      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tool, createdAt])
+  @@index([ipHash, tool, createdAt])
+  @@index([leadId])
 }

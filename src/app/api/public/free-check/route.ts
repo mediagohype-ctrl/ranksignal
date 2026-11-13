@@ -11,6 +11,7 @@ import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/valida
 import { FreeCheckError, runFreeCheck } from "@/lib/free-check/run";
 import { recordLead } from "@/lib/admin/leads";
 import { topFixMessage } from "@/lib/admin/lead-followup";
+import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ const bodySchema = z.object({
   turnstileToken: z.string().max(4096).optional(),
 });
 
-export const POST = handler(async (req: Request) => {
+export const POST = handler(withToolUsage("free-check", async (req: Request) => {
   const body = await parseBody(req, bodySchema);
   // Cheap syntax check first so a typo doesn't use up one of the visitor's checks.
   if (!normalizeInputUrl(body.url)) throw new HttpError(400, "invalid_url", "Enter a website address like example.com.");
@@ -42,6 +43,7 @@ export const POST = handler(async (req: Request) => {
     throw new HttpError(429, "rate_limited", message, { retryAfterSec: limit.retryAfterSec });
   }
 
+  setToolUsage({ url: body.url.trim() });
   const valid = await validateFreeCheckUrl(body.url);
   if (!valid.ok) throw new HttpError(400, valid.code, valid.message);
 
@@ -51,9 +53,10 @@ export const POST = handler(async (req: Request) => {
       recordLead({ source: "free_check", url: item.url, score: item.overall.score, message: topFixMessage(item.issues[0]?.title), ip }),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), LEAD_WAIT_MS)),
     ]);
+    setToolUsage({ url: item.url, score: item.overall.score, leadId });
     return json({ item: { ...item, leadId } }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof FreeCheckError) throw new HttpError(e.code === "blocked_url" ? 400 : 422, e.code, e.message);
     throw e;
   }
-});
+}));

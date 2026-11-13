@@ -3,6 +3,7 @@
 // 20/IP/hour (400/hour overall), no DB writes, no LLM calls.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody } from "@/lib/api";
+import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
 import { clientIp } from "@/lib/auth/rate-limit";
 import { checkPageToolLimit } from "@/lib/free-check/limits";
 import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/validate";
@@ -16,8 +17,9 @@ export const maxDuration = 30;
 const TOOL = "ai-crawler-checker";
 const bodySchema = z.object({ url: z.string().max(2048) });
 
-export const POST = handler(async (req: Request) => {
+export const POST = handler(withToolUsage("ai-crawler-checker", async (req: Request) => {
   const body = await parseBody(req, bodySchema);
+  setToolUsage({ url: body.url.trim() });
   if (!normalizeInputUrl(body.url)) throw new HttpError(400, "invalid_url", "Enter a website address like example.com.");
 
   const limit = checkPageToolLimit(TOOL, clientIp(req));
@@ -51,4 +53,4 @@ export const POST = handler(async (req: Request) => {
     xRobotsTag: home ? home.headers.get("x-robots-tag") : null,
   });
   return json({ result: { site, homeUrl: home?.finalUrl ?? `${site}/`, ...report } }, { headers: { "Cache-Control": "no-store" } });
-});
+}));

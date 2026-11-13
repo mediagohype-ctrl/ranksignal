@@ -6,6 +6,7 @@ import { clientIp } from "@/lib/auth/rate-limit";
 import { db } from "@/lib/db";
 import { checkFreeCheckEmailLimit } from "@/lib/free-check/limits";
 import { decideLeadEmail, leadEmailSchema } from "@/lib/free-check/lead-email";
+import { noteToolUseEmail } from "@/lib/admin/tool-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,9 @@ export const POST = handler(async (req: Request) => {
   if (!decision.ok) {
     throw new HttpError(404, "check_not_found", "We couldn't find this check any more. Run the free check again, then add your email.");
   }
-  if (decision.changed) await db.lead.update({ where: { id: body.leadId }, data: { email: body.email } });
+  if (decision.changed) {
+    await db.lead.update({ where: { id: body.leadId }, data: { email: body.email } });
+    void noteToolUseEmail(body.leadId, body.email); // team alert: warm lead
+  }
   return json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 });
