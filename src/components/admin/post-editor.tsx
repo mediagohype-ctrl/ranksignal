@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { CheckCircle2, CircleAlert, CircleX, Eye, Plus, Save, Send, Trash2, Undo2, Upload, X } from "lucide-react";
-import { Badge, Button, Field, Input, Notice, Textarea, useToast, type Tone } from "@/components/ui";
+import { CheckCircle2, CircleAlert, CircleX, Eye, ListChecks, Plus, Save, Send, Trash2, Undo2, Upload, X } from "lucide-react";
+import { Badge, Button, Dialog, Field, Input, Notice, Textarea, useToast, type Tone } from "@/components/ui";
 import { Markdown } from "@/components/marketing/markdown";
 import { parseMarkdown, slugify } from "@/lib/content/markdown";
 import { scorePost, type Pillar } from "@/lib/content/score";
@@ -25,6 +25,8 @@ const MAX_KEYWORDS = 15;
 
 const scoreTone = (s: number): Tone => (s >= 75 ? "success" : s >= 50 ? "warning" : "danger");
 const PILLAR_NAME: Record<Pillar, string> = { seo: "SEO", aeo: "AEO", geo: "GEO" };
+/** Sort order in the checks popup: missing first, then "improve", then passing. */
+const STATE_ORDER = { fail: 0, warn: 1, pass: 2 } as const;
 
 export function PostEditor({
   initial,
@@ -58,6 +60,8 @@ export function PostEditor({
       ),
     [p, blocks],
   );
+  const [checksOpen, setChecksOpen] = useState(false);
+  const toFix = score.checks.filter((c) => c.state !== "pass");
 
   /** Keywords incl. one typed but not yet committed with Enter; case-insensitive de-dupe, max ${MAX_KEYWORDS}. */
   function keywordList() {
@@ -371,32 +375,66 @@ export function PostEditor({
           <p className="text-xs text-muted">
             {score.stats.words} words · {score.stats.readingMinutes} min read · {score.stats.internalLinks} internal / {score.stats.externalLinks} outside links
           </p>
-          {(Object.keys(score.pillars) as Pillar[]).map((pillar) => (
-            <div key={pillar}>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-muted">{PILLAR_NAME[pillar]}</p>
-              <ul className="space-y-1.5">
-                {score.checks
-                  .filter((c) => c.pillar === pillar)
-                  .map((c) => (
-                    <li key={c.id} className="flex gap-2 text-xs" title={c.tip}>
+          {toFix.length > 0 ? (
+            <p className="flex items-center gap-1.5 text-small text-fg">
+              <CircleAlert aria-hidden className="size-4 shrink-0 text-warning" />
+              {toFix.length} {toFix.length === 1 ? "thing" : "things"} to improve
+            </p>
+          ) : (
+            <p className="flex items-center gap-1.5 text-small text-fg">
+              <CheckCircle2 aria-hidden className="size-4 shrink-0 text-success" /> Every check passes
+            </p>
+          )}
+          <Button variant="secondary" fullWidth icon={<ListChecks />} onClick={() => setChecksOpen(true)}>
+            See all checks
+          </Button>
+        </div>
+      </aside>
+
+      <Dialog
+        open={checksOpen}
+        onClose={() => setChecksOpen(false)}
+        title={`Content score · ${score.overall}/100`}
+        description={`${score.stats.words} words · ${score.stats.readingMinutes} min read · ${score.stats.internalLinks} internal / ${score.stats.externalLinks} outside links. Updates live as you edit.`}
+        size="xl"
+        icon={<ListChecks />}
+      >
+        <div className="grid gap-6 md:grid-cols-3">
+          {(Object.keys(score.pillars) as Pillar[]).map((pillar) => {
+            const checks = score.checks
+              .filter((c) => c.pillar === pillar)
+              // Things to fix first, then the ones that already pass.
+              .sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
+            return (
+              <section key={pillar} aria-labelledby={`checks-${pillar}`} className="space-y-3">
+                <div className="flex items-center justify-between border-b border-border pb-2">
+                  <h3 id={`checks-${pillar}`} className="text-small font-semibold text-fg">
+                    {PILLAR_NAME[pillar]}
+                  </h3>
+                  <Badge tone={scoreTone(score.pillars[pillar])}>{score.pillars[pillar]}/100</Badge>
+                </div>
+                <ul className="space-y-2.5">
+                  {checks.map((c) => (
+                    <li key={c.id} className="flex gap-2 text-small">
                       {c.state === "pass" ? (
-                        <CheckCircle2 aria-label="Pass" className="size-3.5 shrink-0 text-success" />
+                        <CheckCircle2 aria-label="Pass" className="mt-0.5 size-4 shrink-0 text-success" />
                       ) : c.state === "warn" ? (
-                        <CircleAlert aria-label="Improve" className="size-3.5 shrink-0 text-warning" />
+                        <CircleAlert aria-label="Improve" className="mt-0.5 size-4 shrink-0 text-warning" />
                       ) : (
-                        <CircleX aria-label="Missing" className="size-3.5 shrink-0 text-danger" />
+                        <CircleX aria-label="Missing" className="mt-0.5 size-4 shrink-0 text-danger" />
                       )}
                       <span className={c.state === "pass" ? "text-fg-soft" : "text-fg"}>
                         {c.label}
-                        {c.state !== "pass" && <span className="block text-muted">{c.tip}</span>}
+                        {c.state !== "pass" && <span className="mt-0.5 block text-xs text-muted">{c.tip}</span>}
                       </span>
                     </li>
                   ))}
-              </ul>
-            </div>
-          ))}
+                </ul>
+              </section>
+            );
+          })}
         </div>
-      </aside>
+      </Dialog>
     </div>
   );
 }
