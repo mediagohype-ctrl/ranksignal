@@ -20,10 +20,10 @@ export function SampleTag({ className }: { className?: string }) {
 }
 
 const PILLARS = [
-  { label: "SEO", score: 78 },
-  { label: "AEO", score: 54 },
-  { label: "GEO", score: 41 },
-  { label: "Brand", score: 86 },
+  { label: "SEO", plain: "Google Score", score: 78 },
+  { label: "AEO", plain: "Answer Score", score: 54 },
+  { label: "GEO", plain: "AI Score", score: 41 },
+  { label: "Brand", plain: "Trust Score", score: 86 },
 ] as const;
 
 /** Hero: an AI answer card overlapping a compact report card. */
@@ -79,7 +79,10 @@ export function HeroComposition() {
           <ul className="min-w-0 flex-1 space-y-2.5">
             {PILLARS.map((p) => (
               <li key={p.label} className="grid grid-cols-[6.25rem_1fr_1.75rem] items-center gap-2 text-xs">
-                <span className="font-medium text-fg">{p.label}</span>
+                <span className="leading-tight">
+                <span className="block font-medium text-fg">{p.label}</span>
+                <span className="block text-[11px] text-muted">{p.plain}</span>
+              </span>
                 <Meter value={p.score} max={100} label={`Sample ${p.label} score`} tone="score" size="sm" />
                 <span className="text-right tabular-nums text-fg-soft">{p.score}</span>
               </li>

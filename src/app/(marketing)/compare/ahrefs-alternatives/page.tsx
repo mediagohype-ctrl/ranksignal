@@ -133,7 +133,7 @@ const OPTIONS: { name: string; from: string; best: string; body: string }[] = [
     name: "MyWebRank",
     from: `From ${OUR.fromPrice}/month (INR)`,
     best: "Best for Indian small businesses that want problems fixed, and to know what AI assistants say about them.",
-    body: "A weekly website check, AI tracking in every plan and fixes published after your OK, with undo. No backlink, keyword or rank data.",
+    body: `A weekly website check, AI answer tracking and fixes after your OK (one-click with undo on WordPress). ${OUR.dfy.name} from ${OUR.serviceFrom} a month if our team should do the work. No backlink, keyword or rank data.`,
   },
 ];
 
@@ -183,8 +183,7 @@ const FAQ: Qa[] = [
     a: (
       <>
         SE Ranking includes 25 AI prompts a day on Core. Semrush includes AI tracking from its $199 Starter plan. MyWebRank
-        includes it in every plan, across {OUR.starter.ai.engines} AI assistants on Starter and {OUR.growth.ai.engines} on
-        Growth and Agency.
+        includes it on {OUR.self.name}: {OUR.engines}, with {OUR.self.ai.answersPerMonth} AI answers a month.
       </>
     ),
   },
@@ -251,8 +250,8 @@ export default function AhrefsAlternativesPage() {
             It also has a free plan and a $29 Starter plan.
           </p>
           <p className="mt-4">
-            Where MyWebRank is better: a plain-English to-do list, AI tracking in every plan, fixes published only after your
-            OK with undo, a done-for-you service from {OUR.serviceFrom} a month, rupee pricing with GST invoices and support
+            Where MyWebRank is better: a plain-English to-do list, AI answer tracking, fixes only after your OK
+            (one-click with undo on WordPress), {OUR.dfy.name} at {OUR.serviceFrom} a month with no setup fee, rupee pricing with GST invoices and support
             from India. See{" "}
             <Link href="/compare/ahrefs" className="font-medium text-primary underline-offset-4 hover:underline">
               MyWebRank vs Ahrefs
@@ -272,7 +271,7 @@ export default function AhrefsAlternativesPage() {
           {
             situation: "You want your site fixed, not more reports",
             pick: "MyWebRank",
-            why: "Plain-English to-dos, and fixes you approve go live on your site with undo.",
+            why: "Plain-English to-dos, and fixes after your OK: one-click with undo on WordPress, drafts or copy-paste steps elsewhere.",
           },
           {
             situation: "You want to know whether ChatGPT recommends you",

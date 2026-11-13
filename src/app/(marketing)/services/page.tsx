@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { ProofLine } from "@/components/marketing/proof-line";
 import { JsonLd, inkPill } from "@/components/marketing/ui";
-import { SERVICE_FROM_PRICE, SERVICE_TIERS, inr, servicesContactHref } from "@/components/marketing/plans";
+import { CUSTOM_CONTACT_HREF, DFY_PLAN, gstOn, inr, priceNote, servicesContactHref, newTabProps } from "@/components/marketing/plans";
 import {
   DeliveryComposition,
   FaqList,
@@ -16,7 +17,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 
 const TITLE = "SEO, AEO & GEO Services in India — done-for-you SEO company";
-const DESCRIPTION = `Done-for-you SEO, AEO and GEO services from an India-based team: we fix your website, Google Business Profile and listings every month so Google and ChatGPT can find and quote you, with a monthly proof report. From ${inr(SERVICE_FROM_PRICE)}/month plus GST.`;
+const DESCRIPTION = `Done-for-you SEO, AEO and GEO services from an India-based team: we fix your website, Google Business Profile and listings every month so Google and ChatGPT can find and quote you, with a monthly proof report. ${DFY_PLAN.name}: ${inr(DFY_PLAN.price)}/month${gstOn() ? " plus GST" : ""}, no setup fee, ${DFY_PLAN.termNote}.`;
 
 // TITLE / DESCRIPTION above describe the Service in JSON-LD; the search snippet lives in src/lib/seo/pages.ts.
 export const metadata: Metadata = staticPageMetadata("/services");
@@ -79,12 +80,12 @@ const PROMISES = [
     body: "You get a live dashboard and a list of every edit we make, with one-click undo for changes on your connected website.",
   },
   {
-    title: "Short minimums, then 30 days’ notice",
-    body: "Three or six months to give the work a fair chance, then month to month. Leave with 30 days’ notice, no exit fees.",
+    title: "Three months, then 30 days’ notice",
+    body: "Three months to give the work a fair chance, then month to month. No setup fee. Leave with 30 days’ notice, no exit fees.",
   },
   {
-    title: "A delivery guarantee",
-    body: "If we don’t ship the fixes we promised for a month, you get 25% of that month’s fee back. Delays caused by waiting on access or approvals don’t count.",
+    title: "You own everything we create",
+    body: "Every page, article and listing we make is yours to keep, even if you leave.",
   },
   {
     title: "No promises about Google or AI positions. Ever.",
@@ -99,27 +100,29 @@ const FAQ = [
   },
   {
     q: "Do you promise a top Google spot or mentions in ChatGPT?",
-    a: "No. Nobody controls what Google or AI assistants show, and anyone who promises a position is guessing. We guarantee the work: if we don't make the fixes promised for a month, you get 25% of that month's fee back.",
+    a: "No. Nobody controls what Google or AI assistants show, and anyone who promises a position is guessing. We promise the work, and show you every result in your monthly report.",
   },
   {
     q: "What do you need from me?",
     a: "Access to your website and a manager role on your Google Business Profile, about an hour in the first two weeks to agree the customer questions, and quick approvals for anything that changes what your business says publicly.",
   },
   {
-    q: "What does the setup fee cover?",
-    a: "The first check, research into the questions your customers ask, setting up AI checks on five AI assistants, and the first month's fix plan. It is charged once.",
+    q: "Is there a setup fee?",
+    a: "No. You pay the monthly fee only. The first check, the customer questions and the first month's fix plan are part of it.",
   },
   {
-    q: "What happens after the minimum term?",
-    a: "Your plan continues month to month. You can change tier or leave with 30 days' notice. You keep all the content, accounts and reports.",
+    q: "What happens after the first three months?",
+    a: "Your plan continues month to month. You can leave with 30 days' notice. You keep all the content, accounts and reports.",
   },
   {
-    q: "Is Reddit and forum participation honest?",
-    a: "Yes. On Authority, our team only joins conversations where your business is genuinely relevant, and always discloses who we represent. No fake reviews, no sock-puppet accounts.",
+    q: "I have many websites, brands or cities. Can you help?",
+    a: "Yes. Talk to us about a Custom plan: many websites, brands or cities, a dedicated team, reports with your logo for agencies, and API and dashboard access.",
   },
   {
     q: "Are prices inclusive of GST?",
-    a: "No. All prices are in Indian rupees and exclude GST, which is added at the applicable rate.",
+    a: gstOn()
+      ? "No. All prices are in Indian rupees and exclude GST, which is added at the applicable rate."
+      : "All prices are in Indian rupees. We are not GST-registered yet, so no GST is added.",
   },
 ];
 
@@ -139,29 +142,20 @@ export default function ServicesPage() {
         name: BRAND.name,
         url: SITE,
       },
-      offers: SERVICE_TIERS.map((t) => ({
+      offers: {
         "@type": "Offer",
-        name: `${t.name} (done-for-you)`,
+        name: `${DFY_PLAN.name} (done-for-you)`,
         url: `${SITE}/services#plans`,
         priceCurrency: "INR",
-        price: String(t.price),
-        priceSpecification: [
-          {
-            "@type": "UnitPriceSpecification",
-            price: String(t.price),
-            priceCurrency: "INR",
-            unitCode: "MON",
-            valueAddedTaxIncluded: false,
-          },
-          {
-            "@type": "UnitPriceSpecification",
-            name: "One-time setup",
-            price: String(t.setup),
-            priceCurrency: "INR",
-            valueAddedTaxIncluded: false,
-          },
-        ],
-      })),
+        price: String(DFY_PLAN.price),
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          price: String(DFY_PLAN.price),
+          priceCurrency: "INR",
+          unitCode: "MON",
+          valueAddedTaxIncluded: false,
+        },
+      },
     },
     {
       "@context": "https://schema.org",
@@ -207,8 +201,10 @@ export default function ServicesPage() {
                   <ArrowRight aria-hidden size={17} />
                 </Link>
               </div>
-              <p className="mt-8 text-small text-muted">
-                From {inr(SERVICE_FROM_PRICE)} a month, plus GST. You own every account and every word.
+              <ProofLine className="mt-8" />
+              <p className="mt-3 text-small text-muted">
+                {DFY_PLAN.name}: {inr(DFY_PLAN.price)} a month{gstOn() ? ", plus GST" : ""}. No setup fee. You own every account
+                and every word.
               </p>
             </div>
             <div className="mk-rise mk-delay-3 min-w-0 lg:col-span-5 lg:col-start-8 lg:pt-6">
@@ -266,24 +262,32 @@ export default function ServicesPage() {
         <div className="container-marketing">
           <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
             <div className="lg:col-span-7">
-              <p className="mk-label">Plans</p>
+              <p className="mk-label">Price</p>
               <h2 id="plans-title" className="mk-statement mt-5 max-w-[14ch] text-fg">
-                Three ways to hand it over.
+                One plan. We do the work.
               </h2>
             </div>
             <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              Every plan includes the live dashboard, a list of every edit and a monthly report.
+              It includes the live dashboard, a list of every edit and a monthly report. Bigger needs?{" "}
+              <Link
+                href={CUSTOM_CONTACT_HREF}
+                {...newTabProps(CUSTOM_CONTACT_HREF)}
+                className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+              >
+                Talk to us about Custom
+              </Link>
+              .
             </p>
           </div>
-          <ServiceTierCards className="mt-16 lg:mt-20" />
+          <ServiceTierCards withCustom className="mt-16 lg:mt-20" />
           <p className="mt-8 max-w-3xl text-small text-muted">
-            Prices in Indian rupees, excluding GST. Setup is charged once. After the minimum term, plans run month to month with
+            {priceNote()} No setup fee. After the first {DFY_PLAN.minimumMonths} months, the plan runs month to month with
             30 days&apos; notice. Prefer to do the work yourself?{" "}
             <Link
               href="/pricing#software"
               className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
             >
-              See the self-serve plans
+              See Do it myself
             </Link>
             .
           </p>
@@ -419,7 +423,7 @@ export default function ServicesPage() {
           label: "Book a free strategy call",
         }}
         secondary={{ href: "/free-check", label: "Start with a free check" }}
-        footnote="Prices in Indian rupees, excluding GST. We promise the work, never a Google or AI position."
+        footnote={`${priceNote()} We promise the work, never a Google or AI position.`}
       />
     </>
   );

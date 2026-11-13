@@ -306,7 +306,7 @@ export const FEATURES: Feature[] = [
     details: [
       "A monthly report that shows what changed, how many answers each number is based on, and the fixes made that month.",
       "Emails when a website check or AI check is done, or when a fix is waiting for your OK.",
-      "Agency plan: reports and emails with your own name, logo and colour.",
+      "Custom plan: reports and emails with your own name, logo and colour.",
     ],
   },
   {
@@ -353,7 +353,7 @@ export const FEATURES: Feature[] = [
     summary: "Build client reports from the sections you choose, and see every client website on one screen.",
     details: [
       "Pick sections — summary, scores, fixes done, open problems, AI mentions, competitors, Search Console, page speed, your own notes — and save them as a template.",
-      "Share a report as a private link or print it to PDF, with your own logo on the Agency plan.",
+      "Share a report as a private link or print it to PDF, with your own logo on a Custom plan.",
       "Portfolio: every website in your account in one table, with scores, changes and what's waiting for you.",
     ],
   },

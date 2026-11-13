@@ -7,7 +7,7 @@ import { breadcrumbLd, faqLdFromQa, siteUrl, webPageLd } from "@/lib/seo/schema"
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { ENGINES, FinalCta, JsonLd, PageHero, Section } from "@/components/marketing/ui";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
-import { SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, inrGst, num } from "@/components/marketing/plans";
+import { CUSTOM_CONTACT_HREF, CUSTOM_PLAN, DFY_PLAN, TRIAL_DAYS, gstOn, inr, inrGst, num, newTabProps } from "@/components/marketing/plans";
 import { DifferenceStrip } from "@/components/marketing/showcase/difference-strip";
 
 // Title and description live in src/lib/seo/pages.ts (length- and uniqueness-tested).
@@ -69,7 +69,7 @@ export default function AboutPage() {
           </h2>
           <p className="mt-4 text-body leading-relaxed text-fg-soft">
             We explain every problem in plain English, we change your website only after you approve, with an undo, we
-            track what AI assistants like {engineList} say about you, and our prices are in Indian rupees, starting at{" "}
+            track what AI assistants like {engineList} say about you, and our prices are in Indian rupees: {starter.name} is{" "}
             {inrGst(starter.priceInrMonthly ?? 0)} a month.
           </p>
         </div>
@@ -131,20 +131,26 @@ export default function AboutPage() {
             <ul className="mt-4 list-disc space-y-2 pl-5">
               <li>
                 <strong className="font-semibold text-fg">Website audits:</strong> on the {starter.name} plan, each website
-                check reads up to {num(starter.maxPagesPerCrawl)} pages; the Growth plan reads up to{" "}
-                {num(PLANS.growth.maxPagesPerCrawl)} and the Agency plan up to {num(PLANS.agency.maxPagesPerCrawl)}.
+                check reads up to {num(starter.maxPagesPerCrawl)} pages. Bigger sites can ask about a{" "}
+                <Link href={CUSTOM_CONTACT_HREF} {...newTabProps(CUSTOM_CONTACT_HREF)}>Custom plan</Link>.
               </li>
               <li>
                 <strong className="font-semibold text-fg">AI visibility tracking:</strong> we ask your customers&apos;
                 questions to up to {ENGINES.length} AI assistants and record whether you are named, cited or left out.
               </li>
               <li>
-                <strong className="font-semibold text-fg">Software plans:</strong> paid plans start at{" "}
-                {inrGst(starter.priceInrMonthly ?? 0)} a month, and you can try the product free for {TRIAL_DAYS} days first.
+                <strong className="font-semibold text-fg">Do it myself:</strong> the software is{" "}
+                {inrGst(starter.priceInrMonthly ?? 0)} a month, and you can try it free for {TRIAL_DAYS} days first, no card
+                needed.
               </li>
               <li>
-                <strong className="font-semibold text-fg">Done-for-you service:</strong> our team does the work for you,
-                from {inr(SERVICE_FROM_PRICE)} a month excluding GST. See <Link href="/services">services</Link>.
+                <strong className="font-semibold text-fg">{DFY_PLAN.name}:</strong> our team does the work for you, for{" "}
+                {inrGst(DFY_PLAN.price)} a month with no setup fee. See <Link href="/services">services</Link>.
+              </li>
+              <li>
+                <strong className="font-semibold text-fg">{CUSTOM_PLAN.name}:</strong> for many websites, brands or cities,
+                agencies that want reports with their logo, or API and dashboard access.{" "}
+                <Link href={CUSTOM_CONTACT_HREF} {...newTabProps(CUSTOM_CONTACT_HREF)}>Talk to us</Link>.
               </li>
             </ul>
           </div>

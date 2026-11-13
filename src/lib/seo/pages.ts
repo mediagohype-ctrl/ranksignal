@@ -6,7 +6,7 @@
 // - `description` must be 120–155 characters and unique.
 // - `updated` (YYYY-MM-DD) is the last real content change: it feeds the sitemap lastmod, WebPage.dateModified
 //   and the visible freshness signals. Bump it when you change a page's copy — never set it to "today" on every request.
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, inr, inrGst, priceNote } from "@/components/marketing/plans";
+import { DFY_PLAN, SELF_PLAN, TRIAL_DAYS, inr, inrGst, priceNote } from "@/components/marketing/plans";
 
 export interface PageSeo {
   title: string;
@@ -30,15 +30,14 @@ export interface PageSeo {
 
 const TODAY = "2026-11-09";
 const LEGAL = "2026-11-04";
-const SOFTWARE_FROM = Math.min(...MARKETING_PLANS.map((p) => p.price));
 
 export const PAGE_SEO = {
   "/": {
-    title: "SEO, AEO & GEO Checker and AI Visibility Report",
+    title: "Free SEO & AI Visibility Checker",
     description:
-      "Free website SEO report in 30 seconds. See how Google, ChatGPT, Gemini and Perplexity see your business and get your top SEO, AEO and GEO fixes.",
+      "See if Google and ChatGPT can find your business. Get your free Found Score and 3 easy fixes in 30 seconds. No sign-up needed.",
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/features": {
     title: "SEO Audit & AI Visibility Tracking Features",
@@ -48,37 +47,37 @@ export const PAGE_SEO = {
     updated: TODAY,
   },
   "/how-it-works": {
-    title: "How It Works: SEO, AEO & GEO Audit to Fixes",
+    title: "How It Works: Check, Fix, Grow Every Month",
     description:
-      "How MyWebRank works: add your site, we check it for Google and AI, you get a plain to-do list, approve each fix, and we check again — with undo.",
+      "We check your site, you approve each fix, and we report what changed every month. Every change can be undone in one click. Start free.",
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/services": {
-    title: "SEO Company in India: SEO, AEO & GEO Services",
-    description: `Done-for-you SEO, AEO and GEO services from an India-based SEO company. We fix your site and listings monthly and report results. From ${inr(SERVICE_FROM_PRICE)}/mo + GST.`,
+    title: "SEO, AEO & GEO Services in India",
+    description: `Our team fixes your website, Google profile and AI visibility every month. You approve every change. From ${inrGst(DFY_PLAN.price)}/month.`,
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/pricing": {
-    title: "Pricing: SEO Software & Done-for-You SEO Plans",
-    description: `SEO software from ${inrGst(SOFTWARE_FROM)}/mo with a ${TRIAL_DAYS}-day free trial, or done-for-you SEO, AEO and GEO from ${inr(SERVICE_FROM_PRICE)}/mo. ${priceNote()}`,
+    title: `SEO Software Pricing in India from ${inr(SELF_PLAN.price)}`,
+    description: `Simple plans in rupees. Software from ${inr(SELF_PLAN.price)}/month or done-for-you SEO from ${inr(DFY_PLAN.price)}/month. ${TRIAL_DAYS}-day free trial, no setup fee.`,
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/free-check": {
-    title: "Free Website SEO Checker: SEO, AEO & GEO Report",
+    title: "Free Website SEO Checker: Google + AI Report",
     description:
-      "Free website SEO checker: scores your site for SEO, AEO and GEO in 30 seconds, shows if Google and ChatGPT can read it and lists your top fixes.",
+      "Check your website free. See your SEO, AEO, GEO and Brand scores and the 3 fixes that matter most. Takes about 30 seconds, no sign-up.",
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/tools": {
-    title: "Free SEO & AI Visibility Tools, No Sign-up",
+    title: "Free SEO Tools for Google and AI Search",
     description:
-      "15 free SEO and AI tools, no sign-up: check meta tags, headings, schema, broken links, robots.txt and sitemaps, and write titles and FAQs with AI.",
+      "Free SEO tools, no sign-up: check titles, headings, schema, broken links, robots.txt and AI crawler access in seconds, then fix what you find.",
     published: "2026-11-04",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/tools/ai-mention-checker": {
     title: "Free AI Visibility Checker: Can ChatGPT See You?",
@@ -97,9 +96,9 @@ export const PAGE_SEO = {
   "/tools/ai-guide-file-maker": {
     title: "Free llms.txt Generator for Your Website",
     description:
-      "Make an llms.txt AI guide file in two minutes: tell ChatGPT and other AI tools who you are and which pages matter most. Free, no sign-up needed.",
+      "Make an llms.txt file in 2 minutes. Tell ChatGPT and other AI tools who you are and which pages matter most. Free, and no sign-up needed.",
     published: "2026-11-04",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/tools/meta-tag-checker": {
     title: "Free Meta Title & Description Checker",
@@ -130,11 +129,11 @@ export const PAGE_SEO = {
     updated: TODAY,
   },
   "/tools/ai-crawler-checker": {
-    title: "Is My Site Blocked From AI? Free Checker",
+    title: "AI Crawler Checker: Is ChatGPT Blocked?",
     description:
-      "Free check: are ChatGPT, Gemini, Perplexity and Claude allowed to read your website? See every AI crawler your robots.txt and pages block, and fixes.",
+      "Check if ChatGPT, Gemini, Claude and Perplexity can read your website. See which AI robots are blocked. Free, no sign-up, results in seconds.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/tools/sitemap-checker": {
     title: "Free XML Sitemap Checker and Generator",
@@ -179,11 +178,11 @@ export const PAGE_SEO = {
     updated: TODAY,
   },
   "/compare/ahrefs": {
-    title: "MyWebRank vs Ahrefs: Features and Pricing",
-    description:
-      "MyWebRank vs Ahrefs compared honestly: SEO audit, AI visibility, backlinks, keyword data, fixes and pricing in INR, and which one suits your business.",
+    title: "MyWebRank vs Ahrefs: Honest Comparison (2026)",
+    absolute: true,
+    description: `Ahrefs is great for backlinks. MyWebRank finds and fixes problems and tracks AI answers, from ${inr(SELF_PLAN.price)}. See which fits you.`,
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/compare/semrush": {
     title: "MyWebRank vs Semrush: Features and Pricing",
@@ -228,18 +227,19 @@ export const PAGE_SEO = {
     updated: TODAY,
   },
   "/learn": {
-    title: "SEO, AEO & GEO Guides for Google and AI Search",
+    title: "Learn SEO, AEO & GEO in Plain Words",
     description:
-      "Free plain-English guides to SEO, AEO and GEO: how to rank on Google, get quoted in AI Overviews and get your business mentioned by ChatGPT.",
+      "Short, simple guides to get your business found on Google and named by ChatGPT, Gemini and Perplexity. Written in plain words for owners.",
     published: "2026-11-09",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/about": {
-    title: "About Us: SEO, AEO & GEO Team in India",
+    title: "About MyWebRank: SEO & AI Visibility Team in India",
+    absolute: true,
     description:
-      "Who we are: MyWebRank is a New Delhi-based SEO, AEO and GEO company that helps small businesses get found on Google and named in AI answers.",
+      "Meet the team behind MyWebRank. 10,000+ businesses served by our team. We help businesses get found on Google and named by AI like ChatGPT.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/docs": {
     title: "Getting Started Docs: Setup, WordPress & GitHub",
@@ -249,11 +249,12 @@ export const PAGE_SEO = {
     updated: TODAY,
   },
   "/contact": {
-    title: "Contact Our SEO & AI Visibility Team",
+    title: "Contact MyWebRank: Talk to a Real Person",
+    absolute: true,
     description:
-      "Contact the MyWebRank team about done-for-you SEO, agency plans for many client sites, onboarding or support. We usually reply in one business day.",
+      "Questions about plans, agencies or your report? Email, WhatsApp or book a free call. We reply within 1 working day, in English or Hindi.",
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-13",
   },
   "/privacy": {
     title: "Privacy Policy: How We Handle Your Data",
@@ -281,14 +282,14 @@ export const PAGE_SEO = {
   },
   "/hi/pricing": {
     title: "कीमतें: SEO सॉफ़्टवेयर और SEO सेवा के प्लान",
-    description: `SEO सॉफ़्टवेयर ${inrGst(SOFTWARE_FROM)}/महीने से, ${TRIAL_DAYS} दिन फ्री ट्रायल के साथ। या हमारी टीम से SEO, AEO, GEO का काम ${inr(SERVICE_FROM_PRICE)}/महीने से। ${priceNote(true)}`,
+    description: `SEO सॉफ़्टवेयर ${inrGst(SELF_PLAN.price)}/महीने, ${TRIAL_DAYS} दिन फ्री ट्रायल के साथ। या हमारी टीम से SEO, AEO, GEO का पूरा काम ${inr(DFY_PLAN.price)}/महीने। ${priceNote(true)}`,
     published: TODAY,
     updated: TODAY,
     lang: "hi-IN",
   },
   "/hi/services": {
     title: "भारत में SEO कंपनी: SEO, AEO और GEO सेवाएँ",
-    description: `भारत की SEO टीम आपकी वेबसाइट और Google लिस्टिंग हर महीने ठीक करती है और रिपोर्ट भेजती है। SEO, AEO और GEO सेवा ${inr(SERVICE_FROM_PRICE)}/महीने + GST से।`,
+    description: `भारत की SEO टीम आपकी वेबसाइट और Google लिस्टिंग हर महीने ठीक करती है और रिपोर्ट भेजती है। SEO, AEO और GEO सेवा ${inrGst(DFY_PLAN.price)}/महीने, कोई सेटअप फ़ीस नहीं।`,
     published: TODAY,
     updated: TODAY,
     lang: "hi-IN",

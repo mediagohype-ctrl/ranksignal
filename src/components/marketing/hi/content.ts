@@ -1,30 +1,120 @@
 // Hindi copy for the /hi marketing pages. Every price and limit is read from the same constants as the English
 // site (src/components/marketing/plans.ts → src/lib/billing/plans.ts), so the two languages can never disagree.
 // Product names, prices and terms like SEO, AEO, GEO, ChatGPT stay in Latin script, the way Indians write them.
-import { PLANS } from "@/lib/billing/plans";
+//
+// Public offer (Website Blueprint, Nov 2026): two priced plans + Custom.
+//   "Do it myself" (मैं ख़ुद करूँगा) = billing plan "starter", self-serve, free trial.
+//   "Do it for me" (आप कर दीजिए)     = service tier "fix", our team does the work, no setup fee.
+//   "Custom" (कस्टम — बात करें)      = big companies and agencies, no public price.
 import {
-  MARKETING_PLANS, SERVICE_FROM_PRICE, SERVICE_TIERS, TRIAL_AI, TRIAL_DAYS, inr, inrGst, num, priceNote,
+  CUSTOM_CONTACT_HREF_HI, DFY_PLAN, MARKETING_PLANS, SELF_PLAN, SERVICE_TIERS, TRIAL_AI, TRIAL_DAYS,
+  freq, inrGst, num, planSignupHref, priceNote, servicesContactHref,
   type PaidPlanId, type ServiceTierId,
 } from "@/components/marketing/plans";
 
-export const SOFTWARE_FROM = Math.min(...MARKETING_PLANS.map((p) => p.price));
+export const SOFTWARE_FROM = SELF_PLAN.price;
 
-/* ------------------------------------------------------------------ software plans */
+/* ------------------------------------------------------------------ the three public cards */
 
-const PLAN_COPY: Record<PaidPlanId, { blurb: string; cta: string }> = {
-  starter: {
-    blurb: "एक बिज़नेस के लिए, जो साफ़-साफ़ जानना चाहता है कि वह Google और AI के जवाबों में कैसा दिखता है।",
-    cta: `${TRIAL_DAYS} दिन का फ्री ट्रायल शुरू करें`,
-  },
-  growth: {
-    blurb: "बढ़ते बिज़नेस और कई वेबसाइटें संभालने वाली टीमों के लिए।",
-    cta: `${TRIAL_DAYS} दिन का फ्री ट्रायल शुरू करें`,
-  },
-  agency: {
-    blurb: "कई क्लाइंट वेबसाइटें संभालने वाली एजेंसियों के लिए।",
-    cta: "Agency प्लान लें",
-  },
+const weekly = (days: number) => (freq(days) === "Daily" ? "हर दिन" : freq(days) === "Weekly" ? "हर हफ़्ते" : "हर महीने");
+
+/** "Do it myself" highlights, mirroring SELF_PLAN.highlights with the same limits. */
+const SELF_HIGHLIGHTS = [
+  "आपका Found Score, साथ में SEO, AEO, GEO और Brand स्कोर",
+  `${weekly(SELF_PLAN.limits.minScanIntervalDays)} आपकी वेबसाइट का चेक, ${num(SELF_PLAN.limits.maxPagesPerCrawl)} पेज तक`,
+  `ChatGPT जैसे ${SELF_PLAN.ai.engines} AI असिस्टेंट आपके बारे में क्या कहते हैं (हर महीने ${num(SELF_PLAN.ai.answersPerMonth)} AI जवाब)`,
+  "आसान भाषा में काम की लिस्ट, सबसे ज़रूरी काम पहले",
+  "WordPress पर एक क्लिक में सुधार, undo के साथ; दूसरी वेबसाइटों के लिए आसान copy-paste स्टेप",
+  "हर महीने एक रिपोर्ट, जो 2 मिनट में पढ़ी जा सके",
+];
+
+/** "Do it for me" includes, in the same order as DFY_PLAN.includes. */
+const DFY_INCLUDES = [
+  "आपकी वेबसाइट ठीक की जाती है: जो भी चीज़ Google और AI को आप तक पहुँचने से रोकती है, सबसे ज़रूरी पहले",
+  "आपकी Google Business Profile की देखभाल: समय, फ़ोटो, पोस्ट और रिव्यू के जवाब",
+  "नए पेज और लेख, जो आपके ग्राहकों के सवालों का जवाब देते हैं",
+  "AI जवाबों में आपका नाम: हम देखते हैं कि ChatGPT आपके बारे में क्या कहता है और गलत जानकारी ठीक करवाने पर काम करते हैं",
+  "आपकी लिस्टिंग साफ़-सुथरी: हर बड़ी डायरेक्टरी पर एक ही नाम, पता और फ़ोन",
+  "WhatsApp पर आपका अपना एक्सपर्ट, साथ में हर महीने आसान रिपोर्ट और कॉल",
+];
+
+/** Custom includes, in the same order as CUSTOM_PLAN.includes. */
+const CUSTOM_INCLUDES = [
+  "कई वेबसाइटें, ब्रांड, शहर या देश",
+  "आपके लिए अलग टीम और बात करने के लिए एक ही व्यक्ति",
+  "एजेंसियों के लिए आपके लोगो वाली रिपोर्ट",
+  "API और डैशबोर्ड का एक्सेस",
+];
+
+export interface HindiOfferCard {
+  key: "self" | "dfy" | "custom";
+  /** Hindi name, e.g. "मैं ख़ुद करूँगा". */
+  name: string;
+  /** English name shown in brackets, e.g. "Do it myself". */
+  en: string;
+  /** INR excl. GST; null = no public price (Custom). */
+  price: number | null;
+  /** Shown instead of a price when price is null. */
+  priceLabel?: string;
+  line1: string;
+  line2: string;
+  /** Small print under the price. */
+  terms: string;
+  includes: string[];
+  inherits?: string;
+  cta: string;
+  href: string;
+  featured?: boolean;
+  tag?: string;
+}
+
+export const HI_SELF: HindiOfferCard = {
+  key: "self",
+  name: "मैं ख़ुद करूँगा",
+  en: SELF_PLAN.name,
+  price: SELF_PLAN.price,
+  line1: "हम आपको साफ़-साफ़ बताते हैं क्या ठीक करना है।",
+  line2: `${TRIAL_DAYS} दिन फ्री। कार्ड की ज़रूरत नहीं। कभी भी बंद करें।`,
+  terms: `${TRIAL_DAYS} दिन का फ्री ट्रायल, फिर हर महीने`,
+  includes: SELF_HIGHLIGHTS,
+  cta: `${TRIAL_DAYS} दिन फ्री आज़माएँ`,
+  href: planSignupHref(SELF_PLAN.id),
 };
+
+export const HI_DFY: HindiOfferCard = {
+  key: "dfy",
+  name: "आप कर दीजिए",
+  en: DFY_PLAN.name,
+  price: DFY_PLAN.price,
+  line1: "हमारी टीम सारा काम करती है।",
+  line2: "फ्री 30 मिनट की कॉल। कोई सेटअप फ़ीस नहीं।",
+  terms: `कोई सेटअप फ़ीस नहीं · ${DFY_PLAN.minimumMonths} महीने, फिर महीने-दर-महीने`,
+  includes: DFY_INCLUDES,
+  inherits: "“मैं ख़ुद करूँगा” की हर चीज़, और सारा काम हमारी टीम करती है:",
+  cta: "फ्री कॉल बुक करें",
+  href: `/hi${servicesContactHref(DFY_PLAN.id)}`,
+  featured: true,
+  tag: "सबसे ज़्यादा चुना गया",
+};
+
+export const HI_CUSTOM: HindiOfferCard = {
+  key: "custom",
+  name: "कस्टम — बात करें",
+  en: "Custom",
+  price: null,
+  priceLabel: "बात करें",
+  line1: "बड़ी कंपनियों और एजेंसियों के लिए।",
+  line2: "आपके हिसाब से बना प्लान।",
+  terms: "कीमत आपकी ज़रूरत के हिसाब से",
+  includes: CUSTOM_INCLUDES,
+  cta: "हमसे बात करें",
+  href: CUSTOM_CONTACT_HREF_HI,
+};
+
+/** The three pricing cards, in display order (the middle one is the dark, featured card). */
+export const HI_OFFER: HindiOfferCard[] = [HI_SELF, HI_DFY, HI_CUSTOM];
+
+/* ------------------------------------------------------------------ software plan (HiPlanCards shape) */
 
 export interface HindiPlan {
   id: PaidPlanId;
@@ -37,72 +127,29 @@ export interface HindiPlan {
   highlights: string[];
 }
 
-export const HI_PLANS: HindiPlan[] = MARKETING_PLANS.map((p) => {
-  const l = p.limits;
-  const plus = p.id === "agency" ? "+" : "";
-  return {
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    suffix: p.suffix,
-    featured: p.featured,
-    ...PLAN_COPY[p.id],
-    highlights: [
-      `${num(l.maxProjects)}${plus} वेबसाइट`,
-      `${num(l.maxTrackedPrompts)}${plus} ग्राहक-सवाल (हर AI चेक में ${num(p.ai.questionsPerCheck)} तक)`,
-      `हर महीने ${num(p.ai.answersPerMonth)} AI जवाब (${num(p.ai.checksPerMonth)} चेक × ${p.ai.questionsPerCheck} सवाल × ${p.ai.engines} AI असिस्टेंट)`,
-      `हर हफ़्ते वेबसाइट चेक, हर बार ${num(l.maxPagesPerCrawl)} पेज तक`,
-      l.competitorTracking ? "अपने कॉम्पिटिटर से तुलना" : "कॉम्पिटिटर से तुलना नहीं",
-      l.approvalPublishing ? "बदलाव सिर्फ़ आपकी मंज़ूरी से लाइव, undo के साथ" : "सुधार स्टेप-बाय-स्टेप निर्देशों के रूप में",
-      `${num(l.seats)}${plus} टीम मेंबर`,
-      ...(p.id === "agency" ? ["White-label रिपोर्ट और ईमेल"] : []),
-    ],
-  };
-});
+export const HI_PLANS: HindiPlan[] = MARKETING_PLANS.map((p) => ({
+  id: p.id,
+  name: `${HI_SELF.name} (${p.name})`,
+  price: p.price,
+  suffix: p.suffix,
+  featured: p.featured,
+  blurb: HI_SELF.line1,
+  cta: HI_SELF.cta,
+  highlights: SELF_HIGHLIGHTS,
+}));
 
 /** "1 AI चेक: 10 सवाल × 3 AI असिस्टेंट" — the trial allowance, as the app enforces it. */
 export const HI_TRIAL_AI = `${num(TRIAL_AI.checks)} AI चेक: ${TRIAL_AI.questions} सवाल × ${TRIAL_AI.engines} AI असिस्टेंट`;
 
-/* ------------------------------------------------------------------ done-for-you tiers */
+/* ------------------------------------------------------------------ done-for-you (one offer) */
 
 const TIER_COPY: Record<ServiceTierId, { blurb: string; inherits?: string; includes: string[]; updates: string; termNote?: string }> = {
   fix: {
-    blurb: "लोकल बिज़नेस के लिए, जो हर महीने बुनियादी काम ठीक से करवाना चाहता है — बिना कोई तकनीकी शब्द सीखे।",
-    includes: [
-      "हर महीने 15 तक सुधार, आपकी मंज़ूरी के बाद",
-      "आपकी Google Business Profile ठीक-ठाक की जाती है",
-      "हर महीने 2 पेज नए सिरे से अपडेट",
-      "5 तक AI असिस्टेंट (ChatGPT, Claude, Gemini, Perplexity वगैरह) पर ग्राहकों के 50 सवालों की जाँच",
-      "हर महीने रिपोर्ट और 30 मिनट की कॉल",
-    ],
-    updates: "हर महीने रिपोर्ट + 30 मिनट की कॉल",
-  },
-  grow: {
-    blurb: "उन बिज़नेस के लिए, जो ग्राहकों के ज़्यादा सवालों में अपना नाम चाहते हैं और हर महीने नए पेज भी।",
-    inherits: "Fix की हर चीज़, और साथ में",
-    includes: [
-      "हर महीने 4 नए पेज, जो ग्राहकों के सवालों का जवाब देते हैं",
-      "10 बिज़नेस डायरेक्टरी लिस्टिंग",
-      "ग्राहकों से रिव्यू माँगने का सिस्टम",
-      "सवाल-जवाब और तुलना वाले पेज",
-      "ग्राहकों के 100 सवालों की जाँच",
-      "हर 15 दिन में WhatsApp पर अपडेट",
-    ],
-    updates: "हर 15 दिन WhatsApp + हर महीने रिपोर्ट",
-  },
-  authority: {
-    blurb: "भीड़ वाले बाज़ार के बिज़नेस के लिए, जो चाहते हैं कि AI असिस्टेंट उन्हें भरोसेमंद नाम मानें।",
-    inherits: "Grow की हर चीज़, और साथ में",
-    includes: [
-      "हर महीने 8 लेख",
-      "उन वेबसाइटों पर आपके बारे में 2 लेख, जिन्हें AI पहले से लिंक करता है",
-      "पूरे इंटरनेट पर आपके बिज़नेस की जानकारी एक जैसी",
-      "Reddit और फ़ोरम पर ईमानदार, साफ़ बताई गई पोस्ट",
-      "हर 3 महीने में कॉम्पिटिटर की गहरी समीक्षा",
-      "हर दो हफ़्ते में रिव्यू कॉल",
-    ],
-    updates: "हर दो हफ़्ते रिव्यू + हर महीने रिपोर्ट",
-    termNote: "या +15% पर 3 महीने का पायलट",
+    blurb: `${HI_DFY.line1} आप अपना बिज़नेस चलाइए।`,
+    inherits: HI_DFY.inherits,
+    includes: DFY_INCLUDES,
+    updates: "हर महीने रिपोर्ट + कॉल",
+    termNote: "फिर महीने-दर-महीने",
   },
 };
 
@@ -134,8 +181,6 @@ export const HI_SERVICE_TIERS: HindiServiceTier[] = SERVICE_TIERS.map((t) => ({
 
 export type HiFaq = { q: string; a: string };
 
-const starter = PLANS.starter;
-
 export const HOME_FAQ: HiFaq[] = [
   {
     q: "SEO, AEO और GEO में क्या फ़र्क है?",
@@ -151,7 +196,7 @@ export const HOME_FAQ: HiFaq[] = [
   },
   {
     q: "कीमत कितनी है?",
-    a: `सॉफ़्टवेयर प्लान ${inrGst(SOFTWARE_FROM)} महीने से शुरू होते हैं और पहले ${TRIAL_DAYS} दिन फ्री हैं। अगर आप चाहते हैं कि सारा काम हमारी टीम करे, तो सेवा ${inr(SERVICE_FROM_PRICE)} महीने से है। ${priceNote(true)}`,
+    a: `“${HI_SELF.name}” (${HI_SELF.en}) ${inrGst(SOFTWARE_FROM)} महीना है और पहले ${TRIAL_DAYS} दिन फ्री हैं। अगर आप चाहते हैं कि सारा काम हमारी टीम करे, तो “${HI_DFY.name}” (${HI_DFY.en}) ${inrGst(DFY_PLAN.price)} महीना है, कोई सेटअप फ़ीस नहीं। बड़ी कंपनियों और एजेंसियों के लिए कस्टम प्लान है। ${priceNote(true)}`,
   },
   {
     q: "क्या आप Google पर पहला नंबर या ChatGPT में नाम आने की गारंटी देते हैं?",
@@ -162,19 +207,19 @@ export const HOME_FAQ: HiFaq[] = [
 export const PRICING_FAQ: HiFaq[] = [
   {
     q: "फ्री ट्रायल के बाद क्या होता है?",
-    a: `${TRIAL_DAYS} दिन के ट्रायल में आपको पूरी वेबसाइट रिपोर्ट और ${HI_TRIAL_AI} मिलते हैं। पेड प्लान तभी शुरू होता है जब आप खुद कोई प्लान चुनें और पेमेंट की जानकारी डालें।`,
+    a: `${TRIAL_DAYS} दिन के ट्रायल में आपको पूरी वेबसाइट रिपोर्ट और ${HI_TRIAL_AI} मिलते हैं। कार्ड की ज़रूरत नहीं। पेड प्लान तभी शुरू होता है जब आप खुद “${HI_SELF.name}” चुनें और पेमेंट की जानकारी डालें।`,
   },
   {
     q: "एक AI जवाब क्या होता है?",
-    a: "जब हम किसी एक AI असिस्टेंट से आपके ग्राहक का एक सवाल पूछते हैं, तो वह एक AI जवाब है। हर प्लान में हर महीने तय AI जवाब मिलते हैं। ऐप दिखाता है कि कितने बचे हैं, वे हर महीने की 1 तारीख को फिर से भर जाते हैं, और सीमा पार होने से पहले चेक रुक जाता है।",
+    a: `जब हम किसी एक AI असिस्टेंट से आपके ग्राहक का एक सवाल पूछते हैं, तो वह एक AI जवाब है। “${HI_SELF.name}” में हर महीने ${num(SELF_PLAN.ai.answersPerMonth)} AI जवाब मिलते हैं। ऐप दिखाता है कि कितने बचे हैं, वे हर महीने की 1 तारीख को फिर से भर जाते हैं, और सीमा पार होने से पहले चेक रुक जाता है।`,
   },
   {
-    q: "क्या मैं सॉफ़्टवेयर से शुरू करके बाद में सेवा ले सकता हूँ?",
-    a: "हाँ। आपका पुराना डेटा, सवाल और रिपोर्ट साथ रहते हैं, इसलिए हमारी टीम आपके मौजूदा स्कोर से काम शुरू करती है। एक बार की सेटअप फ़ीस तब भी लगती है।",
+    q: "क्या मैं “मैं ख़ुद करूँगा” से शुरू करके बाद में “आप कर दीजिए” ले सकता हूँ?",
+    a: "हाँ। आपका पुराना डेटा, सवाल और रिपोर्ट साथ रहते हैं, इसलिए हमारी टीम आपके मौजूदा स्कोर से काम शुरू करती है। कोई सेटअप फ़ीस नहीं लगती।",
   },
   {
     q: "क्या किसी प्लान में नतीजों की गारंटी है?",
-    a: "नहीं। सॉफ़्टवेयर प्लान में आपको चेक, काम की लिस्ट और सुधार के टूल मिलते हैं। सेवा वाले प्लान में तय सुधार पूरे करने की गारंटी है — Google पर जगह, AI में नाम या लिंक की नहीं। ऐसी गारंटी कोई ईमानदारी से नहीं दे सकता।",
+    a: "नहीं। “मैं ख़ुद करूँगा” में आपको चेक, काम की लिस्ट और सुधार के टूल मिलते हैं। “आप कर दीजिए” में हमारी टीम तय काम करती है — लेकिन Google पर जगह, AI में नाम या लिंक का वादा कोई ईमानदारी से नहीं कर सकता, और हम भी नहीं करते।",
   },
   {
     q: "क्या कीमतों में GST शामिल है?",
@@ -184,24 +229,24 @@ export const PRICING_FAQ: HiFaq[] = [
 
 export const SERVICES_FAQ: HiFaq[] = [
   {
-    q: "यह सेवा सॉफ़्टवेयर से कैसे अलग है?",
-    a: "सॉफ़्टवेयर में MyWebRank समस्याएँ ढूँढता है और सुधार का ड्राफ़्ट बनाता है, काम आपकी टीम करती है। सेवा में काम हमारी टीम करती है: हम आपके साथ प्लान तय करते हैं, हर महीने सुधार करते हैं और बताते हैं कि क्या बदला। लाइव डैशबोर्ड आपको तब भी मिलता है।",
+    q: "“आप कर दीजिए” और “मैं ख़ुद करूँगा” में क्या फ़र्क है?",
+    a: "“मैं ख़ुद करूँगा” में MyWebRank समस्याएँ ढूँढता है और सुधार का ड्राफ़्ट बनाता है, काम आप या आपकी टीम करती है। “आप कर दीजिए” में काम हमारी टीम करती है: हम आपके साथ प्लान तय करते हैं, हर महीने सुधार करते हैं और बताते हैं कि क्या बदला। लाइव डैशबोर्ड आपको तब भी मिलता है।",
   },
   {
     q: "क्या आप Google पर टॉप जगह या ChatGPT में नाम की गारंटी देते हैं?",
-    a: "नहीं। Google या AI असिस्टेंट क्या दिखाएँगे, यह कोई तय नहीं कर सकता। हम काम की गारंटी देते हैं: अगर किसी महीने तय सुधार नहीं हुए, तो उस महीने की फ़ीस का 25% वापस।",
+    a: "नहीं। Google या AI असिस्टेंट क्या दिखाएँगे, यह कोई तय नहीं कर सकता। जो जगह का वादा करता है, वह अंदाज़ा लगा रहा है। हम तय काम करते हैं और हर महीने ईमानदारी से दिखाते हैं कि क्या बदला।",
   },
   {
     q: "आपको मुझसे क्या चाहिए?",
     a: "आपकी वेबसाइट का एक्सेस, Google Business Profile पर मैनेजर रोल, पहले दो हफ़्तों में ग्राहकों के सवाल तय करने के लिए करीब एक घंटा, और जो बदलाव आपके बिज़नेस के बारे में सार्वजनिक बात बदलते हैं, उन पर जल्दी मंज़ूरी।",
   },
   {
-    q: "सेटअप फ़ीस में क्या आता है?",
-    a: "पहला चेक, आपके ग्राहक कौन-से सवाल पूछते हैं इसकी रिसर्च, पाँच AI असिस्टेंट पर जाँच की तैयारी, और पहले महीने का सुधार प्लान। यह फ़ीस सिर्फ़ एक बार लगती है।",
+    q: "क्या कोई सेटअप फ़ीस है?",
+    a: `नहीं। “आप कर दीजिए” में कोई सेटअप फ़ीस नहीं है। आप सिर्फ़ ${inrGst(DFY_PLAN.price)} महीना देते हैं, कम से कम ${DFY_PLAN.minimumMonths} महीने, फिर महीने-दर-महीने।`,
   },
   {
     q: "कम से कम अवधि के बाद क्या होता है?",
-    a: "प्लान महीने-दर-महीने चलता रहता है। आप 30 दिन का नोटिस देकर प्लान बदल सकते हैं या छोड़ सकते हैं। सारा कंटेंट, अकाउंट और रिपोर्ट आपके ही रहते हैं।",
+    a: "प्लान महीने-दर-महीने चलता रहता है। आप 30 दिन का नोटिस देकर छोड़ सकते हैं। सारा कंटेंट, अकाउंट और रिपोर्ट आपके ही रहते हैं।",
   },
   {
     q: "क्या कीमतों में GST शामिल है?",
@@ -220,7 +265,7 @@ export const FREE_CHECK_FAQ: HiFaq[] = [
   },
   {
     q: "फ्री चेक और पूरी रिपोर्ट में क्या फ़र्क है?",
-    a: `फ्री चेक कुछ ही पेज पढ़ता है और किसी AI असिस्टेंट से कुछ नहीं पूछता। पूरी रिपोर्ट ${starter.name} प्लान पर हर चेक में ${num(starter.maxPagesPerCrawl)} पेज तक और Agency पर ${num(PLANS.agency.maxPagesPerCrawl)} पेज तक पढ़ती है, और ChatGPT, Gemini जैसे AI से आपके ग्राहकों के असली सवाल पूछती है। प्लान ${TRIAL_DAYS} दिन के फ्री ट्रायल के बाद ${inrGst(starter.priceInrMonthly ?? 0)} महीने से शुरू होते हैं।`,
+    a: `फ्री चेक कुछ ही पेज पढ़ता है और किसी AI असिस्टेंट से कुछ नहीं पूछता। पूरी रिपोर्ट “${HI_SELF.name}” (${HI_SELF.en}) प्लान पर हर चेक में ${num(SELF_PLAN.limits.maxPagesPerCrawl)} पेज तक पढ़ती है, और ChatGPT, Gemini जैसे AI से आपके ग्राहकों के असली सवाल पूछती है। यह प्लान ${TRIAL_DAYS} दिन के फ्री ट्रायल के बाद ${inrGst(SELF_PLAN.price)} महीना है।`,
   },
   {
     q: "क्या मेरी वेबसाइट पर यह चेक चलाना सुरक्षित है?",

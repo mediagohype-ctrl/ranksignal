@@ -19,6 +19,22 @@ export const PILLAR_LABELS: Record<Pillar, string> = {
   brand: "Brand",
 };
 
+/**
+ * Plain name shown WITH the short name (owner, 13 Nov 2026: keep SEO/AEO/GEO/Brand and pair each with a plain
+ * name so people who don't know the short forms still understand). Never shown instead of the short name.
+ */
+export const PILLAR_PLAIN: Record<Pillar, string> = {
+  seo: "Google Score",
+  aeo: "Answer Score",
+  geo: "AI Score",
+  brand: "Trust Score",
+};
+
+/** "SEO · Google Score" — the full name, for places with room. */
+export function pillarFullName(p: Pillar): string {
+  return `${PILLAR_LABELS[p]} · ${PILLAR_PLAIN[p]}`;
+}
+
 /** Pillars whose checks partly depend on AI answers; shown as "waiting for AI results" until they arrive. */
 export const AI_PILLARS: readonly Pillar[] = ["geo", "brand"];
 

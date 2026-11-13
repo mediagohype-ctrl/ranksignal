@@ -8,6 +8,7 @@ import type { BuilderReportData, ScorePoint } from "@/lib/report-builder/data";
 import { SECTION_META, visibleSections, type SectionChoice, type SectionId } from "@/lib/report-builder/sections";
 import { ScoreHistoryChart } from "@/components/app/charts";
 import { PILLAR_SHORT } from "@/components/app/report/pillars";
+import { pillarFullName } from "@/lib/report/score";
 
 const IMPACT_LABEL: Record<string, string> = { high: "Urgent", medium: "Important", low: "Nice to have" };
 const PERFORMER: Record<string, string> = { agency: "Done by us", client: "Done by you", system: "Applied automatically" };
@@ -84,7 +85,7 @@ function Section({ id, n, data, notes }: { id: SectionId; n: number; data: Build
                 <tbody>
                   {PILLARS.map((k) => (
                     <tr key={k} className="border-b border-border">
-                      <td className="py-1.5 pr-3 font-medium text-fg">{PILLAR_SHORT[k]}</td>
+                      <td className="py-1.5 pr-3 font-medium text-fg">{pillarFullName(k)}</td>
                       <td className="py-1.5 pr-3 text-right tabular-nums">{scoreOf(start, k) ?? "—"}</td>
                       <td className="py-1.5 pr-3 text-right tabular-nums">{scoreOf(end, k) ?? "—"}</td>
                       <td className="py-1.5">

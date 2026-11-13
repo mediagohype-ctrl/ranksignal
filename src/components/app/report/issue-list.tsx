@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle2, ChevronDown, ChevronRight, FileText, Wrench }
 import type { IssueImpact, Pillar, ReportIssue } from "@/lib/report/types";
 import { EmptyState, IssueCard, LinkButton } from "@/components/ui";
 import { PILLAR_ORDER, PILLAR_SHORT } from "./pillars";
+import { pillarFullName } from "@/lib/report/score";
 import { issueHref } from "@/components/app/nav";
 
 type PillarFilter = Pillar | "all";
@@ -234,7 +235,7 @@ export function IssueList({
         groups.map((g) => (
           <section key={g.pillar} aria-labelledby={`issues-${g.pillar}`} className="space-y-4">
             <h3 id={`issues-${g.pillar}`} className="flex items-center gap-2 text-h4 text-fg">
-              {PILLAR_SHORT[g.pillar]} problems
+              {pillarFullName(g.pillar)} problems
               <span className="text-small font-normal tabular-nums text-muted">({g.items.length})</span>
             </h3>
             {g.items.map((i) => {

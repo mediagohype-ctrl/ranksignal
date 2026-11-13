@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import { Eye, ImageOff, Mail, Palette, Sparkles } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { CUSTOM_CONTACT_HREF, servicesContactHref } from "@/components/marketing/plans";
 import type { Branding, StoredBranding } from "@/lib/branding";
 import {
   Badge,
@@ -112,16 +113,16 @@ export function BrandingPanel({ eligible, canHidePoweredBy, canManage, stored, o
       <Card>
         <CardHeader icon={<Palette />} title="Branding" description="Put your own name, logo and colour on reports and report emails." />
         <CardBody className="space-y-4">
-          <Notice tone="info" icon={<Sparkles />} title="Available on the Agency plan and done-for-you services">
-            White-label reports let agencies send client reports under their own name and logo. Upgrade to Agency, or talk to us
-            about a done-for-you plan, to turn it on.
+          <Notice tone="info" icon={<Sparkles />} title="Available on Custom plans and Do it for me">
+            White-label reports let agencies send client reports under their own name and logo. Talk to us about a Custom plan,
+            or about Do it for me, to turn it on.
           </Notice>
           <div className="flex flex-wrap gap-2">
-            <LinkButton href="/app/settings?tab=billing" size="sm">
-              See plans
+            <LinkButton href={CUSTOM_CONTACT_HREF} size="sm" external>
+              Talk to us about Custom
             </LinkButton>
-            <LinkButton href="/contact?topic=services" variant="secondary" size="sm">
-              Ask about done-for-you
+            <LinkButton href={servicesContactHref()} variant="secondary" size="sm">
+              Ask about Do it for me
             </LinkButton>
           </div>
         </CardBody>
@@ -279,7 +280,7 @@ export function BrandingPanel({ eligible, canHidePoweredBy, canManage, stored, o
               <span>
                 <span className="font-medium text-fg">Hide “Powered by {BRAND.name}”</span>
                 <span className="block text-xs text-muted">
-                  {canHidePoweredBy ? "Removes our name from shared reports and emails." : "Available on the Agency plan."}
+                  {canHidePoweredBy ? "Removes our name from shared reports and emails." : "Available on Custom plans."}
                 </span>
               </span>
             </label>

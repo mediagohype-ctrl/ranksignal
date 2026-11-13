@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
-import { PLANS } from "@/lib/billing/plans";
 import { LEGAL_ENTITY } from "@/lib/site";
 import { faqLd, siteUrl } from "@/lib/seo/schema";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { ENGINES, JsonLd, PageHero, Section } from "@/components/marketing/ui";
-import { SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, inrGst, num } from "@/components/marketing/plans";
-import { ABOUT_FAQ } from "@/components/marketing/hi/content";
+import { DFY_PLAN, SELF_PLAN, TRIAL_DAYS, gstOn, inr, inrGst, num } from "@/components/marketing/plans";
+import { ABOUT_FAQ, HI_CUSTOM, HI_DFY, HI_SELF } from "@/components/marketing/hi/content";
 import { DifferenceStrip } from "@/components/marketing/showcase/difference-strip";
 import { HiFaqSection, HiFinalCta } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
@@ -18,7 +17,6 @@ const engineList = `${ENGINES.slice(0, -1).join(", ")} और ${ENGINES[ENGINES.
 
 export default function HindiAboutPage() {
   const base = siteUrl();
-  const starter = PLANS.starter;
   return (
     <>
       <JsonLd
@@ -47,7 +45,7 @@ export default function HindiAboutPage() {
           <p className="mt-4 text-body leading-relaxed text-fg-soft">
             हम हर समस्या आसान भाषा में समझाते हैं, आपकी वेबसाइट में बदलाव सिर्फ़ आपकी मंज़ूरी के बाद करते हैं और उसे वापस (undo) भी किया जा सकता है,
             हम देखते हैं कि {engineList} जैसे AI असिस्टेंट आपके बारे में क्या कहते हैं, और हमारी कीमतें भारतीय रुपये में हैं —{" "}
-            {inrGst(starter.priceInrMonthly ?? 0)} महीने से शुरू।
+            “{HI_SELF.name}” {inrGst(SELF_PLAN.price)} महीना।
           </p>
         </div>
         <DifferenceStrip
@@ -76,9 +74,9 @@ export default function HindiAboutPage() {
                 : `प्लान की कीमतें भारतीय रुपये में हैं, और पहले ${TRIAL_DAYS} दिन का फ्री ट्रायल मिलता है।`,
               visual: {
                 kind: "inr",
-                price: inr(starter.priceInrMonthly ?? 0),
+                price: inr(SELF_PLAN.price),
                 per: gstOn() ? "+ GST / महीना" : "/ महीना",
-                notes: [gstOn() ? `${starter.name} प्लान, GST अलग` : `${starter.name} प्लान`, `${TRIAL_DAYS} दिन का फ्री ट्रायल`],
+                notes: [gstOn() ? `${HI_SELF.name} प्लान, GST अलग` : `${HI_SELF.name} प्लान`, `${TRIAL_DAYS} दिन का फ्री ट्रायल`],
               },
             },
           ]}
@@ -106,20 +104,27 @@ export default function HindiAboutPage() {
             </p>
             <ul className="mt-4 list-disc space-y-2 pl-5">
               <li>
-                <strong className="font-semibold text-fg">वेबसाइट जाँच:</strong> {starter.name} प्लान पर हर चेक {num(starter.maxPagesPerCrawl)} पेज
-                तक पढ़ता है; Growth प्लान {num(PLANS.growth.maxPagesPerCrawl)} तक और Agency प्लान {num(PLANS.agency.maxPagesPerCrawl)} तक।
+                <strong className="font-semibold text-fg">वेबसाइट जाँच:</strong> “{HI_SELF.name}” प्लान पर हर चेक{" "}
+                {num(SELF_PLAN.limits.maxPagesPerCrawl)} पेज तक पढ़ता है।
               </li>
               <li>
                 <strong className="font-semibold text-fg">AI में दिखने की जाँच:</strong> हम आपके ग्राहकों के सवाल {ENGINES.length} तक AI असिस्टेंट से
                 पूछते हैं और दर्ज करते हैं कि आपका नाम आया, लिंक मिला या आप छूट गए।
               </li>
               <li>
-                <strong className="font-semibold text-fg">सॉफ़्टवेयर प्लान:</strong> पेड प्लान {inrGst(starter.priceInrMonthly ?? 0)} महीने से शुरू होते हैं,
-                और पहले {TRIAL_DAYS} दिन आप इसे फ्री आज़मा सकते हैं।
+                <strong className="font-semibold text-fg">
+                  {HI_SELF.name} ({HI_SELF.en}):
+                </strong>{" "}
+                {inrGst(SELF_PLAN.price)} महीना, और पहले {TRIAL_DAYS} दिन आप इसे फ्री आज़मा सकते हैं, बिना कार्ड के।
               </li>
               <li>
-                <strong className="font-semibold text-fg">सेवा:</strong> हमारी टीम आपके लिए काम करती है, {inr(SERVICE_FROM_PRICE)} महीने से, GST अलग।
-                देखें <Link href="/hi/services">सेवाएँ</Link>।
+                <strong className="font-semibold text-fg">
+                  {HI_DFY.name} ({HI_DFY.en}):
+                </strong>{" "}
+                हमारी टीम सारा काम करती है, {inrGst(DFY_PLAN.price)} महीना, कोई सेटअप फ़ीस नहीं। देखें <Link href="/hi/services">सेवाएँ</Link>।
+              </li>
+              <li>
+                <strong className="font-semibold text-fg">{HI_CUSTOM.name}:</strong> {HI_CUSTOM.line1} {HI_CUSTOM.line2}
               </li>
             </ul>
           </div>

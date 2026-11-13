@@ -8,7 +8,8 @@ import type { CheckResult, IssueEffort, IssueImpact, ReportIssue, SiteReport } f
 import type { Citation, ExtractedPage } from "@/lib/types";
 import { requireAppProject } from "@/lib/dashboard/server";
 import { fmtDate, hostOf, pct } from "@/lib/dashboard/format";
-import { PILLAR_EXPLAINER, PILLAR_SHORT } from "@/components/app/report/pillars";
+import { PILLAR_EXPLAINER } from "@/components/app/report/pillars";
+import { pillarFullName } from "@/lib/report/score";
 import { PrintToolbar } from "@/components/app/report/auto-print";
 import { Notice } from "@/components/ui";
 import { AnswerText } from "@/components/app/ai-answers/answer-text";
@@ -66,7 +67,7 @@ function IssueBlock({ issue: i, n, quick }: { issue: ReportIssue; n: number; qui
   return (
     <article id={`issue-${i.id}`} className="break-inside-avoid-page rounded-xl border border-border p-5">
       <p className="text-xs font-semibold text-muted">
-        Problem {n} · {PILLAR_SHORT[i.pillar]} · {IMPACT_LABEL[i.impact]} · {EFFORT_LABEL[i.effort]}
+        Problem {n} · {pillarFullName(i.pillar)} · {IMPACT_LABEL[i.impact]} · {EFFORT_LABEL[i.effort]}
         {quick && " · Fix this first"}
         {i.affectedCount > 0 && ` · ${i.affectedCount} ${i.affectedCount === 1 ? "page" : "pages"}`}
       </p>
@@ -254,7 +255,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
           {r.pillars.map((p) => (
             <div key={p.pillar} className="break-inside-avoid-page">
               <h3 className="text-h3 text-fg">
-                {PILLAR_SHORT[p.pillar]}: {p.score ?? "not measured yet"}
+                {pillarFullName(p.pillar)}: {p.score ?? "not measured yet"}
                 {p.score !== null && <span className="text-muted"> / 100</span>}
                 {p.partial && <span className="ml-2 text-small font-normal text-muted">(website only — AI answers not in yet)</span>}
               </h3>

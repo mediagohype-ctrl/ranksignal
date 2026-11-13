@@ -8,7 +8,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 import { FEATURES, type Feature } from "@/components/marketing/content";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
-import { MARKETING_PLANS, TRIAL_AI, TRIAL_DAYS, gstOn, inr, num } from "@/components/marketing/plans";
+import { SELF_PLAN, TRIAL_AI, TRIAL_DAYS, gstOn, inr, num } from "@/components/marketing/plans";
 import { FEATURE_CATEGORIES, WAITING_FOR, featuresIn, isFeatureLive } from "@/components/marketing/features/categories";
 import { FeatureIllustration } from "@/components/marketing/features/illustrations";
 import { ProductTour } from "@/components/marketing/visuals/tour";
@@ -159,15 +159,13 @@ export default function FeaturesPage() {
 }
 
 function featureFacts(): Qa[] {
-  const [starter, growth, agency] = MARKETING_PLANS;
+  const starter = SELF_PLAN;
   return [
     {
       q: "How many pages does the website check read?",
       a: (
         <>
-          Each website check reads up to {num(starter.limits.maxPagesPerCrawl)} pages on the {starter.name} plan,{" "}
-          {num(growth.limits.maxPagesPerCrawl)} on {growth.name} and {num(agency.limits.maxPagesPerCrawl)} on {agency.name}. It
-          scores four areas — SEO, AEO, GEO and Brand — each from 0 to 100, and turns every problem into a plain-English to-do.
+          Each website check reads up to {num(starter.limits.maxPagesPerCrawl)} pages on the {starter.name} plan. It scores four areas — SEO, AEO, GEO and Brand — each from 0 to 100, and turns every problem into a plain-English to-do.
         </>
       ),
     },
@@ -176,8 +174,7 @@ function featureFacts(): Qa[] {
       a: (
         <>
           {starter.name} covers {num(starter.ai.answersPerMonth)} AI answers a month, asked across {starter.ai.engines} AI
-          assistants. {growth.name} covers {num(growth.ai.answersPerMonth)} answers across {growth.ai.engines} assistants, and{" "}
-          {agency.name} covers {num(agency.ai.answersPerMonth)}. One answer is one customer question asked to one AI assistant.
+          assistants. One answer is one customer question asked to one AI assistant.
         </>
       ),
     },
@@ -185,8 +182,8 @@ function featureFacts(): Qa[] {
       q: "What does it cost to try?",
       a: (
         <>
-          Nothing for {TRIAL_DAYS} days: the free trial includes {TRIAL_AI.summary} and a full website check. After that, plans
-          cost {inr(starter.price)}, {inr(growth.price)} or {inr(agency.price)} a month{gstOn() ? " + GST" : ""}. See{" "}
+          Nothing for {TRIAL_DAYS} days: the free trial includes {TRIAL_AI.summary} and a full website check. After that,{" "}
+          {starter.name} costs {inr(starter.price)} a month{gstOn() ? " + GST" : ""}. See{" "}
           <Link href="/pricing">pricing</Link> for every limit.
         </>
       ),

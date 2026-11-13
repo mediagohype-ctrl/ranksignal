@@ -48,7 +48,8 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
   // 300 answers = 4 checks of 25 questions × 3 assistants.
   starter: {
     id: "starter",
-    name: "Starter",
+    // Shown to customers as "Do it myself" (Website Blueprint, Nov 2026). The id stays "starter" for billing.
+    name: "Do it myself",
     priceInrMonthly: 1_999,
     maxProjects: 1,
     maxTrackedPrompts: 50,
@@ -102,6 +103,20 @@ export const PLANS: Record<PlanId, PlanWithAiLimits> = {
 };
 
 export const PAID_PLAN_IDS = ["starter", "growth", "agency"] as const satisfies readonly PlanId[];
+
+/**
+ * Self-serve plans offered to the public (Website Blueprint, Nov 2026): only "Do it myself" (starter). Growth and
+ * Agency stay defined — existing customers keep them and staff can set them for Custom deals — but are never shown
+ * on the website or offered as an upgrade.
+ */
+export const PUBLIC_PLAN_IDS = ["starter"] as const satisfies readonly PlanId[];
+
+/** Plans shown on an organization's billing page: the trial, the public plans, plus its own plan if it is a legacy one. */
+export function plansShownTo(currentPlanId: string): PlanId[] {
+  const ids: PlanId[] = ["trial", ...PUBLIC_PLAN_IDS];
+  if (isPlanId(currentPlanId) && !ids.includes(currentPlanId)) ids.push(currentPlanId);
+  return ids;
+}
 
 export function isPlanId(id: string): id is PlanId {
   return Object.prototype.hasOwnProperty.call(PLANS, id);

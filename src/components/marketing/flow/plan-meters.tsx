@@ -1,9 +1,9 @@
 // Pricing visuals: the main plan limits as meters, and "what every plan includes".
-// Server components. Every number comes from MARKETING_PLANS (which reads @/lib/billing/plans),
+// Server components. Every number comes from MARKETING_PLANS (only "Do it myself" now; reads @/lib/billing/plans),
 // so the bars always match what the app enforces. Bars are aria-hidden; the number next to each is text.
 import clsx from "clsx";
 import { BadgeCheck, CalendarClock, History, LineChart, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { MARKETING_PLANS, num } from "../plans";
+import { CUSTOM_PLAN, MARKETING_PLANS, num } from "../plans";
 
 type Metric = { key: string; label: string; hint: string; value: (p: (typeof MARKETING_PLANS)[number]) => number; units?: boolean };
 
@@ -59,7 +59,9 @@ export function PlanMeters({ className }: { className?: string }) {
         })}
       </div>
       <figcaption className="mt-7 border-t border-border pt-4 text-small text-muted">
-        The main limits of each software plan side by side; longer bars mean more. These are the limits the app enforces.
+        {MARKETING_PLANS.length > 1
+          ? "The main limits of each software plan side by side; longer bars mean more. These are the limits the app enforces."
+          : `The main limits of ${MARKETING_PLANS.map((p) => p.name).join("")}. These are the limits the app enforces. Need more? Ask about ${CUSTOM_PLAN.name}.`}
       </figcaption>
     </figure>
   );
@@ -71,7 +73,6 @@ export function PlanIncludes({ className }: { className?: string }) {
   const engines = MARKETING_PLANS.map((p) => p.ai.engines);
   const minEngines = Math.min(...engines);
   const maxEngines = Math.max(...engines);
-  const agency = MARKETING_PLANS.find((p) => p.id === "agency");
 
   const items: { icon: React.ReactNode; title: string; body: string }[] = [
     {
@@ -119,8 +120,8 @@ export function PlanIncludes({ className }: { className?: string }) {
       <figcaption className="mt-4 flex items-start gap-2 text-small text-fg-soft">
         <BadgeCheck aria-hidden size={16} className="mt-0.5 shrink-0 text-primary" />
         <span>
-          Included in every software plan.
-          {agency ? ` ${agency.name} also adds white-label reports and emails with your own name and logo.` : ""}
+          Included in {MARKETING_PLANS.length > 1 ? "every software plan" : MARKETING_PLANS.map((p) => p.name).join("")}. Reports
+          and emails with your own name and logo come with a {CUSTOM_PLAN.name} plan.
         </span>
       </figcaption>
     </figure>

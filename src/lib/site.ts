@@ -1,8 +1,7 @@
-// Legal entity + contact details shown on the Privacy Policy, Terms and footer.
-// TODO(legal): every value marked TODO is a placeholder — replace with the registered details before launch.
+// Legal entity + contact details shown on the Privacy Policy, Terms and footer. Confirmed by the owner, Nov 2026.
 import { BRAND, brandAddressLine } from "@/lib/brand";
 
-/** TODO(legal): registered legal name of the company that runs the service. */
+/** Legal name of the business that runs the service (as on the GST certificate). */
 export const LEGAL_ENTITY = "Go Hype Media";
 
 /**
@@ -11,14 +10,14 @@ export const LEGAL_ENTITY = "Go Hype Media";
  */
 export const LEGAL_ADDRESS = brandAddressLine();
 
-/** Where people send privacy, deletion and legal requests. TODO(legal): confirm the inbox. */
+/** Where people send privacy, deletion and legal requests. */
 export const LEGAL_EMAIL = BRAND.supportEmail;
 
-/** Grievance Officer under the DPDP Act 2023 / IT Rules 2011. TODO(legal): name the person. */
-export const GRIEVANCE_OFFICER = "TODO: Grievance Officer name";
+/** Grievance Officer under the DPDP Act 2023 / IT Rules 2011. */
+export const GRIEVANCE_OFFICER = "Gourav Gupta";
 
-/** Courts with jurisdiction over disputes. TODO(legal): confirm the city. */
-export const JURISDICTION_CITY = "TODO: city";
+/** Courts with jurisdiction over disputes. */
+export const JURISDICTION_CITY = "New Delhi";
 
 /** Date shown as "Last updated" on the Privacy Policy and Terms. */
-export const LEGAL_UPDATED = "4 November 2026";
+export const LEGAL_UPDATED = "13 November 2026";

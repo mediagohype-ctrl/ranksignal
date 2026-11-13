@@ -1,4 +1,4 @@
-// Done-for-you service: tier cards, hero delivery log and the sample monthly impact report.
+// Done-for-you service: the "Do it for me" offer card (+ Custom), hero delivery log and the sample monthly impact report.
 // Every business, number and fix shown here is sample data and labelled as such.
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -6,15 +6,48 @@ import clsx from "clsx";
 import { ArrowRight, ArrowUpRight, Check, RotateCcw } from "lucide-react";
 import { SampleTag } from "./home-ui";
 import { inkPill } from "./ui";
-import { SERVICE_TIERS, inr, servicesContactHref, type ServiceTier } from "./plans";
+import {
+  CUSTOM_CONTACT_HREF, CUSTOM_PLAN, SERVICE_TIERS, gstOn, inr, servicesContactHref, newTabProps, type ServiceTier,
+} from "./plans";
 
-/* ------------------------------------------------------------------ tier cards */
+/* ------------------------------------------------------------------ offer cards */
 
-export function ServiceTierCards({ headingLevel = "h3", className }: { headingLevel?: "h2" | "h3"; className?: string }) {
+/** The done-for-you offer card ("Do it for me"), optionally beside the Custom card. */
+export function ServiceTierCards({
+  headingLevel = "h3",
+  className,
+  withCustom = false,
+}: {
+  headingLevel?: "h2" | "h3";
+  className?: string;
+  withCustom?: boolean;
+}) {
   return (
-    <ul className={clsx("grid gap-6 lg:grid-cols-3 lg:items-stretch", className)}>
+    <ul className={clsx("grid gap-6 lg:items-stretch", withCustom ? "lg:grid-cols-2" : "max-w-xl", className)}>
       {SERVICE_TIERS.map((t) => (
         <TierCard key={t.id} tier={t} Heading={headingLevel} />
+      ))}
+      {withCustom && <CustomCard Heading={headingLevel} />}
+    </ul>
+  );
+}
+
+function CheckList({ items, ink }: { items: readonly string[]; ink: boolean }) {
+  return (
+    <ul className="space-y-3.5">
+      {items.map((i) => (
+        <li key={i} className={clsx("flex gap-3 text-[0.9375rem] leading-snug", ink ? "text-bg/85" : "text-fg-soft")}>
+          <span
+            aria-hidden
+            className={clsx(
+              "mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+              ink ? "bg-bg/15 text-bg" : "bg-primary-soft text-primary-soft-fg",
+            )}
+          >
+            <Check size={12} strokeWidth={2.75} />
+          </span>
+          {i}
+        </li>
       ))}
     </ul>
   );
@@ -29,15 +62,10 @@ function TierCard({ tier: t, Heading }: { tier: ServiceTier; Heading: "h2" | "h3
         ink ? "bg-fg text-bg" : "border border-border bg-surface",
       )}
     >
-      <div className="flex items-center justify-between gap-4">
-        <Heading className={clsx("text-[1.75rem] font-semibold leading-none tracking-[-0.03em]", ink ? "text-bg" : "text-fg")}>
-          {t.name}
-        </Heading>
-        {ink && (
-          <span className="inline-flex h-7 items-center rounded-full bg-bg px-3 text-xs font-semibold text-fg">Recommended</span>
-        )}
-      </div>
-      <p className={clsx("mt-4 text-[1rem] leading-relaxed lg:min-h-[4.9em]", ink ? "text-bg/80" : "text-fg-soft")}>{t.blurb}</p>
+      <Heading className={clsx("text-[1.75rem] font-semibold leading-none tracking-[-0.03em]", ink ? "text-bg" : "text-fg")}>
+        {t.name}
+      </Heading>
+      <p className={clsx("mt-4 text-[1rem] leading-relaxed", ink ? "text-bg/80" : "text-fg-soft")}>{t.blurb}</p>
 
       <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
         <span
@@ -48,46 +76,49 @@ function TierCard({ tier: t, Heading }: { tier: ServiceTier; Heading: "h2" | "h3
         >
           {inr(t.price)}
         </span>
-        <span className={clsx("text-small", ink ? "text-bg/75" : "text-muted")}>a month</span>
+        <span className={clsx("text-small", ink ? "text-bg/75" : "text-muted")}>a month{gstOn() ? " + GST" : ""}</span>
       </p>
       <dl className={clsx("mt-4 space-y-1 text-small", ink ? "text-bg/80" : "text-fg-soft")}>
-        <div className="flex gap-1.5">
+        <div>
           <dt className="sr-only">Setup fee</dt>
-          <dd>
-            + <span className="tabular-nums">{inr(t.setup)}</span> one-time setup
-          </dd>
+          <dd>{t.setup > 0 ? `+ ${inr(t.setup)} one-time setup` : "No setup fee"}</dd>
         </div>
         <div>
-          <dt className="sr-only">Minimum term</dt>
-          <dd>
-            {t.minimumMonths}-month minimum{t.termNote ? <span className={ink ? "text-bg/70" : "text-muted"}> · {t.termNote}</span> : null}
-          </dd>
+          <dt className="sr-only">Term</dt>
+          <dd>{t.termNote ?? `${t.minimumMonths}-month minimum`}</dd>
         </div>
       </dl>
 
       <Link href={servicesContactHref(t.id)} className={inkPill("lg", ink, "mt-8 w-full")}>
-        Book a free strategy call
+        Book a free call
         <ArrowRight aria-hidden />
       </Link>
 
       <div className={clsx("mt-9 flex-1 border-t pt-7", ink ? "border-bg/20" : "border-border")}>
         {t.inherits && <p className={clsx("mb-4 text-small font-semibold", ink ? "text-bg" : "text-fg")}>{t.inherits}</p>}
-        <ul className="space-y-3.5">
-          {t.includes.map((i) => (
-            <li key={i} className={clsx("flex gap-3 text-[0.9375rem] leading-snug", ink ? "text-bg/85" : "text-fg-soft")}>
-              <span
-                aria-hidden
-                className={clsx(
-                  "mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full",
-                  ink ? "bg-bg/15 text-bg" : "bg-primary-soft text-primary-soft-fg",
-                )}
-              >
-                <Check size={12} strokeWidth={2.75} />
-              </span>
-              {i}
-            </li>
-          ))}
-        </ul>
+        <CheckList items={t.includes} ink={ink} />
+      </div>
+    </li>
+  );
+}
+
+function CustomCard({ Heading }: { Heading: "h2" | "h3" }) {
+  return (
+    <li className="mk-reveal relative flex flex-col rounded-[28px] border border-border bg-surface p-7 sm:p-9">
+      <Heading className="text-[1.75rem] font-semibold leading-none tracking-[-0.03em] text-fg">{CUSTOM_PLAN.name}</Heading>
+      <p className="mt-4 text-[1rem] leading-relaxed text-fg-soft">{CUSTOM_PLAN.blurb}</p>
+      <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-[clamp(2.25rem,1.9rem+1.2vw,2.875rem)] font-semibold leading-none tracking-[-0.04em] text-fg">
+          {CUSTOM_PLAN.priceLabel}
+        </span>
+      </p>
+      <p className="mt-4 text-small text-fg-soft">{CUSTOM_PLAN.start}</p>
+      <Link href={CUSTOM_CONTACT_HREF} {...newTabProps(CUSTOM_CONTACT_HREF)} className={inkPill("lg", false, "mt-8 w-full")}>
+        {CUSTOM_PLAN.cta}
+        <ArrowRight aria-hidden />
+      </Link>
+      <div className="mt-9 flex-1 border-t border-border pt-7">
+        <CheckList items={CUSTOM_PLAN.includes} ink={false} />
       </div>
     </li>
   );

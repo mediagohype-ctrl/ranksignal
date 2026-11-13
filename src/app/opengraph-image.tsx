@@ -52,7 +52,7 @@ export default async function OpengraphImage() {
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <div style={{ fontSize: 66, fontWeight: 600, lineHeight: 1.08, letterSpacing: -2.5, maxWidth: 1000 }}>{BRAND.tagline}</div>
+          <div style={{ fontSize: 56, fontWeight: 600, lineHeight: 1.1, letterSpacing: -2, maxWidth: 1000 }}>{BRAND.tagline}</div>
           <div style={{ display: "flex", gap: 14 }}>
             {["SEO", "AEO", "GEO", "AI visibility"].map((t) => (
               <div

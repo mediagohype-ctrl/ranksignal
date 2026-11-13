@@ -1,164 +1,126 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import clsx from "clsx";
-import { ArrowRight, Check, Minus } from "lucide-react";
-import { Table, TD, TH, THead, TR } from "@/components/ui";
+import { ArrowRight, Check } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { ProofLine } from "@/components/marketing/proof-line";
 import { JsonLd, inkPill } from "@/components/marketing/ui";
 import {
-  MARKETING_PLANS,
-  planSignupHref,
-  SERVICE_FROM_PRICE,
-  SERVICE_TIERS,
-  TRIAL_AI,
+  CUSTOM_CONTACT_HREF,
+  CUSTOM_PLAN,
+  DFY_PLAN,
+  SELF_PLAN,
   TRIAL_DAYS,
   gstOn,
   inr,
-  inrGst,
-  num,
-  priceNote,
-  servicesContactHref,
+  planSignupHref,
+  servicesContactHref, newTabProps,
 } from "@/components/marketing/plans";
-import { formatInr, gstConfig, planPriceWithGst } from "@/lib/billing/gst";
-import { FaqList, ServiceTierCards, ServicesCta } from "@/components/marketing/services-ui";
-import { PlanIncludes, PlanMeters } from "@/components/marketing/flow/plan-meters";
+import { FaqList } from "@/components/marketing/services-ui";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 
-const SOFTWARE_FROM = Math.min(...MARKETING_PLANS.map((p) => p.price));
 export const metadata: Metadata = staticPageMetadata("/pricing");
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
 
-type Cell = string | boolean;
+/** "₹1,999/month + GST" — one GST mention per price, none when we are not GST-registered. */
+const monthly = (n: number) => `${inr(n)}/month${gstOn() ? " + GST" : ""}`;
 
-const ROWS: { label: string; hint?: string; values: Cell[] }[] = [
-  { label: "Websites", values: MARKETING_PLANS.map((p) => num(p.limits.maxProjects)) },
+interface PlanCard {
+  key: string;
+  name: string;
+  price: string;
+  line: string;
+  start: string;
+  term?: string;
+  cta: string;
+  href: string;
+  dark?: boolean;
+  tag?: string;
+  listTitle: string;
+  list: readonly string[];
+}
+
+const CARDS: PlanCard[] = [
   {
-    label: "Customer questions",
-    hint: "Questions we ask AI assistants about what you sell",
-    values: MARKETING_PLANS.map((p) => num(p.limits.maxTrackedPrompts)),
+    key: "self",
+    name: "I'll do it myself",
+    price: monthly(SELF_PLAN.price),
+    line: SELF_PLAN.blurb,
+    start: `${TRIAL_DAYS} days free. No card needed. Cancel any time.`,
+    cta: SELF_PLAN.cta,
+    href: planSignupHref(SELF_PLAN.id),
+    listTitle: "What you get",
+    list: SELF_PLAN.highlights,
   },
   {
-    label: "AI answers per month",
-    hint: "One answer = one question asked to one AI assistant",
-    values: MARKETING_PLANS.map((p) => num(p.ai.answersPerMonth)),
+    key: "dfy",
+    name: DFY_PLAN.name,
+    price: monthly(DFY_PLAN.price),
+    line: DFY_PLAN.blurb,
+    start: `Free 30-minute call.${DFY_PLAN.setup === 0 ? " No setup fee." : ""}`,
+    term: DFY_PLAN.termNote,
+    cta: "Book a free call",
+    href: servicesContactHref("fix"),
+    dark: true,
+    tag: "Most chosen",
+    listTitle: DFY_PLAN.inherits ?? "What you get",
+    list: DFY_PLAN.includes,
   },
-  { label: "Questions asked per AI check", values: MARKETING_PLANS.map((p) => num(p.ai.questionsPerCheck)) },
-  { label: "AI assistants per check", hint: "ChatGPT, Gemini, Perplexity, Claude and more", values: MARKETING_PLANS.map((p) => num(p.ai.engines)) },
-  { label: "Full AI checks per month", values: MARKETING_PLANS.map((p) => num(p.ai.checksPerMonth)) },
-  { label: "Automatic website checks", hint: "On a schedule you choose: weekly, monthly or off", values: MARKETING_PLANS.map(() => "Weekly") },
-  { label: "Pages per website check", values: MARKETING_PLANS.map((p) => num(p.limits.maxPagesPerCrawl)) },
-  { label: "Competitor comparison", values: MARKETING_PLANS.map((p) => p.limits.competitorTracking) },
-  { label: "Fixes go live only with your OK", values: MARKETING_PLANS.map((p) => p.limits.approvalPublishing) },
-  { label: "Undo and change history", values: MARKETING_PLANS.map(() => true) },
-  { label: "Team members", values: MARKETING_PLANS.map((p) => num(p.limits.seats)) },
   {
-    label: "White-label reports",
-    hint: "Your name, logo and colour on shared reports, monthly reports and report emails",
-    values: MARKETING_PLANS.map((p) => (p.id === "agency" ? "Included" : false)),
+    key: "custom",
+    name: CUSTOM_PLAN.name,
+    price: CUSTOM_PLAN.priceLabel,
+    line: CUSTOM_PLAN.blurb,
+    start: CUSTOM_PLAN.start,
+    cta: CUSTOM_PLAN.cta,
+    href: CUSTOM_CONTACT_HREF,
+    listTitle: "What you get",
+    list: CUSTOM_PLAN.includes,
   },
 ];
 
 const WHICH: { label: string; diy: string; dfy: string }[] = [
-  {
-    label: "Who does the work",
-    diy: "You or your team. We find the problems, explain them and draft the fixes.",
-    dfy: "Our team. We plan, write and make the fixes on your site, profile and listings.",
-  },
-  {
-    label: "Your time each month",
-    diy: "A few hours to review fixes and publish them.",
-    dfy: "About 30 minutes: approve the plan and read the report.",
-  },
-  {
-    label: "What you get",
-    diy: "Scores, AI checks, a to-do list and fixes that go live only with your OK.",
-    dfy: "All of the software, plus fixes made for you, new pages, listings and a monthly report.",
-  },
-  {
-    label: "Commitment",
-    diy: `${TRIAL_DAYS}-day free trial, then monthly. Cancel any time.`,
-    dfy: "One-time setup and a 3 or 6-month minimum, then 30 days’ notice.",
-  },
-  {
-    label: "Price",
-    diy: `From ${inrGst(SOFTWARE_FROM)} a month`,
-    dfy: `From ${inrGst(SERVICE_FROM_PRICE)} a month`,
-  },
-  {
-    label: "Best for",
-    diy: "Owners, marketers and agencies who like to do it themselves.",
-    dfy: "Busy owners who want it handled, and the proof each month.",
-  },
+  { label: "Who does the work", diy: "You, with our step-by-step help", dfy: "Our team" },
+  { label: "Your time each month", diy: "2–3 hours", dfy: "15 minutes to say OK" },
+  { label: "Best for", diy: "Owners who like to do it themselves", dfy: "Busy owners who want it done" },
 ];
 
 const PRICING_FAQ = [
+  { q: `What happens after ${TRIAL_DAYS} days?`, a: "Pick a plan, or do nothing and pay nothing." },
+  { q: "Can I switch plans later?", a: "Yes, any time. Your history moves with you." },
   {
-    q: "What happens after the free trial?",
-    a: `Your ${TRIAL_DAYS}-day trial gives you a full website report and ${TRIAL_AI.summary}. It only turns into a paid plan if you choose one and add payment details.`,
+    q: `Why ${DFY_PLAN.minimumMonths} months for ${DFY_PLAN.name}?`,
+    a: `Google and AI need a few weeks to notice changes. ${DFY_PLAN.minimumMonths} months shows real progress.`,
   },
-  {
-    q: "What is an AI answer?",
-    a: "Each time we ask one AI assistant one of your customer questions, that's one AI answer. Each plan includes a number of AI answers a month; the app shows how many are left and when they reset on the 1st, and stops before you go over.",
-  },
-  {
-    q: "Can I start with the software and switch to done-for-you later?",
-    a: "Yes. Your history, questions and reports carry over, so our team starts from your existing scores. The one-time setup fee still applies.",
-  },
-  {
-    q: "Do any plans guarantee results?",
-    a: "No. Software plans give you the checks, the to-do list and the tools to fix things. Done-for-you plans guarantee the agreed fixes get done — not a Google position, AI mentions or links. Nobody can honestly promise those.",
-  },
-  {
-    q: "Are prices inclusive of GST?",
-    a: gstOn()
-      ? `No. All prices are in Indian rupees and exclude GST. ${gstConfig().ratePercent}% GST is added when you pay — for example Starter is ${inr(MARKETING_PLANS[0].price)} + ${formatInr(planPriceWithGst(MARKETING_PLANS[0].id)?.gstPaise ?? 0)} GST = ${formatInr(planPriceWithGst(MARKETING_PLANS[0].id)?.totalPaise ?? 0)} a month. You get a GST invoice for every payment.`
-      : "Prices are in Indian rupees. We don't charge GST on top at the moment, so the price you see is what you pay.",
-  },
+  { q: "Do you promise #1 on Google?", a: "No one honestly can. We promise the work, and show you every result." },
 ];
 
-function CellValue({ v }: { v: Cell }) {
-  if (v === true)
-    return (
-      <span className="inline-flex items-center justify-center text-success">
-        <Check aria-hidden size={18} />
-        <span className="sr-only">Included</span>
-      </span>
-    );
-  if (v === false)
-    return (
-      <span className="inline-flex items-center justify-center text-muted">
-        <Minus aria-hidden size={18} />
-        <span className="sr-only">Not included</span>
-      </span>
-    );
-  return <span className="tabular-nums">{v}</span>;
-}
-
 export default function PricingPage() {
+  const offer = (name: string, price: number, url: string) => ({
+    "@type": "Offer",
+    name,
+    price: String(price),
+    priceCurrency: "INR",
+    url,
+    availability: "https://schema.org/InStock",
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: String(price),
+      priceCurrency: "INR",
+      unitCode: "MON",
+      ...(gstOn() ? { valueAddedTaxIncluded: false } : {}),
+    },
+  });
+
   const softwareLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: BRAND.name,
     description: BRAND.tagline,
     brand: { "@type": "Brand", name: BRAND.name },
-    offers: MARKETING_PLANS.map((p) => ({
-      "@type": "Offer",
-      name: `${BRAND.name} ${p.name}`,
-      price: String(p.price),
-      priceCurrency: "INR",
-      url: `${SITE}/pricing#software`,
-      availability: "https://schema.org/InStock",
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        price: String(p.price),
-        priceCurrency: "INR",
-        unitCode: "MON",
-        ...(gstOn() ? { valueAddedTaxIncluded: false } : {}),
-        ...(p.suffix ? { minPrice: String(p.price) } : {}),
-      },
-    })),
+    offers: [offer(`${BRAND.name} ${SELF_PLAN.name}`, SELF_PLAN.price, `${SITE}/pricing#plans`)],
   };
 
   const serviceLd = {
@@ -167,14 +129,7 @@ export default function PricingPage() {
     name: "Done-for-you website fixes for Google and AI",
     url: `${SITE}/services`,
     provider: { "@type": "Organization", name: BRAND.name, url: SITE },
-    offers: SERVICE_TIERS.map((t) => ({
-      "@type": "Offer",
-      name: `${t.name} (done-for-you)`,
-      price: String(t.price),
-      priceCurrency: "INR",
-      url: `${SITE}/services#plans`,
-      priceSpecification: { "@type": "UnitPriceSpecification", price: String(t.price), priceCurrency: "INR", unitCode: "MON", valueAddedTaxIncluded: false },
-    })),
+    offers: [offer(DFY_PLAN.name, DFY_PLAN.price, `${SITE}/pricing#plans`)],
   };
 
   const faqLd = {
@@ -189,230 +144,145 @@ export default function PricingPage() {
 
       {/* ------------------------------------------------------------ Hero */}
       <section aria-labelledby="pricing-title">
-        <div className="container-marketing pb-14 pt-14 sm:pb-20 sm:pt-20 lg:pt-24">
-          <h1 id="pricing-title" className="mk-label mk-rise">
-            SEO, AEO &amp; GEO pricing
-          </h1>
+        <div className="container-marketing pb-12 pt-14 sm:pb-16 sm:pt-20 lg:pt-24">
+          <p className="mk-label mk-rise">SEO, AEO &amp; GEO pricing</p>
           <div className="mt-6 grid gap-10 lg:grid-cols-12 lg:items-end lg:gap-10">
-            <p className="mk-hero mk-rise mk-delay-1 max-w-[12ch] text-fg lg:col-span-8">
-              Do it yourself, <span className="text-primary">or let us do it.</span>
-            </p>
-            <p className="mk-lead mk-rise mk-delay-2 max-w-md text-fg-soft lg:col-span-4">
-              Use the software and make the fixes yourself, or hand the work to our team and get a report on what changed.
-              {priceNote()}
-            </p>
+            <h1 id="pricing-title" className="mk-hero mk-rise mk-delay-1 max-w-[14ch] text-fg lg:col-span-8">
+              Simple pricing. <span className="text-primary">You choose who does the work.</span>
+            </h1>
+            <div className="mk-rise mk-delay-2 max-w-md lg:col-span-4">
+              <p className="mk-lead text-fg-soft">
+                {gstOn() ? "Prices in ₹. GST extra. No hidden costs." : "Prices in ₹. No hidden costs."}
+              </p>
+              <ProofLine className="mt-4" />
+            </div>
           </div>
-
-          <nav aria-label="Pricing options" className="mk-rise mk-delay-3 mt-12 sm:mt-16">
-            <ul className="grid gap-px overflow-hidden rounded-[22px] border border-border bg-border sm:grid-cols-2">
-              <li>
-                <a href="#software" className="group flex h-full items-center justify-between gap-4 bg-surface p-6 hover:bg-surface-2 sm:p-8">
-                  <span>
-                    <span className="block text-small text-muted">Self-serve software</span>
-                    <span className="mt-1 block text-[1.375rem] font-semibold tracking-[-0.02em] text-fg">
-                      From {inr(SOFTWARE_FROM)}/mo{gstOn() ? " + GST" : ""}
-                    </span>
-                    <span className="mt-1 block text-small text-fg-soft">{TRIAL_DAYS}-day free trial · you make the fixes</span>
-                  </span>
-                  <ArrowRight aria-hidden size={22} className="shrink-0 rotate-90 text-fg transition-transform group-hover:translate-y-0.5" />
-                </a>
-              </li>
-              <li>
-                <a href="#done-for-you" className="group flex h-full items-center justify-between gap-4 bg-fg p-6 text-bg hover:bg-fg-soft sm:p-8">
-                  <span>
-                    <span className="block text-small text-bg/75">Done-for-you service</span>
-                    <span className="mt-1 block text-[1.375rem] font-semibold tracking-[-0.02em] text-bg">
-                      From {inr(SERVICE_FROM_PRICE)}/mo
-                    </span>
-                    <span className="mt-1 block text-small text-bg/80">Our team makes the fixes · monthly report</span>
-                  </span>
-                  <ArrowRight aria-hidden size={22} className="shrink-0 rotate-90 transition-transform group-hover:translate-y-0.5" />
-                </a>
-              </li>
-            </ul>
-          </nav>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ Self-serve */}
-      <section id="software" aria-labelledby="software-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-24 sm:py-28">
+      {/* ------------------------------------------------------------ Plans */}
+      <section id="plans" aria-labelledby="plans-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
         <div className="container-marketing">
-          <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
-            <div className="lg:col-span-7">
-              <p className="mk-label">Self-serve software</p>
-              <h2 id="software-title" className="mk-statement mt-5 max-w-[14ch] text-fg">
-                You do the fixes. We show you which.
-              </h2>
-            </div>
-            <p className="mk-lead max-w-md text-fg-soft lg:col-span-4 lg:col-start-9">
-              Every plan starts with a {TRIAL_DAYS}-day free trial. Billed monthly, cancel any time.
-            </p>
-          </div>
-
-          <ul className="mt-16 grid gap-6 lg:mt-20 lg:grid-cols-3 lg:items-stretch">
-            {MARKETING_PLANS.map((p) => (
+          <h2 id="plans-title" className="sr-only">
+            Plans
+          </h2>
+          <ul className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+            {CARDS.map((c) => (
               <li
-                key={p.id}
+                key={c.key}
                 className={clsx(
-                  "mk-reveal relative flex flex-col rounded-[28px] border bg-surface p-7 sm:p-9",
-                  p.featured ? "border-fg ring-1 ring-fg" : "border-border",
+                  "mk-reveal relative flex flex-col rounded-[28px] p-7 sm:p-9",
+                  c.dark
+                    ? "order-first bg-fg text-bg shadow-card lg:order-none lg:-my-4 lg:py-12"
+                    : "border border-border bg-surface",
                 )}
               >
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-[1.75rem] font-semibold leading-none tracking-[-0.03em] text-fg">{p.name}</h3>
-                  {p.featured && (
-                    <span className="inline-flex h-7 items-center rounded-full bg-fg px-3 text-xs font-semibold text-bg">Most popular</span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className={clsx("text-[1.75rem] font-semibold leading-none tracking-[-0.03em]", c.dark ? "text-bg" : "text-fg")}>
+                    {c.name}
+                  </h3>
+                  {c.tag && (
+                    <span className="inline-flex h-7 items-center rounded-full bg-bg px-3 text-xs font-semibold text-fg">{c.tag}</span>
                   )}
                 </div>
-                <p className="mt-4 text-[1rem] leading-relaxed text-fg-soft lg:min-h-[4.9em]">{p.blurb}</p>
-                <p className="mt-8 flex items-baseline gap-2">
-                  <span className="text-[clamp(2.25rem,1.9rem+1.2vw,2.875rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums text-fg">
-                    {inr(p.price)}
-                    {p.suffix}
-                  </span>
-                  <span className="text-small text-muted">{gstOn() ? "+ GST a month" : "a month"}</span>
-                </p>
-                <p className="mt-4 text-small text-fg-soft">
-                  {gstOn()
-                    ? `${formatInr(planPriceWithGst(p.id)?.totalPaise ?? 0)} a month with ${gstConfig().ratePercent}% GST · billed monthly`
-                    : "Billed monthly"}
-                </p>
-                <Link
-                  href={planSignupHref(p.id)}
+                <p className={clsx("mt-4 text-[1rem] leading-relaxed", c.dark ? "text-bg/80" : "text-fg-soft")}>{c.line}</p>
+                <p
                   className={clsx(
-                    "mt-8 w-full",
-                    p.featured
-                      ? inkPill("lg")
-                      : "inline-flex h-14 items-center justify-center gap-2 rounded-full border border-border-strong px-7 text-[1rem] font-medium text-fg hover:bg-surface-2",
+                    "mt-8 text-[clamp(1.875rem,1.6rem+1vw,2.5rem)] font-semibold leading-tight tracking-[-0.04em] tabular-nums",
+                    c.dark ? "text-bg" : "text-fg",
                   )}
                 >
-                  {p.cta}
-                  {p.featured && <ArrowRight aria-hidden />}
+                  {c.price}
+                </p>
+                <p className={clsx("mt-3 text-small font-medium", c.dark ? "text-bg" : "text-fg")}>{c.start}</p>
+                {c.term && <p className="mt-1 text-small text-bg/75">{c.term}</p>}
+                <Link
+                  href={c.href}
+                  {...newTabProps(c.href)}
+                  className={
+                    c.dark
+                      ? inkPill("lg", true, "mt-8 w-full")
+                      : "mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full border border-border-strong px-7 text-[1rem] font-medium text-fg hover:bg-surface-2"
+                  }
+                >
+                  {c.cta}
+                  {c.dark && <ArrowRight aria-hidden />}
                 </Link>
-                <ul className="mt-9 flex-1 space-y-3.5 border-t border-border pt-7">
-                  {p.highlights.map((h) => (
-                    <li key={h} className="flex gap-3 text-[0.9375rem] leading-snug text-fg-soft">
-                      <span aria-hidden className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-soft-fg">
-                        <Check size={12} strokeWidth={2.75} />
-                      </span>
-                      {h}
-                    </li>
-                  ))}
-                </ul>
+                <div className={clsx("mt-9 flex-1 border-t pt-7", c.dark ? "border-bg/15" : "border-border")}>
+                  <h4 className={clsx("text-small font-semibold", c.dark ? "text-bg" : "text-fg")}>{c.listTitle}</h4>
+                  <ul className="mt-4 space-y-3.5">
+                    {c.list.map((h) => (
+                      <li key={h} className={clsx("flex gap-3 text-[0.9375rem] leading-snug", c.dark ? "text-bg/85" : "text-fg-soft")}>
+                        <span
+                          aria-hidden
+                          className={clsx(
+                            "mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+                            c.dark ? "bg-bg/15 text-bg" : "bg-primary-soft text-primary-soft-fg",
+                          )}
+                        >
+                          <Check size={12} strokeWidth={2.75} />
+                        </span>
+                        {h}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </li>
             ))}
           </ul>
-
-          <div className="mk-reveal mt-16 lg:mt-20">
-            <h3 className="text-[clamp(1.5rem,1.25rem+0.9vw,2rem)] font-semibold leading-tight tracking-[-0.03em] text-fg">
-              Compare the plans at a glance
-            </h3>
-            <p className="mk-body mt-3 max-w-2xl text-fg-soft">
-              The biggest differences between plans are how many websites you can add, how many pages each website check
-              reads and how many AI answers you get each month. The detailed comparison below lists every limit.
-            </p>
-            <PlanMeters className="mt-8" />
-          </div>
-
-          <div className="mk-reveal mt-14">
-            <h3 className="text-[clamp(1.5rem,1.25rem+0.9vw,2rem)] font-semibold leading-tight tracking-[-0.03em] text-fg">
-              What every plan includes
-            </h3>
-            <PlanIncludes className="mt-8" />
-          </div>
-
-          <details className="group mk-reveal mt-12 rounded-[22px] border border-border bg-surface">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-6 px-6 py-5 sm:px-8 [&::-webkit-details-marker]:hidden">
-              <span className="text-[1.125rem] font-semibold tracking-[-0.015em] text-fg">Compare software plans in detail</span>
-              <span
-                aria-hidden
-                className="relative inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border-strong text-fg transition-transform duration-200 group-open:rotate-45"
-              >
-                <span className="absolute h-px w-3 bg-current" />
-                <span className="absolute h-3 w-px bg-current" />
-              </span>
-            </summary>
-            <div className="border-t border-border">
-              <Table caption="Feature comparison across Starter, Growth and Agency software plans" zebra>
-                <THead>
-                  <tr>
-                    <TH className="w-[40%]">Feature</TH>
-                    {MARKETING_PLANS.map((p) => (
-                      <TH key={p.id} align="center">
-                        {p.name}
-                      </TH>
-                    ))}
-                  </tr>
-                </THead>
-                <tbody>
-                  {ROWS.map((r) => (
-                    <TR key={r.label}>
-                      <TD className="font-medium text-fg">
-                        {r.label}
-                        {r.hint && <span className="block text-xs font-normal text-muted">{r.hint}</span>}
-                      </TD>
-                      {r.values.map((v, i) => (
-                        <TD key={i} className="text-center">
-                          <CellValue v={v} />
-                        </TD>
-                      ))}
-                    </TR>
-                  ))}
-                </tbody>
-              </Table>
-              <p className="border-t border-border px-6 py-4 text-small text-muted sm:px-8">
-                Limits above are the ones the app enforces. Not sure which fits? The free trial includes a full website report and{" "}
-                {TRIAL_AI.summary}, and you can pick a plan later.
-              </p>
-            </div>
-          </details>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ Done-for-you */}
-      <section id="done-for-you" aria-labelledby="dfy-title" className="scroll-mt-20 border-t border-border py-24 sm:py-28">
+      {/* ------------------------------------------------------------ Proof */}
+      <section aria-label="Proof" className="border-t border-border py-16 sm:py-20">
         <div className="container-marketing">
-          <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
-            <div className="lg:col-span-7">
-              <p className="mk-label">Done-for-you</p>
-              <h2 id="dfy-title" className="mk-statement mt-5 max-w-[14ch] text-fg">
-                We do the fixes. You get the proof.
-              </h2>
-            </div>
-            <div className="max-w-md lg:col-span-4 lg:col-start-9">
-              <p className="mk-lead text-fg-soft">
-                Our team makes the agreed fixes every month and reports what changed. Includes the software.
-              </p>
-              <Link
-                href="/services"
-                className="mt-5 inline-flex items-center gap-1.5 text-[1rem] font-medium text-fg underline decoration-border-strong underline-offset-[6px] hover:decoration-fg"
-              >
-                How the service works
-                <ArrowRight aria-hidden size={17} />
-              </Link>
-            </div>
-          </div>
-          <ServiceTierCards className="mt-16 lg:mt-20" />
-          <p className="mt-8 max-w-3xl text-small text-muted">
-            Prices exclude GST. Setup is charged once; minimum terms then month to month with 30 days&apos; notice. If we
-            don&apos;t make the fixes promised for a month, you get 25% of that month&apos;s fee back. We never promise a
-            Google or AI position.
+          <p className="mk-reveal flex items-center justify-center gap-3 text-center text-[clamp(1.5rem,1.2rem+1.4vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em] text-fg">
+            <Check aria-hidden className="size-[1em] shrink-0 text-success" />
+            {BRAND.proof}
           </p>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ Which is right */}
-      <section id="which" aria-labelledby="which-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-24 sm:py-28">
+      <section id="which" aria-labelledby="which-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
         <div className="container-marketing">
-          <h2 id="which-title" className="mk-reveal mk-statement max-w-[14ch] text-fg">
+          <h2 id="which-title" className="mk-reveal mk-title max-w-[16ch] text-fg">
             Which is right for me?
           </h2>
-          <WhichTable />
+          <div className="mk-reveal mt-10 overflow-hidden rounded-[24px] border border-border bg-surface">
+            <table className="w-full table-fixed text-left">
+              <caption className="sr-only">
+                {SELF_PLAN.name} compared with {DFY_PLAN.name}
+              </caption>
+              <thead>
+                <tr className="border-b border-border">
+                  <td className="w-[30%] p-4 sm:p-6" />
+                  <th scope="col" className="p-4 align-bottom text-[0.9375rem] font-semibold text-fg sm:p-6 sm:text-[1.125rem]">
+                    {SELF_PLAN.name}
+                  </th>
+                  <th scope="col" className="bg-fg p-4 align-bottom text-[0.9375rem] font-semibold text-bg sm:p-6 sm:text-[1.125rem]">
+                    {DFY_PLAN.name}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {WHICH.map((r, i) => (
+                  <tr key={r.label} className={clsx(i < WHICH.length - 1 && "border-b border-border")}>
+                    <th scope="row" className="p-4 align-top text-small font-semibold text-fg sm:p-6">
+                      {r.label}
+                    </th>
+                    <td className="p-4 align-top text-small leading-relaxed text-fg-soft sm:p-6 sm:text-[0.9375rem]">{r.diy}</td>
+                    <td className="bg-surface-2/70 p-4 align-top text-small leading-relaxed text-fg sm:p-6 sm:text-[0.9375rem]">{r.dfy}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ FAQ */}
-      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border py-24 sm:py-28">
+      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border py-20 sm:py-28">
         <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <h2 id="faq-title" className="mk-title max-w-[12ch] text-fg">
@@ -425,25 +295,6 @@ export default function PricingPage() {
               </Link>
               .
             </p>
-            <p className="mk-body mt-5 max-w-sm text-fg-soft">
-              GST is added at the rate set by India&apos;s{" "}
-              <a
-                href="https://cbic-gst.gov.in/"
-                rel="noopener"
-                className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
-              >
-                Central Board of Indirect Taxes and Customs
-              </a>
-              . Comparing us with an agency? Google&apos;s own guide,{" "}
-              <a
-                href="https://developers.google.com/search/docs/fundamentals/do-i-need-seo"
-                rel="noopener"
-                className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
-              >
-                Do you need an SEO?
-              </a>
-              , lists the questions worth asking.
-            </p>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">
             <FaqList items={PRICING_FAQ} />
@@ -451,102 +302,18 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <ServicesCta
-        title="Not sure yet? Start with the free check."
-        body={<p>It reads your homepage and main pages and shows your score and top fixes. Then decide who does them.</p>}
-        primary={{ href: "/free-check", label: "Run the free check" }}
-        secondary={{ href: servicesContactHref(), label: "Book a strategy call" }}
-        footnote={`${TRIAL_DAYS}-day free trial on software. ${priceNote()} We never promise a Google position.`}
-      />
-    </>
-  );
-}
-
-function WhichTable() {
-  return (
-    <>
-      {/* Wide screens: a three-column table. */}
-      <div className="mk-reveal mt-14 hidden overflow-hidden rounded-[28px] border border-border bg-surface md:block lg:mt-20">
-        <table className="w-full table-fixed text-left">
-          <caption className="sr-only">Self-serve software compared with done-for-you service</caption>
-          <thead>
-            <tr className="border-b border-border">
-              <td className="w-[24%] p-8" />
-              <th scope="col" className="p-8 align-bottom">
-                <span className="block text-small font-medium text-muted">Do it yourself</span>
-                <span className="mt-1 block text-[1.5rem] font-semibold tracking-[-0.02em] text-fg">Software</span>
-              </th>
-              <th scope="col" className="bg-fg p-8 align-bottom">
-                <span className="block text-small font-medium text-bg/75">We do it</span>
-                <span className="mt-1 block text-[1.5rem] font-semibold tracking-[-0.02em] text-bg">Done-for-you</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {WHICH.map((r) => (
-              <tr key={r.label} className="border-b border-border">
-                <th scope="row" className="p-8 align-top text-small font-semibold text-fg">
-                  {r.label}
-                </th>
-                <td className="p-8 align-top text-[0.9375rem] leading-relaxed text-fg-soft">{r.diy}</td>
-                <td className="bg-surface-2/70 p-8 align-top text-[0.9375rem] leading-relaxed text-fg">{r.dfy}</td>
-              </tr>
-            ))}
-            <tr>
-              <td />
-              <td className="p-8">
-                <Link
-                  href="/signup"
-                  className="inline-flex h-12 items-center justify-center rounded-full border border-border-strong px-6 text-[0.9375rem] font-medium text-fg hover:bg-surface-2"
-                >
-                  Start free trial
-                </Link>
-              </td>
-              <td className="bg-surface-2/70 p-8">
-                <Link href="/services" className={inkPill("md", false, "h-12 px-6")}>
-                  See done-for-you
-                  <ArrowRight aria-hidden />
-                </Link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Small screens: two stacked panels. */}
-      <div className="mt-12 grid gap-5 md:hidden">
-        {(
-          [
-            { key: "diy", kicker: "Do it yourself", name: "Software", ink: false, href: "/signup", cta: "Start free trial" },
-            { key: "dfy", kicker: "We do it", name: "Done-for-you", ink: true, href: "/services", cta: "See done-for-you" },
-          ] as const
-        ).map((c) => (
-          <div key={c.key} className={clsx("rounded-[24px] p-6", c.ink ? "bg-fg text-bg" : "border border-border bg-surface")}>
-            <p className={clsx("text-small font-medium", c.ink ? "text-bg/75" : "text-muted")}>{c.kicker}</p>
-            <h3 className={clsx("mt-1 text-[1.5rem] font-semibold tracking-[-0.02em]", c.ink ? "text-bg" : "text-fg")}>{c.name}</h3>
-            <dl className={clsx("mt-5 divide-y", c.ink ? "divide-bg/15" : "divide-border")}>
-              {WHICH.map((r) => (
-                <div key={r.label} className="py-3.5">
-                  <dt className={clsx("text-xs font-semibold", c.ink ? "text-bg" : "text-fg")}>{r.label}</dt>
-                  <dd className={clsx("mt-1 text-[0.9375rem] leading-relaxed", c.ink ? "text-bg/80" : "text-fg-soft")}>
-                    {c.key === "diy" ? r.diy : r.dfy}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <Link
-              href={c.href}
-              className={
-                c.ink
-                  ? inkPill("md", true, "mt-5 h-12 w-full")
-                  : "mt-5 inline-flex h-12 w-full items-center justify-center rounded-full border border-border-strong text-[0.9375rem] font-medium text-fg hover:bg-surface-2"
-              }
-            >
-              {c.cta}
-            </Link>
-          </div>
-        ))}
-      </div>
+      {/* ------------------------------------------------------------ Final button */}
+      <section aria-labelledby="final-title" className="border-t border-border bg-fg py-20 text-bg sm:py-24">
+        <div className="container-marketing flex flex-col items-start gap-8 sm:flex-row sm:items-center sm:justify-between">
+          <h2 id="final-title" className="mk-title max-w-[18ch] text-bg">
+            Not sure yet? See your scores first.
+          </h2>
+          <Link href="/free-check" className={inkPill("lg", true, "w-full sm:w-auto")}>
+            Check my website free
+            <ArrowRight aria-hidden />
+          </Link>
+        </div>
+      </section>
     </>
   );
 }

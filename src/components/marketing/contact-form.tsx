@@ -7,12 +7,20 @@ import { Turnstile, isTurnstileConfigured } from "@/components/turnstile";
 
 type Errors = Partial<Record<"name" | "email" | "message", string>>;
 
-/** Message prefill for /contact?topic=services (optionally &tier=fix|grow|authority). */
+/** Message prefill for /contact?topic=services (optionally &tier=fix → "Do it for me"). */
 function servicesPrefill(tierName?: string): string {
-  return `Topic: Done-for-you services${tierName ? ` (${tierName} plan)` : ""}
+  return `Topic: Done-for-you services${tierName ? ` (${tierName})` : ""}
 
-I'd like to book a free strategy call. Our website is: 
+I'd like to book a free call. Our website is: 
 What we'd most like help with: `;
+}
+
+/** Message prefill for /contact?topic=custom. */
+function customPrefill(): string {
+  return `Topic: Custom plan
+
+How many websites, brands or cities: 
+What we need (e.g. reports with our logo, API or dashboard access): `;
 }
 
 export function ContactForm({
@@ -21,15 +29,15 @@ export function ContactForm({
   tierName,
 }: {
   supportEmail: string;
-  /** "services" pre-fills the message for the done-for-you strategy call. */
-  topic?: "services";
+  /** "services" pre-fills the message for the done-for-you call; "custom" for the Custom plan. */
+  topic?: "services" | "custom";
   tierName?: string;
 }) {
   const [form, setForm] = useState({
     name: "",
     email: "",
     company: "",
-    message: topic === "services" ? servicesPrefill(tierName) : "",
+    message: topic === "services" ? servicesPrefill(tierName) : topic === "custom" ? customPrefill() : "",
     website: "",
   });
   const [token, setToken] = useState("");
@@ -100,6 +108,11 @@ export function ContactForm({
           Topic: Done-for-you services{tierName ? ` · ${tierName}` : ""}
         </p>
       )}
+      {topic === "custom" && (
+        <p className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-small font-medium text-primary-soft-fg">
+          Topic: Custom plan
+        </p>
+      )}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Name" htmlFor="c-name" error={errors.name} required>
           <Input id="c-name" autoComplete="name" value={form.name} onChange={set("name")} maxLength={100} required invalid={!!errors.name}
@@ -113,7 +126,7 @@ export function ContactForm({
       <Field label="Company or agency" htmlFor="c-company" optional>
         <Input id="c-company" autoComplete="organization" value={form.company} onChange={set("company")} maxLength={120} />
       </Field>
-      <Field label="How can we help?" htmlFor="c-message" hint={topic === "services" ? "Add your website and what you'd like help with. We'll reply to arrange a time." : "E.g. how many client sites you manage, or what you'd like to know."} error={errors.message} required>
+      <Field label="How can we help?" htmlFor="c-message" hint={topic === "services" ? "Add your website and what you'd like help with. We'll reply to arrange a time." : topic === "custom" ? "Tell us roughly how many websites, brands or cities, and what you need." : "E.g. which plan suits you, or what you'd like to know."} error={errors.message} required>
         <Textarea id="c-message" rows={6} value={form.message} onChange={set("message")} maxLength={5000} required invalid={!!errors.message}
           aria-describedby={fieldDescribedBy("c-message", { hint: true, error: errors.message })} />
       </Field>

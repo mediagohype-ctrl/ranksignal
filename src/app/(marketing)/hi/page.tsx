@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import clsx from "clsx";
 import { ArrowRight } from "lucide-react";
-import { JsonLd } from "@/components/marketing/ui";
+import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { SAMPLE_FIXES, SAMPLE_SCORE } from "@/components/marketing/home-sample";
 import { SampleScoreCard } from "@/components/marketing/showcase/sample-score";
-import { TRIAL_DAYS } from "@/components/marketing/plans";
-import { HOME_FAQ, HI_PLANS } from "@/components/marketing/hi/content";
-import { HiCheckLauncher, HiFaqSection, HiPlanCards } from "@/components/marketing/hi/hi-ui";
+import { TRIAL_DAYS, gstOn, inr, newTabProps } from "@/components/marketing/plans";
+import { HOME_FAQ, HI_OFFER } from "@/components/marketing/hi/content";
+import { HiCheckLauncher, HiFaqSection } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { faqLd, siteUrl } from "@/lib/seo/schema";
@@ -149,16 +150,48 @@ export default function HindiHomePage() {
         <div className="container-marketing">
           <div className="mk-reveal max-w-2xl">
             <h2 id="hi-pricing-title" className="mk-title text-fg">
-              आसान प्लान। {TRIAL_DAYS} दिन फ्री।
+              खुद करें, या हमसे करवाएँ।
             </h2>
-            <p className="mk-body mt-4 text-fg-soft">कीमतें भारतीय रुपये में, GST अलग। जब चाहें बंद करें।</p>
+            <p className="mk-body mt-4 text-fg-soft">
+              कीमतें भारतीय रुपये में{gstOn() ? ", GST अलग" : ""}। “मैं ख़ुद करूँगा” पहले {TRIAL_DAYS} दिन फ्री।
+            </p>
           </div>
-          <div className="mt-12">
-            <HiPlanCards plans={HI_PLANS} limit={4} />
-          </div>
+          <ul className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+            {HI_OFFER.map((c) => {
+              const ink = !!c.featured;
+              return (
+                <li key={c.key} className={clsx("mk-reveal flex flex-col rounded-[28px] p-7 sm:p-8", ink ? "bg-fg text-bg" : "border border-border bg-surface")}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className={clsx("text-[1.375rem] font-semibold leading-tight", ink ? "text-bg" : "text-fg")}>
+                      {c.name}
+                      <span className={clsx("ml-2 text-small font-normal", ink ? "text-bg/70" : "text-muted")} lang="en">
+                        ({c.en})
+                      </span>
+                    </h3>
+                    {c.tag && <span className="inline-flex h-7 items-center rounded-full bg-bg px-3 text-xs font-semibold text-fg">{c.tag}</span>}
+                  </div>
+                  <p className="mt-6 flex flex-wrap items-baseline gap-x-2">
+                    <span className={clsx("text-[2.25rem] font-semibold leading-none tracking-[-0.03em] tabular-nums", ink ? "text-bg" : "text-fg")}>
+                      {c.price === null ? c.priceLabel : inr(c.price)}
+                    </span>
+                    {c.price !== null && (
+                      <span className={clsx("text-small", ink ? "text-bg/75" : "text-muted")}>{gstOn() ? "+ GST / महीना" : "/ महीना"}</span>
+                    )}
+                  </p>
+                  <p className={clsx("mt-5 flex-1 text-[1rem]", ink ? "text-bg" : "text-fg")}>
+                    {c.line1}
+                    <span className={clsx("mt-1 block text-small", ink ? "text-bg/80" : "text-fg-soft")}>{c.line2}</span>
+                  </p>
+                  <Link href={c.href} {...newTabProps(c.href)} className={inkPill("md", ink, "mt-8 w-full")}>
+                    {c.cta}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
           <p className="mt-8 text-center text-small text-muted">
             <Link href="/hi/pricing" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
-              सभी प्लान की पूरी तुलना देखें
+              प्लान में क्या-क्या मिलता है, पूरा देखें
             </Link>
           </p>
         </div>

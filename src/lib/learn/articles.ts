@@ -76,7 +76,7 @@ export const ARTICLES: Article[] = [
     keyPoints: [
       "AEO targets questions, not just keywords: “how much does X cost”, “what is the best Y near me”.",
       "Answer engines prefer a short, direct answer (about 40–60 words) placed right under a question-shaped heading.",
-      "FAQPage, HowTo, Organization and Product structured data help engines understand what each answer is about.",
+      "FAQPage, Organization and Product structured data help engines understand what each answer is about.",
       "AEO builds on SEO: a page that can’t be crawled or indexed can’t be quoted.",
     ],
     sections: [
@@ -241,7 +241,7 @@ export const ARTICLES: Article[] = [
             ["Full name", "Search Engine Optimization", "Answer Engine Optimization", "Generative Engine Optimization"],
             ["Where you win", "Google and Bing results pages", "Featured snippets, AI Overviews, voice assistants, “People also ask”", "ChatGPT, Gemini, Perplexity, Claude, Copilot and Grok answers"],
             ["What you optimise", "Whole pages for search phrases", "Individual answers to questions", "Your brand as an entity and your citable facts"],
-            ["Key tactics", "Technical health, content, links", "Question headings, 40–60 word answers, FAQ and HowTo structured data", "AI crawler access, consistent business details, third-party mentions, statistics and sources, llms.txt"],
+            ["Key tactics", "Technical health, content, links", "Question headings, 40–60 word answers, FAQ structured data", "AI crawler access, consistent business details, third-party mentions, statistics and sources, llms.txt"],
             ["How you measure", "Rankings, impressions, organic clicks", "Snippet and AI Overview appearances", "Mention and citation rate across sampled AI answers"],
           ],
         },
@@ -286,7 +286,7 @@ export const ARTICLES: Article[] = [
   {
     slug: "how-to-get-mentioned-by-chatgpt",
     title: "How to get your business mentioned by ChatGPT, Gemini and Perplexity",
-    metaTitle: "How to rank in ChatGPT: get your business mentioned by AI (2026)",
+    metaTitle: "How to Get Your Business Recommended by ChatGPT",
     description:
       "A practical guide to getting your brand recommended in ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews: AI crawler access, Bing indexing, entity clarity, third-party mentions and how to track results.",
     keywords: ["how to rank in ChatGPT", "get mentioned by ChatGPT", "ChatGPT SEO", "AI visibility", "rank in AI search", "Perplexity SEO"],
@@ -425,7 +425,7 @@ export const ARTICLES: Article[] = [
         bullets: [
           "Organization or LocalBusiness on the home page, with logo, contact and sameAs links.",
           "FAQPage for visible question-and-answer sections ([free FAQ schema generator](/tools/faq-markup-maker)).",
-          "Product, Service, Article, BreadcrumbList or HowTo where they fit.",
+          "Product, Service, Article or BreadcrumbList where they fit.",
         ],
       },
       {

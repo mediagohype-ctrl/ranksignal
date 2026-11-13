@@ -6,7 +6,17 @@ import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { SampleResult } from "@/components/marketing/home-sample";
 import { FAQS } from "@/components/marketing/content";
-import { MARKETING_PLANS, TRIAL_DAYS, gstOn, inr, planSignupHref } from "@/components/marketing/plans";
+import {
+  CUSTOM_CONTACT_HREF,
+  CUSTOM_PLAN,
+  DFY_PLAN,
+  SELF_PLAN,
+  TRIAL_DAYS,
+  gstOn,
+  inr,
+  planSignupHref,
+  servicesContactHref, newTabProps,
+} from "@/components/marketing/plans";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 import { backlinksEnabled, dfsConfigured } from "@/lib/dataforseo/status";
@@ -27,9 +37,66 @@ const SITE = BRAND.appUrl.replace(/\/$/, "");
 
 // The three names the report scores you on, each with what it means in plain words.
 const TERMS = [
-  { term: "SEO", name: "Search engines", line: "Can Google and Bing find, read and trust your pages?" },
-  { term: "AEO", name: "Answer engines", line: "Do your pages give short, direct answers worth quoting?" },
-  { term: "GEO", name: "Generative AI", line: "Do ChatGPT, Gemini and others name you and link to you?" },
+  { term: "SEO", name: "Google Score", line: "Can Google and Bing find, read and trust your pages?" },
+  { term: "AEO", name: "Answer Score", line: "Do your pages give short, direct answers worth quoting?" },
+  { term: "GEO", name: "AI Score", line: "Do ChatGPT, Gemini and others name you and link to you?" },
+];
+
+/** "₹1,999/month + GST" — one GST mention per price, none when we are not GST-registered. */
+const monthly = (n: number) => `${inr(n)}/month${gstOn() ? " + GST" : ""}`;
+
+// Website Blueprint: two priced plans + Custom. The middle (done-for-you) card is dark and shows first on phones.
+const HOME_PLANS = [
+  {
+    key: "self",
+    name: "I'll do it myself",
+    price: monthly(SELF_PLAN.price),
+    line: SELF_PLAN.blurb,
+    start: `${TRIAL_DAYS} days free. No card needed. Cancel any time.`,
+    cta: SELF_PLAN.cta,
+    href: planSignupHref(SELF_PLAN.id),
+    dark: false,
+    points: [
+      "Your SEO, AEO, GEO and Brand scores",
+      `A website check every week, up to ${SELF_PLAN.limits.maxPagesPerCrawl.toLocaleString("en-IN")} pages`,
+      `What ChatGPT, Gemini and Perplexity say about you (${SELF_PLAN.ai.answersPerMonth.toLocaleString("en-IN")} AI answers a month)`,
+      "A to-do list in plain words, most important first",
+      "One-click fixes with undo on WordPress",
+      "A monthly report you can read in 2 minutes",
+    ],
+    whoDoes: "You make the fixes, with our step-by-step help.",
+  },
+  {
+    key: "dfy",
+    name: DFY_PLAN.name,
+    price: monthly(DFY_PLAN.price),
+    line: "Our team does all the work.",
+    start: `Free 30-minute call.${DFY_PLAN.setup === 0 ? " No setup fee." : ""}`,
+    cta: "Book a free call",
+    href: servicesContactHref("fix"),
+    dark: true,
+    points: [
+      "Everything in I'll do it myself",
+      "Our team fixes your website, most important first",
+      "Your Google Business Profile looked after",
+      "New pages that answer what your customers ask",
+      "Wrong facts about you in AI answers corrected",
+      "Your own expert on WhatsApp, plus a monthly call",
+    ],
+    whoDoes: "Our team does the work. You just reply OK.",
+  },
+  {
+    key: "custom",
+    name: CUSTOM_PLAN.name,
+    price: CUSTOM_PLAN.priceLabel,
+    line: CUSTOM_PLAN.blurb,
+    start: CUSTOM_PLAN.start,
+    cta: CUSTOM_PLAN.cta,
+    href: CUSTOM_CONTACT_HREF,
+    dark: false,
+    points: [...CUSTOM_PLAN.includes],
+    whoDoes: "A dedicated team, with one point of contact.",
+  },
 ];
 
 const STEPS = [
@@ -106,7 +173,11 @@ export default function HomePage() {
               See how Google and AI assistants like ChatGPT see your business. Get your top fixes in plain words, so
               customers can find you more easily.
             </p>
-            <FreeCheckLauncher id="hero-url" className="mk-rise mk-delay-2 mx-auto mt-9 max-w-[36rem] text-left" />
+            <FreeCheckLauncher
+              id="hero-url"
+              className="mk-rise mk-delay-2 mx-auto mt-9 max-w-[36rem] text-left"
+              hint={`Free · No sign-up · ${BRAND.proof}`}
+            />
           </div>
         </div>
       </section>
@@ -154,13 +225,12 @@ export default function HomePage() {
             <h3 className="mt-8 text-[1.25rem] font-semibold tracking-[-0.015em] text-fg">
               What do SEO, AEO and GEO mean for my business?
             </h3>
-            <p className="mk-body mx-auto mt-3 max-w-[42rem] text-fg-soft">
-              They are three ways the same customer can find you. SEO (search engine optimization) gets your website
-              into Google&apos;s normal results. AEO (answer engine optimization) makes your pages give short, clear
-              answers that Google&apos;s answer box and AI Overviews can quote. GEO (generative engine optimization) helps
-              AI assistants like ChatGPT, Gemini and Perplexity name your business and link to your website when someone
-              asks for what you sell. Do well at all three and you are there wherever your customers look.{" "}
-              {BRAND.name} checks all three and tells you what to fix first.
+            {/* Kept to ~40 words: short enough for Google's answer box to quote; the visual below shows each step. */}
+            <p className="mk-lead mx-auto mt-4 max-w-[38rem] text-fg-soft">
+              They are the three places one customer can find you: <span className="font-medium text-fg">Google&apos;s results</span>,
+              the <span className="font-medium text-fg">answer box at the top</span>, and{" "}
+              <span className="font-medium text-fg">AI assistants like ChatGPT</span>. {BRAND.name} checks all three and
+              shows you what to fix first.
             </p>
           </div>
           <ReachVisual className="mk-reveal mt-12 lg:mt-16" />
@@ -246,40 +316,54 @@ export default function HomePage() {
         <div className="container-marketing">
           <div className="mk-reveal max-w-2xl">
             <h2 id="pricing-title" className="mk-title text-fg">
-              Simple plans. {TRIAL_DAYS} days free.
+              Pick your plan
             </h2>
-            <p className="mk-body mt-4 text-fg-soft">Prices in Indian rupees, plus GST. Cancel any time.</p>
+            <p className="mk-body mt-4 text-fg-soft">{gstOn() ? "Prices in ₹. GST extra. No hidden costs." : "Prices in ₹. No hidden costs."}</p>
           </div>
-          <ul className="mt-12 grid gap-6 md:grid-cols-3">
-            {MARKETING_PLANS.map((p) => (
+          <ul className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+            {HOME_PLANS.map((p) => (
               <li
-                key={p.id}
+                key={p.key}
                 className={
-                  "mk-reveal flex flex-col rounded-2xl border bg-surface p-6 shadow-card sm:p-8 " +
-                  (p.featured ? "border-primary ring-1 ring-primary" : "border-border")
+                  "mk-reveal flex flex-col rounded-2xl p-6 sm:p-8 " +
+                  (p.dark ? "order-first bg-fg text-bg shadow-card lg:order-none lg:-my-3 lg:py-11" : "border border-border bg-surface shadow-card")
                 }
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-h4 text-fg">{p.name}</h3>
-                  {p.featured && (
-                    <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-soft-fg">Most popular</span>
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className={"text-h4 " + (p.dark ? "text-bg" : "text-fg")}>{p.name}</h3>
+                  {p.dark && <span className="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold text-fg">Most chosen</span>}
                 </div>
-                <p className="mt-4 text-[2.25rem] font-semibold leading-none tracking-[-0.03em] tabular-nums text-fg">
-                  {inr(p.price)}
-                  {p.suffix}
-                  <span className="ml-1 text-small font-normal tracking-normal text-muted">{gstOn() ? "+ GST / month" : "/ month"}</span>
+                <p className={"mt-4 text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] tabular-nums " + (p.dark ? "text-bg" : "text-fg")}>
+                  {p.price}
                 </p>
-                <p className="mt-4 text-small text-fg-soft">{p.blurb}</p>
-                <ul className="mt-6 flex-1 space-y-3">
-                  {p.highlights.slice(0, 4).map((h) => (
-                    <li key={h} className="flex gap-3 text-small text-fg-soft">
-                      <Check aria-hidden size={16} className="mt-0.5 shrink-0 text-primary" />
-                      {h}
-                    </li>
-                  ))}
-                </ul>
-                <Link href={planSignupHref(p.id)} className={inkPill("md", false, "mt-8 w-full")}>
+                <p className={"mt-3 text-small " + (p.dark ? "text-bg/80" : "text-fg-soft")}>{p.line}</p>
+                <p className={"mt-2 text-small font-medium " + (p.dark ? "text-bg" : "text-fg")}>{p.start}</p>
+
+                <div className={"mt-6 flex-1 border-t pt-6 " + (p.dark ? "border-bg/15" : "border-border")}>
+                  <p className={"text-xs font-semibold uppercase tracking-[0.06em] " + (p.dark ? "text-bg/70" : "text-muted")}>
+                    What you get
+                  </p>
+                  <ul className="mt-3 space-y-2.5">
+                    {p.points.map((pt) => (
+                      <li key={pt} className={"flex gap-2.5 text-small " + (p.dark ? "text-bg/90" : "text-fg-soft")}>
+                        <Check aria-hidden size={16} className={"mt-0.5 shrink-0 " + (p.dark ? "text-bg" : "text-success")} />
+                        {pt}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className={"mt-6 text-small italic " + (p.dark ? "text-bg/80" : "text-fg-soft")}>{p.whoDoes}</p>
+                </div>
+
+                <Link
+                  href={p.href}
+                  {...newTabProps(p.href)}
+                  className={
+                    p.dark
+                      ? inkPill("md", true, "mt-8 h-12 w-full")
+                      : "mt-8 inline-flex h-12 w-full items-center justify-center rounded-full border border-border-strong px-5 text-small font-medium text-fg hover:bg-surface-2"
+                  }
+                >
                   {p.cta}
                 </Link>
               </li>
@@ -287,7 +371,7 @@ export default function HomePage() {
           </ul>
           <p className="mt-8 text-center text-small text-muted">
             <Link href="/pricing" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
-              Compare plans in detail
+              See what each plan includes
             </Link>
           </p>
         </div>

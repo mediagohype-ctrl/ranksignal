@@ -8,7 +8,7 @@ import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 import { HOW_STEPS, RISK_CLASSES } from "@/components/marketing/content";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, num } from "@/components/marketing/plans";
+import { DFY_PLAN, SELF_PLAN, TRIAL_DAYS, gstOn, inr, num } from "@/components/marketing/plans";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import {
   BaselineVignette,
@@ -106,7 +106,7 @@ const LOOP_INDEX = [...HOW_STEPS.map((s, i) => ({ n: String(i + 1).padStart(2, "
 }];
 
 function methodFaq(): Qa[] {
-  const [starter, , agency] = MARKETING_PLANS;
+  const starter = SELF_PLAN;
   return [
     {
       q: "How does the website check read my pages?",
@@ -115,8 +115,7 @@ function methodFaq(): Qa[] {
           Like a search engine. We start at your homepage and sitemap, follow your internal links and obey your robots.txt
           rules, as set out in the{" "}
           <SourceLink href="https://datatracker.ietf.org/doc/html/rfc9309">Robots Exclusion Protocol</SourceLink>. Each check
-          reads up to {num(starter.limits.maxPagesPerCrawl)} pages on the {starter.name} plan and up to{" "}
-          {num(agency.limits.maxPagesPerCrawl)} on {agency.name}.
+          reads up to {num(starter.limits.maxPagesPerCrawl)} pages on the {starter.name} plan.
         </>
       ),
     },
@@ -147,8 +146,6 @@ const linkClass =
   "inline-flex items-center gap-1.5 text-[1rem] font-medium text-fg underline decoration-border-strong underline-offset-[6px] hover:decoration-fg";
 
 export default function HowItWorksPage() {
-  const selfServeFrom = Math.min(...MARKETING_PLANS.map((p) => p.price));
-
   return (
     <>
       {/* FAQPage repeats the visible "Our method" questions and answers word for word. */}
@@ -443,32 +440,34 @@ export default function HowItWorksPage() {
           </h2>
           <div className="mk-reveal mt-12 grid overflow-hidden rounded-[28px] border border-border lg:mt-16 lg:grid-cols-2">
             <div className="flex flex-col p-8 sm:p-12">
-              <p className="text-small font-medium text-muted">Do it yourself</p>
+              <p className="text-small font-medium text-muted">{SELF_PLAN.name}</p>
               <p className="mt-3 text-[clamp(1.75rem,1.4rem+1.3vw,2.5rem)] font-semibold leading-[1.05] tracking-[-0.04em] text-fg">
-                From <span className="tabular-nums">{inr(selfServeFrom)}</span>{gstOn() ? " + GST" : ""} a month.
+                <span className="tabular-nums">{inr(SELF_PLAN.price)}</span>{gstOn() ? " + GST" : ""} a month.
               </p>
               <p className="mk-body mt-5 max-w-md flex-1 text-fg-soft">
                 You use {BRAND.name} yourself: the scores, the to-do list and ready-made fixes to approve. Publish through
                 WordPress or GitHub, or make the fixes by hand.
               </p>
-              <p className="mt-4 text-small text-muted">Every plan starts with a {TRIAL_DAYS}-day free trial.{gstOn() ? " Plus GST." : ""}</p>
+              <p className="mt-4 text-small text-muted">Starts with a {TRIAL_DAYS}-day free trial. No card needed.</p>
               <Link href="/pricing" className={inkPill("lg", false, "mt-9 self-start")}>
-                Compare plans
+                See pricing
                 <ArrowUpRight aria-hidden />
               </Link>
             </div>
             <div className="flex flex-col bg-fg p-8 text-bg sm:p-12">
-              <p className="text-small font-medium text-bg/70">Done for you</p>
+              <p className="text-small font-medium text-bg/70">{DFY_PLAN.name}</p>
               <p className="mt-3 text-[clamp(1.75rem,1.4rem+1.3vw,2.5rem)] font-semibold leading-[1.05] tracking-[-0.04em] text-bg">
-                From <span className="tabular-nums">{inr(SERVICE_FROM_PRICE)}</span> a month.
+                <span className="tabular-nums">{inr(DFY_PLAN.price)}</span>{gstOn() ? " + GST" : ""} a month.
               </p>
               <p className="mk-body mt-5 max-w-md flex-1 text-bg/80">
                 Our team does the work with you: we make the fixes you approve each month and walk you through your
                 monthly report.
               </p>
-              <p className="mt-4 text-small text-bg/70">Plus GST and setup. We promise the work, not a Google position.</p>
+              <p className="mt-4 text-small text-bg/70">
+                No setup fee. {DFY_PLAN.termNote}. We promise the work, not a Google position.
+              </p>
               <Link href="/services" className={inkPill("lg", true, "mt-9 self-start")}>
-                See done-for-you plans
+                See {DFY_PLAN.name}
                 <ArrowRight aria-hidden />
               </Link>
             </div>

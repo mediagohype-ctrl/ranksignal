@@ -112,10 +112,10 @@ export function SetupVignette() {
 /* ------------------------------------------------------------------ 02 · audit and measure */
 
 const BASELINE_PILLARS = [
-  { label: "SEO", score: 66 },
-  { label: "AEO", score: 31 },
-  { label: "GEO", score: 24 },
-  { label: "Brand", score: 72 },
+  { label: "SEO", plain: "Google Score", score: 66 },
+  { label: "AEO", plain: "Answer Score", score: 31 },
+  { label: "GEO", plain: "AI Score", score: 24 },
+  { label: "Brand", plain: "Trust Score", score: 72 },
 ] as const;
 
 export function BaselineVignette() {
@@ -139,7 +139,10 @@ export function BaselineVignette() {
         <ul className="space-y-3 border-b border-border px-5 py-5 sm:border-b-0 sm:border-r sm:px-6">
           {BASELINE_PILLARS.map((p) => (
             <li key={p.label} className="grid grid-cols-[6.25rem_1fr_1.75rem] items-center gap-2 text-xs">
-              <span className="font-medium text-fg">{p.label}</span>
+              <span className="leading-tight">
+                <span className="block font-medium text-fg">{p.label}</span>
+                <span className="block text-[11px] text-muted">{p.plain}</span>
+              </span>
               <Meter value={p.score} max={100} label={`Sample ${p.label} score`} tone="score" size="sm" />
               <span className="text-right tabular-nums text-fg-soft">{p.score}</span>
             </li>

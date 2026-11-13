@@ -63,19 +63,19 @@ export default function TermsPage() {
         <li>check websites you have no right to check, or use {BRAND.name} to attack, overload or copy other websites;</li>
         <li>use it for anything illegal, misleading, or that breaks other people&apos;s rights;</li>
         <li>try to get around plan limits, security checks, or access other customers&apos; data;</li>
-        <li>resell or copy the service without our written OK (the Agency plan allows managing client websites).</li>
+        <li>resell or copy the service without our written OK (a Custom plan agreed with us in writing can allow managing client websites).</li>
       </ul>
       <p>If you break these rules, we may pause or close your account. Where we can, we will warn you first.</p>
 
       <h2>6. Free trial, plans and payments</h2>
       <ul>
         <li>New accounts get a {TRIAL_DAYS}-day free trial. You don&apos;t pay anything unless you choose a plan.</li>
-        <li>Paid plans are billed monthly in advance, in Indian rupees, through Razorpay. Prices on our website do not include GST, which is added at the current rate.</li>
+        <li>Paid plans (the self-serve &ldquo;Do it myself&rdquo; plan and the done-for-you &ldquo;Do it for me&rdquo; service) are billed monthly in advance, in Indian rupees, through Razorpay. Prices on our website do not include GST, which is added at the current rate.</li>
         <li>Your plan renews every month until you cancel. You can cancel any time in the app; you keep access until the end of the month you paid for.</li>
         <li>We don&apos;t refund part-months, except where the law requires it or we agree in writing.</li>
         <li>If a payment fails, we will remind you. If it is still unpaid after a short grace period, we may limit your account until it is paid.</li>
         <li>We may change prices with at least 30 days&apos; notice by email. The new price starts from your next renewal after that.</li>
-        <li>Done-for-you services have their own written order (scope, price, minimum term); where it differs from these terms, the order wins.</li>
+        <li>The done-for-you &ldquo;Do it for me&rdquo; service and Custom plans have their own written order (scope, price, minimum term); where it differs from these terms, the order wins.</li>
       </ul>
 
       <h2>7. Your content and ours</h2>

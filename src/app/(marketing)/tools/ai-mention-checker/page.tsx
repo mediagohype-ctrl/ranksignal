@@ -116,7 +116,7 @@ const MORE: Qa[] = [
       <>
         We ask AI assistants the questions your customers ask and record whether each answer names you, links to you or
         recommends a competitor. The free trial includes {TRIAL_AI.summary}, which is {TRIAL_AI.answers} answers in{" "}
-        {TRIAL_DAYS} days. The Growth plan covers {PLANS.growth.aiAnswersPerMonth.toLocaleString("en-IN")} AI answers a month.
+        {TRIAL_DAYS} days. The {PLANS.starter.name} plan covers {PLANS.starter.aiAnswersPerMonth.toLocaleString("en-IN")} AI answers a month.
       </>
     ),
   },

@@ -6,7 +6,9 @@ import Link from "next/link";
 import { ArrowRight, Check, CircleDashed, HelpCircle, X } from "lucide-react";
 import { LinkButton, SectionHeading } from "@/components/ui";
 import { Section } from "@/components/marketing/ui";
-import { MARKETING_PLANS, SERVICE_FROM_PRICE, TRIAL_DAYS, gstOn, inr, priceNote } from "@/components/marketing/plans";
+import {
+  CUSTOM_CONTACT_HREF, CUSTOM_PLAN, DFY_PLAN, SELF_PLAN, TRIAL_DAYS, gstOn, inrGst, num, newTabProps,
+} from "@/components/marketing/plans";
 import { formatCheckedOn, formatFrom, trademarkNote, type Competitor } from "@/lib/compare/competitors";
 
 /* ------------------------------------------------------------------ comparison table */
@@ -218,23 +220,28 @@ export function StrengthsSection({
 
 /* ------------------------------------------------------------------ pricing */
 
-/** MyWebRank's plan prices, read from the same plan config the app enforces. */
+/** MyWebRank's prices, read from the same plan config the app enforces. Each price says "+ GST" once (via inrGst). */
 export function OurPrices() {
   return (
     <ul className="mt-3 space-y-1.5 text-small text-fg-soft">
-      {MARKETING_PLANS.map((p) => (
-        <li key={p.id}>
-          <span className="font-medium text-fg">{p.name}:</span> {inr(p.price)}
-          {p.suffix ?? ""}/month{gstOn() ? " + GST" : ""} · {p.limits.maxProjects} website{p.limits.maxProjects === 1 ? "" : "s"} ·{" "}
-          {p.ai.answersPerMonth.toLocaleString("en-IN")} AI answers a month
-        </li>
-      ))}
       <li>
-        <span className="font-medium text-fg">Done-for-you service:</span> from {inr(SERVICE_FROM_PRICE)}/month plus a
-        one-time setup fee
+        <span className="font-medium text-fg">{SELF_PLAN.name}:</span> {inrGst(SELF_PLAN.price)} a month ·{" "}
+        {SELF_PLAN.limits.maxProjects} website{SELF_PLAN.limits.maxProjects === 1 ? "" : "s"} ·{" "}
+        {num(SELF_PLAN.ai.answersPerMonth)} AI answers a month · {TRIAL_DAYS}-day free trial
       </li>
       <li>
-        {TRIAL_DAYS}-day free trial. {priceNote()}
+        <span className="font-medium text-fg">{DFY_PLAN.name}:</span> {inrGst(DFY_PLAN.price)} a month · our team does the
+        work · no setup fee · {DFY_PLAN.termNote ?? `${DFY_PLAN.minimumMonths} months minimum`}
+      </li>
+      <li>
+        <span className="font-medium text-fg">{CUSTOM_PLAN.name}:</span>{" "}
+        <Link href={CUSTOM_CONTACT_HREF} {...newTabProps(CUSTOM_CONTACT_HREF)} className="font-medium text-primary underline-offset-4 hover:underline">
+          {CUSTOM_PLAN.priceLabel.toLowerCase()}
+        </Link>{" "}
+        · many websites, agencies, white-label reports, API
+      </li>
+      <li>
+        Prices in Indian rupees.
         {gstOn() ? " We issue a GST invoice for every payment." : ""}
       </li>
     </ul>

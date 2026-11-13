@@ -49,8 +49,8 @@ export const AI_VISIBILITY_NOTE = "This free check reads your website. It does n
 
 /** Plain names for the four scores (docs/PLAIN_WORDS.md). */
 export const FREE_PILLAR_NAMES: Record<Pillar, string> = {
-  seo: "SEO",
-  aeo: "AEO",
-  geo: "GEO",
-  brand: "Brand",
+  seo: "SEO · Google Score",
+  aeo: "AEO · Answer Score",
+  geo: "GEO · AI Score",
+  brand: "Brand · Trust Score",
 };

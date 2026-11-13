@@ -111,8 +111,8 @@ export default function CompareAhrefsPage() {
           <p>
             Ahrefs is a deep research tool for backlinks, keywords and rank tracking, priced in US dollars from $29 a month.
             MyWebRank is a simpler tool for Indian businesses: it checks your website, tracks what ChatGPT, Gemini and other
-            AI assistants say about you in every plan, and publishes fixes to your site only after you approve them. Plans
-            start at {OUR.fromPrice} a month. Pick Ahrefs for link and keyword research; pick MyWebRank to get problems
+            AI assistants say about you, and fixes problems only after you approve them (one-click with undo on WordPress).
+            {OUR.self.name} costs {OUR.fromPrice} a month. Pick Ahrefs for link and keyword research; pick MyWebRank to get problems
             found and fixed.
           </p>
         }
@@ -137,8 +137,8 @@ export default function CompareAhrefsPage() {
         ours={[
           "A plain-English to-do list instead of raw data, so an owner can act without an SEO background.",
           `AI answer tracking included in every plan, from ${OUR.fromPrice} a month, with no add-on to buy.`,
-          `Fixes published to your site (${OUR.connectors}) only after your OK, with one-click undo.`,
-          `A done-for-you service from ${OUR.serviceFrom} a month if you'd rather we did the work.`,
+          `${OUR.publishing}, only after your OK.`,
+          `${OUR.dfy.name} at ${OUR.serviceFrom} a month, with no setup fee, if you'd rather we did the work.`,
           "Prices in rupees with GST invoices, and support from a team based in India.",
         ]}
       />
@@ -146,9 +146,9 @@ export default function CompareAhrefsPage() {
       <PricingSection id="pricing" competitors={[AH]}>
         <p>
           Like for like, the comparison is not exact. Ahrefs Lite at $129 a month buys deep link and keyword data for one
-          user. MyWebRank Starter at {OUR.fromPrice} a month buys a weekly website check of up to{" "}
-          {OUR.starter.limits.maxPagesPerCrawl} pages, {OUR.starter.ai.answersPerMonth} AI answers a month and approved fixes
-          for one website, for {OUR.starter.limits.seats} team members.
+          user. MyWebRank {OUR.self.name} at {OUR.fromPrice} a month buys a weekly website check of up to{" "}
+          {OUR.pages} pages, {OUR.self.ai.answersPerMonth} AI answers a month and approved fixes for one website, for{" "}
+          {OUR.self.limits.seats} team members.
         </p>
       </PricingSection>
 
@@ -160,7 +160,7 @@ export default function CompareAhrefsPage() {
           {
             situation: "You run a local business and want to know what to fix first",
             pick: "MyWebRank",
-            why: "You get a short, ranked to-do list in plain English, and fixes you approve go straight to your site.",
+            why: "You get a short, ranked to-do list in plain English, and on WordPress a fix you approve goes live in one click, with undo.",
           },
           {
             situation: "You want to know if ChatGPT recommends you, on a small budget",
@@ -169,8 +169,8 @@ export default function CompareAhrefsPage() {
           },
           {
             situation: "You have no time to do SEO yourself",
-            pick: "MyWebRank's done-for-you service",
-            why: "Our team makes the agreed fixes each month and reports what changed. We never promise a ranking.",
+            pick: `MyWebRank ${OUR.dfy.name}`,
+            why: `Our team does the work for ${OUR.serviceFrom} a month, with no setup fee, and reports what changed. We never promise a ranking.`,
           },
           {
             situation: "You have an SEO team and a bigger budget",

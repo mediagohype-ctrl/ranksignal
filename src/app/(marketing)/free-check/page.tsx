@@ -166,9 +166,9 @@ const FREE_CHECK_FAQ: Qa[] = [
     a: (
       <>
         The free check reads a handful of pages and never asks an AI assistant. The full report reads up to{" "}
-        {inrN(starter.maxPagesPerCrawl)} pages per check on the {starter.name} plan, up to{" "}
-        {inrN(PLANS.agency.maxPagesPerCrawl)} on Agency, and asks ChatGPT, Gemini and others your customers&apos; real
-        questions. Plans start at {inrGst(starter.priceInrMonthly ?? 0)} a month after a {TRIAL_DAYS}-day free trial.
+        {inrN(starter.maxPagesPerCrawl)} pages per check on the {starter.name} plan, and asks ChatGPT, Gemini and
+        Perplexity your customers&apos; real questions. {starter.name} is {inrGst(starter.priceInrMonthly ?? 0)} a month
+        after a {TRIAL_DAYS}-day free trial, no card needed.
       </>
     ),
   },

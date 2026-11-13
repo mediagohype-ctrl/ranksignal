@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Bot, Building2, FolderKanban, Globe2, ShieldCheck, Users } from "lucide-react";
 import { db } from "@/lib/db";
-import { PLANS, getPlan } from "@/lib/billing/plans";
+import { PLANS, getPlan, plansShownTo } from "@/lib/billing/plans";
 import { getAiAllowance } from "@/lib/billing/allowance";
 import { answersPerCheck } from "@/lib/billing/plans";
 import { answersLeftLabel } from "@/lib/billing/topups";
@@ -171,7 +171,7 @@ export default async function SettingsPage() {
           }
         />
         <BillingPlans
-          plans={Object.values(PLANS)}
+          plans={plansShownTo(org.planId).map((id) => PLANS[id])}
           currentPlanId={org.planId}
           canManage={canManage}
           prices={planPrices}

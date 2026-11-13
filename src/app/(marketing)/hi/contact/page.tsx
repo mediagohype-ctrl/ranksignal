@@ -41,7 +41,7 @@ export default async function HindiContactPage({ searchParams }: { searchParams:
           <div>
             <Card variant="elevated" padding="lg" className="relative">
               <div lang="en">
-                <ContactForm supportEmail={BRAND.supportEmail} topic={isServices ? "services" : undefined} />
+                <ContactForm supportEmail={BRAND.supportEmail} topic={isServices ? "services" : topic === "custom" ? "custom" : undefined} />
               </div>
             </Card>
             <EnglishNote>

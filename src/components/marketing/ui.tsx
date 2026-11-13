@@ -21,6 +21,16 @@ export function inkPill(size: "md" | "lg" = "md", inverse = false, className?: s
   );
 }
 
+/** The one bright button (brand colour): "Check my website free" in the header (Website Blueprint). */
+export function brightPill(size: "md" | "lg" = "md", className?: string) {
+  return clsx(
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-[-0.005em]",
+    "bg-primary text-primary-fg shadow-sm hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-px",
+    size === "lg" ? "h-14 px-7 text-[1rem]" : "h-10 px-5 text-small",
+    className,
+  );
+}
+
 /** Standard marketing section: generous vertical rhythm + max-w-6xl container. */
 export function Section({
   id,

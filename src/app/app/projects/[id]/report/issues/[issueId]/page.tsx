@@ -6,7 +6,7 @@ import { loadIssue } from "@/lib/report/issue-page";
 import { checkIdOfIssue } from "@/lib/report/page-notes";
 import type { IssueImpact } from "@/lib/report/types";
 import { issueHref, issuePageHref, todoItemHref } from "@/components/app/nav";
-import { PILLAR_SHORT } from "@/components/app/report/pillars";
+import { pillarFullName } from "@/lib/report/score";
 import { CoreWebVitalsCard } from "@/components/app/report/core-web-vitals";
 import { Card, LinkButton } from "@/components/ui";
 
@@ -56,7 +56,7 @@ export default async function IssuePage({ params }: { params: Promise<{ id: stri
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className={`inline-flex h-6 items-center rounded-full px-2.5 font-semibold ${pr.tone}`}>{pr.label}</span>
           <span className="inline-flex h-6 items-center rounded-full border border-border px-2.5 font-medium text-muted">
-            Part of {PILLAR_SHORT[issue.pillar]}
+            Part of {pillarFullName(issue.pillar)}
           </span>
           <span className="text-muted">
             Problem {index + 1} of {report.issues.length}

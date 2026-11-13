@@ -57,8 +57,8 @@ const FAQ: Qa[] = [
     a: (
       <>
         Yes. Its Starter plan at $199 a month tracks 50 AI prompts a day, and its help centre lists an AI Visibility
-        Toolkit at $99 a month that tracks prompts in ChatGPT and Google AI Mode. MyWebRank includes AI answer tracking in
-        every plan, across up to 5 AI assistants.
+        Toolkit at $99 a month that tracks prompts in ChatGPT and Google AI Mode. MyWebRank includes AI answer tracking on
+        {OUR.self.name}, across {OUR.engines}.
       </>
     ),
   },
@@ -67,8 +67,8 @@ const FAQ: Qa[] = [
     a: (
       <>
         We didn&apos;t find approval-gated publishing or a done-for-you service on the Semrush pages we checked. MyWebRank
-        sends approved fixes to {OUR.connectors}, saves the old version so you can undo, and offers a monthly service where
-        our team makes the fixes for you.
+        waits for your OK before any fix: {OUR.publishing}. It also offers {OUR.dfy.name} at {OUR.serviceFrom} a month,
+        where our team does the work for you.
       </>
     ),
   },
@@ -113,8 +113,8 @@ export default function CompareSemrushPage() {
           <p>
             Semrush is a large marketing toolkit with keyword, backlink and rank data, priced in US dollars from $139 a month
             for its SEO plan. AI tracking starts on its $199 Starter plan. MyWebRank is a smaller, simpler tool for Indian
-            businesses: a weekly website check, AI answer tracking in every plan, and fixes published to your site only after
-            you approve them, from {OUR.fromPrice} a month. Choose Semrush for research depth, MyWebRank for getting fixes done.
+            businesses: a weekly website check, AI answer tracking, and fixes only after you approve
+            them (one-click with undo on WordPress), from {OUR.fromPrice} a month. Choose Semrush for research depth, MyWebRank for getting fixes done.
           </p>
         }
       >
@@ -137,17 +137,17 @@ export default function CompareSemrushPage() {
         ]}
         ours={[
           "A plain-English to-do list, written for owners rather than SEO specialists.",
-          `AI answer tracking in every plan from ${OUR.fromPrice} a month, including on our smallest plan.`,
-          `Fixes published to ${OUR.connectors} only after your OK, with one-click undo.`,
-          `A done-for-you service from ${OUR.serviceFrom} a month: our team makes the fixes and reports monthly.`,
+          `AI answer tracking included in ${OUR.self.name} at ${OUR.fromPrice} a month.`,
+          `${OUR.publishing}, only after your OK.`,
+          `${OUR.dfy.name} at ${OUR.serviceFrom} a month, with no setup fee: our team does the work and reports monthly.`,
           "Rupee pricing with GST invoices, and support from a team based in India.",
         ]}
       />
 
       <PricingSection id="pricing" competitors={[SR]}>
         <p>
-          Semrush&apos;s cheapest plan with AI tracking is Starter at $199 a month. MyWebRank&apos;s cheapest plan with AI
-          tracking is Starter at {OUR.fromPrice} a month, with {OUR.starter.ai.answersPerMonth} AI answers a month. Semrush
+          Semrush&apos;s cheapest plan with AI tracking is Starter at $199 a month. MyWebRank&apos;s {OUR.self.name} plan
+          costs {OUR.fromPrice} a month, with {OUR.self.ai.answersPerMonth} AI answers a month. Semrush
           gives you far more research data for the money; MyWebRank gives you fewer, simpler numbers and help fixing them.
         </p>
       </PricingSection>
@@ -160,19 +160,19 @@ export default function CompareSemrushPage() {
           {
             situation: "You own a clinic, shop or service business and aren't an SEO person",
             pick: "MyWebRank",
-            why: "You get a short to-do list in plain English, and fixes you approve go live on your site.",
+            why: "You get a short to-do list in plain English, and on WordPress a fix you approve goes live in one click, with undo.",
           },
           {
             situation: "You mainly want to know whether AI assistants recommend you",
             pick: "MyWebRank",
-            why: `AI tracking is in every plan, from ${OUR.fromPrice} a month in rupees.`,
+            why: `AI tracking is included in ${OUR.self.name}, ${OUR.fromPrice} a month in rupees.`,
           },
           {
             situation: "You want someone else to do the work",
-            pick: "MyWebRank's done-for-you service",
-            why: "We make the agreed fixes every month and show you each change. We promise the work, not a ranking.",
+            pick: `MyWebRank ${OUR.dfy.name}`,
+            why: `Our team does the work for ${OUR.serviceFrom} a month, with no setup fee, and shows you each change. We promise the work, not a ranking.`,
           },
-          { situation: "You already pay for Semrush", pick: "Semrush, and add MyWebRank if needed", why: "Add MyWebRank only if you want approved fixes published and a plain to-do list." },
+          { situation: "You already pay for Semrush", pick: "Semrush, and add MyWebRank if needed", why: "Add MyWebRank only if you want approved fixes and a plain to-do list." },
         ]}
       />
 

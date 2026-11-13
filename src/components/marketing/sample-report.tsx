@@ -7,10 +7,10 @@ import { Badge, IssueCard, Meter, ScoreRing } from "@/components/ui";
  */
 
 export const SAMPLE_PILLARS = [
-  { key: "seo", label: "SEO", name: "Google", score: 78, hint: "Google can read most pages" },
-  { key: "aeo", label: "AEO", name: "Clear answers", score: 54, hint: "Few short, clear answers" },
-  { key: "geo", label: "GEO", name: "AI assistants", score: 41, hint: "Rarely named in AI answers" },
-  { key: "brand", label: "Brand", name: "Business facts", score: 86, hint: "AI describes you correctly" },
+  { key: "seo", label: "SEO", name: "Google Score", score: 78, hint: "Google can read most pages" },
+  { key: "aeo", label: "AEO", name: "Answer Score", score: 54, hint: "Few short, clear answers" },
+  { key: "geo", label: "GEO", name: "AI Score", score: 41, hint: "Rarely named in AI answers" },
+  { key: "brand", label: "Brand", name: "Trust Score", score: 86, hint: "AI describes you correctly" },
 ] as const;
 
 const SAMPLE_OVERALL = 65;
@@ -67,6 +67,7 @@ export function SampleReport() {
             <li key={p.key} className="flex flex-col items-center rounded-xl bg-surface-2 px-2 py-4 text-center">
               <ScoreRing score={p.score} size="md" label={`Sample ${p.label} score`} />
               <p className="mt-2 text-small font-semibold text-fg">{p.label}</p>
+              <p className="text-xs font-medium text-fg-soft">{p.name}</p>
               <p className="text-xs text-muted">{p.hint}</p>
             </li>
           ))}

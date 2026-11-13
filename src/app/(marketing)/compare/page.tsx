@@ -19,7 +19,7 @@ const SR = COMPETITORS.semrush;
 const SE = COMPETITORS["se-ranking"];
 
 const SUMMARY: Record<(typeof COMPARE_PAGES)[number]["path"], string> = {
-  "/compare/ahrefs": "Ahrefs leads on backlinks and keyword data. MyWebRank is simpler, tracks AI answers in every plan and publishes fixes you approve.",
+  "/compare/ahrefs": "Ahrefs leads on backlinks and keyword data. MyWebRank is simpler, tracks AI answers and fixes problems only after you approve them.",
   "/compare/semrush": "Semrush is a large marketing toolkit with keyword, backlink and rank data. MyWebRank focuses on fixes, AI answers and rupee pricing.",
   "/compare/se-ranking": "SE Ranking packs rank tracking, backlinks and AI tracking into one plan. MyWebRank adds approved fixes and a done-for-you service.",
   "/compare/ahrefs-alternatives": "Semrush, SE Ranking, Ubersuggest, Google Search Console and MyWebRank, with who each one suits.",
@@ -67,8 +67,8 @@ const FAQ: Qa[] = [
     a: (
       <>
         It has no backlink database, no keyword database and no daily rank tracker. It focuses on a weekly website check, AI
-        answer tracking across up to {OUR.growth.ai.engines} AI assistants, a plain-English to-do list and fixes published to
-        your site after your OK.
+        answer tracking across {OUR.engines}, a plain-English to-do list, and fixes after your OK: one-click with undo on
+        WordPress, drafts or copy-paste steps for Shopify, Wix and Webflow.
       </>
     ),
   },
@@ -77,8 +77,8 @@ const FAQ: Qa[] = [
     a: (
       <>
         Yes. The <Link href="/free-check">free check</Link> needs no sign-up. The{" "}
-        {OUR.trialDays}-day free trial adds an AI check and approved fixes. Paid plans start at {OUR.fromPrice} a month plus
-        GST.
+        {OUR.trialDays}-day free trial adds an AI check and approved fixes. After that, {OUR.self.name} costs {OUR.fromPrice} a
+        month, or {OUR.dfy.name} costs {OUR.serviceFrom} a month if you want our team to do the work.
       </>
     ),
   },
@@ -113,8 +113,8 @@ export default function ComparePage() {
         intro={
           <p>
             Ahrefs, Semrush and SE Ranking are bigger research tools with backlink, keyword and rank data that MyWebRank does
-            not have. MyWebRank is a simpler tool for Indian businesses: a weekly website check, AI answer tracking in every
-            plan, and fixes published to your site only after you approve them, from {OUR.fromPrice} a month in rupees. Each
+            not have. MyWebRank is a simpler tool for Indian businesses: a weekly website check, AI answer tracking, and
+            fixes only after you approve them (one-click with undo on WordPress), from {OUR.fromPrice} a month in rupees. Each
             comparison below says honestly where the other tool is better.
           </p>
         }

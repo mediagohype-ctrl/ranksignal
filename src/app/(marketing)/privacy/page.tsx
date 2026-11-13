@@ -97,8 +97,8 @@ export default function PrivacyPage() {
       <p>We share information only with companies that help us run {BRAND.name}, and only what they need:</p>
       <ul>
         <li>
-          <strong>AI providers</strong> — OpenAI (ChatGPT), Google (Gemini), Perplexity, and data providers such as
-          DataForSEO. We send them your customer questions, and sometimes your business name, website address and the
+          <strong>AI providers</strong> — OpenAI (ChatGPT), Google (Gemini), Anthropic (Claude), xAI (Grok), Perplexity,
+          OpenRouter (which passes our requests to these AI providers), and data providers such as DataForSEO. We send them your customer questions, and sometimes your business name, website address and the
           text of your public pages, so they can answer the questions or help write drafts. We do not send your
           password, payment details or your team&apos;s personal details. These providers have their own privacy
           rules. We use their business (paid API) services and, where they offer the choice, settings that stop our

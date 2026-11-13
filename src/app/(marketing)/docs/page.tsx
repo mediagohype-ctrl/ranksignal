@@ -5,7 +5,7 @@ import { RiskBadge } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { JsonLd, PageHero, Prose } from "@/components/marketing/ui";
 import { RISK_CLASSES } from "@/components/marketing/content";
-import { MARKETING_PLANS, TRIAL_AI, TRIAL_DAYS, num } from "@/components/marketing/plans";
+import { CUSTOM_PLAN, DFY_PLAN, SELF_PLAN, TRIAL_AI, TRIAL_DAYS, num } from "@/components/marketing/plans";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, webPageLd } from "@/lib/seo/schema";
 
@@ -95,10 +95,8 @@ export default function DocsPage() {
               </p>
               <p>
                 The free trial lasts {TRIAL_DAYS} days and includes {TRIAL_AI.summary} ({TRIAL_AI.answers} AI answers) plus
-                a full website check. On paid plans, each website check reads up to{" "}
-                {num(MARKETING_PLANS[0].limits.maxPagesPerCrawl)} pages on {MARKETING_PLANS[0].name},{" "}
-                {num(MARKETING_PLANS[1].limits.maxPagesPerCrawl)} on {MARKETING_PLANS[1].name} and{" "}
-                {num(MARKETING_PLANS[2].limits.maxPagesPerCrawl)} on {MARKETING_PLANS[2].name}.
+                a full website check. On {SELF_PLAN.name}, each website check reads up to{" "}
+                {num(SELF_PLAN.limits.maxPagesPerCrawl)} pages. Bigger sites can ask about a {CUSTOM_PLAN.name} plan.
               </p>
             </section>
 
@@ -229,13 +227,13 @@ export default function DocsPage() {
             <section id="branding" aria-labelledby="branding-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
               <h2 id="branding-h">White-label branding</h2>
               <p>
-                On the Agency plan (and for done-for-you clients), Owners and Admins can open{" "}
+                On a {CUSTOM_PLAN.name} plan (and for {DFY_PLAN.name} clients), Owners and Admins can open{" "}
                 <em>Settings → Branding</em> to set the name, logo (an https:// image link), accent colour, reply-to
                 email and a short footer line used on shared report links, monthly reports and monthly report emails. A
                 live preview shows the report header and email before you save.
               </p>
               <p>
-                Accent colours must be dark enough to read on white. Agency plans can also hide the &ldquo;Powered by{" "}
+                Accent colours must be dark enough to read on white. {CUSTOM_PLAN.name} plans can also hide the &ldquo;Powered by{" "}
                 {BRAND.name}&rdquo; line.
               </p>
             </section>

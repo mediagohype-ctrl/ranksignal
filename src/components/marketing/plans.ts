@@ -1,10 +1,11 @@
 // Marketing view of the billing plans. Limits and prices always come from @/lib/billing/plans
 // so the website matches what the app enforces.
 import {
-  PAID_PLAN_IDS, TRIAL_DAYS, checksPerMonth, getEngineLimit, getPlan, getPlanWithAiLimits, questionsPerCheck,
+  PAID_PLAN_IDS, PUBLIC_PLAN_IDS, TRIAL_DAYS, checksPerMonth, getEngineLimit, getPlan, getPlanWithAiLimits, questionsPerCheck,
 } from "@/lib/billing/plans";
 import { gstConfig, gstSuffix } from "@/lib/billing/gst";
 import type { PlanLimits } from "@/lib/types";
+import { BRAND } from "@/lib/brand";
 
 export type PaidPlanId = (typeof PAID_PLAN_IDS)[number];
 
@@ -25,20 +26,11 @@ export const priceNote = (hi = false) =>
       : "Prices in Indian rupees.";
 export const freq = (days: number) => (days <= 1 ? "Daily" : days <= 7 ? "Weekly" : "Monthly");
 
-const COPY: Record<PaidPlanId, { blurb: string; suffix?: string; featured?: boolean; cta: string }> = {
+// Website Blueprint (Nov 2026): the public offer is two plans + Custom. "Do it myself" is the billing plan "starter".
+const COPY: Partial<Record<PaidPlanId, { blurb: string; suffix?: string; featured?: boolean; cta: string }>> = {
   starter: {
-    blurb: "For one business that wants a clear picture of how it shows up on Google and in AI answers.",
-    cta: `Start ${TRIAL_DAYS}-day free trial`,
-  },
-  growth: {
-    blurb: "For growing businesses and teams looking after several websites.",
-    featured: true,
-    cta: `Start ${TRIAL_DAYS}-day free trial`,
-  },
-  agency: {
-    blurb: "For agencies looking after many client websites.",
-    suffix: "+",
-    cta: "Get Agency",
+    blurb: "We show you exactly what to fix.",
+    cta: "Start free trial",
   },
 };
 
@@ -81,38 +73,48 @@ export const TRIAL_AI = (() => {
   };
 })();
 
-export const MARKETING_PLANS: MarketingPlan[] = PAID_PLAN_IDS.map((id) => {
+/** Engine names in the order checks use them (first N = the plan's engine limit). */
+const ENGINE_NAMES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Grok"];
+const listNames = (n: string[]) => (n.length <= 1 ? n.join("") : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`);
+
+/** Self-serve plans shown on the website: only "Do it myself" (see PUBLIC_PLAN_IDS). */
+export const MARKETING_PLANS: MarketingPlan[] = PUBLIC_PLAN_IDS.map((id) => {
   const l = getPlan(id);
   const a = getPlanWithAiLimits(id);
   const engines = getEngineLimit(id);
   const perCheck = questionsPerCheck(id);
-  const plus = id === "agency" ? "+" : "";
   return {
     id,
     name: l.name,
     price: l.priceInrMonthly ?? 0,
-    ...COPY[id],
+    blurb: COPY[id]?.blurb ?? "",
+    cta: COPY[id]?.cta ?? "Start free trial",
     highlights: [
-      `${num(l.maxProjects)}${plus} website${l.maxProjects === 1 ? "" : "s"}`,
-      `${num(l.maxTrackedPrompts)}${plus} customer questions (up to ${num(perCheck)} per AI check)`,
-      aiAnswersLine(id),
-      `Weekly website check, up to ${num(l.maxPagesPerCrawl)} pages each time`,
-      l.competitorTracking ? "Compare against your competitors" : "No competitor comparison",
-      l.approvalPublishing ? "Fixes go live only with your OK, with undo" : "Fixes as step-by-step instructions",
-      `${num(l.seats)}${plus} team member${l.seats === 1 ? "" : "s"}`,
-      ...(id === "agency" ? ["White-label reports and emails"] : []),
+      "Your Found Score, plus your SEO, AEO, GEO and Brand scores",
+      `A ${freq(l.minScanIntervalDays).toLowerCase()} check of your website, up to ${num(l.maxPagesPerCrawl)} pages`,
+      `What ${listNames(ENGINE_NAMES.slice(0, engines))} say about you (${num(a.aiAnswersPerMonth)} AI answers a month)`,
+      "A to-do list in plain words, most important first",
+      "One-click fixes with undo on WordPress; easy copy-paste steps for other sites",
+      "A monthly report you can read in 2 minutes",
     ],
     limits: l,
     ai: { answersPerMonth: a.aiAnswersPerMonth, checksPerMonth: checksPerMonth(id), questionsPerCheck: perCheck, engines },
   };
 });
 
+/** "Do it myself" — the one self-serve plan. */
+export const SELF_PLAN = MARKETING_PLANS[0]!;
+
 export { TRIAL_DAYS };
 
 /* ------------------------------------------------------------------ done-for-you service tiers */
 // Done-for-you service (Organization.serviceTier). Prices in INR, excluding GST. We promise delivery, never rankings.
 
-export type ServiceTierId = "fix" | "grow" | "authority";
+// Website Blueprint (Nov 2026): one done-for-you offer, "Do it for me", ₹19,999/month, no setup fee, 3 months then
+// month to month. Bigger needs go to Custom. (Org.serviceTier "fix" = Do it for me; "grow"/"authority" are legacy
+// tiers kept for existing clients in src/lib/admin/money.ts and are never shown on the website.)
+
+export type ServiceTierId = "fix";
 
 export interface ServiceTier {
   id: ServiceTierId;
@@ -136,62 +138,44 @@ export interface ServiceTier {
 export const SERVICE_TIERS: ServiceTier[] = [
   {
     id: "fix",
-    name: "Fix",
+    name: "Do it for me",
     price: 19_999,
-    setup: 9_999,
+    setup: 0,
     minimumMonths: 3,
-    blurb: "For a local business that wants the basics done properly, every month, without learning any jargon.",
+    termNote: "3 months, then month to month",
+    blurb: "Our team does all the work. You run your business.",
+    inherits: "Everything in Do it myself, plus our team does the work",
     includes: [
-      "Up to 15 fixes made a month, after your OK",
-      "Your Google Business Profile tidied up",
-      "2 page refreshes a month",
-      "50 customer questions on up to 5 AI assistants (ChatGPT, Claude, Gemini, Perplexity and more, depending on plan)",
-      "Monthly report and a 30-minute call",
+      "Your website, fixed: everything that stops Google and AI finding you, most important first",
+      "Your Google Business Profile, looked after: hours, photos, posts and replies to reviews",
+      "New pages and articles that answer what your customers ask",
+      "Your name in AI answers: we track what ChatGPT says about you and correct wrong facts",
+      "Your listings, cleaned up: same name, address and phone on every top directory",
+      "Your own expert on WhatsApp, plus a simple monthly report and call",
     ],
     questions: 50,
-    updates: "Monthly report + 30-minute call",
-  },
-  {
-    id: "grow",
-    name: "Grow",
-    price: 49_999,
-    setup: 19_999,
-    minimumMonths: 6,
-    blurb: "For businesses that want to be named for more customer questions, with new pages every month.",
-    inherits: "Everything in Fix, plus",
-    includes: [
-      "4 new pages a month that answer customer questions",
-      "10 business directory listings",
-      "A review-request programme",
-      "Questions-and-answers and comparison pages",
-      "100 customer questions",
-      "Fortnightly WhatsApp update",
-    ],
-    questions: 100,
-    updates: "Fortnightly WhatsApp + monthly report",
+    updates: "Monthly report + call",
     featured: true,
   },
-  {
-    id: "authority",
-    name: "Authority",
-    price: 119_999,
-    setup: 39_999,
-    minimumMonths: 6,
-    termNote: "Or a 3-month pilot at +15%",
-    blurb: "For businesses in crowded markets that want AI assistants to see them as a trusted source.",
-    inherits: "Everything in Grow, plus",
-    includes: [
-      "8 articles a month",
-      "2 articles about you on websites AI already links to",
-      "Your business details made consistent across the web",
-      "Honest, clearly labelled posts on Reddit and forums",
-      "A detailed competitor review every 3 months",
-      "Bi-weekly review call",
-    ],
-    questions: 100,
-    updates: "Bi-weekly review + monthly report",
-  },
 ];
+
+/** "Do it for me" — the one done-for-you offer. */
+export const DFY_PLAN = SERVICE_TIERS[0]!;
+
+/** Custom: for bigger needs. No public price. */
+export const CUSTOM_PLAN = {
+  name: "Custom",
+  priceLabel: "Let's talk",
+  blurb: "For big companies and agencies.",
+  start: "Plan built around you.",
+  cta: "Talk to us",
+  includes: [
+    "Many websites, brands, cities or countries",
+    "A dedicated team and one point of contact",
+    "Reports with your logo, for agencies",
+    "API and dashboard access",
+  ],
+} as const;
 
 export const SERVICE_FROM_PRICE = Math.min(...SERVICE_TIERS.map((t) => t.price));
 
@@ -199,6 +183,40 @@ export const SERVICE_FROM_PRICE = Math.min(...SERVICE_TIERS.map((t) => t.price))
 export function servicesContactHref(tier?: ServiceTierId) {
   return `/contact?topic=services${tier ? `&tier=${tier}` : ""}`;
 }
+
+/** WhatsApp chat link with a pre-written message (opens the app on phones, WhatsApp Web on computers). */
+export function whatsappHref(message: string): string {
+  return `https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(message)}`;
+}
+
+/** Custom plan: straight to WhatsApp with a ready message (owner, Nov 2026). */
+export const CUSTOM_CONTACT_HREF = whatsappHref(
+  [
+    "Hi MyWebRank, I'm interested in a Custom plan.",
+    "",
+    "My website: ",
+    "Number of websites / brands: ",
+    "What I need: ",
+  ].join("\n"),
+);
+
+/** Same for the Hindi pages. */
+export const CUSTOM_CONTACT_HREF_HI = whatsappHref(
+  [
+    "नमस्ते MyWebRank, मुझे Custom प्लान के बारे में बात करनी है।",
+    "",
+    "मेरी वेबसाइट: ",
+    "कितनी वेबसाइट / ब्रांड: ",
+    "मुझे क्या चाहिए: ",
+  ].join("\n"),
+);
+
+/** True for links that leave the site (open them in a new tab). */
+export const isExternalHref = (href: string) => /^https?:\/\//.test(href);
+
+/** Link props: links that leave the site (WhatsApp) open in a new tab. Spread onto <Link> / <a>. */
+export const newTabProps = (href: string) =>
+  isExternalHref(href) ? ({ target: "_blank", rel: "noopener noreferrer" } as const) : {};
 
 /** Where a plan's button on the public site goes. Agency skips the trial and opens Razorpay checkout after sign-up. */
 export function planSignupHref(planId: string): string {

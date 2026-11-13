@@ -7,6 +7,7 @@ import { AiVisibilitySection } from "@/components/app/report/ai-visibility-secti
 import { IssueList } from "@/components/app/report/issue-list";
 import { issueHref } from "@/components/app/nav";
 import { PILLAR_EXPLAINER, PILLAR_ICON, visiblePillars } from "@/components/app/report/pillars";
+import { PILLAR_PLAIN } from "@/lib/report/score";
 import { QuickWins } from "@/components/app/report/quick-wins";
 import { CoreWebVitalsCard } from "@/components/app/report/core-web-vitals";
 import { Badge, Card, CheckList, Notice, PillarCard, ScoreRing, SectionHeading } from "@/components/ui";
@@ -77,7 +78,7 @@ export function ReportBody({
             <PillarCard
               key={p.pillar}
               {...p}
-              label={p.label}
+              label={`${p.label} · ${PILLAR_PLAIN[p.pillar]}`}
               grade={expert ? p.grade : null}
               icon={PILLAR_ICON[p.pillar]}
               className="break-inside-avoid"

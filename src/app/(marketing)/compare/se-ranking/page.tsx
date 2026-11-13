@@ -44,7 +44,7 @@ const FAQ: Qa[] = [
     a: (
       <>
         It depends on who does the work. SE Ranking gives you more data for the money, including rank tracking and backlinks,
-        from $129 a month. MyWebRank gives you a shorter, plain-English to-do list and publishes fixes you approve, from{" "}
+        from $129 a month. MyWebRank gives you a shorter, plain-English to-do list and fixes after your OK, from{" "}
         {OUR.fromPrice} a month. If you have a marketer, SE Ranking; if you don&apos;t, MyWebRank.
       </>
     ),
@@ -54,8 +54,8 @@ const FAQ: Qa[] = [
     a: (
       <>
         Yes. SE Ranking&apos;s Core and Growth plans include 25 AI prompts a day across 5 AI engines, with an add-on from $71
-        a month for more. MyWebRank includes AI answer tracking in every plan: {OUR.starter.ai.answersPerMonth} AI answers a
-        month on Starter and {OUR.growth.ai.answersPerMonth.toLocaleString("en-IN")} on Growth.
+        a month for more. MyWebRank includes AI answer tracking on {OUR.self.name}: {OUR.engines}, with{" "}
+        {OUR.self.ai.answersPerMonth.toLocaleString("en-IN")} AI answers a month.
       </>
     ),
   },
@@ -72,8 +72,8 @@ const FAQ: Qa[] = [
     q: "Can MyWebRank replace SE Ranking for an agency?",
     a: (
       <>
-        Only partly. Our Agency plan covers {OUR.agency.limits.maxProjects} websites, white-label reports and AI tracking,
-        but it has no rank tracker or backlink data. Agencies that report rankings to clients will still need a tool like SE
+        Only partly. For agencies we offer a {OUR.custom.name} plan (many websites, reports with your logo, AI
+        tracking), priced after a conversation, but it has no rank tracker or backlink data. Agencies that report rankings to clients will still need a tool like SE
         Ranking for that part.
       </>
     ),
@@ -82,8 +82,8 @@ const FAQ: Qa[] = [
     q: "How are MyWebRank fixes published?",
     a: (
       <>
-        You connect your site ({OUR.connectors}) or copy the fix by hand. Every change waits for your OK, the old version is
-        saved first, and you can undo it in one click. On GitHub, changes arrive as pull requests for your developer to review.
+        {OUR.publishing}. Every change waits for your OK. On WordPress the old version is saved
+        first, and you can undo it in one click. On GitHub, changes arrive as pull requests for your developer to review.
       </>
     ),
   },
@@ -109,7 +109,7 @@ export default function CompareSeRankingPage() {
           <p>
             SE Ranking is an all-round SEO platform with rank tracking, keyword research, backlinks, a site audit and AI
             tracking, priced in US dollars from $129 a month. MyWebRank is narrower and simpler: a weekly website check, AI
-            answer tracking in every plan, and fixes published to your site only after you approve them, from{" "}
+            answer tracking, and fixes only after you approve them (one-click with undo on WordPress), from{" "}
             {OUR.fromPrice} a month in rupees. SE Ranking suits marketers who want data; MyWebRank suits owners who want fixes.
           </p>
         }
@@ -133,17 +133,17 @@ export default function CompareSeRankingPage() {
         ]}
         ours={[
           "A plain-English to-do list, sorted by impact and effort, so you know what to do first.",
-          `AI answer tracking in every plan, including our ${OUR.fromPrice} Starter plan.`,
-          `Fixes published to ${OUR.connectors} only after your OK, with one-click undo.`,
-          `A done-for-you service from ${OUR.serviceFrom} a month, if you'd rather not do it yourself.`,
+          `AI answer tracking included in ${OUR.self.name} at ${OUR.fromPrice} a month.`,
+          `${OUR.publishing}, only after your OK.`,
+          `${OUR.dfy.name} at ${OUR.serviceFrom} a month, with no setup fee, if you'd rather not do it yourself.`,
           "Rupee pricing with GST invoices, and support from a team based in India.",
         ]}
       />
 
       <PricingSection id="pricing" competitors={[SE]}>
         <p>
-          SE Ranking Core and MyWebRank Starter both include AI tracking. Core costs $129 a month and adds rank tracking,
-          keywords and backlinks. Starter costs {OUR.fromPrice} a month, covers one website and adds approved fixes and a
+          SE Ranking Core and MyWebRank {OUR.self.name} both include AI tracking. Core costs $129 a month and adds rank
+          tracking, keywords and backlinks. {OUR.self.name} costs {OUR.fromPrice} a month, covers one website and adds approved fixes and a
           plain-English to-do list.
         </p>
       </PricingSection>
@@ -156,7 +156,7 @@ export default function CompareSeRankingPage() {
           {
             situation: "You own one business website and want a clear list of what to fix",
             pick: "MyWebRank",
-            why: "Plain-English to-dos, and fixes go live on your site after your OK.",
+            why: "Plain-English to-dos, and fixes after your OK: one-click with undo on WordPress, copy-paste steps elsewhere.",
           },
           {
             situation: "You want to pay in rupees with a GST invoice",
@@ -165,8 +165,8 @@ export default function CompareSeRankingPage() {
           },
           {
             situation: "You'd rather hand the work to a team",
-            pick: "MyWebRank's done-for-you service",
-            why: "Our team makes the agreed fixes each month and reports what changed.",
+            pick: `MyWebRank ${OUR.dfy.name}`,
+            why: `Our team does the work for ${OUR.serviceFrom} a month, with no setup fee, and reports what changed.`,
           },
           { situation: "You're an agency with both needs", pick: "both", why: "SE Ranking for rankings and links, MyWebRank for AI tracking and approved fixes." },
         ]}
