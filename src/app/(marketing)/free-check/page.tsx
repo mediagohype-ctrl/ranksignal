@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import { Bot, MessageSquareQuote, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { CheckLanes, type Lane } from "@/components/marketing/showcase/check-lanes";
+import { FreeCheckFinalCta, FreeCheckSteps, FreeVsFull } from "@/components/marketing/free-check-explainer";
+import { SELF_ENGINE_LIST } from "@/components/marketing/engine-names";
 import { BRAND, bookCallHref } from "@/lib/brand";
-import { IconTile, JsonLd, PageHero, Section } from "@/components/marketing/ui";
+import { JsonLd } from "@/components/marketing/ui";
 import { FreeCheckTool, HideWhenFreeCheckResult } from "@/components/marketing/free-check-tool";
-import { SectionHeading } from "@/components/ui";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import { PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
 import { inrGst } from "@/components/marketing/plans";
@@ -27,40 +25,6 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   return staticPageMetadata("/free-check", sp.url !== undefined ? { robots: { index: false, follow: true } } : {});
 }
 
-const WHAT: { icon: ReactNode; title: string; body: string }[] = [
-  { icon: <Search />, title: "SEO basics", body: "Your Google headlines and summaries, main headings, secure address (the padlock), and whether your pages can appear on Google." },
-  { icon: <Sparkles />, title: "Answer-readiness (AEO)", body: "Whether your pages answer real customer questions clearly enough to be quoted." },
-  { icon: <Bot />, title: "AI access (GEO)", body: "Whether the robots of ChatGPT, Perplexity and Claude are allowed in, and whether AI can tell who you are." },
-  { icon: <ShieldCheck />, title: "Trust signs", body: "Your business details, About and Contact pages, and links to your social profiles." },
-];
-
-const LANES: Lane[] = [
-  {
-    tag: "SEO",
-    title: "Google search",
-    line: "Can Google find your pages and show a clear headline and summary under your name?",
-    icon: <Search />,
-    checks: ["Your Google headline and summary", "Main headings and the secure padlock", "Pages allowed on Google, and your sitemap"],
-    mock: { kind: "search", query: "cake shop near me", site: "yourbusiness.example", title: "Your Business · Fresh cakes in your area" },
-  },
-  {
-    tag: "AEO",
-    title: "Answer boxes",
-    line: "Do your pages answer real customer questions in a short, clear way that can be quoted?",
-    icon: <MessageSquareQuote />,
-    checks: ["Short, direct answers on your pages", "Question-style headings and FAQs", "Business details Google can read"],
-    mock: { kind: "answer", heading: "Answer", answer: "Yes, they deliver every day before 8 pm across the city.", source: "From yourbusiness.example" },
-  },
-  {
-    tag: "GEO",
-    title: "AI assistants",
-    line: "Can ChatGPT, Perplexity and Claude get into your website and tell who you are?",
-    icon: <Bot />,
-    checks: ["AI robots allowed in your robots.txt", "Who you are and what you do, said plainly", "An AI guide file (llms.txt), if you have one"],
-    mock: { kind: "chat", question: "Who delivers cakes near me?", before: "You could try", name: "Your Business", after: "— they deliver same day." },
-  },
-];
-
 export default async function FreeCheckPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const initialUrl = typeof sp.url === "string" ? sp.url.slice(0, 2048) : "";
@@ -79,61 +43,30 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Se
   return (
     <>
       <JsonLd data={[jsonLd, webPageLd("/free-check"), faqLdFromQa(FREE_CHECK_FAQ)]} />
-      <PageHero
-        eyebrow="Free tool"
-        title="Free website SEO checker: is your site ready for Google and AI?"
-        intro={
-          <p>
-            Type your website. We&apos;ll read your homepage and up to four main pages, then score them for SEO, answer
-            engines (AEO) and AI assistants (GEO) — with your top 3 fixes, in plain words.
+      {/* Hero, laid out like /how-it-works: small label, one big line, one short intro. The H1 keeps the searched phrase. */}
+      <section aria-labelledby="fc-title" className="relative overflow-hidden">
+        <div className="container-marketing pb-10 pt-14 sm:pb-12 sm:pt-20 lg:pt-24">
+          <h1 id="fc-title" className="mk-label mk-rise">
+            Free website SEO checker
+          </h1>
+          <p className="mk-hero mk-rise mt-6 max-w-[16ch] text-fg">
+            Is your site ready for <span className="text-primary">Google and AI?</span>
           </p>
-        }
-      />
-      <section aria-label="Run the free check" className="bg-bg py-12 sm:py-16">
+          <p className="mk-lead mk-rise mk-delay-1 mt-8 max-w-[38rem] text-fg-soft">
+            Type your website. We&apos;ll read your homepage and up to {MAX_KEY_PAGES} main pages, then score them for SEO,
+            answer engines (AEO) and AI assistants (GEO) — with your top 3 fixes, in plain words.
+          </p>
+        </div>
+      </section>
+      <section id="fc-tool" aria-label="Run the free check" className="scroll-mt-24 border-t border-border bg-surface-2/50 py-12 sm:py-16">
         <div className="container-marketing">
           <FreeCheckTool initialUrl={initialUrl} bookHref={bookCallHref()} />
         </div>
       </section>
       {/* Reading matter: in the HTML for everyone, folded away once a result is on screen. */}
       <HideWhenFreeCheckResult>
-      <Section labelledBy="fc-lanes">
-        <SectionHeading
-          id="fc-lanes"
-          size="lg"
-          align="center"
-          eyebrow="SEO, AEO and GEO"
-          title="Three places customers find you"
-          description={
-            <>
-              SEO is being found on Google. AEO (answer engine optimisation) is being the short answer that Google and
-              voice assistants quote. GEO (generative engine optimisation) is being named by AI assistants like ChatGPT and
-              Gemini. The free check scores your website for all three, plus Brand.
-            </>
-          }
-        />
-        <CheckLanes
-          site="yourbusiness.com"
-          siteNote={`We read your homepage and up to ${MAX_KEY_PAGES} main pages`}
-          lanes={LANES}
-          caption="What the free check looks at for each place. The small pictures are illustrations, not your results."
-        />
-      </Section>
-      <Section labelledBy="fc-what" tone="surface">
-        <SectionHeading id="fc-what" size="lg" align="center" eyebrow="What we check" title="What the free check looks at" />
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {WHAT.map((w) => (
-            <li key={w.title} className="rounded-2xl border border-border bg-bg p-6">
-              <IconTile>{w.icon}</IconTile>
-              <h3 className="mt-4 text-h4 text-fg">{w.title}</h3>
-              <p className="mt-2 text-small leading-relaxed text-muted">{w.body}</p>
-            </li>
-          ))}
-        </ul>
-        <p className="mx-auto mt-10 max-w-2xl text-center text-small text-muted">
-          This free check reads your website. It does <strong className="font-semibold text-fg">not</strong> ask
-          ChatGPT — the full check does, after you sign up. We never store the pages we read.
-        </p>
-      </Section>
+      <FreeCheckSteps />
+      <FreeVsFull />
       <QaSection id="fc-faq" title="Questions about the free check" items={FREE_CHECK_FAQ}>
         <SourcesList
           links={[
@@ -144,6 +77,7 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Se
           ]}
         />
       </QaSection>
+      <FreeCheckFinalCta />
       </HideWhenFreeCheckResult>
     </>
   );
@@ -178,8 +112,8 @@ const FREE_CHECK_FAQ: Qa[] = [
     a: (
       <>
         The free check reads a handful of pages and never asks an AI assistant. The full report reads up to{" "}
-        {inrN(starter.maxPagesPerCrawl)} pages per check on the {starter.name} plan, and asks ChatGPT, Gemini and
-        Perplexity your customers&apos; real questions. {starter.name} is {inrGst(starter.priceInrMonthly ?? 0)} a month
+        {inrN(starter.maxPagesPerCrawl)} pages per check on the {starter.name} plan, and asks {SELF_ENGINE_LIST} your
+        customers&apos; real questions. {starter.name} is {inrGst(starter.priceInrMonthly ?? 0)} a month
         after a {TRIAL_DAYS}-day free trial, no card needed.
       </>
     ),

@@ -1,3 +1,4 @@
+import { socialIcon } from "@/components/marketing/social-icons";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { BRAND, WHATSAPP_HELP_MESSAGE, brandLocationLine, brandWhatsappHref } from "@/lib/brand";
@@ -139,9 +140,10 @@ export function SiteFooter() {
           {/* Office city, from BRAND_ADDRESS_LOCALITY (nothing is shown until it is set). */}
           {location && <p className="mt-3 text-small text-muted">Office: {location}</p>}
           {BRAND.sameAs.length > 0 && (
-            <ul aria-label={`${BRAND.name} on other sites`} className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
+            <ul aria-label={`${BRAND.name} on other sites`} className="mt-6 flex flex-wrap items-center gap-2.5">
               {BRAND.sameAs.map((url) => {
                 const name = profileName(url);
+                const icon = socialIcon(name);
                 return (
                   <li key={url}>
                     <a
@@ -149,9 +151,14 @@ export function SiteFooter() {
                       target="_blank"
                       rel="me noopener noreferrer"
                       aria-label={`${BRAND.name} on ${name} (opens in a new tab)`}
-                      className="text-small text-fg-soft underline-offset-4 transition-colors hover:text-fg hover:underline"
+                      title={name}
+                      className={
+                        icon
+                          ? "inline-flex size-9 items-center justify-center rounded-full border border-border bg-surface text-fg-soft transition-colors hover:border-border-strong hover:text-fg"
+                          : "inline-flex h-9 items-center rounded-full border border-border bg-surface px-3.5 text-small text-fg-soft transition-colors hover:border-border-strong hover:text-fg"
+                      }
                     >
-                      {name}
+                      {icon ?? name}
                     </a>
                   </li>
                 );

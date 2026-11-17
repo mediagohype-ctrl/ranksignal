@@ -10,7 +10,7 @@ import { SELF_PLAN } from "./plans";
 const DOMAIN = "greenleaf-bakery.example";
 
 /** Shared card shell: header with title, sub-line and the Sample tag. */
-function Panel({
+export function Panel({
   title,
   sub,
   aside,
@@ -40,7 +40,7 @@ function Panel({
   );
 }
 
-function Chip({ children, tone = "plain" }: { children: React.ReactNode; tone?: "plain" | "primary" | "dashed" }) {
+export function Chip({ children, tone = "plain" }: { children: React.ReactNode; tone?: "plain" | "primary" | "dashed" }) {
   return (
     <span
       className={clsx(
