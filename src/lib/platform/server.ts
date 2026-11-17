@@ -33,3 +33,29 @@ export async function getSitePlatform(organizationId: string, projectId: string,
   cache.set(projectId, { platform, at: Date.now() });
   return platform;
 }
+
+const DONE_CRAWL = ["succeeded", "succeeded_with_warnings"];
+
+/**
+ * The platform stored by the latest finished website check — database only, never fetches the website. Null when
+ * there is no check yet or the check predates platform detection. Use this where a guess isn't worth a network call.
+ */
+export async function getStoredSitePlatform(organizationId: string, projectId: string): Promise<Platform | null> {
+  const run = await db.crawlRun.findFirst({
+    where: { organizationId, projectId, status: { in: DONE_CRAWL } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (!run) return null;
+  const pages = await db.crawlPage.findMany({
+    where: { organizationId, crawlRunId: run.id, statusCode: 200 },
+    select: { extracted: true },
+    orderBy: { crawledAt: "asc" }, // home page first
+    take: 5,
+  });
+  for (const p of pages) {
+    const v = (p.extracted as { platform?: unknown } | null)?.platform;
+    if (isPlatform(v)) return v;
+  }
+  return null;
+}

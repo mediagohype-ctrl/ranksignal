@@ -1,8 +1,10 @@
 // Customer billing details printed on GST invoices (BillingDetails, one per organization). Server-only.
 import { z } from "zod";
+import { HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
 import { isValidGstin } from "./gst";
 import { isIndianStateCode, stateName } from "./indian-states";
+import { BILLING_DETAILS_HREF } from "./links";
 
 export const billingDetailsSchema = z
   .object({
@@ -71,4 +73,52 @@ export async function saveBillingDetails(organizationId: string, input: BillingD
     update: { ...input },
   });
   return (await getBillingDetails(organizationId))!;
+}
+
+/** Error code the checkout routes return when the business name / state are missing (the client shows the form). */
+export const BILLING_DETAILS_REQUIRED = "billing_details_required";
+
+/** True when the invoice can be issued correctly: a business name and a state (decides CGST + SGST or IGST). */
+export function hasInvoiceBasics(d: { legalName?: string | null; stateCode?: string | null } | null | undefined): boolean {
+  return !!d && (d.legalName ?? "").trim().length >= 2 && isIndianStateCode((d.stateCode ?? "").trim());
+}
+
+/**
+ * Checkout guard (subscription and answer packs): no payment is started until the business name and state are
+ * saved. Without them the invoice was issued in the workspace name with OUR state as place of supply — CGST + SGST
+ * on a customer from another state, where IGST is due (app audit 15 Nov 2026, Fix 29).
+ */
+export async function requireBillingDetailsForPayment(organizationId: string): Promise<BillingDetailsView> {
+  const d = await getBillingDetails(organizationId);
+  if (!d || !hasInvoiceBasics(d)) {
+    throw new HttpError(
+      409,
+      BILLING_DETAILS_REQUIRED,
+      "Before you pay, add your business name and state, so your GST invoice is correct. Save them under Billing details, then try again.",
+      { next: BILLING_DETAILS_HREF },
+    );
+  }
+  return d;
+}
+
+export interface CheckoutPrefill {
+  email?: string;
+  name?: string;
+  /** Phone / WhatsApp number in international format, when the workspace saved one. */
+  contact?: string;
+}
+
+/** What we already know about the payer, to pre-fill Razorpay Checkout (never required; empty values are left out). */
+export async function checkoutPrefill(organizationId: string, userId: string): Promise<CheckoutPrefill> {
+  const [user, org] = await Promise.all([
+    db.user.findUnique({ where: { id: userId }, select: { email: true, name: true } }).catch(() => null),
+    db.organization.findUnique({ where: { id: organizationId }, select: { name: true, whatsappNumber: true } }).catch(() => null),
+  ]);
+  const out: CheckoutPrefill = {};
+  if (user?.email) out.email = user.email;
+  const name = (user?.name ?? "").trim() || (org?.name ?? "").trim();
+  if (name) out.name = name;
+  const contact = (org?.whatsappNumber ?? "").trim();
+  if (/^\+?\d{8,15}$/.test(contact)) out.contact = contact;
+  return out;
 }

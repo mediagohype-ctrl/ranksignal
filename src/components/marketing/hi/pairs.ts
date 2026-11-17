@@ -5,7 +5,7 @@
 export const HINDI_PAIRS = {
   "/": "/hi",
   "/pricing": "/hi/pricing",
-  "/services": "/hi/services",
+  "/done-for-you": "/hi/services",
   "/free-check": "/hi/free-check",
   "/about": "/hi/about",
   "/contact": "/hi/contact",

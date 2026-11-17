@@ -2,6 +2,7 @@
 // Copy rules: short sentences, jargon explained, concrete steps, and never a promised outcome.
 import type { IssueEffort, IssueImpact, Pillar, ReportIssue } from "@/lib/report/types";
 import { MAX_AFFECTED, plural, type EvaluatedCheck, type ReportFinding } from "@/lib/report/inputs";
+import { placesOf } from "@/lib/report/counts";
 
 type Copy = Pick<ReportIssue, "title" | "whatsWrong" | "whyItMatters" | "howToFix" | "impact" | "effort"> & { relatedActionType?: string };
 type CopyFn = (c: EvaluatedCheck) => Copy | null;
@@ -22,7 +23,8 @@ const WP_PLUGIN = "On WordPress, a plugin such as Yoast or Rank Math adds a box 
 
 const COPY: Record<string, CopyFn> = {
   "seo.indexability": (c) => ({
-    title: n(c, "errors") ? `${pages(n(c, "errors") + n(c, "noindex"))} can't show up on Google` : `${pagesAre(n(c, "noindex"))} hidden from Google`,
+    // Titles count the SAME pages as the "N pages" badge beside them (c.affectedCount), never a sub-group.
+    title: n(c, "errors") ? `${pages(c.affectedCount)} can't show up on Google` : `${pagesAre(c.affectedCount)} hidden from Google`,
     whatsWrong: [
       n(c, "errors") ? `${pages(n(c, "errors"))} showed an error (like "page not found") or didn't load when we visited.` : "",
       n(c, "noindex") ? `${pagesHave(n(c, "noindex"))} a hidden setting that tells Google not to show ${n(c, "noindex") === 1 ? "it" : "them"}.` : "",
@@ -55,7 +57,9 @@ const COPY: Record<string, CopyFn> = {
   "seo.titles": (c) => {
     const bad = n(c, "missing") + n(c, "duplicate") + n(c, "short");
     return {
-      title: bad ? `Google headline missing or unclear on ${pages(bad)}` : `Google headline too long on ${pages(n(c, "long"))} — Google cuts it off`,
+      title: bad
+        ? `Google headline ${n(c, "long") ? "needs fixing" : "missing or unclear"} on ${pages(c.affectedCount)}`
+        : `Google headline too long on ${pages(c.affectedCount)} — Google cuts it off`,
       whatsWrong: [
         n(c, "missing") ? `${pagesHave(n(c, "missing"))} no Google headline.` : "",
         n(c, "duplicate") ? `${pagesHave(n(c, "duplicate"))} the same Google headline as another page, so they look the same in search results.` : "",
@@ -79,10 +83,12 @@ const COPY: Record<string, CopyFn> = {
     const bad = n(c, "missing") + n(c, "duplicate");
     return {
       title: !bad
-        ? `Google summary too long on ${pages(n(c, "long"))} — Google cuts it off`
+        ? `Google summary too long on ${pages(c.affectedCount)} — Google cuts it off`
         : n(c, "missing") === 0
-          ? `Google summary copied on ${pages(bad)}`
-          : `Google summary missing on ${pages(bad)} — Google shows random text from the page instead`,
+          ? `Google summary copied${n(c, "long") ? " or too long" : ""} on ${pages(c.affectedCount)}`
+          : n(c, "duplicate") || n(c, "long")
+            ? `Google summary needs fixing on ${pages(c.affectedCount)}`
+            : `Google summary missing on ${pages(c.affectedCount)} — Google shows random text from the page instead`,
       whatsWrong: [
         n(c, "missing") ? `${pagesHave(n(c, "missing"))} no Google summary — the short text shown under your link in Google.` : "",
         n(c, "duplicate") ? `${pagesHave(n(c, "duplicate"))} the same Google summary as another page.` : "",
@@ -101,7 +107,11 @@ const COPY: Record<string, CopyFn> = {
     };
   },
   "seo.h1": (c) => ({
-    title: n(c, "missing") ? `Main heading missing on ${pages(n(c, "missing"))}` : `${pagesHave(n(c, "multiple"))} more than one main heading`,
+    title: !n(c, "missing")
+      ? `${pagesHave(c.affectedCount)} more than one main heading`
+      : n(c, "multiple")
+        ? `Main heading missing or repeated on ${pages(c.affectedCount)}`
+        : `Main heading missing on ${pages(c.affectedCount)}`,
     whatsWrong: `${n(c, "missing") ? `${pagesHave(n(c, "missing"))} no main heading (the big headline at the top of the page). ` : ""}${n(c, "multiple") ? `${pagesHave(n(c, "multiple"))} several main headings, which makes it unclear what the page is about.` : ""}`,
     whyItMatters: "One clear headline helps visitors, Google and AI assistants see the main topic quickly.",
     howToFix: [
@@ -475,7 +485,11 @@ const COPY: Record<string, CopyFn> = {
     relatedActionType: "content_brief",
   }),
   "aeo.structured_data": (c) => ({
-    title: n(c, "invalid") ? `Info for Google and AI is broken on ${pages(n(c, "invalid"))}` : `Info for Google and AI missing on ${pages(n(c, "total") - n(c, "valid"))}`,
+    title: !n(c, "invalid")
+      ? `Info for Google and AI missing on ${pages(c.affectedCount)}`
+      : n(c, "invalid") >= c.affectedCount
+        ? `Info for Google and AI is broken on ${pages(c.affectedCount)}`
+        : `Info for Google and AI is missing or broken on ${pages(c.affectedCount)}`,
     whatsWrong: `${n(c, "valid")} of ${n(c, "total")} pages include info for Google and AI (hidden labels that describe your business, products and articles).${n(c, "invalid") ? ` ${pagesHave(n(c, "invalid"))} labels with mistakes that can't be read.` : ""}`,
     whyItMatters: "These labels let Google and AI assistants read facts about your pages without guessing. Broken labels are ignored completely.",
     howToFix: [
@@ -924,8 +938,14 @@ export const IMPACT_LABEL: Record<IssueImpact, string> = { high: "Urgent", mediu
  * Open-problem counts for history snapshots, from the same grouped problem list the report and To-do show
  * (one row per problem, not one per page). Urgent → high, Important → medium, Nice to have → low.
  */
-export function issueCounts(issues: Pick<ReportIssue, "impact">[]): { critical: number; high: number; medium: number; low: number; info: number; total: number } {
-  const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0, total: issues.length };
+export function issueCounts(
+  issues: (Pick<ReportIssue, "impact"> & Partial<Pick<ReportIssue, "affectedCount">>)[],
+): { critical: number; high: number; medium: number; low: number; info: number; total: number; places?: number } {
+  const counts: { critical: number; high: number; medium: number; low: number; info: number; total: number; places?: number } = {
+    critical: 0, high: 0, medium: 0, low: 0, info: 0, total: issues.length,
+  };
   for (const i of issues) counts[i.impact] += 1;
+  // "across N places": how many spots the problems touch (src/lib/report/counts.ts). Only when the list carries it.
+  if (issues.some((i) => typeof i.affectedCount === "number")) counts.places = placesOf(issues);
   return counts;
 }

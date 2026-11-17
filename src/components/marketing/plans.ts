@@ -6,6 +6,7 @@ import {
 import { gstConfig, gstSuffix } from "@/lib/billing/gst";
 import type { PlanLimits } from "@/lib/types";
 import { BRAND } from "@/lib/brand";
+import { SELF_FIX_LINE } from "@/lib/billing/offer";
 
 export type PaidPlanId = (typeof PAID_PLAN_IDS)[number];
 
@@ -77,6 +78,21 @@ export const TRIAL_AI = (() => {
 const ENGINE_NAMES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Grok"];
 const listNames = (n: string[]) => (n.length <= 1 ? n.join("") : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`);
 
+/** "ChatGPT, Gemini and Perplexity": the AI assistants a plan checks, by name (first N = the plan's engine limit). */
+export function engineNamesLine(planId: string): string {
+  return listNames(ENGINE_NAMES.slice(0, getEngineLimit(planId)));
+}
+
+/**
+ * The card line for AI checks, without the "AI answers" jargon: "ChatGPT, Gemini and Perplexity checked every week".
+ * "Every week" only when the plan's monthly answers cover 4 or more whole checks; otherwise it says how many a month.
+ */
+export function aiCheckedLine(planId: string): string {
+  const checks = checksPerMonth(planId);
+  const when = checks >= 4 ? "every week" : checks === 1 ? "once a month" : `${checks} times a month`;
+  return `${engineNamesLine(planId)} checked ${when}`;
+}
+
 /** Self-serve plans shown on the website: only "Do it myself" (see PUBLIC_PLAN_IDS). */
 export const MARKETING_PLANS: MarketingPlan[] = PUBLIC_PLAN_IDS.map((id) => {
   const l = getPlan(id);
@@ -90,11 +106,11 @@ export const MARKETING_PLANS: MarketingPlan[] = PUBLIC_PLAN_IDS.map((id) => {
     blurb: COPY[id]?.blurb ?? "",
     cta: COPY[id]?.cta ?? "Start free trial",
     highlights: [
-      "Your Found Score, plus your SEO, AEO, GEO and Brand scores",
+      "Your Found Score out of 100, plus your SEO, AEO, GEO and Brand scores",
       `A ${freq(l.minScanIntervalDays).toLowerCase()} check of your website, up to ${num(l.maxPagesPerCrawl)} pages`,
-      `What ${listNames(ENGINE_NAMES.slice(0, engines))} say about you (${num(a.aiAnswersPerMonth)} AI answers a month)`,
+      aiCheckedLine(id),
       "A to-do list in plain words, most important first",
-      "One-click fixes with undo on WordPress; easy copy-paste steps for other sites",
+      SELF_FIX_LINE,
       "A monthly report you can read in 2 minutes",
     ],
     limits: l,

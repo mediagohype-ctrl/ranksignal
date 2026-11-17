@@ -7,9 +7,7 @@ import { ArrowRight, Clock, ScanSearch } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { fmtDate, hostOf } from "@/lib/dashboard/format";
-import { loadSharedReport } from "@/lib/share/server";
-import { verifyShareToken } from "@/lib/share/token";
-import { db } from "@/lib/db";
+import { loadSharedReport, resolveShareLink } from "@/lib/share/server";
 import { DEFAULT_BRANDING, getBranding, toPublicBranding, type PublicBranding } from "@/lib/branding";
 import { MeasuredWith } from "@/components/app/providers-status";
 import { PrintButton } from "@/components/app/print-button";
@@ -39,10 +37,9 @@ const DEFAULT_PUBLIC = toPublicBranding(DEFAULT_BRANDING);
 /** White-label branding of the org that owns the shared project (default branding on any failure). */
 async function brandingForToken(token: string): Promise<PublicBranding> {
   try {
-    const claims = await verifyShareToken(token);
-    if (!claims) return DEFAULT_PUBLIC;
-    const project = await db.project.findUnique({ where: { id: claims.projectId }, select: { organizationId: true } });
-    return project ? toPublicBranding(await getBranding(project.organizationId)) : DEFAULT_PUBLIC;
+    // Long signed token or short link (same rules as the report itself).
+    const link = await resolveShareLink(token);
+    return link ? toPublicBranding(await getBranding(link.project.organizationId)) : DEFAULT_PUBLIC;
   } catch {
     return DEFAULT_PUBLIC;
   }

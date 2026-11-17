@@ -1,5 +1,7 @@
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
 import { getOffsiteSuggestions, listOffsite } from "@/lib/offsite";
+import { getAiCheckState } from "@/lib/visibility/run-state-server";
+import { aiCheckCopy } from "@/lib/visibility/run-state";
 import { PageHeader } from "@/components/ui";
 import { OffsiteClient, type OffsiteSuggestionsView } from "@/components/app/offsite/offsite-client";
 
@@ -8,8 +10,12 @@ export const metadata = { title: "Your listings" };
 export default async function OffsitePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { session, project } = await requireAppProject(id);
-  const [items, suggestions] = await Promise.all([
+  const [items, aiCheck, suggestions] = await Promise.all([
     listOffsite(session, project.id),
+    // While an AI check is running (or waiting for tomorrow) we say so, never "No AI check yet".
+    getAiCheckState(project.id, session.organizationId)
+      .then((st) => aiCheckCopy(st))
+      .catch(() => null),
     getOffsiteSuggestions(session, project.id).catch((e): OffsiteSuggestionsView | null => {
       console.error("[offsite] suggestions failed:", e instanceof Error ? e.message : e);
       return null;
@@ -23,7 +29,13 @@ export default async function OffsitePage({ params }: { params: Promise<{ id: st
         title="Your listings"
         description="Listings, reviews and articles about you on other sites. AI tools read these too."
       />
-      <OffsiteClient projectId={project.id} initialItems={items} suggestions={suggestions} canEdit={hasRole(session, "member")} />
+      <OffsiteClient
+        projectId={project.id}
+        initialItems={items}
+        suggestions={suggestions}
+        canEdit={hasRole(session, "member")}
+        aiCheckInFlight={aiCheck ? { title: aiCheck.title, detail: aiCheck.detail } : null}
+      />
     </>
   );
 }

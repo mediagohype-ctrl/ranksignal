@@ -3,13 +3,15 @@ import { roleLabel } from "@/components/app/role-label";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, BellOff, CreditCard, LogOut, Plug, Settings } from "lucide-react";
+import { Bell, BellOff, BookOpen, CreditCard, LifeBuoy, LogOut, Mail, MessageCircle, Plug, Settings } from "lucide-react";
 import clsx from "clsx";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtRelative } from "@/lib/dashboard/format";
 import { Avatar, Meter, Skeleton, Spinner, useToast } from "@/components/ui";
 import { answersLeftLabel } from "@/lib/billing/topups";
 import { ALLOWANCE_CHANGED_EVENT, BuyAnswersButton } from "@/components/app/billing/topup-dialog";
+import { useMenuInput } from "@/components/app/menu-context";
+import { unreadBadgeText } from "@/components/app/nav";
 
 /* ------------------------------------------------------------- shared popover hook */
 
@@ -158,7 +160,9 @@ export function NotificationsBell() {
     try {
       const r = await api<{ items: NotificationRow[]; unreadCount?: number }>("/api/notifications");
       setItems(r.items);
-      setUnread(r.unreadCount ?? r.items.filter((n) => !n.readAt).length);
+      // ONE number for the badge, the button's label and the menu heading: every unread notification in the
+      // account (the list below shows only the newest 30, so counting the list would give a different number).
+      setUnread(Math.max(0, r.unreadCount ?? r.items.filter((n) => !n.readAt).length));
       setError(null);
     } catch (e) {
       setError(errorMessage(e));
@@ -193,7 +197,7 @@ export function NotificationsBell() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`}
+        aria-label={`Notifications${unread ? ` (${unreadBadgeText(unread)} unread)` : ""}`}
         aria-expanded={open}
         aria-haspopup="true"
         className={clsx(
@@ -203,15 +207,21 @@ export function NotificationsBell() {
       >
         <Bell size={18} aria-hidden />
         {unread > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-danger-fg ring-2 ring-surface">
-            {unread > 9 ? "9+" : unread}
+          <span
+            aria-hidden
+            className="absolute -right-0.5 top-1 flex h-4 min-w-4 items-center justify-center whitespace-nowrap rounded-full bg-danger px-1 text-[10px] font-semibold leading-none tabular-nums text-danger-fg ring-2 ring-surface"
+          >
+            {unreadBadgeText(unread)}
           </span>
         )}
       </button>
       {open && (
         <div className={clsx(POPOVER, "fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-96")}>
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <span className="text-small font-semibold text-fg">Notifications</span>
+            <span className="text-small font-semibold text-fg">
+              Notifications
+              {unread > 0 && <span className="ml-2 font-normal text-muted">{unreadBadgeText(unread)} unread</span>}
+            </span>
             {unread > 0 && (
               <button type="button" onClick={markAll} className="text-xs font-medium text-primary hover:underline">
                 Mark all as read
@@ -286,6 +296,57 @@ export function NotificationsBell() {
   );
 }
 
+/* ------------------------------------------------------------- help */
+
+/**
+ * Help button on every screen: chat on WhatsApp (with a ready-typed message), the getting-started guide, and email.
+ * The links come from the server layout (src/lib/brand.ts), so they match the public site.
+ */
+export function HelpMenu({ whatsappHref, guideHref, supportEmail }: { whatsappHref: string; guideHref: string; supportEmail: string }) {
+  const { open, setOpen, ref } = usePopover();
+  const itemCls =
+    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-small text-fg-soft hover:bg-surface-2 hover:text-fg [&_svg]:text-muted";
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Help"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={clsx(
+          "flex h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 text-small font-medium text-fg-soft hover:bg-surface-2 hover:text-fg",
+          open && "bg-surface-2 text-fg",
+        )}
+      >
+        <LifeBuoy size={18} aria-hidden />
+        <span className="hidden sm:inline">Help</span>
+      </button>
+      {open && (
+        <div role="menu" aria-label="Help" className={clsx(POPOVER, "absolute right-0 top-12 w-64")}>
+          <div className="border-b border-border px-4 py-3">
+            <div className="text-small font-semibold text-fg">Need help?</div>
+            <div className="text-xs text-muted">Ask us anything. A real person replies.</div>
+          </div>
+          <div className="p-1.5">
+            <a role="menuitem" href={whatsappHref} target="_blank" rel="noopener noreferrer" className={itemCls} onClick={() => setOpen(false)}>
+              <MessageCircle size={16} aria-hidden /> Chat on WhatsApp
+              <span className="sr-only"> (opens in new tab)</span>
+            </a>
+            <a role="menuitem" href={guideHref} target="_blank" rel="noopener noreferrer" className={itemCls} onClick={() => setOpen(false)}>
+              <BookOpen size={16} aria-hidden /> Getting started guide
+              <span className="sr-only"> (opens in new tab)</span>
+            </a>
+            <a role="menuitem" href={`mailto:${supportEmail}`} className={itemCls} onClick={() => setOpen(false)}>
+              <Mail size={16} aria-hidden /> Email support
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------- user menu */
 
 function useLogout() {
@@ -318,6 +379,8 @@ export function UserMenu({
   const { open, setOpen, ref } = usePopover();
   const { busy, logout } = useLogout();
   const pathname = usePathname();
+  // Do it myself has no website connections, so its menu has no "Connect website" (owner decision 1).
+  const { canConnect, staff } = useMenuInput();
   const display = name || email;
   // Inside a website's pages, Settings and Connect website open that website's pages; elsewhere, pick a website first.
   const projectId = /^\/app\/projects\/([^/]+)/.exec(pathname ?? "")?.[1];
@@ -359,9 +422,11 @@ export function UserMenu({
             <Link role="menuitem" href={settingsHref} className={itemCls} onClick={() => setOpen(false)}>
               <Settings size={16} aria-hidden /> Settings
             </Link>
-            <Link role="menuitem" href={connectHref} className={itemCls} onClick={() => setOpen(false)}>
-              <Plug size={16} aria-hidden /> Connect website
-            </Link>
+            {(canConnect || staff) && (
+              <Link role="menuitem" href={connectHref} className={itemCls} onClick={() => setOpen(false)}>
+                <Plug size={16} aria-hidden /> Connect website
+              </Link>
+            )}
             <Link role="menuitem" href="/app/settings?tab=billing" className={itemCls} onClick={() => setOpen(false)}>
               <CreditCard size={16} aria-hidden /> Plan &amp; billing
             </Link>

@@ -31,6 +31,8 @@ export interface WorkPermissions {
   canSeeInternal: boolean;
   canDelete: boolean;
   staffMode: boolean;
+  /** Do it myself (not a managed offer, not staff support): the board is the owner's own list. */
+  selfMode?: boolean;
 }
 
 function SectionTitle({ icon, children, count }: { icon: React.ReactNode; children: React.ReactNode; count?: number }) {
@@ -144,7 +146,7 @@ export function TaskDetailDialog({
   }
 
   const details = [
-    { label: "Who does it", value: <PerformerBadge performedBy={task.performedBy} /> },
+    ...(perms.selfMode ? [] : [{ label: "Who does it", value: <PerformerBadge performedBy={task.performedBy} /> }]),
     { label: "Assignee", value: task.assigneeName ? <span className="inline-flex items-center gap-2"><Avatar name={task.assigneeName} size="xs" />{task.assigneeName}</span> : <span className="text-muted">Unassigned</span> },
     { label: "Due", value: task.dueAt ? <DueText dueAt={task.dueAt} status={task.status} /> : <span className="text-muted">No date</span> },
     ...(task.completedAt ? [{ label: "Completed", value: fmtDate(task.completedAt) }] : []),
@@ -216,7 +218,7 @@ export function TaskDetailDialog({
           {task.evidence.links.length > 0 && (
             <section aria-label="Evidence">
               <SectionTitle icon={<Paperclip />} count={task.evidence.links.length}>
-                Evidence
+                {perms.selfMode ? "Links" : "Evidence"}
               </SectionTitle>
               <ul className="space-y-1.5">
                 {task.evidence.links.map((l) => (

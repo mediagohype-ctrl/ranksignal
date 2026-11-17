@@ -50,3 +50,24 @@ describe("wrong facts = contradictions of confirmed facts only", () => {
     expect(cur.summary.brandKnowledge?.[0].inaccuracies).toEqual(["wrong city"]);
   });
 });
+
+describe("checked claims (Check these facts)", () => {
+  it("never calls an unconfirmed claim wrong, and drops claims the owner confirmed", async () => {
+    const { checkedClaims } = await import("@/lib/visibility/brand-knowledge");
+    const out = checkedClaims(
+      [
+        { claim: "Founded by Gourav Gupta.", fact: "name", verdict: "not_supported" },
+        { claim: "Acme Tiles sells furniture.", fact: "sells", verdict: "contradicts" },
+        { claim: "Repeats what the owner said is wrong.", fact: "owner", verdict: "contradicts" },
+        { claim: "Office in Okhla Phase II.", fact: "city", verdict: "contradicts" },
+      ],
+      parseConfirmedFacts({ sells: "Ceramic tiles" }),
+      ["Office in Okhla Phase II."],
+    );
+    expect(out).toEqual([
+      { claim: "Acme Tiles sells furniture.", status: "conflict" },
+      { claim: "Repeats what the owner said is wrong.", status: "conflict" },
+      { claim: "Founded by Gourav Gupta.", status: "not_confirmed" },
+    ]);
+  });
+});

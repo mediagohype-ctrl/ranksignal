@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 
 const LINKS = [
   { href: "/", label: "Homepage", body: "What we do, in plain English.", icon: Home },
-  { href: "/free-check", label: "Free AI-readiness check", body: "Score your site in about 20 seconds.", icon: Gauge },
+  { href: "/free-check", label: "Free AI-readiness check", body: "Score your site in about 30 seconds.", icon: Gauge },
   { href: "/pricing", label: "Pricing", body: "Plans and the free trial.", icon: Tag },
-  { href: "/docs", label: "Getting started", body: "Set-up guides and how approvals work.", icon: BookOpen },
+  { href: "/docs", label: "Getting started", body: "Set-up guides and how fixes work.", icon: BookOpen },
   { href: "/contact", label: "Contact us", body: "A real person will reply.", icon: Mail },
 ];
 

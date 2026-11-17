@@ -31,7 +31,7 @@ const ROWS: Row[] = [
   { label: "Rank tracking", cells: [OUR_CELLS.rank, { s: "yes", note: "750 tracked keywords on Lite, 2,000 on Standard" }] },
   { label: "AI answer tracking", cells: [OUR_CELLS.ai, { s: "partial", note: "150 AI prompt checks on Lite; Brand Radar AI from $199/mo extra" }] },
   { label: "Plain-English to-do list", cells: [OUR_CELLS.todo, { s: "unknown" }] },
-  { label: "Fixes published to your site with approval and undo", cells: [OUR_CELLS.publish, { s: "unknown" }] },
+  { label: "Ready-to-paste fixes, or a team that makes them", cells: [OUR_CELLS.publish, { s: "unknown" }] },
   { label: "Done-for-you service", cells: [OUR_CELLS.service, { s: "unknown" }] },
   { label: "Prices shown in", cells: [OUR_CELLS.currency, { text: "USD", note: "On their pricing page" }] },
   { label: "Starting price", cells: [OUR_CELLS.from, { text: "$29/mo", note: "Starter; Lite is $129/mo" }] },
@@ -45,7 +45,7 @@ const FAQ: Qa[] = [
       <>
         No. MyWebRank has no backlink database, no keyword database and no daily rank tracker. If link building or
         keyword research is the core of your work, Ahrefs does that and MyWebRank does not. MyWebRank covers the website
-        audit, AI answer tracking and getting fixes published, which many small businesses need first.
+        audit, AI answer tracking and getting fixes done, which many small businesses need first.
       </>
     ),
   },
@@ -83,8 +83,7 @@ const FAQ: Qa[] = [
     q: "Which is easier for a small business owner?",
     a: (
       <>
-        MyWebRank is built for owners who are not SEO specialists: every problem becomes a plain-English to-do, and fixes go
-        live only after you approve them. Ahrefs is a professional toolkit with far more data, so it suits people who
+        MyWebRank is built for owners who are not SEO specialists: every problem becomes a plain-English to-do, and every fix comes with step-by-step help. Ahrefs is a professional toolkit with far more data, so it suits people who
         already know SEO or have a marketer to use it.
       </>
     ),
@@ -111,7 +110,7 @@ export default function CompareAhrefsPage() {
           <p>
             Ahrefs is a deep research tool for backlinks, keywords and rank tracking, priced in US dollars from $29 a month.
             MyWebRank is a simpler tool for Indian businesses: it checks your website, tracks what ChatGPT, Gemini and other
-            AI assistants say about you, and fixes problems only after you approve them (one-click with undo on WordPress).
+            AI assistants say about you, and shows you exactly what to fix, with ready-to-paste fixes.
             {OUR.self.name} costs {OUR.fromPrice} a month. Pick Ahrefs for link and keyword research; pick MyWebRank to get problems
             found and fixed.
           </p>
@@ -137,7 +136,7 @@ export default function CompareAhrefsPage() {
         ours={[
           "A plain-English to-do list instead of raw data, so an owner can act without an SEO background.",
           `AI answer tracking included in every plan, from ${OUR.fromPrice} a month, with no add-on to buy.`,
-          `${OUR.publishing}, only after your OK.`,
+          `${OUR.publishing}.`,
           `${OUR.dfy.name} at ${OUR.serviceFrom} a month, with no setup fee, if you'd rather we did the work.`,
           "Prices in rupees with GST invoices, and support from a team based in India.",
         ]}
@@ -147,7 +146,7 @@ export default function CompareAhrefsPage() {
         <p>
           Like for like, the comparison is not exact. Ahrefs Lite at $129 a month buys deep link and keyword data for one
           user. MyWebRank {OUR.self.name} at {OUR.fromPrice} a month buys a weekly website check of up to{" "}
-          {OUR.pages} pages, {OUR.self.ai.answersPerMonth} AI answers a month and approved fixes for one website, for{" "}
+          {OUR.pages} pages, {OUR.self.ai.answersPerMonth} AI answers a month and ready-to-paste fixes for one website, for{" "}
           {OUR.self.limits.seats} team members.
         </p>
       </PricingSection>
@@ -160,7 +159,7 @@ export default function CompareAhrefsPage() {
           {
             situation: "You run a local business and want to know what to fix first",
             pick: "MyWebRank",
-            why: "You get a short, ranked to-do list in plain English, and on WordPress a fix you approve goes live in one click, with undo.",
+            why: "You get a short, ranked to-do list in plain English, and each fix comes ready to paste, with step-by-step help.",
           },
           {
             situation: "You want to know if ChatGPT recommends you, on a small budget",
@@ -175,7 +174,7 @@ export default function CompareAhrefsPage() {
           {
             situation: "You have an SEO team and a bigger budget",
             pick: "both",
-            why: "Ahrefs for research, MyWebRank for AI answer tracking and approved fixes.",
+            why: "Ahrefs for research, MyWebRank for AI answer tracking and ready-to-paste fixes.",
           },
         ]}
       />

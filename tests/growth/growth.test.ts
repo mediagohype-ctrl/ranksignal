@@ -143,8 +143,16 @@ describe("badge", () => {
   it("builds embed URLs", () => {
     const u = badgeUrls({ token: "a.b.c", appUrl: "https://app.test/" });
     expect(u.svg).toBe("https://app.test/badge/a.b.c.svg");
-    expect(u.report).toBe("https://app.test/r/a.b.c");
+    // The click goes through /badge/<token> (report while sharing is on, home page otherwise) — never a dead link.
+    expect(u.report).toBe("https://app.test/badge/a.b.c");
     expect(u.html).toContain('src="https://app.test/badge/a.b.c.svg"');
+    // Google's advice for widget links.
+    expect(u.html).toContain('rel="nofollow noopener"');
+    expect(u.html).toContain("Found Score");
+  });
+  it("uses the product's score name", () => {
+    expect(renderBadgeSvg({ score: 50 })).toContain(">Found Score<");
+    expect(renderBadgeSvg({ score: 50 })).not.toMatch(/AI-ready/);
   });
 });
 

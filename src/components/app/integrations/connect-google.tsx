@@ -1,6 +1,6 @@
 "use client";
 // Connect Google Search Console + GA4 (read-only OAuth), pick the property, see sync health, disconnect.
-// Shows owner setup instructions when the server has no Google OAuth client configured.
+// When Google connections are not switched on yet, says so in customer words (no server setting names).
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, CheckCircle2, ExternalLink, Link2, Search, Unplug } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, Notice, Select, Skeleton, buttonClass } from "@/components/ui";
@@ -63,18 +63,11 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return j as T;
 }
 
-function SetupHelp({ redirectUri }: { redirectUri: string }) {
+/** Shown while Google connections aren't switched on. Customer words only: the setup steps live in the staff docs. */
+function SetupHelp() {
   return (
-    <Notice tone="info" title="Google connections need a one-time setup by the site owner">
-      <ol className="mt-2 list-decimal space-y-1 pl-5">
-        <li>In Google Cloud Console, create a project and configure the OAuth consent screen (External, app name, support email).</li>
-        <li>Enable the Google Search Console API, Google Analytics Admin API and Google Analytics Data API.</li>
-        <li>
-          Create an OAuth client ID of type &quot;Web application&quot; with this authorised redirect URI:{" "}
-          <code className="break-all rounded bg-surface px-1 py-0.5 text-xs">{redirectUri}</code>
-        </li>
-        <li>Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the server and restart.</li>
-      </ol>
+    <Notice tone="info" title="This isn't switched on yet">
+      Connecting Google isn&apos;t available yet. We&apos;ll tell you when it is. Your reports work without it.
     </Notice>
   );
 }
@@ -291,7 +284,7 @@ export function ConnectGoogle({ projectId, canAdmin }: { projectId: string; canA
         {flash && <Notice tone={flash.tone}>{flash.text}</Notice>}
         {loadError && <Notice tone="danger">{loadError}</Notice>}
         {!status && !loadError && <Skeleton className="h-24 rounded-xl" />}
-        {status && !status.configured && <SetupHelp redirectUri={status.redirectUri} />}
+        {status && !status.configured && <SetupHelp />}
         {status?.configured && (
           <>
             {!canAdmin && <p className="text-small text-muted">Only admins can connect or change Google accounts.</p>}

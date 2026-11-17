@@ -9,6 +9,9 @@ const h = vi.hoisted(() => {
       project: { findFirst: fn() },
       offsiteItem: { findMany: fn(), findFirst: fn(), create: fn(), updateMany: fn(), deleteMany: fn(), count: fn() },
       visibilityRun: { findMany: fn() },
+      observation: { findMany: fn() },
+      crawlRun: { findFirst: fn() },
+      crawlPage: { findMany: fn() },
     },
     audit: vi.fn(),
   };
@@ -47,6 +50,9 @@ beforeEach(() => {
   h.audit.mockResolvedValue(undefined);
   h.db.project.findFirst.mockResolvedValue({ id: "p1", websiteUrl: "https://www.acme.in/", competitors: [{ name: "Rival", domain: "rival.com" }] });
   h.db.offsiteItem.count.mockResolvedValue(0);
+  h.db.observation.findMany.mockResolvedValue([]);
+  h.db.crawlRun.findFirst.mockResolvedValue(null);
+  h.db.crawlPage.findMany.mockResolvedValue([]);
 });
 
 describe("suggestFromCitations", () => {
@@ -110,7 +116,10 @@ describe("getOffsiteSuggestions", () => {
     h.db.visibilityRun.findMany.mockResolvedValue([]);
     const out = await getOffsiteSuggestions(member, "p1");
     expect(out).toMatchObject({ aiCitations: [], measuredAt: null });
-    expect(out.starter.length).toBe(STARTER_LISTINGS.length);
+    // No facts and no platform: the default list for India, never the whole catalogue.
+    expect(out.businessKind).toBe("default");
+    expect(out.starter.map((x) => x.key)).toEqual(["gbp", "linkedin", "justdial", "indiamart", "facebook"]);
+    expect(out.starter.length).toBeLessThan(STARTER_LISTINGS.length);
   });
 });
 

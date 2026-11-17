@@ -34,7 +34,7 @@ const ROWS: Row[] = [
     cells: [OUR_CELLS.ai, { s: "partial", note: "Not in the SEO plan; 50 AI prompts a day on Starter ($199/mo)" }],
   },
   { label: "Plain-English to-do list", cells: [OUR_CELLS.todo, { s: "unknown" }] },
-  { label: "Fixes published to your site with approval and undo", cells: [OUR_CELLS.publish, { s: "unknown" }] },
+  { label: "Ready-to-paste fixes, or a team that makes them", cells: [OUR_CELLS.publish, { s: "unknown" }] },
   { label: "Done-for-you service", cells: [OUR_CELLS.service, { s: "unknown" }] },
   { label: "Prices shown in", cells: [OUR_CELLS.currency, { text: "USD", note: "On their pricing page" }] },
   { label: "Starting price", cells: [OUR_CELLS.from, { text: "$139/mo", note: "SEO plan; $117.33/mo billed annually" }] },
@@ -66,9 +66,9 @@ const FAQ: Qa[] = [
     q: "What does MyWebRank do that Semrush doesn't?",
     a: (
       <>
-        We didn&apos;t find approval-gated publishing or a done-for-you service on the Semrush pages we checked. MyWebRank
-        waits for your OK before any fix: {OUR.publishing}. It also offers {OUR.dfy.name} at {OUR.serviceFrom} a month,
-        where our team does the work for you.
+        We didn&apos;t find ready-to-paste fixes or a done-for-you service on the Semrush pages we checked. MyWebRank
+        shows you exactly what to change on {OUR.self.name}. It also offers {OUR.dfy.name} at {OUR.serviceFrom} a month,
+        where our team makes the changes on your website for you.
       </>
     ),
   },
@@ -77,7 +77,7 @@ const FAQ: Qa[] = [
     a: (
       <>
         Yes. Semrush has a free plan with 10 reports a day and a 7-day trial on paid plans. MyWebRank has a free website
-        check with no sign-up, and a {OUR.trialDays}-day trial that includes an AI check and approved fixes.
+        check with no sign-up, and a {OUR.trialDays}-day trial that includes an AI check and ready-to-paste fixes.
       </>
     ),
   },
@@ -87,7 +87,7 @@ const FAQ: Qa[] = [
       <>
         Marketers and agencies who live in keyword and competitor data. If you plan content around search volumes, track
         hundreds of rankings daily or research backlinks, Semrush does that well and MyWebRank does not. If you want a short
-        list of fixes and someone to publish them, MyWebRank fits better.
+        list of fixes and help making them, MyWebRank fits better.
       </>
     ),
   },
@@ -113,8 +113,7 @@ export default function CompareSemrushPage() {
           <p>
             Semrush is a large marketing toolkit with keyword, backlink and rank data, priced in US dollars from $139 a month
             for its SEO plan. AI tracking starts on its $199 Starter plan. MyWebRank is a smaller, simpler tool for Indian
-            businesses: a weekly website check, AI answer tracking, and fixes only after you approve
-            them (one-click with undo on WordPress), from {OUR.fromPrice} a month. Choose Semrush for research depth, MyWebRank for getting fixes done.
+            businesses: a weekly website check, AI answer tracking, and ready-to-paste fixes with step-by-step help, from {OUR.fromPrice} a month. Choose Semrush for research depth, MyWebRank for getting fixes done.
           </p>
         }
       >
@@ -138,7 +137,7 @@ export default function CompareSemrushPage() {
         ours={[
           "A plain-English to-do list, written for owners rather than SEO specialists.",
           `AI answer tracking included in ${OUR.self.name} at ${OUR.fromPrice} a month.`,
-          `${OUR.publishing}, only after your OK.`,
+          `${OUR.publishing}.`,
           `${OUR.dfy.name} at ${OUR.serviceFrom} a month, with no setup fee: our team does the work and reports monthly.`,
           "Rupee pricing with GST invoices, and support from a team based in India.",
         ]}
@@ -160,7 +159,7 @@ export default function CompareSemrushPage() {
           {
             situation: "You own a clinic, shop or service business and aren't an SEO person",
             pick: "MyWebRank",
-            why: "You get a short to-do list in plain English, and on WordPress a fix you approve goes live in one click, with undo.",
+            why: "You get a short to-do list in plain English, and each fix comes ready to paste, with step-by-step help.",
           },
           {
             situation: "You mainly want to know whether AI assistants recommend you",
@@ -172,7 +171,7 @@ export default function CompareSemrushPage() {
             pick: `MyWebRank ${OUR.dfy.name}`,
             why: `Our team does the work for ${OUR.serviceFrom} a month, with no setup fee, and shows you each change. We promise the work, not a ranking.`,
           },
-          { situation: "You already pay for Semrush", pick: "Semrush, and add MyWebRank if needed", why: "Add MyWebRank only if you want approved fixes and a plain to-do list." },
+          { situation: "You already pay for Semrush", pick: "Semrush, and add MyWebRank if needed", why: "Add MyWebRank only if you want ready-to-paste fixes and a plain to-do list." },
         ]}
       />
 

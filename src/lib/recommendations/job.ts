@@ -10,6 +10,7 @@ import { reserveCredits, recordUsage, releaseReservation } from "@/lib/billing/u
 import { POLICY_VERSION, detectRegulatedClaims, type PolicyResult } from "@/lib/policy/engine";
 import { draftHash } from "@/lib/actions/hash";
 import { capabilitiesOf, evaluatePolicy, type ProjectSettings } from "@/lib/actions/gate";
+import { canConnectWebsite } from "@/lib/billing/offer";
 import { requestApproval, requestExecution } from "@/lib/actions/service";
 import {
   buildRecommendations, clip, dedupeKey, scorePriority,
@@ -192,10 +193,15 @@ export const analyzeJob: JobHandler = async (ctx) => {
   await ctx.event("analyze.evidence_built", { findings: findings.length, visibilityRunId: vrun?.id ?? null, drafts: drafts.length });
 
   // ---- Integration + dedupe ----
-  const integration = await db.integration.findFirst({
-    where: { organizationId: orgId, projectId, provider: "wordpress", credentialEncrypted: { not: null }, health: { not: "failed" } },
-    orderBy: { createdAt: "desc" },
-  });
+  // Do it myself has no website connections (owner decision 1): a connection made earlier is ignored, so nothing is
+  // queued for approval or put live — every suggestion becomes copy-and-paste steps.
+  const offerOrg = await db.organization.findUnique({ where: { id: orgId }, select: { planId: true, serviceTier: true } });
+  const integration = canConnectWebsite(offerOrg)
+    ? await db.integration.findFirst({
+        where: { organizationId: orgId, projectId, provider: "wordpress", credentialEncrypted: { not: null }, health: { not: "failed" } },
+        orderBy: { createdAt: "desc" },
+      })
+    : null;
   const caps = integration ? capabilitiesOf(integration) : null;
   const open = await db.action.findMany({ where: { organizationId: orgId, projectId, status: { in: OPEN_STATUSES } }, select: { type: true, target: true } });
   const seen = new Set(open.map((a) => dedupeKey(a.type, a.target as ActionTarget | null)));

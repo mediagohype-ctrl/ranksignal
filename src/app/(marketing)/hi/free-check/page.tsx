@@ -3,18 +3,24 @@ import type { ReactNode } from "react";
 import { Bot, MessageSquareQuote, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { CheckLanes, type Lane } from "@/components/marketing/showcase/check-lanes";
 import { MAX_KEY_PAGES } from "@/lib/free-check/run";
-import { BRAND } from "@/lib/brand";
+import { BRAND, bookCallHref } from "@/lib/brand";
 import { IconTile, JsonLd, PageHero, Section } from "@/components/marketing/ui";
-import { FreeCheckTool } from "@/components/marketing/free-check-tool";
+import { FreeCheckTool, HideWhenFreeCheckResult } from "@/components/marketing/free-check-tool";
 import { SectionHeading } from "@/components/ui";
 import { FREE_CHECK_FAQ } from "@/components/marketing/hi/content";
-import { EnglishNote, HiFaqSection } from "@/components/marketing/hi/hi-ui";
+import { HiFaqSection } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { PAGE_SEO } from "@/lib/seo/pages";
 import { faqLd, siteUrl } from "@/lib/seo/schema";
 
-export const metadata: Metadata = staticPageMetadata("/hi/free-check");
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** /hi/free-check?url=… shows one visitor's result: never indexed, main version (canonical) /hi/free-check. */
+export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const sp = await searchParams;
+  return staticPageMetadata("/hi/free-check", sp.url !== undefined ? { robots: { index: false, follow: true } } : {});
+}
 
 const WHAT: { icon: ReactNode; title: string; body: string }[] = [
   { icon: <Search />, title: "SEO की बुनियाद", body: "Google पर दिखने वाली हेडलाइन और समरी, मुख्य हेडिंग, सुरक्षित पता (ताले का निशान), और क्या आपके पेज Google पर आ सकते हैं।" },
@@ -50,7 +56,7 @@ const LANES: Lane[] = [
   },
 ];
 
-export default async function HindiFreeCheckPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function HindiFreeCheckPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const initialUrl = typeof sp.url === "string" ? sp.url.slice(0, 2048) : "";
   const base = siteUrl();
@@ -82,15 +88,11 @@ export default async function HindiFreeCheckPage({ searchParams }: { searchParam
       />
       <section aria-label="फ्री चेक चलाएँ" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing">
-          {/* The tool and its results are in English for now; the surrounding page is Hindi. */}
-          <div lang="en">
-            <FreeCheckTool initialUrl={initialUrl} />
-          </div>
-          <EnglishNote>
-            ध्यान दें: यह चेक टूल और इसके नतीजे अभी अंग्रेज़ी में दिखते हैं। स्कोर और सुधार वही हैं जो अंग्रेज़ी पेज पर मिलते हैं।
-          </EnglishNote>
+          {/* The tool and its result are in Hindi (src/lib/free-check/strings.ts and hi-fixes.ts). */}
+          <FreeCheckTool initialUrl={initialUrl} lang="hi" bookHref={bookCallHref("/hi/contact?topic=services")} />
         </div>
       </section>
+      <HideWhenFreeCheckResult>
       <Section labelledBy="hi-fc-lanes">
         <SectionHeading
           id="hi-fc-lanes"
@@ -130,6 +132,7 @@ export default async function HindiFreeCheckPage({ searchParams }: { searchParam
         </p>
       </Section>
       <HiFaqSection id="faq" title="फ्री चेक से जुड़े सवाल" items={FREE_CHECK_FAQ} />
+      </HideWhenFreeCheckResult>
     </>
   );
 }

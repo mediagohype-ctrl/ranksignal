@@ -53,7 +53,6 @@ export default function AiCrawlerCheckerPage() {
       <section aria-label="Check AI crawler access" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <AiCrawlerChecker />
-          <LeadBox tool="ai-crawler-checker" />
         </div>
       </section>
 
@@ -116,6 +115,14 @@ export default function AiCrawlerCheckerPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="ai-crawler-checker" />
+          </div>
+        </div>
+      </section>
       <QaSection id="acc-faq" tone="surface" title="AI crawler questions" items={FAQ}>
         <SourcesList
           links={[

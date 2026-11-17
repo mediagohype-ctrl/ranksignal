@@ -4,6 +4,7 @@
 import { Badge, Notice } from "@/components/ui";
 import type { HeadingReport } from "@/lib/tools/headings";
 import { CheckResults, PageUrlForm, ResultCard, usePageCheck } from "./page-check-ui";
+import { WholeSiteCta } from "./whole-site-cta";
 
 type Result = HeadingReport & { url: string; finalUrl: string };
 
@@ -70,6 +71,7 @@ export function HeadingChecker() {
               {r.truncated && <p className="mt-3 text-xs text-muted">This page has a lot of headings. We show the first 200.</p>}
             </ResultCard>
           )}
+          <WholeSiteCta />
         </div>
       )}
     </div>

@@ -24,9 +24,12 @@ export interface ResearchProfile {
   keywords: string[];
   /** Serves customers in a local area (shop, clinic, trades…). Auto-detected from categories when omitted. */
   local?: boolean;
-  /** City the business serves, used in local questions ("in Pune"). */
+  /** City or area the business serves, used in local questions ("in Pune", "in South Delhi"). */
   city?: string | null;
 }
+
+/** How many local ("in <city>") questions a suggestion list should carry when the business has a city. */
+export const LOCAL_QUESTION_TARGET = 3;
 
 /** Default number of prompts suggested by research (blueprint: 12–20 per project to start). */
 export const DEFAULT_PROMPT_COUNT = 20;
@@ -181,6 +184,61 @@ export function templatePrompts(p: ResearchProfile, max = DEFAULT_PROMPT_COUNT):
   return keepDiscoveryQuestions(dedupePrompts(out), [...p.brandNames, ...p.competitors.map((c) => c.name)]).slice(0, max);
 }
 
+/** True when the question names the city or area ("South Delhi" also matches a question that says "Delhi"). */
+export function mentionsPlace(text: string, city: string): boolean {
+  const t = text.toLowerCase();
+  const c = city.trim().toLowerCase();
+  if (!c) return false;
+  if (t.includes(c)) return true;
+  return c.split(/[\s,]+/).some((w) => w.length >= 4 && !["north", "south", "east", "west", "central", "city", "town", "near"].includes(w) && t.includes(w));
+}
+
+/**
+ * Local questions for a business with a city or area: "best <topic> in <city>". National questions ("in India")
+ * are the most competitive ones; a small business is far more likely to be named for its own city.
+ */
+export function localQuestions(p: ResearchProfile, max = LOCAL_QUESTION_TARGET): PromptCandidate[] {
+  const city = p.city?.trim();
+  if (!city) return [];
+  const locale = localeFor(p.languages[0] ?? "en", p.countries[0] ?? "IN");
+  const topics = [
+    ...new Set(
+      [...p.keywords, ...p.categories.flatMap((c) => topicPhrases(c))]
+        .map((t) => t.toLowerCase().replace(/^best\s+/, "").replace(/\s+(?:near me|online|in [\p{L} .-]+)$/iu, "").trim())
+        .filter((t) => t.length >= 3 && t.split(/\s+/).length <= 6),
+    ),
+  ].slice(0, max);
+  const patterns: [(t: string) => string, PromptIntent][] = [
+    [(t) => `What are the best ${t} in ${city}?`, "commercial"],
+    [(t) => `Who offers good ${t} in ${city}?`, "commercial"],
+    [(t) => `What is the usual price of ${t} in ${city}?`, "transactional"],
+  ];
+  const out: PromptCandidate[] = topics.map((t, i) => {
+    const [make, intent] = patterns[i % patterns.length]!;
+    return { text: make(t), intent, topic: t, locale, source: "template" };
+  });
+  return keepDiscoveryQuestions(dedupePrompts(out), [...p.brandNames, ...p.competitors.map((c) => c.name)]).slice(0, max);
+}
+
+/**
+ * Makes sure a suggestion list isn't all national: when the business has a city and fewer than
+ * LOCAL_QUESTION_TARGET suggestions name it, local questions are mixed in near the top (never past `max`).
+ */
+export function mixInLocal(cands: PromptCandidate[], p: ResearchProfile, max: number, existing: string[] = []): PromptCandidate[] {
+  const city = p.city?.trim();
+  if (!city) return cands.slice(0, max);
+  const have = cands.filter((c) => mentionsPlace(c.text, city)).length;
+  const need = Math.min(LOCAL_QUESTION_TARGET, max) - have;
+  if (need <= 0) return cands.slice(0, max);
+  const extra = dedupePrompts(localQuestions(p, LOCAL_QUESTION_TARGET), [...existing, ...cands.map((c) => c.text)]).slice(0, need);
+  if (extra.length === 0) return cands.slice(0, max);
+  // Keep room for the local ones, then spread them through the list (2nd, 5th, 8th…) so they aren't buried.
+  const base = cands.slice(0, Math.max(0, max - extra.length));
+  const out = [...base];
+  extra.forEach((q, i) => out.splice(Math.min(out.length, 1 + i * 3), 0, q));
+  return out;
+}
+
 const llmSchema = z.object({
   prompts: z
     .array(
@@ -212,8 +270,13 @@ export async function researchPrompts(
         "(3) Keep every question positive or neutral — no 'is it worth it', 'alternatives to', 'vs', 'scam', 'mistakes to " +
         "avoid', 'cheapest' or complaint-style questions. (4) Short and natural, like a real person typing (under 18 " +
         "words). Mix: finding the best option ('best X in <city/country>', 'X for <audience>'), choosing ('how to choose X', " +
-        "'what to look for in X'), and cost ('how much does X cost'). Use the city for local businesses. (5) No duplicates " +
-        "or near-duplicates. Write in the requested language.",
+        "'what to look for in X'), and cost ('how much does X cost'). (5) No duplicates or near-duplicates. (6) Do NOT make " +
+        "every question a broad national one — those are the hardest for a small business to be named in. When a city or " +
+        "area is given, make about a quarter of the questions local to it ('digital marketing agency in South Delhi', " +
+        "'best bakery in Pune for custom cakes'), even if the business also sells across the country. (7) Make about a " +
+        "quarter of the questions niche: use a specific speciality, tool, material, product type or customer type taken " +
+        "from what the business sells or its keywords ('Framer website agency India', 'neck fan for long train journeys'), " +
+        "not only the broad category. Write in the requested language.",
       user: JSON.stringify({
         brand: profile.brandNames[0],
         categories: profile.categories,
@@ -232,8 +295,8 @@ export async function researchPrompts(
       const clean = keepDiscoveryQuestions(dedupePrompts(cands, opts.existing), names);
       // Too few survived the filter: top up from the templates rather than show a short list.
       const topUp = clean.length >= max ? [] : dedupePrompts(templatePrompts(profile, 60), [...(opts.existing ?? []), ...clean.map((c) => c.text)]);
-      return { candidates: [...clean, ...topUp].slice(0, max), source: "llm", costMicros: res.costMicros };
+      return { candidates: mixInLocal([...clean, ...topUp], profile, max, opts.existing), source: "llm", costMicros: res.costMicros };
     }
   }
-  return { candidates: dedupePrompts(templatePrompts(profile, 60), opts.existing).slice(0, max), source: "template", costMicros: 0 };
+  return { candidates: mixInLocal(dedupePrompts(templatePrompts(profile, 60), opts.existing), profile, max, opts.existing), source: "template", costMicros: 0 };
 }

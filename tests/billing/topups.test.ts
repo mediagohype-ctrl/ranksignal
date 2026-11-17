@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   packs: [] as Record<string, unknown>[],
   settlements: [] as Record<string, unknown>[],
   observations: [] as Date[],
+  ledgerAnswers: [] as Date[],
   org: { planId: "starter", createdAt: new Date("2026-08-01T00:00:00Z") },
   firstPaid: { createdAt: new Date("2026-08-02T00:00:00Z") } as { createdAt: Date } | null,
 }));
@@ -16,6 +17,9 @@ vi.mock("@/lib/db", () => {
     subscription: { findFirst: vi.fn(async () => state.firstPaid) },
     observation: {
       count: vi.fn(async ({ where }: { where: { createdAt: { gte?: Date; lt?: Date } } }) => state.observations.filter((d) => inRange(d, where.createdAt)).length),
+    },
+    usageLedger: {
+      aggregate: vi.fn(async ({ where }: { where: { createdAt: { gte?: Date; lt?: Date } } }) => ({ _sum: { credits: state.ledgerAnswers.filter((d) => inRange(d, where.createdAt)).length } })),
     },
     topUpPack: {
       findMany: vi.fn(async () => state.packs.map((p) => ({ ...p }))),
@@ -43,37 +47,77 @@ vi.mock("@/lib/db", () => {
 });
 
 import { PLANS } from "@/lib/billing/plans";
-import { TOPUP_FROM_PAISE, TOPUP_PACKS, answersLeftLabel, getTopUpPack, isTopUpPackId, pricePerAnswerPaise, topUpExpiry } from "@/lib/billing/topups";
+import {
+  LEGACY_TOPUP_PACKS,
+  TOPUP_FROM_PAISE,
+  TOPUP_PACKS,
+  answersLeftLabel,
+  fullChecksIn,
+  getTopUpPack,
+  isTopUpPackId,
+  packLabelFor,
+  pricePerAnswerPaise,
+  topUpExpiry,
+} from "@/lib/billing/topups";
+import { answersPerCheck } from "@/lib/billing/plans";
+import { aiCostShare, topUpAiBudgetMicros } from "@/lib/billing/ai-margin";
 import { settleTopUps } from "@/lib/billing/allowance";
 
 describe("top-up packs (config)", () => {
-  it("are the owner's packs, smallest first: 35 for ₹250, 100 for ₹699, 500 for ₹2,999, 2,000 for ₹9,999 (before GST, paise)", () => {
-    expect(TOPUP_PACKS.map((p) => [p.answers, p.pricePaise])).toEqual([
-      [35, 250_00],
-      [100, 699_00],
-      [500, 2_999_00],
-      [2_000, 9_999_00],
+  it("are sold in whole AI checks (app audit Fix 28): 1 check (75 answers) ₹499, 4 checks (300 answers) ₹1,699 (before GST, paise)", () => {
+    expect(answersPerCheck("starter")).toBe(75);
+    expect(TOPUP_PACKS.map((p) => [p.id, p.answers, p.pricePaise])).toEqual([
+      ["checks_1", 75, 499_00],
+      ["checks_4", 300, 1_699_00],
     ]);
-    expect(TOPUP_FROM_PAISE).toBe(250_00);
-    expect(getTopUpPack("answers_35")?.answers).toBe(35);
+    expect(TOPUP_PACKS.map((p) => p.name)).toEqual(["1 extra AI check (75 answers)", "4 extra AI checks (300 answers)"]);
+    for (const p of TOPUP_PACKS) expect(p.answers % answersPerCheck("starter"), p.id).toBe(0);
+    expect(TOPUP_FROM_PAISE).toBe(499_00);
     expect(isTopUpPackId("answers_1")).toBe(false);
   });
 
-  // The plan must stay the better deal: a pack's price per answer may not be lower than Starter's.
-  // OWNER-APPROVED EXCEPTIONS (2026-11-10): the 500 and 2,000 packs are a bulk discount below Starter's ≈ ₹6.66.
-  // Adding a pack to this list is a pricing decision — confirm with the owner first.
-  const BELOW_STARTER_APPROVED = new Set(["answers_500", "answers_2000"]);
-  it("every other pack costs at least as much per answer as the Starter plan", () => {
-    const starter = PLANS.starter;
-    const starterPerAnswer = ((starter.priceInrMonthly ?? 0) * 100) / starter.aiAnswersPerMonth;
-    for (const p of TOPUP_PACKS) {
-      if (BELOW_STARTER_APPROVED.has(p.id)) continue;
-      expect(pricePerAnswerPaise(p), p.id).toBeGreaterThanOrEqual(starterPerAnswer);
+  it("old packs (35 / 100 / 500 / 2,000 answers) are no longer sold but still known for history and invoices", () => {
+    expect(LEGACY_TOPUP_PACKS.map((p) => [p.id, p.answers, p.pricePaise])).toEqual([
+      ["answers_35", 35, 250_00],
+      ["answers_100", 100, 699_00],
+      ["answers_500", 500, 2_999_00],
+      ["answers_2000", 2_000, 9_999_00],
+    ]);
+    for (const p of LEGACY_TOPUP_PACKS) {
+      expect(isTopUpPackId(p.id)).toBe(true);
+      expect(getTopUpPack(p.id)?.answers).toBe(p.answers);
+      expect(TOPUP_PACKS).not.toContain(p);
     }
   });
-  it("the approved exceptions are still the cheapest-per-answer packs (bigger pack, lower price per answer)", () => {
-    const per = TOPUP_PACKS.map(pricePerAnswerPaise);
-    for (let i = 1; i < per.length; i++) expect(per[i]).toBeLessThan(per[i - 1]);
+
+  // Price floor (owner pricing decision, audit prices): the 1-check pack is priced like the plan (₹6.65 vs ₹6.66 per
+  // answer), the 4-check pack is the bulk discount (₹5.66) — never below ₹5.50, above the old 2,000 pack's ₹5.00.
+  it("price per answer: the 1-check pack is priced like the plan, the 4-check pack is the bulk discount", () => {
+    const starter = PLANS.starter;
+    const starterPerAnswer = ((starter.priceInrMonthly ?? 0) * 100) / starter.aiAnswersPerMonth;
+    const [one, four] = TOPUP_PACKS.map(pricePerAnswerPaise);
+    expect(one).toBeGreaterThanOrEqual(starterPerAnswer - 1.5);
+    expect(four).toBeLessThan(one);
+    for (const p of TOPUP_PACKS) expect(pricePerAnswerPaise(p), p.id).toBeGreaterThanOrEqual(550);
+  });
+
+  it("profit guard: the AI spend a pack unlocks is AI_COST_SHARE of its price, at least ₹1.50 per answer", () => {
+    for (const p of TOPUP_PACKS) {
+      const inr = p.pricePaise / 100;
+      expect(topUpAiBudgetMicros(inr), p.id).toBeGreaterThan(0);
+      expect((inr * aiCostShare()) / p.answers, p.id).toBeGreaterThanOrEqual(1.5);
+    }
+  });
+
+  it("names packs in checks first, answers second, for the workspace's plan", () => {
+    expect(packLabelFor(75, 75)).toBe("1 extra AI check (75 answers)");
+    expect(packLabelFor(300, 75)).toBe("4 extra AI checks (300 answers)");
+    expect(packLabelFor(35, 75)).toBe("35 extra AI answers");
+    expect(packLabelFor(2_000, 75)).toBe("2,000 extra AI answers");
+    expect(packLabelFor(75, 200)).toBe("75 extra AI answers");
+    expect(fullChecksIn(225, 75)).toBe(3);
+    expect(fullChecksIn(74, 75)).toBe(0);
+    expect(fullChecksIn(100, 0)).toBe(0);
   });
 
   it("is valid for 12 months from purchase (month-end safe)", () => {

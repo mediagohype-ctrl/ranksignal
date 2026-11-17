@@ -1,7 +1,8 @@
 // What a workspace may still use, in customer words: "AI answers left: 820 of 1,200 monthly + 400 extra".
 // One AI answer = one customer question asked to one AI assistant. Credits stay internal (cost tracking).
 //
-//   used        = real answers collected this month (simulated answers are free) + answers still expected by AI
+//   used        = real answers collected this month by the whole account (simulated answers are free; websites
+//                 deleted or replaced since still count — see below) + answers still expected by AI
 //                 checks in progress (queued, running, or waiting until tomorrow for the daily budget), so two checks
 //                 can't both be promised the same answers.
 //   monthlyLeft = cap − used (never below 0). `used` is shown capped at `cap`.
@@ -17,6 +18,20 @@
 // month, idempotent) so reads only have to work out the current month. Settlement runs lazily on read and from the
 // scheduler. The plan cap used for a closed month is the plan at settlement time (settled within minutes of the
 // month change by the scheduler); a month before the first paid subscription counts as trial.
+//
+// DELETING OR REPLACING A WEBSITE DOES NOT GIVE ANSWERS BACK (owner decision 2, 15 Nov 2026). Answers are counted
+// per ACCOUNT per month. Observation rows are deleted together with their website (Project → VisibilityRun →
+// Observation cascade; removing a tracked question deletes its observations too), so counting only those rows let a
+// customer delete a website and get the month's answers again (225 → 300 in the audit). The usage ledger
+// (UsageLedger, taskType "visibility_prompt", kind "actual", 1 credit per real answer, 0 for simulated ones) belongs
+// to the organization and is NOT deleted with a website, so countRealAnswers() takes
+//     max(observation rows still stored, answers the ledger recorded)
+// for the same time window. max — not the ledger alone — because the ledger is written in small batches and can be
+// a few answers behind while a check runs; and not a "deleted answers" counter written only at delete time, because
+// that would cover just the delete button (not question removal, staff clean-ups, or a crash between two writes).
+// keepAnswersOfDeletedProject() closes the last gap: answers a crashed check collected but never wrote to the
+// ledger are written just before the website is deleted. Checks still in progress on the deleted website are
+// deleted with it, so the answers they were holding are released; the ones already collected stay used.
 import { db } from "@/lib/db";
 import { getPlanWithAiLimits } from "./plans";
 import { billingPeriod } from "./usage";
@@ -41,6 +56,11 @@ export interface AiAllowance {
   /** Extra answers from top-up packs: total left, earliest expiry of a pack that still has answers, per pack. */
   extra: { left: number; expiresAt: Date | null; packs: ExtraAnswersPack[] };
 }
+
+/** Ledger task type of one AI answer (same value as VISIBILITY_TASK_TYPE in src/lib/visibility/job.ts). */
+export const AI_ANSWER_TASK_TYPE = "visibility_prompt";
+/** Ledger provider of the catch-up row written when a website is deleted (see keepAnswersOfDeletedProject). */
+export const DELETED_WEBSITE_PROVIDER = "deleted_website";
 
 /** Runs that still hold answers they are expected to collect. */
 export const IN_FLIGHT_RUN_STATUSES = ["queued", "running"];
@@ -182,7 +202,62 @@ async function loadPacks(orgId: string, expiringAfter: Date | null): Promise<Pac
   });
 }
 
-type CountClient = Pick<typeof db, "observation">;
+type CountClient = Pick<typeof db, "observation" | "usageLedger">;
+
+/**
+ * Real (not simulated) AI answers the account collected in a time window — immune to website / question deletion:
+ * max(observation rows still stored, answers recorded in the usage ledger). See the note at the top of this file.
+ */
+export async function countRealAnswers(client: CountClient, orgId: string, createdAt: { gte: Date; lt?: Date }): Promise<number> {
+  const [stored, ledger] = await Promise.all([
+    client.observation.count({ where: { organizationId: orgId, simulated: false, createdAt } }),
+    client.usageLedger.aggregate({
+      where: { organizationId: orgId, taskType: AI_ANSWER_TASK_TYPE, kind: "actual", createdAt },
+      _sum: { credits: true },
+    }),
+  ]);
+  return Math.max(stored, ledger._sum.credits ?? 0);
+}
+
+/**
+ * Call just BEFORE a website (project) is deleted or replaced. Normally the ledger already holds every answer of
+ * the website; if a check crashed before writing its last batch, this writes the difference so those answers stay
+ * counted after the rows are gone. Checks that are running right now are skipped — they write their own remaining
+ * usage when they stop. Returns the answers added to the ledger (0 almost always).
+ */
+export async function keepAnswersOfDeletedProject(orgId: string, projectId: string, now = new Date()): Promise<number> {
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { planId: true, createdAt: true } });
+  if (!org) return 0;
+  const since = org.planId === "trial" ? org.createdAt : utcMonthStart(now);
+  const runs = await db.visibilityRun.findMany({
+    where: { organizationId: orgId, projectId, status: { not: "running" } },
+    select: { id: true },
+  });
+  if (runs.length === 0) return 0;
+  const runIds = runs.map((r) => r.id);
+  const [stored, ledger] = await Promise.all([
+    db.observation.count({ where: { organizationId: orgId, simulated: false, createdAt: { gte: since }, visibilityRunId: { in: runIds } } }),
+    db.usageLedger.aggregate({
+      where: { organizationId: orgId, taskType: AI_ANSWER_TASK_TYPE, kind: "actual", createdAt: { gte: since }, runId: { in: runIds } },
+      _sum: { credits: true },
+    }),
+  ]);
+  const missing = stored - (ledger._sum.credits ?? 0);
+  if (missing <= 0) return 0;
+  await db.usageLedger.create({
+    data: {
+      organizationId: orgId,
+      projectId,
+      provider: DELETED_WEBSITE_PROVIDER,
+      taskType: AI_ANSWER_TASK_TYPE,
+      kind: "actual",
+      credits: missing,
+      costMicros: 0,
+      billingPeriod: billingPeriod(now),
+    },
+  });
+  return missing;
+}
 
 /** Overflow answers collected before each pack that expired between windowStart and `until`. */
 async function overflowBeforeExpiries(
@@ -194,9 +269,7 @@ async function overflowBeforeExpiries(
   const out: Record<string, number> = {};
   const expiring = packs.filter((p) => p.expiresAt > o.windowStart && p.expiresAt <= o.until);
   for (const p of expiring) {
-    const n = await client.observation.count({
-      where: { organizationId: orgId, simulated: false, createdAt: { gte: o.since, lt: p.expiresAt } },
-    });
+    const n = await countRealAnswers(client, orgId, { gte: o.since, lt: p.expiresAt });
     out[p.id] = Math.max(0, n - o.base);
   }
   return out;
@@ -241,9 +314,7 @@ export async function settleTopUps(orgId: string, now = new Date()): Promise<num
         const cap = Math.max(0, getPlanWithAiLimits(trial ? "trial" : org.planId).aiAnswersPerMonth);
         const since = trial ? org.createdAt : m;
         const base = cap + (trial ? settledConsumed(packs) : 0);
-        const collected = await tx.observation.count({
-          where: { organizationId: orgId, simulated: false, createdAt: { gte: since, lt: mEnd } },
-        });
+        const collected = await countRealAnswers(tx, orgId, { gte: since, lt: mEnd });
         const overflow = Math.max(0, collected - base);
         const overflowBefore = overflow > 0 ? await overflowBeforeExpiries(tx, orgId, packs, { since, windowStart: m, until: mEnd, base }) : {};
         const alloc = allocateOverflow(packs, overflow, { windowStart: m, until: mEnd, overflowBefore });
@@ -317,7 +388,7 @@ export async function getAiAllowance(orgId: string, o: { now?: Date; excludeRunI
     packs = await loadPacks(orgId, packsAfter);
   }
   const [collected, inFlight, overflowBefore] = await Promise.all([
-    db.observation.count({ where: { organizationId: orgId, simulated: false, createdAt: { gte: since } } }),
+    countRealAnswers(db, orgId, { gte: since }),
     db.visibilityRun.findMany({
       where: {
         organizationId: orgId,

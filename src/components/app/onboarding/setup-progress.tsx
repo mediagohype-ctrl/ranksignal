@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Rocket } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/dashboard/client";
 import { BRAND } from "@/lib/brand";
+import { aiCheckCopy, type AiCheckStatus } from "@/lib/visibility/run-state";
 import type { BusinessFacts } from "@/lib/setup/facts";
 import { Button, Card, CardBody, CardHeader, LinkButton, Notice, ProgressSteps, type ProgressStep, type StepStatus } from "@/components/ui";
 
@@ -56,6 +57,8 @@ export function SetupProgress({
     visibility: { state: "pending" },
   });
   const [poll, setPoll] = useState<DashboardPoll["item"] | null>(null);
+  /** Live AI check state (running with progress, or waiting until tomorrow because the AI limit was reached). */
+  const [aiState, setAiState] = useState<AiCheckStatus | null>(null);
   const [ready, setReady] = useState(false);
   const [running, setRunning] = useState(false);
   const busy = useRef(false);
@@ -137,6 +140,8 @@ export function SetupProgress({
       try {
         const r = await api<DashboardPoll>(`/api/projects/${projectId}/dashboard`);
         if (alive) setPoll(r.item);
+        const st = await api<{ ai?: AiCheckStatus }>(`/api/projects/${projectId}/runs/status`).catch(() => null);
+        if (alive && st?.ai) setAiState(st.ai);
       } catch {
         /* transient — try again next tick */
       }
@@ -157,14 +162,20 @@ export function SetupProgress({
   const homeHref = projectId ? `/app/projects/${projectId}` : "/app";
 
   useEffect(() => {
-    if (!projectId || ready || !crawlDone || !settled) return;
-    setReady(true);
+    if (projectId && !ready && crawlDone && settled) setReady(true);
+  }, [crawlDone, settled, projectId, ready]);
+
+  // Open Home by itself once the website results are ready. This is its own effect on purpose: the old single
+  // effect set `ready` and started the timer together, so the re-render it caused cancelled its own timer and
+  // the screen stayed on "Opening Home…". The "Open Home" button stays as a fallback.
+  useEffect(() => {
+    if (!ready || !projectId) return;
     const t = setTimeout(() => {
       router.push(`/app/projects/${projectId}`);
       router.refresh();
     }, 1500);
     return () => clearTimeout(t);
-  }, [crawlDone, settled, projectId, ready, router]);
+  }, [ready, projectId, router]);
 
   /* ---------------- steps */
 
@@ -191,6 +202,8 @@ export function SetupProgress({
       ? "The AI check didn't finish. You can run it again from Home."
       : visDone
         ? "Done"
+        : aiState?.state === "waiting_tomorrow"
+          ? (aiCheckCopy(aiState)?.detail ?? "We'll collect the rest of the answers automatically tomorrow.")
         : visRun && visRun.progress.total > 0
           ? `${answers(visRun.progress.done)} of ${visRun.progress.total} in — this keeps going after Home opens`
           : "Asking ChatGPT, Gemini and others your customers' questions…");

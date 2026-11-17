@@ -8,13 +8,16 @@ import { HttpError } from "@/lib/api";
 import { recordUsage } from "@/lib/billing/usage";
 import { generateStructured, isLlmConfigured } from "@/lib/providers/llm";
 import { buildSiteReport } from "@/lib/report/build";
+import { isSiteReport } from "@/lib/report/stored";
+import { biggestFix } from "@/lib/report/counts";
+import type { SiteReport } from "@/lib/report/types";
 import { FORBIDDEN_CLAIMS } from "@/lib/report/summary";
 import { compareSnapshots, getSnapshotAt, listSnapshots } from "@/lib/snapshots";
 import { listOpenWork, listShippedWork } from "@/lib/tasks";
 import { getSearchSummary } from "@/lib/google/summary";
 import { listOffsiteForPeriod } from "@/lib/offsite";
 import {
-  ATTRIBUTION_NOTE, buildHeadline, buildPlan, classifyIssues, competitorShareRows, engineRows, initialStatus, likeForLike,
+  ATTRIBUTION_NOTE, buildHeadline, buildPlan, classifyIssues, classifyProblems, competitorShareRows, engineRows, initialStatus, likeForLike,
   normalizeSnapshot, pickStartEnd, promptsWonLost, rates, scoreDeltas, searchSectionFrom, templateMonthlySummary, type RunObs, type Snap,
 } from "./compute";
 import { deliverMonthlyReport } from "./deliver";
@@ -72,6 +75,25 @@ function wrongAnswersFrom(runs: { metrics: unknown; finishedAt: Date | null; cre
     }
   }
   return out.slice(0, 15);
+}
+
+/**
+ * A stored full report for the month: "start" = the newest one at/before the month began (else the first inside it),
+ * "end" = the newest one inside the month. Null when none was stored.
+ */
+async function storedReportAt(projectId: string, organizationId: string, range: { start: Date; end: Date }, which: "start" | "end"): Promise<SiteReport | null> {
+  try {
+    const base = { organizationId, projectId, simulated: false, report: { not: Prisma.DbNull } };
+    const pick = async (where: Prisma.ReportSnapshotWhereInput, dir: "asc" | "desc") =>
+      (await db.reportSnapshot.findFirst({ where: { ...base, ...where }, orderBy: { createdAt: dir }, select: { report: true } }))?.report ?? null;
+    const r =
+      which === "end"
+        ? await pick({ createdAt: { gt: range.start, lt: range.end } }, "desc")
+        : ((await pick({ createdAt: { lte: range.start } }, "desc")) ?? (await pick({ createdAt: { gt: range.start, lt: range.end } }, "asc")));
+    return isSiteReport(r) ? r : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Collects every fact for the report (no writes). Exported for tests and previews. */
@@ -172,7 +194,8 @@ export async function buildMonthlyPayload(
     select: { code: true, severity: true, message: true, status: true, detectedAt: true, resolvedAt: true },
     take: 10000,
   });
-  const issues = classifyIssues(findings, range);
+  // Finding rows are only a fallback (one line per problem type); the counts come from the report's problem list.
+  const findingIssues = classifyIssues(findings, range, Number.POSITIVE_INFINITY);
 
   // ---- work shipped + next month ----
   const [shipped, openWork] = await Promise.all([
@@ -189,12 +212,21 @@ export async function buildMonthlyPayload(
     byPerformer: { agency: 0, client: 0, system: 0 },
   };
   for (const s of shipped) work.byPerformer[s.performedBy] = (work.byPerformer[s.performedBy] ?? 0) + 1;
-  let reportIssues: { title: string; impact: string }[] = [];
-  try {
-    reportIssues = (await buildSiteReport(projectId, organizationId)).issues.map((i) => ({ title: i.title, impact: i.impact }));
-  } catch (e) {
-    console.error("[monthly-report] site report unavailable:", e instanceof Error ? e.message : e);
+  // The ONE problem count (src/lib/report/counts.ts): the report's problem list at the start and end of the month.
+  const [startStored, endStored] = await Promise.all([storedReportAt(projectId, organizationId, range, "start"), storedReportAt(projectId, organizationId, range, "end")]);
+  let endReport: SiteReport | null = endStored;
+  if (!endReport) {
+    try {
+      endReport = await buildSiteReport(projectId, organizationId);
+    } catch (e) {
+      console.error("[monthly-report] site report unavailable:", e instanceof Error ? e.message : e);
+    }
   }
+  const reportIssues = (endReport?.issues ?? []).map((i) => ({ title: i.title, impact: i.impact }));
+  const issues = endReport ? classifyProblems(endReport.issues, startStored?.issues ?? null, findingIssues) : classifyIssues(findings, range);
+  // The biggest fix (most points, then least time — the same rule as Home), for the "nothing done yet" nudge.
+  const top = endReport ? biggestFix(endReport) : null;
+  const topFix = top ? { id: top.id, title: top.title, minutes: top.minutes, points: top.points } : null;
   const nextMonth = buildPlan(openWork, reportIssues);
 
   // ---- Google search (Search Console + GA4): this calendar month vs the previous one ----
@@ -264,6 +296,7 @@ export async function buildMonthlyPayload(
       promptsLost: wonLost.lost.slice(0, 20),
     },
     issues,
+    topFix,
     work,
     nextMonth,
     wrongAnswers: wrongAnswersFrom(realRuns),

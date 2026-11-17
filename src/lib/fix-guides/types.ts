@@ -4,6 +4,10 @@ import type { Platform } from "@/lib/platform/detect";
 import type { ReportIssue } from "@/lib/report/types";
 import type { ExtractedPage } from "@/lib/types";
 import type { TaskCategory } from "@/lib/tasks/types";
+import type { FixSite } from "./site";
+import type { ReadyCode } from "./ready-code";
+
+export type { FixSite, ReadyCode };
 
 export interface FixPage {
   url: string;
@@ -19,6 +23,10 @@ export interface FixContext {
   issue: ReportIssue;
   /** Affected pages with stored crawl data (may be empty for site-wide problems). */
   pages: FixPage[];
+  /** What we know about the business and site (real details for ready code and suggestions). Optional. */
+  site?: FixSite | null;
+  /** The site's main pages from the last website check (for the AI guide file). Optional. */
+  sitePages?: { url: string; title: string | null; description?: string | null }[];
 }
 
 /** One line of the site-specific plan: this page, what it has now, what to change it to. */
@@ -46,4 +54,6 @@ export interface FixGuide {
   time: string;
   /** Task board category when added to the task list. */
   category: TaskCategory;
+  /** The exact code / file to paste, filled in with the customer's real details (needs ctx.site). */
+  ready?: (ctx: FixContext) => ReadyCode | null;
 }

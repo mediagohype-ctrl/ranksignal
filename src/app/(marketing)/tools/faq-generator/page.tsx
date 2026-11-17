@@ -53,7 +53,6 @@ export default function FaqGeneratorPage() {
       <section aria-label="Write FAQ drafts" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <FaqGenerator />
-          <LeadBox tool="faq-generator" />
         </div>
       </section>
 
@@ -128,6 +127,14 @@ export default function FaqGeneratorPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="faq-generator" />
+          </div>
+        </div>
+      </section>
       <QaSection id="fg-faq" tone="surface" title="FAQ generator: common questions" items={FAQ}>
         <p className="text-body leading-relaxed text-fg-soft">
           See which of your pages already have FAQ code, and what else to fix:{" "}

@@ -2,7 +2,9 @@
 // privacy policy and social profile links.
 import type { Platform } from "@/lib/platform/detect";
 import type { FixGuide } from "../../types";
-import { clip, isHome, pageName, suggestTitle } from "../../helpers";
+import { clip, isHome, pageName } from "../../helpers";
+import { suggestTitles } from "../../suggest-titles";
+import { titleContext } from "../titles";
 import { NEW_PAGE, PUBLISH, footerLink, perPlatform } from "./shared";
 import { orgSteps, ORG_HINTS } from "./org";
 
@@ -30,11 +32,14 @@ export const nameConsistencyGuide: FixGuide = {
   effect: (ctx) =>
     `"${ctx.brand}" is missing from the Google headline on ${ctx.issue.affectedCount} of your pages, so Google and AI assistants find it harder to connect those pages to your business.`,
   changes: (ctx) =>
-    ctx.pages.map((p) => ({
-      page: pageName(p.url),
-      now: p.extracted?.title ? clip(p.extracted.title, 70) : "(no headline)",
-      change: suggestTitle(p, ctx.brand),
-    })),
+    {
+      const titles = suggestTitles(ctx.pages, titleContext(ctx));
+      return ctx.pages.map((p, i) => ({
+        page: pageName(p.url),
+        now: p.extracted?.title ? clip(p.extracted.title, 70) : "(no headline)",
+        change: titles[i],
+      }));
+    },
   steps: perPlatform((p) => [
     "Decide on one spelling of your business name — \"<Brand>\" — including spaces, capitals and whether you add \"Ltd\", \"LLC\" or similar. Use it everywhere.",
     NAME_IN_HEADLINES[p],

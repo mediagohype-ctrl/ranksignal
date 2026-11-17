@@ -1,6 +1,9 @@
-// Public score badge (brief §9): an SVG "AI-ready score 82" that links back to MyWebRank. Pure renderer; the route
-// (src/app/badge/[file]/route.ts) checks the share token and reads the stored score.
+// Public score badge (brief §9): an SVG "Found Score 82" that links back to MyWebRank. Pure renderer; the route
+// (src/app/badge/[file]/route.ts) checks the badge token and reads the stored score.
 import { BRAND } from "@/lib/brand";
+
+/** The product's score name, the same as on pricing and the free check. */
+export const BADGE_LABEL = "Found Score";
 
 const XML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
 
@@ -25,7 +28,7 @@ function textWidth(s: string): number {
 }
 
 export function renderBadgeSvg(o: { score: number | null; label?: string; link?: string }): string {
-  const label = (o.label ?? "AI-ready score").slice(0, 40);
+  const label = (o.label ?? BADGE_LABEL).slice(0, 40);
   const value =
     o.score === null || !Number.isFinite(o.score) ? "not checked" : String(Math.max(0, Math.min(100, Math.round(o.score))));
   const link = o.link ?? BRAND.appUrl;
@@ -50,11 +53,15 @@ export function renderBadgeSvg(o: { score: number | null; label?: string; link?:
   ].join("\n");
 }
 
-/** Public URLs + embed HTML for a project's badge (token = the report share link's token). */
+/**
+ * Public URLs + embed HTML for a project's badge (token = the badge token). The link goes through /badge/<token>,
+ * which opens the shared report while sharing is on and our home page otherwise — so it never dead-ends.
+ * rel="nofollow": Google asks for widget / badge links to be nofollow.
+ */
 export function badgeUrls(o: { token: string; appUrl?: string }) {
   const base = (o.appUrl ?? BRAND.appUrl).replace(/\/$/, "");
   const svg = `${base}/badge/${encodeURIComponent(o.token)}.svg`;
-  const report = `${base}/r/${encodeURIComponent(o.token)}`;
-  const html = `<a href="${escapeXml(report)}" target="_blank" rel="noopener"><img src="${escapeXml(svg)}" alt="AI-ready score, checked by ${escapeXml(BRAND.name)}" height="20"></a>`;
+  const report = `${base}/badge/${encodeURIComponent(o.token)}`;
+  const html = `<a href="${escapeXml(report)}" target="_blank" rel="nofollow noopener"><img src="${escapeXml(svg)}" alt="${BADGE_LABEL}, checked by ${escapeXml(BRAND.name)}" height="20"></a>`;
   return { svg, report, html };
 }

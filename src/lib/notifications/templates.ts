@@ -1,4 +1,5 @@
 // Pure builders for run-completion notifications (in-app row + email copy). Plain English, no guarantees.
+import { changeLine, prioritySplit, problemCounts, type ProblemChange, type ProblemCounts } from "@/lib/report/counts";
 
 export type RunNoticeType = "report_ready" | "visibility_ready" | "job_failed" | "approval_requested";
 
@@ -13,61 +14,98 @@ export interface RunNotice {
   email: { subject: string; preheader: string; paragraphs: string[]; ctaLabel: string };
 }
 
-/**
- * Priority groups as shown to people (docs/PLAIN_WORDS.md). Report issues carry impact high/medium/low; raw
- * audit severities (critical/high → Urgent, medium → Important, low/info → Nice to have) are only a fallback.
- */
-const PRIORITIES = [
-  { label: "urgent", impacts: ["high"], severities: ["critical", "high"] },
-  { label: "important", impacts: ["medium"], severities: ["medium"] },
-  { label: "nice to have", impacts: ["low"], severities: ["low", "info"] },
-] as const;
+/** Legacy fallback only: raw audit severities → the three priorities (critical/high → urgent, medium → important). */
+function countsFromSeverities(sev: Partial<Record<string, number>>): ProblemCounts {
+  const urgent = (sev.critical ?? 0) + (sev.high ?? 0);
+  const important = sev.medium ?? 0;
+  const niceToHave = (sev.low ?? 0) + (sev.info ?? 0);
+  return { problems: urgent + important + niceToHave, urgent, important, niceToHave, places: null, pages: null };
+}
 const pct = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? `${Math.round(x * 100)}%` : "—");
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/**
- * Counts per priority. Pass the REPORT's grouped issues (getStoredReport(...).issues) so the message matches the
- * number people see in the report; `openBySeverity` (raw finding rows) is a legacy fallback only.
- */
-export function priorityCounts(o: { issues?: { impact: string }[] | null; openBySeverity?: Partial<Record<string, number>> }): [string, number][] {
-  if (o.issues) {
-    return PRIORITIES.map((p) => [p.label, o.issues!.filter((i) => (p.impacts as readonly string[]).includes(i.impact)).length] as [string, number]).filter(([, n]) => n > 0);
-  }
-  const sev = o.openBySeverity ?? {};
-  return PRIORITIES.map((p) => [p.label, p.severities.reduce((a, s) => a + (sev[s] ?? 0), 0)] as [string, number]).filter(([, n]) => n > 0);
+type CountInput = { counts?: ProblemCounts | null; issues?: { impact: string }[] | null; openBySeverity?: Partial<Record<string, number>> };
+
+function noticeCounts(o: CountInput): ProblemCounts {
+  if (o.counts) return o.counts;
+  if (o.issues) return problemCounts({ issues: o.issues as { impact: "high" | "medium" | "low" }[] });
+  return countsFromSeverities(o.openBySeverity ?? {});
 }
 
-/** After the WEBSITE check. AI results come separately ("Your AI results are ready") — never "full report" here. */
-export function reportReadyNotice(o: {
-  organizationId: string; projectId: string; projectName: string; crawlRunId: string; pagesCrawled: number;
-  /** The report's grouped issues (preferred). */
-  issues?: { impact: string }[] | null;
-  /** Legacy fallback: open findings by severity. */
-  openBySeverity?: Partial<Record<string, number>>;
-}): RunNotice {
-  const counts = priorityCounts(o);
-  const total = counts.reduce((a, [, n]) => a + n, 0);
-  const summary = total
-    ? `We found ${plural(total, "problem")} to fix: ${counts.map(([s, n]) => `${n} ${s}`).join(", ")}.`
-    : "We didn't find any problems to fix this time.";
-  const urgent = counts.find(([s]) => s === "urgent")?.[1] ?? 0;
-  return {
+/**
+ * Counts per priority, as [label, n] pairs. The numbers come from problemCounts (src/lib/report/counts.ts) — the ONE
+ * definition every screen uses — fed with the REPORT's problem list (getStoredReport(...).issues). `openBySeverity`
+ * (raw finding rows) is a legacy fallback only.
+ */
+export function priorityCounts(o: CountInput): [string, number][] {
+  const c = noticeCounts(o);
+  return ([["urgent", c.urgent], ["important", c.important], ["nice to have", c.niceToHave]] as [string, number][]).filter(([, n]) => n > 0);
+}
+
+/** "24 problems to fix: 6 urgent, 10 important, 8 nice to have" */
+function toFixLine(c: ProblemCounts): string {
+  const split = prioritySplit(c);
+  return `${plural(c.problems, "problem")} to fix${split ? `: ${split}` : ""}`;
+}
+
+/**
+ * After the WEBSITE check. AI results come separately ("Your AI results are ready") — never "full report" here.
+ * First check: "Your website results are ready" with the full count. Every later check is about the CHANGE:
+ * "2 problems fixed, 1 new. Score 49 → 52." (pass `change`, from problemChange in src/lib/report/counts.ts).
+ */
+export function reportReadyNotice(
+  o: CountInput & {
+    organizationId: string; projectId: string; projectName: string; crawlRunId: string; pagesCrawled: number;
+    /** Set on a re-check: what changed since the previous website check. */
+    change?: ProblemChange | null;
+    /** True when AI answers aren't part of this count yet — they can add problems when they arrive. */
+    aiPending?: boolean;
+  },
+): RunNotice {
+  const c = noticeCounts(o);
+  const summary = c.problems ? `We found ${toFixLine(c)}.` : "We didn't find any problems to fix this time.";
+  const urgentLine =
+    c.urgent > 0
+      ? `Start with the ${plural(c.urgent, "urgent problem")} — each one explains what's wrong, why it matters and how to fix it.`
+      : "Each problem is explained in plain English, with suggested fixes.";
+  const aiNote = o.aiPending
+    ? "This count covers your website only. When your AI results arrive they can add problems about what AI tools say, so the Full report may then show a few more."
+    : "";
+  const base = {
     organizationId: o.organizationId,
     projectId: o.projectId,
-    type: "report_ready",
+    type: "report_ready" as const,
+    link: `/app/projects/${o.projectId}/report?run=${o.crawlRunId}`,
+  };
+
+  if (o.change) {
+    const changed = changeLine(o.change);
+    const now = c.problems ? `You now have ${toFixLine(c)}.` : "There are no problems left to fix right now.";
+    return {
+      ...base,
+      title: `What changed on your website — ${o.projectName}`,
+      body: `${changed} ${now}`,
+      email: {
+        subject: `What changed on ${o.projectName}: ${changed.replace(/\.$/, "")}`,
+        preheader: changed,
+        paragraphs: [`We checked ${plural(o.pagesCrawled, "page")} on ${o.projectName}'s website again.`, changed, now, ...(aiNote ? [aiNote] : []), urgentLine],
+        ctaLabel: "See what changed",
+      },
+    };
+  }
+
+  return {
+    ...base,
     title: `Your website results are ready — ${o.projectName}`,
     body: `We checked ${plural(o.pagesCrawled, "page")}. ${summary}`,
-    link: `/app/projects/${o.projectId}/report?run=${o.crawlRunId}`,
     email: {
       subject: `Your website results for ${o.projectName} are ready`,
       preheader: summary,
       paragraphs: [
         `We just finished checking ${plural(o.pagesCrawled, "page")} on ${o.projectName}'s website.`,
         summary,
-        urgent > 0
-          ? `Start with the ${plural(urgent, "urgent problem")} — each one explains what's wrong, why it matters and how to fix it.`
-          : "Each problem is explained in plain English, with suggested fixes.",
-        "What AI tools say about you comes next — we'll tell you when your AI results are ready.",
+        urgentLine,
+        aiNote || "What AI tools say about you comes next — we'll tell you when your AI results are ready.",
       ],
       ctaLabel: "See your website results",
     },
@@ -82,6 +120,8 @@ export function visibilityReadyNotice(o: {
   questions?: number | null;
   /** Answers expected (run.sampleSize), for "123 of 125 answers". */
   expected?: number | null;
+  /** An AI spend limit ended the check early (metrics.stoppedEarly): say so, and that the rest was given back. */
+  stoppedByLimit?: boolean;
 }): RunNotice {
   const m = o.metrics ?? {};
   const simulated = m.simulated === true;
@@ -90,7 +130,9 @@ export function visibilityReadyNotice(o: {
   const rates = `AI named you in ${pct(m.mentionRate)} of answers and linked to your site in ${pct(m.citationRate)}.`;
   const notes = [
     simulated ? "These are made-up demo answers (simulated), not real AI answers." : "",
-    o.partial
+    o.stoppedByLimit
+      ? `We had to stop this check early because the AI limit was reached${answers !== null && o.expected ? `: we got ${answers} of ${o.expected} answers` : ""}. The answers we didn't collect are back in your AI answers for this month.`
+      : o.partial
       ? answers !== null && o.expected
         ? `We got ${answers} of ${o.expected} answers this time, so the numbers are based on fewer answers.`
         : "Some questions couldn't be checked this time, so the numbers are based on fewer answers."
@@ -123,6 +165,9 @@ export function visibilityReadyNotice(o: {
 export function plainFailureReason(error: string | null | undefined, errorClass: string | null | undefined): string {
   const e = (error ?? "").toLowerCase();
   if (e.includes("interrupted")) return "The check was interrupted while our servers restarted. Please run it again.";
+  // The AI limit stopped the check for good (after waiting several days) before any answer came in.
+  if (e.includes("ai limit reached"))
+    return "We couldn't collect any AI answers because the AI limit was reached several days in a row, so we stopped this check. The AI answers it was holding are back in your allowance — you can start the AI check again.";
   // Daily AI budget: the check isn't failed, it continues tomorrow (the job requeues it).
   if (e.includes("budget")) return "We've reached today's limit for AI checks. We'll finish the rest of your AI check tomorrow — there's nothing you need to do.";
   if (e.includes("ai answers")) return "You've used all the AI answers in your plan for this month. They reset on the 1st, or you can upgrade for more.";

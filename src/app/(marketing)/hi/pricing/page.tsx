@@ -39,6 +39,8 @@ function OfferCard({ c }: { c: HindiOfferCard }) {
         <span className={clsx("text-[clamp(2.25rem,1.9rem+1.2vw,2.875rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums", ink ? "text-bg" : "text-fg")}>
           {c.price === null ? c.priceLabel : inr(c.price)}
         </span>
+        {/* A real space, so the price reads "₹19,999 + GST" (not "₹19,999+ GST") when copied or read aloud. */}
+        {c.price !== null && " "}
         {c.price !== null && <span className={clsx("text-small", ink ? "text-bg/75" : "text-muted")}>{per()}</span>}
       </p>
       <p className={clsx("mt-3 text-small", ink ? "text-bg/75" : "text-muted")}>{c.terms}</p>

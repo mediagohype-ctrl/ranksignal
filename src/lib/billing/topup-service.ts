@@ -6,11 +6,13 @@ import { HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
 import { accessMessage, getOrgAccess } from "./access";
+import { checkoutPrefill, hasInvoiceBasics, requireBillingDetailsForPayment } from "./billing-details";
+import { answersPerCheck } from "./plans";
 import { getAiAllowance, utcMonthStart } from "./allowance";
 import { formatInr, priceWithGst } from "./gst";
 import { isRazorpayConfigured } from "./razorpay";
 import { createRazorpayOrder } from "./razorpay-orders";
-import { TOPUP_VALIDITY_MONTHS, getTopUpPack, offeredTopUpPacks, topUpExpiry, type TopUpPackId } from "./topups";
+import { TOPUP_VALIDITY_MONTHS, fullChecksIn, getTopUpPack, offeredTopUpPacks, packLabelFor, topUpExpiry, type TopUpPackId } from "./topups";
 
 /** Pending orders one workspace may open per hour (stops checkout spam creating hundreds of Razorpay orders). */
 export const MAX_PENDING_TOPUP_ORDERS_PER_HOUR = 10;
@@ -19,6 +21,10 @@ export interface TopUpOffer {
   id: TopUpPackId;
   name: string;
   answers: number;
+  /** Pack name for this workspace's plan, checks first: "1 extra AI check (75 answers)". */
+  label: string;
+  /** Full AI checks the pack covers on this workspace's plan (0 when smaller than one check). */
+  checks: number;
   basePaise: number;
   gstPaise: number;
   totalPaise: number;
@@ -33,13 +39,17 @@ async function customerStateCode(orgId: string): Promise<string | null> {
   return d?.stateCode ?? null;
 }
 
-export function offerFor(id: TopUpPackId, stateCode: string | null): TopUpOffer {
+export function offerFor(id: TopUpPackId, stateCode: string | null, planId = "starter"): TopUpOffer {
   const p = getTopUpPack(id)!;
+  const perCheck = answersPerCheck(planId);
   const b = priceWithGst(p.pricePaise, { customerStateCode: stateCode });
   return {
     id: p.id,
     name: p.name,
     answers: p.answers,
+    // The test pack keeps its own name; real packs are named in this plan's checks.
+    label: p.id === "answers_test" ? p.name : packLabelFor(p.answers, perCheck),
+    checks: fullChecksIn(p.answers, perCheck),
     basePaise: b.basePaise,
     gstPaise: b.gstPaise,
     totalPaise: b.totalPaise,
@@ -49,9 +59,9 @@ export function offerFor(id: TopUpPackId, stateCode: string | null): TopUpOffer 
   };
 }
 
-export async function getTopUpOffers(orgId: string): Promise<TopUpOffer[]> {
+export async function getTopUpOffers(orgId: string, planId = "starter"): Promise<TopUpOffer[]> {
   const state = await customerStateCode(orgId);
-  return offeredTopUpPacks().map((p) => offerFor(p.id, state));
+  return offeredTopUpPacks().map((p) => offerFor(p.id, state, planId));
 }
 
 export type TopUpOrderStatus = "pending" | "paid" | "failed" | "refunded";
@@ -63,21 +73,34 @@ export interface TopUpOverview {
   accessActive: boolean;
   extraLeft: number;
   extraExpiresAt: string | null;
+  /** AI answers one full check uses on this plan (answersPerCheck). */
+  answersPerCheck: number;
+  /** Answers usable right now (plan + extra) and the full AI checks they cover. */
+  answersLeft: number;
+  checksLeft: number;
+  /** True until the business name and state are saved: checkout shows a short form first (GST invoice). */
+  needsBillingDetails: boolean;
+  /** Suggested business name for that form. */
+  businessName: string;
   packs: { id: string; name: string; answers: number; left: number; purchasedAt: string; expiresAt: string; status: "active" | "used" | "expired" | "refunded" }[];
   orders: { id: string; razorpayOrderId: string; name: string; answers: number; totalPaise: number; status: TopUpOrderStatus; createdAt: string; paidAt: string | null }[];
 }
 
 /** Everything the "Extra AI answers" card and the buy dialog need. */
 export async function getTopUpOverview(orgId: string, now = new Date()): Promise<TopUpOverview> {
-  const [offers, access, allowance, packs, orders] = await Promise.all([
-    getTopUpOffers(orgId),
-    getOrgAccess(orgId, now),
+  const access = await getOrgAccess(orgId, now);
+  const perCheck = answersPerCheck(access.planId);
+  const [offers, allowance, packs, orders, details, org] = await Promise.all([
+    getTopUpOffers(orgId, access.planId),
     getAiAllowance(orgId, { now }),
     db.topUpPack.findMany({ where: { organizationId: orgId }, orderBy: { purchasedAt: "desc" }, take: 50 }),
     db.topUpOrder.findMany({ where: { organizationId: orgId }, orderBy: { createdAt: "desc" }, take: 50 }),
+    db.billingDetails.findUnique({ where: { organizationId: orgId }, select: { legalName: true, stateCode: true } }).catch(() => null),
+    db.organization.findUnique({ where: { id: orgId }, select: { name: true } }).catch(() => null),
   ]);
   const leftById = new Map(allowance.extra.packs.map((p) => [p.id, p.left]));
-  const name = (packId: string, answers: number) => getTopUpPack(packId)?.name ?? `${answers.toLocaleString("en-IN")} extra AI answers`;
+  // History rows are named from the answers actually bought (the old 35 / 100 / 500 / 2,000 packs keep working).
+  const name = (packId: string, answers: number) => (packId === "answers_test" ? (getTopUpPack(packId)?.name ?? "Test pack") : packLabelFor(answers, perCheck));
   return {
     offers,
     checkoutAvailable: isRazorpayConfigured(),
@@ -85,6 +108,11 @@ export async function getTopUpOverview(orgId: string, now = new Date()): Promise
     accessActive: access.active,
     extraLeft: allowance.extra.left,
     extraExpiresAt: allowance.extra.expiresAt?.toISOString() ?? null,
+    answersPerCheck: perCheck,
+    answersLeft: allowance.left,
+    checksLeft: fullChecksIn(allowance.left, perCheck),
+    needsBillingDetails: !hasInvoiceBasics(details),
+    businessName: details?.legalName ?? org?.name ?? "",
     packs: packs.map((p) => {
       const left = leftById.get(p.id) ?? 0;
       const status = p.status === "refunded" ? "refunded" : p.expiresAt <= now ? "expired" : left > 0 ? "active" : "used";
@@ -126,7 +154,9 @@ export async function startTopUpCheckout(o: { organizationId: string; userId: st
   }
   const pack = offeredTopUpPacks().find((p) => p.id === o.packId);
   if (!pack) throw new HttpError(400, "pack_unavailable", "That pack isn't available. Please pick another one.");
-  const offer = offerFor(pack.id, await customerStateCode(o.organizationId));
+  // No payment without a business name and state (they decide CGST + SGST or IGST on the invoice).
+  const details = await requireBillingDetailsForPayment(o.organizationId);
+  const offer = offerFor(pack.id, details.stateCode, access.planId);
   const receipt = `topup_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
   let order;
   try {
@@ -169,7 +199,8 @@ export async function startTopUpCheckout(o: { organizationId: string; userId: st
       },
     })
     .catch(() => undefined);
-  return { orderId: order.id, keyId: process.env.RAZORPAY_KEY_ID ?? "", amount: offer.totalPaise, currency: "INR", pack: offer, breakdown: offer };
+  const prefill = await checkoutPrefill(o.organizationId, o.userId).catch(() => ({}));
+  return { orderId: order.id, keyId: process.env.RAZORPAY_KEY_ID ?? "", amount: offer.totalPaise, currency: "INR", pack: offer, breakdown: offer, prefill };
 }
 
 // ---------------------------------------------------------------------------------------------------- webhook side

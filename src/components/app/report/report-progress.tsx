@@ -10,6 +10,8 @@ export interface RunSnapshot {
   collected?: number;
   sampleSize?: number;
   error?: string | null;
+  /** Plain status for an AI check in flight, e.g. "12 of 75 answers in — the rest tomorrow". */
+  note?: string | null;
 }
 
 const ACTIVE = ["queued", "preflight", "running", "retry_scheduled", "validating"];
@@ -47,7 +49,7 @@ export function ReportInProgress({
       label: "Ask AI assistants about you",
       description: visibility
         ? visActive
-          ? `${visibility.collected ?? 0} of ${visibility.sampleSize ?? "?"} answers collected`
+          ? (visibility.note ?? (visibility.sampleSize ? `${visibility.collected ?? 0} of ${visibility.sampleSize} answers in` : "Getting started…"))
           : visDone
             ? "Answers collected"
             : "Not run"

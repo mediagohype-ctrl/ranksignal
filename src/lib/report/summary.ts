@@ -2,6 +2,7 @@
 import { z } from "zod";
 import type { SiteReport } from "@/lib/report/types";
 import { plural } from "@/lib/report/inputs";
+import { biggestFix, problemCounts, problemsLabel } from "@/lib/report/counts";
 import { generateStructured, isLlmConfigured } from "@/lib/providers/llm";
 
 const pctOf = (n: number | null) => `${Math.round((n ?? 0) * 100)}%`;
@@ -24,9 +25,11 @@ export function templateSummary(r: SiteReport): string {
       s.push(`Your strongest area is ${best.label} (${best.score} out of 100) and the weakest is ${worst.label} (${worst.score} out of 100).`);
     }
   }
-  const high = r.issues.filter((i) => i.impact === "high");
-  if (r.issues.length) {
-    s.push(`We found ${plural(r.issues.length, "thing")} to improve${high.length ? `, ${high.length} of them urgent` : ""}; start with “${r.issues[0].title.replace(/\.$/, "")}”.`);
+  // Same count, split and "biggest fix" as Home, the problem list and notifications (src/lib/report/counts.ts).
+  const c = problemCounts(r);
+  if (c.problems) {
+    const top = biggestFix(r) ?? r.issues[0];
+    s.push(`We found ${problemsLabel(c)} to fix${c.urgent ? `, ${c.urgent} of them urgent` : ""}; start with “${top.title.replace(/\.$/, "")}”.`);
   }
   if (r.quickWins.length) s.push(r.quickWins.length === 1 ? "One of these is a quick fix you can do in under an hour." : `${r.quickWins.length} of these are quick fixes you can do in under an hour each.`);
   const ai = r.aiVisibility;

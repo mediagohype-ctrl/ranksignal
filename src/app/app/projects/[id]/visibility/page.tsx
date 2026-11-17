@@ -2,9 +2,13 @@ import Link from "next/link";
 import clsx from "clsx";
 import { FileText, Link2, ListChecks, MessageSquare, ThumbsUp } from "lucide-react";
 import { getExpertMode } from "@/lib/expert";
-import { groupByQuestion, joinNames, runProviders, wrongFacts, type AnswerObservation } from "@/lib/dashboard/ai-answers";
+import { groupByQuestion, joinNames, runProviders, type AnswerObservation } from "@/lib/dashboard/ai-answers";
+import { latestProbedRun, readFactReviews } from "@/lib/visibility/fact-review";
+import { aiCheckCopy, aiCheckInFlight, aiProgressLabel } from "@/lib/visibility/run-state";
+import { aiCheckEmailsOn, getAiCheckState } from "@/lib/visibility/run-state-server";
 import { AnswersList } from "@/components/app/ai-answers/answers-list";
 import { WrongFacts } from "@/components/app/ai-answers/wrong-facts";
+import { CompetitorSuggestions } from "@/components/app/ai-answers/competitor-suggestions";
 import { db } from "@/lib/db";
 import { readMetrics } from "@/lib/dashboard/data";
 import { requireAppProject, hasRole } from "@/lib/dashboard/server";
@@ -16,7 +20,7 @@ import { ProvidersStatus, engineName, type PublicProvider } from "@/components/a
 import { RunButtons } from "@/components/app/run-buttons";
 import { VisibilityTable, type ObservationRow } from "@/components/app/visibility-table";
 import {
-  Badge, Card, CardBody, CardHeader, EmptyState, LinkButton, Meter, PageHeader, SimulatedDataBanner, Stat, StatusBadge, Table, TD, TH,
+  Badge, Card, CardBody, CardHeader, EmptyState, LinkButton, Meter, Notice, PageHeader, SimulatedDataBanner, Stat, StatusBadge, Table, TD, TH,
   THead, TR,
 } from "@/components/ui";
 
@@ -34,7 +38,7 @@ export default async function VisibilityPage({
   const { id } = await params;
   const { run: runParam } = await searchParams;
   const { session, project } = await requireAppProject(id);
-  const [runs, expert, prompts] = await Promise.all([
+  const [runs, expert, prompts, ai] = await Promise.all([
     db.visibilityRun.findMany({
       where: { organizationId: session.organizationId, projectId: project.id },
       orderBy: { createdAt: "desc" },
@@ -46,8 +50,11 @@ export default async function VisibilityPage({
       orderBy: [{ active: "desc" }, { priority: "asc" }, { createdAt: "asc" }],
       select: { id: true, text: true, active: true },
     }),
+    // Running, waiting until tomorrow (AI limit reached), done or failed — one helper for every screen.
+    getAiCheckState(project.id, session.organizationId),
   ]);
-  const active = runs.some((r) => isActiveStatus(r.status));
+  const active = aiCheckInFlight(ai) || runs.some((r) => isActiveStatus(r.status));
+  const aiCopy = aiCheckCopy(ai, { willEmail: aiCheckEmailsOn(project.settings) });
   const canEdit = hasRole(session, "member");
   // Only the engines this plan asks per check (S1 hook).
   const engines: PublicProvider[] | null = await describeProviders({ maxProviders: await getOrgEngineLimit(session.organizationId).catch(() => undefined) })
@@ -102,11 +109,15 @@ export default async function VisibilityPage({
   const namedTotal = counted.filter((a) => a.brandMentioned).length;
   // The AI tools this check actually used, by product name.
   const engineList = joinNames(runProviders(run?.providers).map(engineName));
-  // Wrong facts: from this check, else the newest check that looked for them.
-  const facts = runs.map((r) => wrongFacts(r.metrics)).find((f) => f.length) ?? [];
-  const runFacts = wrongFacts(run?.metrics);
-  const shownFacts = runFacts.length ? runFacts : facts;
+  // "Check these facts": always from the NEWEST finished check that asked AI about the business (never an older
+  // check that happened to have more statements), minus the ones the owner already marked correct or wrong.
+  const probed = latestProbedRun(runs, readFactReviews(project.settings));
   const m = readMetrics(run?.metrics);
+  const extra = asRecord<unknown>(run?.metrics);
+  // A spend limit ended this check early / this check is the first one where an AI tool named the business.
+  const stoppedEarly = asRecord<unknown>(extra.stoppedEarly);
+  const firstTools = strings(asRecord<unknown>(extra.firstMention).tools);
+  const latestFailed = ai.state === "failed" && runs[0] && !isActiveStatus(runs[0].status);
   const simulated = m?.simulated || rows.some((r) => r.simulated);
   const sources = [...(m?.citationSources ?? [])].sort((a, b) => b.count - a.count).slice(0, 20);
   const maxSource = sources[0]?.count ?? 1;
@@ -121,7 +132,7 @@ export default async function VisibilityPage({
         description="What AI tools say when your customers ask them questions — and whether they name you."
         actions={
           <>
-            <AutoRefresh active={active} label="Collecting AI answers" />
+            <AutoRefresh active={active} label={ai.state === "waiting_tomorrow" ? "Continues tomorrow" : aiCheckInFlight(ai) ? aiProgressLabel(ai) : "Collecting AI answers"} />
             {expert && (
               <LinkButton href={`/app/projects/${project.id}/report#ai-visibility`} variant="secondary" icon={<FileText />}>
                 See in full report
@@ -148,10 +159,35 @@ export default async function VisibilityPage({
         </SimulatedDataBanner>
       )}
 
+      {/* A check is in flight: say plainly whether it is running (with progress) or waiting for tomorrow's AI limit. */}
+      {aiCopy && (
+        <Notice tone={ai.state === "waiting_tomorrow" ? "warning" : "info"} title={aiCopy.title}>
+          {aiCopy.detail}
+          {ai.state === "waiting_tomorrow" && ai.resumeAt && ` We'll start again around ${fmtDate(ai.resumeAt, true)}.`}
+        </Notice>
+      )}
+      {!aiCopy && latestFailed && (
+        <Notice tone="danger" title="Your last AI check didn't finish">
+          {runs[0].collected > 0 ? `We collected ${runs[0].collected} of ${runs[0].sampleSize} answers before it stopped. ` : ""}
+          The AI answers it didn&apos;t collect are back in your allowance for this month. You can start the AI check again.
+        </Notice>
+      )}
+      {firstTools.length > 0 && (
+        <Notice tone="success" title={`${joinNames(firstTools)} named you for the first time!`}>
+          This is the first AI check where an AI tool named your business. Open the questions below to read what {firstTools.length === 1 ? "it" : "they"} said.
+        </Notice>
+      )}
+      {run && typeof stoppedEarly.expected === "number" && (
+        <Notice tone="warning" title="This check stopped early">
+          The AI limit was reached, so we collected {run.collected} of {run.sampleSize} answers. The numbers below are based on fewer answers. The answers we
+          didn&apos;t collect are back in your allowance for this month.
+        </Notice>
+      )}
+
       {!run ? (
         <EmptyState
           icon={<MessageSquare />}
-          title="AI tools haven't been asked about you yet."
+          title={aiCopy ? aiCopy.title : "AI tools haven't been asked about you yet."}
           action={
             <RunButtons
               projectId={project.id}
@@ -170,18 +206,21 @@ export default async function VisibilityPage({
             <h2 id="aa-headline" className="text-h3 text-balance text-fg">
               {counted.length === 0
                 ? isActiveStatus(run.status)
-                  ? "Collecting AI answers…"
+                  ? (aiCopy?.title ?? "Your AI check is running")
                   : "This AI check didn't get any answers."
                 : `AI named you in ${namedTotal} of ${counted.length} ${counted.length === 1 ? "answer" : "answers"}.`}
             </h2>
             <p className="text-small text-muted">
-              Checked {fmtDate(run.finishedAt ?? run.createdAt)}. Tap a question to read what AI said.
+              {isActiveStatus(run.status)
+                ? `${aiProgressLabel({ collected: run.collected, expected: run.sampleSize })}. Started ${fmtDate(run.createdAt)}.`
+                : `Checked ${fmtDate(run.finishedAt ?? run.createdAt)}.`}{" "}
+              Tap a question to read what AI said.
             </p>
           </section>
 
           {(questions.length > 0 || prompts.length > 0) && (
             <div className="space-y-2">
-              <AnswersList projectId={project.id} questions={questions} prompts={prompts} canEdit={canEdit} brandNames={strings(project.brandNames)} runId={runParam ? run?.id : null} />
+              <AnswersList projectId={project.id} questions={questions} prompts={prompts} canEdit={canEdit} brandNames={strings(project.brandNames)} runId={runParam ? run?.id : null} checkRunning={isActiveStatus(run.status)} />
               {questions.length > 0 && (
                 <p className="text-xs text-muted">
                   Checked {questions.length} {questions.length === 1 ? "question" : "questions"}
@@ -192,7 +231,15 @@ export default async function VisibilityPage({
             </div>
           )}
 
-          <WrongFacts projectId={project.id} facts={shownFacts} canEdit={canEdit} />
+          <WrongFacts
+            projectId={project.id}
+            facts={probed?.facts ?? []}
+            canEdit={canEdit}
+            checkedOn={probed ? fmtDate(probed.run.finishedAt ?? probed.run.createdAt) : null}
+          />
+
+          {/* No competitors saved (older accounts): suggest the businesses AI already names, with one-click Add. */}
+          {!simulated && asArray(project.competitors).length === 0 && <CompetitorSuggestions projectId={project.id} canEdit={canEdit} onlyWhenNoneSaved />}
 
           {expert && (
             <>

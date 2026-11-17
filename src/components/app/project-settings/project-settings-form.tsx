@@ -12,6 +12,7 @@ import { Button, Card, CardBody, CardFooter, CardHeader, Field, Input, LinkButto
 import { DangerZone } from "./danger-zone";
 import { SwitchRow } from "./switch";
 import { fmtDate } from "@/lib/dashboard/format";
+import { EXTRA_FACT_FIELDS, type ExtraFactKey } from "@/lib/setup/facts";
 
 export interface CompetitorRow {
   name: string;
@@ -47,7 +48,17 @@ interface Props {
   team?: React.ReactNode;
   planSection?: React.ReactNode;
   preferences?: React.ReactNode;
+  /** Which tab is open (?tab=): business · schedules · notifications · team. Default: business. */
+  tab?: SettingsTab;
+  /** Do it for me / Custom: website connections and the "Changes to your website" switches exist. */
+  canConnect?: boolean;
+  /** Notifications tab extra (WhatsApp updates). */
+  notificationsExtra?: React.ReactNode;
 }
+
+// Tab ids and ?tab= parsing live in a plain module so the server page can call them.
+import type { SettingsTab } from "./tabs";
+export type { SettingsTab } from "./tabs";
 
 const SAFE_FIX_NAMES: Record<string, string> = {
   update_meta_description: "Google summaries",
@@ -87,7 +98,11 @@ export function ProjectSettingsForm({
   team,
   planSection,
   preferences,
+  tab = "business",
+  canConnect = false,
+  notificationsExtra,
 }: Props) {
+  const show = (t: SettingsTab) => tab === t;
   const router = useRouter();
   const toast = useToast();
   const [saved, setSaved] = useState(initial);
@@ -98,6 +113,14 @@ export function ProjectSettingsForm({
   const [name, setName] = useState(initial.facts.name || initial.name);
   const [city, setCity] = useState(initial.facts.city ?? "");
   const [sells, setSells] = useState(initial.facts.sells ?? "");
+  const [customers, setCustomers] = useState(initial.facts.customers ?? "");
+  // "Confirm your facts" (all optional): founder, phone, address, main services.
+  const [extra, setExtra] = useState<Record<ExtraFactKey, string>>(() => ({
+    founder: initial.facts.founder ?? "",
+    phone: initial.facts.phone ?? "",
+    address: initial.facts.address ?? "",
+    services: initial.facts.services ?? "",
+  }));
   const [brands, setBrands] = useState<string[]>(() => {
     const own = (initial.facts.name || initial.name).trim().toLowerCase();
     const others = initial.brandNames.filter((b) => b.trim().toLowerCase() !== own);
@@ -134,11 +157,25 @@ export function ProjectSettingsForm({
   const cleanCompetitors = competitors
     .map((c) => ({ name: c.name.trim(), domain: c.domain.trim(), aliases: c.aliases }))
     .filter((c) => c.name || c.domain);
-  const facts: ProjectFacts = { ...saved.facts, name: name.trim(), city: city.trim(), sells: sells.trim() };
+  const facts: ProjectFacts = {
+    ...saved.facts,
+    name: name.trim(),
+    city: city.trim(),
+    sells: sells.trim(),
+    customers: customers.trim(),
+    founder: extra.founder.trim(),
+    phone: extra.phone.trim(),
+    address: extra.address.trim(),
+    services: extra.services.trim(),
+  };
+  const sellsChanged = sells.trim() !== (saved.facts.sells ?? "");
+  const audienceChanged = customers.trim() !== (saved.facts.customers ?? "") || city.trim() !== (saved.facts.city ?? "");
   const businessDirty =
     name.trim() !== (saved.facts.name || saved.name) ||
     city.trim() !== (saved.facts.city ?? "") ||
-    sells.trim() !== (saved.facts.sells ?? "") ||
+    sellsChanged ||
+    audienceChanged ||
+    EXTRA_FACT_FIELDS.some((f) => extra[f.key].trim() !== (saved.facts[f.key] ?? "")) ||
     JSON.stringify(brandNames) !== JSON.stringify(saved.brandNames) ||
     JSON.stringify(cleanCompetitors) !== JSON.stringify(saved.competitors);
 
@@ -153,6 +190,11 @@ export function ProjectSettingsForm({
         name: name.trim(),
         facts,
         brandNames,
+        // The AI questions are written from "what you sell" and "who your customers are": keep them in step.
+        ...(sellsChanged ? { categories: sells.trim() ? [sells.trim().slice(0, 120)] : [] } : {}),
+        ...(audienceChanged
+          ? { audience: [customers.trim(), city.trim() ? `in ${city.trim()}` : ""].filter(Boolean).join(" ").slice(0, 500) || null }
+          : {}),
         competitors: cleanCompetitors.map((c) => ({ name: c.name, domain: c.domain || undefined, aliases: splitList(c.aliases) })),
       },
       (s) => ({ ...s, name: name.trim(), facts, brandNames, competitors: cleanCompetitors }),
@@ -185,7 +227,8 @@ export function ProjectSettingsForm({
         </Notice>
       )}
 
-      {/* My business */}
+      {/* My business (Business tab). Keep this section's structure stable: other screens add fields here. */}
+      {show("business") && (
       <Card as="section">
         <CardHeader title="My business" description="We use these to ask AI the right questions and spot you in answers." icon={<Briefcase />} />
         <CardBody className="space-y-5">
@@ -210,12 +253,48 @@ export function ProjectSettingsForm({
                 onChange={(e) => setSells(e.target.value)}
               />
             </Field>
+            <Field label="Who your customers are" htmlFor="ps-customers" optional className="sm:col-span-2">
+              <Input
+                id="ps-customers"
+                value={customers}
+                maxLength={300}
+                disabled={!canEdit}
+                placeholder="e.g. Families and offices nearby"
+                onChange={(e) => setCustomers(e.target.value)}
+              />
+            </Field>
           </div>
+
+          <details className="rounded-xl border border-border px-4 py-3" open={EXTRA_FACT_FIELDS.some((f) => extra[f.key])}>
+            <summary className="cursor-pointer text-small font-medium text-fg">Confirm your facts (optional)</summary>
+            <p className="mt-2 text-small text-muted">
+              What you want Google and AI tools to get right about you. We use these to fill in your ready-to-paste fixes and to spot wrong
+              facts in AI answers.
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {EXTRA_FACT_FIELDS.map((f) => (
+                <Field key={f.key} label={f.label} htmlFor={`ps-fact-${f.key}`} optional className={f.key === "address" || f.key === "services" ? "sm:col-span-2" : undefined}>
+                  <Input
+                    id={`ps-fact-${f.key}`}
+                    value={extra[f.key]}
+                    maxLength={f.max}
+                    disabled={!canEdit}
+                    placeholder={f.placeholder}
+                    onChange={(e) => setExtra((x) => ({ ...x, [f.key]: e.target.value }))}
+                  />
+                </Field>
+              ))}
+            </div>
+          </details>
 
           <div className="space-y-2">
             <h3 className="flex items-center gap-2 text-small font-medium text-fg">
               <Tag aria-hidden size={14} className="text-muted" /> Other names people use for you
             </h3>
+            <p className="text-small text-muted">
+              Short forms and other spellings, for example &quot;Go Hype Media&quot; and &quot;GoHype&quot;. We look for every one of them on your
+              website and in AI answers.
+            </p>
             <ul className="space-y-2">
               {brands.map((b, i) => (
                 <li key={i} className="flex items-center gap-2">
@@ -301,8 +380,10 @@ export function ProjectSettingsForm({
           </div>
         </CardFooter>
       </Card>
+      )}
 
-      {/* Connect website */}
+      {/* Connect website: only where our team works on the website (Do it myself has no connections) */}
+      {show("business") && canConnect && (
       <Card as="section" padding="md">
         <div className="flex flex-wrap items-center gap-4">
           <Plug aria-hidden size={20} className="shrink-0 text-primary" />
@@ -315,8 +396,10 @@ export function ProjectSettingsForm({
           </LinkButton>
         </div>
       </Card>
+      )}
 
-      {/* Automatic checks */}
+      {/* Automatic checks (Schedules tab) */}
+      {show("schedules") && (
       <Card as="section">
         <CardHeader title="Automatic checks" description="We check again by ourselves, so you can see things change." icon={<CalendarClock />} />
         <CardBody>
@@ -325,7 +408,8 @@ export function ProjectSettingsForm({
             {(
               [
                 ["crawl", "Website", ["weekly", "monthly", "off"]],
-                ["visibility", "AI", saved.schedule.visibility === "weekly" ? ["weekly", "monthly", "off"] : ["monthly", "off"]],
+                // The scheduler runs AI checks weekly too (src/lib/jobs/scheduler.ts); plans that don't allow it see it greyed out.
+                ["visibility", "AI", ["weekly", "monthly", "off"]],
               ] as const
             ).map(([kind, label, options]) => (
               <Field key={kind} label={label} htmlFor={`ps-sched-${kind}`} hint={nextRunText(saved.schedule[kind], plan.minScanIntervalDays, lastRuns[kind])}>
@@ -356,8 +440,11 @@ export function ProjectSettingsForm({
           )}
         </CardBody>
       </Card>
+      )}
 
-      {/* Auto-fix + Pause */}
+      {/* Auto-fix + Pause (Schedules tab): only where our team changes the website. On Do it myself nothing
+          changes the website automatically, so there is nothing to switch on or pause. */}
+      {show("schedules") && canConnect && (
       <Card as="section">
         <CardHeader title="Changes to your website" icon={<Wand2 />} />
         <CardBody className="divide-y divide-border">
@@ -407,8 +494,10 @@ export function ProjectSettingsForm({
           )}
         </CardBody>
       </Card>
+      )}
 
-      {/* Emails */}
+      {/* Emails (Notifications tab) */}
+      {show("notifications") && (
       <Card as="section">
         <CardHeader title="Emails" description="Sent to the people who look after this account." icon={<Mail />} />
         <CardBody className="divide-y divide-border">
@@ -433,12 +522,14 @@ export function ProjectSettingsForm({
           ))}
         </CardBody>
       </Card>
+      )}
+      {show("notifications") && notificationsExtra}
 
-      {team}
-      {planSection}
-      {preferences}
+      {show("team") && team}
+      {show("team") && planSection}
+      {show("team") && preferences}
 
-      {expert && (
+      {show("business") && expert && (
         <Card as="section">
           <CardHeader title="Markets" description="Countries and languages we ask AI tools in." icon={<Globe2 />} />
           <CardBody className="grid gap-5 sm:grid-cols-2">
@@ -464,7 +555,7 @@ export function ProjectSettingsForm({
         </Card>
       )}
 
-      {isAdmin && <DangerZone projectId={projectId} projectName={saved.name} />}
+      {show("business") && isAdmin && <DangerZone projectId={projectId} projectName={saved.name} />}
     </div>
   );
 }

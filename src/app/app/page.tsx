@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Clock, ExternalLink, FileBarChart2, FolderKanban, ListChecks, Plus, ShieldCheck } from "lucide-react";
+import { ArrowRight, Clock, ExternalLink, FileBarChart2, FolderKanban, ListChecks, Plus, RefreshCw } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAppSession } from "@/lib/dashboard/server";
 import { readMetrics } from "@/lib/dashboard/data";
 import { fmtRelative, hostOf, isActiveStatus } from "@/lib/dashboard/format";
+import { getPlan } from "@/lib/billing/plans";
+import { loadTodo } from "@/lib/tasks/todo-server";
+import { todoHref } from "@/lib/tasks/todo";
 import { Avatar, Badge, Card, LinkButton, PageHeader, ScoreRing, StatusBadge, Tooltip } from "@/components/ui";
 
-export const metadata = { title: "Projects" };
+export const metadata = { title: "All websites" };
 
 export default async function ProjectsPage() {
   const s = await requireAppSession();
-  const projects = await db.project.findMany({
+  const [org, projects] = await Promise.all([
+    db.organization.findUnique({ where: { id: s.organizationId }, select: { planId: true } }),
+    db.project.findMany({
     where: { organizationId: s.organizationId },
     orderBy: { createdAt: "desc" },
     include: {
@@ -26,21 +31,42 @@ export default async function ProjectsPage() {
         take: 1,
         select: { status: true, finishedAt: true, createdAt: true, pagesCrawled: true },
       },
-      _count: { select: { findings: { where: { status: "open" } }, actions: { where: { status: "awaiting_approval" } } } },
     },
-  });
+    }),
+  ]);
   if (projects.length === 0) redirect("/app/onboarding");
+
+  // "N fixes waiting" = the open items on that website's To-do list (loadTodo — the same list and number the
+  // To-do page shows). There is no separate screen of changes waiting for approval any more (the old Fixes to
+  // approve page now opens the To-do list), so the card no longer says "N to approve" for any offer.
+  const waiting = new Map<string, number | null>(
+    await Promise.all(
+      projects.map(async (p) => {
+        try {
+          const { lists } = await loadTodo(s, p.id);
+          return [p.id, lists.website.length + lists.outside.length] as const;
+        } catch {
+          return [p.id, null] as const;
+        }
+      }),
+    ),
+  );
+  // A full plan can't add another website: say so on the card instead of promising "Add another website".
+  const plan = getPlan(org?.planId ?? "trial");
+  const planFull = projects.length >= plan.maxProjects;
 
   return (
     <>
       <PageHeader
         icon={<FolderKanban />}
-        title="Projects"
-        description="Each project is one website. See how it looks to Google and whether AI tools name you."
+        title="All websites"
+        description="See how each website looks to Google and whether AI tools name you."
         actions={
-          <LinkButton href="/app/onboarding" icon={<Plus />}>
-            New project
-          </LinkButton>
+          planFull ? undefined : (
+            <LinkButton href="/app/onboarding" icon={<Plus />}>
+              Add a website
+            </LinkButton>
+          )
         }
       />
       <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -53,6 +79,8 @@ export default async function ProjectsPage() {
           const times = [vis?.finishedAt ?? vis?.createdAt, crawl?.finishedAt ?? crawl?.createdAt].filter(Boolean) as Date[];
           const lastScan = times.length ? new Date(Math.max(...times.map((t) => t.getTime()))) : null;
           const href = `/app/projects/${p.id}`;
+          const fixes = waiting.get(p.id) ?? null;
+          const todo = todoHref(p.id);
           return (
             <Card as="li" key={p.id} variant="interactive" className="relative flex flex-col">
               <div className="flex items-start gap-3 p-5 pb-4">
@@ -91,10 +119,12 @@ export default async function ProjectsPage() {
                     {index === null ? "Not checked yet" : index >= 50 ? "Often named in AI answers" : index >= 20 ? "Sometimes named" : "Rarely named"}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-h3 tabular-nums text-fg">{p._count.findings}</div>
-                  <div className="text-xs text-muted">{p._count.findings === 1 ? "problem to fix" : "problems to fix"}</div>
-                </div>
+                {fixes !== null && (
+                  <Link href={todo} className="relative z-[1] rounded-lg text-right hover:underline" aria-label={`${fixes} ${fixes === 1 ? "fix" : "fixes"} waiting for ${p.name}. Open the To-do list.`}>
+                    <div className="text-h3 tabular-nums text-fg">{fixes}</div>
+                    <div className="text-xs text-muted">{fixes === 1 ? "fix waiting" : "fixes waiting"}</div>
+                  </Link>
+                )}
               </div>
 
               <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-5 py-3 text-xs text-muted">
@@ -106,20 +136,10 @@ export default async function ProjectsPage() {
                     {lastScan ? `Last checked ${fmtRelative(lastScan)}` : "Not checked yet"}
                   </span>
                 )}
-                {p._count.actions > 0 && (
-                  <Badge tone="warning" size="sm" icon={<ShieldCheck />}>
-                    {p._count.actions} to approve
-                  </Badge>
-                )}
                 <div className="relative z-[1] ml-auto flex items-center gap-1">
-                  <Tooltip content="Website problems">
-                    <LinkButton href={`${href}/audit`} variant="ghost" size="icon-sm" aria-label={`Website problems for ${p.name}`}>
+                  <Tooltip content="To-do list">
+                    <LinkButton href={todo} variant="ghost" size="icon-sm" aria-label={`To-do list for ${p.name}`}>
                       <ListChecks />
-                    </LinkButton>
-                  </Tooltip>
-                  <Tooltip content="Fixes to approve">
-                    <LinkButton href={`${href}/actions`} variant="ghost" size="icon-sm" aria-label={`Fixes to approve for ${p.name}`}>
-                      <ShieldCheck />
                     </LinkButton>
                   </Tooltip>
                   <LinkButton href={`${href}/report`} variant="secondary" size="xs" icon={<FileBarChart2 />} iconRight={<ArrowRight />}>
@@ -136,9 +156,18 @@ export default async function ProjectsPage() {
             className="flex h-full min-h-56 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-6 text-center text-muted transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary-soft-fg"
           >
             <span className="flex size-11 items-center justify-center rounded-full bg-surface-2">
-              <Plus size={20} aria-hidden />
+              {planFull ? <RefreshCw size={20} aria-hidden /> : <Plus size={20} aria-hidden />}
             </span>
-            <span className="text-small font-medium">Add another website</span>
+            {planFull ? (
+              <>
+                <span className="text-small font-medium">Replace your website or talk to us about more</span>
+                <span className="text-xs">
+                  Your {plan.name} plan includes {plan.maxProjects} {plan.maxProjects === 1 ? "website" : "websites"}.
+                </span>
+              </>
+            ) : (
+              <span className="text-small font-medium">Add another website</span>
+            )}
           </Link>
         </li>
       </ul>

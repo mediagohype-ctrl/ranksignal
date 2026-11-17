@@ -50,6 +50,8 @@ export class AiBudgetError extends JobError {
   constructor(
     message: string,
     readonly scope: "platform" | "workspace" | "unavailable",
+    /** True when the workspace's MONTHLY cap (not a daily one) is what stopped the call: waiting a day won't help. */
+    readonly month = false,
   ) {
     super(message, scope === "unavailable" ? "transient" : "quota");
   }
@@ -59,6 +61,11 @@ export class AiBudgetError extends JobError {
 export function isAiBudgetExhausted(err: unknown): boolean {
   const e = err as { aiBudget?: unknown; scope?: unknown } | null;
   return !!e && e.aiBudget === true && (e.scope === "platform" || e.scope === "workspace");
+}
+
+/** Which limit stopped the call: the monthly workspace cap, or a daily cap (platform or workspace). */
+export function aiBudgetPeriod(err: unknown): "daily" | "monthly" {
+  return (err as { month?: unknown } | null)?.month === true ? "monthly" : "daily";
 }
 
 export interface AiSpendReservation {
@@ -405,6 +412,7 @@ export async function reserveAiSpend(
           ? "This workspace's AI budget for this month is used up. AI checks continue next month."
           : "This workspace's AI budget for today is used up. The rest of the AI check will run tomorrow.",
       v.scope,
+      v.scope === "workspace" && v.month === true,
     );
   }
 }

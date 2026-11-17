@@ -4,8 +4,13 @@ import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
 import { AppSidebar } from "@/components/app/sidebar";
 import { MobileTabBar } from "@/components/app/tab-bar";
-import { NotificationsBell, UsageMeter, UserMenu } from "@/components/app/topbar-widgets";
-import { Badge, Divider, ToastProvider } from "@/components/ui";
+import { HelpMenu, NotificationsBell, UsageMeter, UserMenu } from "@/components/app/topbar-widgets";
+import { Badge, Divider, LinkButton, ToastProvider } from "@/components/ui";
+import { MenuProvider } from "@/components/app/menu-context";
+import { HELP_GUIDE_HREF, UPGRADE_HREF } from "@/components/app/nav";
+import { menuInputFor } from "@/lib/dashboard/menu";
+import { offerName } from "@/lib/billing/offer";
+import { BRAND, WHATSAPP_HELP_MESSAGE, brandWhatsappHref } from "@/lib/brand";
 import { PlanBanner } from "@/components/app/plan-banner";
 import { VerifyEmailBanner } from "@/components/app/verify-email-banner";
 import { getPlanBannerData, pickBanner } from "@/lib/billing/banner";
@@ -18,13 +23,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await requireAppSession();
 
   const [org, projects, user] = await Promise.all([
-    db.organization.findUnique({ where: { id: session.organizationId }, select: { name: true, planId: true, status: true } }),
+    db.organization.findUnique({ where: { id: session.organizationId }, select: { name: true, planId: true, status: true, serviceTier: true } }),
     db.project.findMany({
       where: { organizationId: session.organizationId },
       select: { id: true, name: true, websiteUrl: true },
       orderBy: { createdAt: "desc" },
     }),
-    db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, emailVerified: true, timeZone: true } }),
+    db.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, emailVerified: true, timeZone: true, expertMode: true } }),
   ]);
   if (!org) redirect("/login");
   // ONE banner slot (brief rule 6), priority in pickBanner: blocked account → email not confirmed → payment due →
@@ -32,6 +37,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const banner = await getPlanBannerData(session.organizationId).catch(() => null);
   const plan = getPlan(org.planId);
   const trial = org.planId === "trial";
+  const canManageBilling = session.role === "owner" || session.role === "admin";
+  // What this account's menu shows: the offer (Do it myself has no website connections), which data partners are
+  // switched on, Expert mode and how many websites there are. Staff in support mode see everything.
+  const menu = menuInputFor({ org, expert: user?.expertMode === true, websiteCount: projects.length, staff: session.staffMode });
   const bannerKind = banner
     ? pickBanner({ access: banner.access, ai: banner.ai, emailVerified: user?.emailVerified ?? null, staffMode: session.staffMode })
     : !session.staffMode && user?.emailVerified === false
@@ -40,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <ToastProvider>
       <TimeZoneProvider timeZone={user?.timeZone}>
+      <MenuProvider value={menu}>
       <RunWatcher />
       <a
         href="#main"
@@ -54,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="ml-12 flex min-w-0 items-center gap-2 lg:ml-0">
               <span className="truncate text-small font-semibold text-fg">{org.name}</span>
               <Badge tone={trial ? "warning" : "primary"} size="sm" className="shrink-0">
-                {plan.name}
+                {org.serviceTier ? offerName(org) : plan.name}
               </Badge>
               {org.status !== "active" && (
                 <Badge tone="danger" size="sm" className="hidden shrink-0 capitalize sm:inline-flex">
@@ -63,8 +73,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               )}
             </div>
             <div className="ml-auto flex items-center gap-1 sm:gap-2">
+              {trial && canManageBilling && !session.staffMode && (
+                <LinkButton href={UPGRADE_HREF} size="xs" variant="outline" className="hidden shrink-0 sm:inline-flex">
+                  Upgrade
+                </LinkButton>
+              )}
               <UsageMeter />
               <Divider orientation="vertical" className="hidden md:inline-block" />
+              <HelpMenu whatsappHref={brandWhatsappHref(WHATSAPP_HELP_MESSAGE)} guideHref={HELP_GUIDE_HREF} supportEmail={BRAND.supportEmail} />
               <NotificationsBell />
               <UserMenu
                 name={user?.name ?? null}
@@ -100,7 +116,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 access={banner.access}
                 ai={banner.ai}
                 timeZone={user?.timeZone}
-                canManageBilling={session.role === "owner" || session.role === "admin"}
+                canManageBilling={canManageBilling}
+                upgradeHref={UPGRADE_HREF}
                 className="mb-6"
               />
             )}
@@ -109,6 +126,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <MobileTabBar />
+      </MenuProvider>
       </TimeZoneProvider>
     </ToastProvider>
   );

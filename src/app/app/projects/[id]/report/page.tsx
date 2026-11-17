@@ -14,6 +14,8 @@ import { ReportBody } from "@/components/app/report/report-body";
 import { ReportInProgress, ReportNoCrawl } from "@/components/app/report/report-progress";
 import { ShareReportButton } from "@/components/app/report/share-report";
 import { Notice, PageHeader, buttonClass } from "@/components/ui";
+import { aiCheckCopy, aiCheckInFlight, withLiveAiSentence } from "@/lib/visibility/run-state";
+import { aiCheckEmailsOn, getAiCheckState } from "@/lib/visibility/run-state-server";
 import { SearchPerformance } from "@/components/app/report/search-performance";
 
 export const metadata = { title: "Full report" };
@@ -27,7 +29,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const where = { organizationId: session.organizationId, projectId: project.id };
   const canRun = hasRole(session, "member");
 
-  const [latestCrawl, goodCrawls, latestVis, promptCount, expert] = await Promise.all([
+  const [latestCrawl, goodCrawls, latestVis, promptCount, expert, ai] = await Promise.all([
     db.crawlRun.findFirst({ where, orderBy: { createdAt: "desc" } }),
     db.crawlRun.findMany({
       where: { ...where, status: { in: DONE } },
@@ -38,11 +40,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     db.visibilityRun.findFirst({ where, orderBy: { createdAt: "desc" } }),
     db.trackedPrompt.count({ where: { ...where, active: true } }),
     getExpertMode(session),
+    getAiCheckState(project.id, session.organizationId),
   ]);
   const lastGoodCrawl = goodCrawls[0] ?? null;
   const previousCrawl = goodCrawls[1] ?? null;
   const crawlActive = !!latestCrawl && isActiveStatus(latestCrawl.status);
-  const visActive = !!latestVis && isActiveStatus(latestVis.status);
+  const visActive = aiCheckInFlight(ai) || (!!latestVis && isActiveStatus(latestVis.status));
+  // "Your AI check is running · 12 of 75 answers in" / "…will finish tomorrow" (AI limit reached).
+  const aiCopy = aiCheckCopy(ai, { willEmail: aiCheckEmailsOn(project.settings) });
 
   const header = (
     <PageHeader
@@ -59,7 +64,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         {latestCrawl && crawlActive ? (
           <ReportInProgress
             crawl={latestCrawl}
-            visibility={latestVis ? { status: latestVis.status, collected: latestVis.collected, sampleSize: latestVis.sampleSize } : null}
+            visibility={latestVis ? { status: latestVis.status, collected: latestVis.collected, sampleSize: latestVis.sampleSize, note: aiCopy?.short } : null}
             hasPrompts={promptCount > 0}
           />
         ) : (
@@ -93,7 +98,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const r = report;
+  // Never "We haven't asked AI assistants about you yet" while a check is running or waiting for tomorrow.
+  const r = aiCopy ? { ...report, executiveSummary: withLiveAiSentence(report.executiveSummary, aiCopy) } : report;
   const host = hostOf(r.websiteUrl);
   const running = crawlActive || visActive;
 
@@ -155,9 +161,13 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       />
 
       {running && (
-        <Notice tone="info" className="no-print" title={crawlActive ? "Checking your website again…" : "Asking AI tools about you…"}>
+        <Notice
+          tone={!crawlActive && ai.state === "waiting_tomorrow" ? "warning" : "info"}
+          className="no-print"
+          title={crawlActive ? "Checking your website again…" : (aiCopy?.title ?? "Asking AI tools about you…")}
+        >
           <span className="inline-flex flex-wrap items-center gap-2">
-            This report updates automatically when the new results are in.
+            {!crawlActive && aiCopy ? aiCopy.detail : "This report updates automatically when the new results are in."}
             <AutoRefresh active={running} intervalMs={3000} label="Checking for updates" />
           </span>
         </Notice>
@@ -175,6 +185,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         projectId={project.id}
         canRun={canRun}
         visibilityActive={visActive}
+        aiStatus={aiCopy}
         measuredWith={<MeasuredWith labels={r.aiVisibility.providers} />}
         expert={expert}
       />

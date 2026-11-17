@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Download, Search } from "lucide-react";
 import { Badge, Button, Field, Input, Notice, Table, TD, TH, THead, TR, type Tone } from "@/components/ui";
 import type { LinkCheckReport, LinkClass, LinkResult } from "@/lib/tools/link-check";
+import { WholeSiteCta } from "./whole-site-cta";
 
 const CLASS_INFO: Record<LinkClass, { label: string; tone: Tone; todo: string }> = {
   ok: { label: "OK", tone: "success", todo: "Nothing to do." },
@@ -262,6 +263,7 @@ export function BrokenLinkChecker() {
               )}
             </>
           )}
+          <WholeSiteCta />
         </div>
       )}
     </div>

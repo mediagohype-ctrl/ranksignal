@@ -86,5 +86,6 @@ export function pillarSummary(pillar: Pillar, score: number | null, checks: Chec
   const failing = measured.filter((c) => c.status === "fail").length;
   const tone = score >= 75 ? "Good" : score >= 50 ? "Needs work" : "Poor";
   const waiting = !aiMeasured && AI_PILLARS.includes(pillar) ? " Waiting for AI results — this score covers your website only." : "";
-  return `${tone}: ${passing} of ${measured.length} checks pass${failing ? `, ${failing} need${failing === 1 ? "s" : ""} fixing` : ""}.${waiting}`;
+  // "Poor: 0 of 7 pass. 3 matter most." (site audit, 15 Nov 2026): short, and the verb follows the count (1 matters / 3 matter).
+  return `${tone}: ${passing} of ${measured.length} pass.${failing ? ` ${failing} matter${failing === 1 ? "s" : ""} most.` : ""}${waiting}`;
 }

@@ -154,11 +154,19 @@ function toIso(v: unknown): string | null {
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+/** Names at least this long (letters + digits) also match with their spaces moved: "Go Hype Media" ≈ "gohypemedia". */
+const LOOSE_NAME_MIN = 6;
 export function brandRegex(name: string): RegExp | null {
   const n = name.trim();
   if (n.length < 2) return null;
   const pre = /^[\p{L}\p{N}]/u.test(n) ? "(?<![\\p{L}\\p{N}])" : "";
   const post = /[\p{L}\p{N}]$/u.test(n) ? "(?![\\p{L}\\p{N}])" : "";
+  const chars = Array.from(n).filter((c) => /[\p{L}\p{N}]/u.test(c));
+  // Long enough to be unmistakable: allow a space, hyphen, dot or "&" between any two characters, so the same
+  // name written "Go Hype Media", "GoHype Media", "go-hype-media" or "gohypemedia" all count. Short names stay exact.
+  if (chars.length >= LOOSE_NAME_MIN && chars.length <= 60) {
+    return new RegExp(`(?<![\\p{L}\\p{N}])${chars.map(escapeRe).join("[\\s\\-_.&'’]{0,3}")}(?![\\p{L}\\p{N}])`, "giu");
+  }
   return new RegExp(`${pre}${escapeRe(n)}${post}`, "giu");
 }
 /** Case-insensitive, whole-word brand occurrences across all names/aliases. */

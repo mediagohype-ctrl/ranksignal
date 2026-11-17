@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import type { WeakPage } from "@/lib/links/suggest";
+import { TEST_PAGE_NOTE, type WeakPage } from "@/lib/links/suggest";
 import { Badge, EmptyState } from "@/components/ui";
 
 const SHOW = 50;
@@ -26,17 +26,19 @@ export function WeakPagesList({ projectId, pages }: { projectId: string; pages: 
         {shown.map((p) => (
           <li key={p.url} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-fg">{p.label}</p>
+              {/* Address first: many pages can share one title, the address tells them apart. */}
               <a
                 href={p.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex max-w-full items-center gap-1 text-xs text-muted hover:text-fg hover:underline"
+                className="inline-flex max-w-full items-center gap-1 font-medium text-fg hover:underline"
               >
                 <span className="truncate">{pathOf(p.url)}</span>
-                <ExternalLink size={11} aria-hidden className="shrink-0" />
+                <ExternalLink size={11} aria-hidden className="shrink-0 text-muted" />
                 <span className="sr-only">(opens in new tab)</span>
               </a>
+              <p className="truncate text-xs text-muted">{p.label}</p>
+              {p.testPage && <p className="mt-0.5 text-xs font-medium text-warning">{TEST_PAGE_NOTE}</p>}
             </div>
             <Badge tone={p.strength === "orphan" ? "danger" : "warning"}>
               {p.strength === "orphan" ? "No links in" : "1 link in"}

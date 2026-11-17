@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { handler, HttpError, json, parseBody, requireProject, requireSession } from "@/lib/api";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
+import { keepAnswersOfDeletedProject } from "@/lib/billing/allowance";
 import { writeAuditLog } from "@/lib/audit-log";
 import {
   SettingsPatchError, mergeSettingsPatch, patchNeedsAdmin, projectPatchSchema, readSchedule, readSettings,
@@ -78,6 +79,11 @@ export const DELETE = handler(async (_req: Request, { params }: Ctx) => {
   const s = await requireSession("admin");
   const { id } = await params;
   const project = await requireProject(s, id);
+  // Deleting (or replacing) a website must not give this month's AI answers back: make sure every answer it
+  // collected is in the account's usage ledger before its rows are removed (src/lib/billing/allowance.ts).
+  await keepAnswersOfDeletedProject(s.organizationId, project.id).catch((e) =>
+    console.warn("[projects] could not carry AI answers over before delete", (e as Error)?.name),
+  );
   await db.project.delete({ where: { id: project.id } });
   await writeAuditLog({
     organizationId: s.organizationId,

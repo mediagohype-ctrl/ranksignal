@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { SAMPLE_FIXES, SAMPLE_SCORE } from "@/components/marketing/home-sample";
 import { SampleScoreCard } from "@/components/marketing/showcase/sample-score";
-import { TRIAL_DAYS, gstOn, inr, newTabProps } from "@/components/marketing/plans";
-import { HOME_FAQ, HI_OFFER } from "@/components/marketing/hi/content";
+import { SELF_PLAN, TRIAL_DAYS, freq, gstOn, inr, newTabProps } from "@/components/marketing/plans";
+import { HOME_FAQ, HI_DFY, HI_OFFER } from "@/components/marketing/hi/content";
 import { HiCheckLauncher, HiFaqSection } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
 import { staticPageMetadata } from "@/lib/seo/metadata";
@@ -23,10 +23,18 @@ const TERMS = [
   { term: "GEO", name: "जनरेटिव AI", line: "क्या ChatGPT, Gemini जैसे AI आपका नाम लेते हैं और आपकी साइट का लिंक देते हैं?" },
 ];
 
+/** "हर हफ़्ते" / "हर दिन" / "हर महीने", from the plan's real limit (same source as the English page). */
+const HI_EVERY: Record<string, string> = { Daily: "हर दिन", Weekly: "हर हफ़्ते", Monthly: "हर महीने" };
+const HI_CHECK_EVERY = HI_EVERY[freq(SELF_PLAN.limits.minScanIntervalDays)] ?? "हर महीने";
+
 const STEPS = [
   { title: "चेक करें", body: "अपनी वेबसाइट का पता डालें। हम उसे पढ़ते हैं और ChatGPT, Gemini जैसे AI से वही सवाल पूछते हैं जो आपके ग्राहक पूछते हैं।" },
   { title: "सुधारें", body: "आपको काम की एक छोटी लिस्ट मिलती है, सबसे ज़रूरी काम सबसे ऊपर। हर सुधार आसान शब्दों में बताता है कि क्या बदलना है।" },
-  { title: "आगे बढ़ें", body: "जो सुधार चाहिए उन्हें मंज़ूरी दें। हम हर महीने फिर से चेक करते हैं, ताकि आप देख सकें कि क्या बदला।" },
+  // Same promise as the English page: the owner makes the fixes (or our team does on Do it for me); checks are weekly.
+  {
+    title: "आगे बढ़ें",
+    body: `सुधार आप हमारे बताए कदमों से ख़ुद करते हैं, या “${HI_DFY.name}” में हमारी टीम कर देती है। हम ${HI_CHECK_EVERY} चेक करते हैं, ताकि आपको हमेशा पता रहे कि आप कहाँ खड़े हैं।`,
+  },
 ];
 
 // Sample result (same business, score and points as the English sample in home-sample.tsx), in Hindi.
@@ -57,14 +65,17 @@ export default function HindiHomePage() {
             <h1 id="hi-hero-title" className="mk-label mk-rise text-primary">
               फ्री SEO, AEO और GEO वेबसाइट चेकर
             </h1>
+            {/* The tagline stays (team decision, 15 Nov 2026); the question sits right under it as the H2. */}
             <p className="mk-hero mk-rise mt-5 text-fg">
               चेक करें। सुधारें। <span className="text-primary">आगे बढ़ें।</span>
             </p>
-            <p className="mk-lead mk-rise mk-delay-1 mx-auto mt-8 max-w-[36rem] text-fg-soft">
-              देखिए कि Google और ChatGPT जैसे AI असिस्टेंट आपके बिज़नेस को कैसे देखते हैं। सबसे ज़रूरी सुधार आसान भाषा में पाइए,
-              ताकि ग्राहक आपको आसानी से ढूँढ सकें।
+            <h2 className="mk-title mk-rise mk-delay-1 mx-auto mt-6 max-w-[24ch] text-balance text-fg sm:mt-8">
+              क्या ग्राहक आपको Google और ChatGPT पर ढूँढ पा रहे हैं?
+            </h2>
+            <p className="mk-lead mk-rise mk-delay-1 mx-auto mt-4 max-w-[36rem] text-fg-soft">
+              फ्री SEO और AI चेकर। 30 सेकंड में देखिए कि Google और ChatGPT आपके बिज़नेस को कैसे देखते हैं।
             </p>
-            <HiCheckLauncher id="hi-hero-url" className="mk-rise mk-delay-2 mx-auto mt-9 max-w-[36rem] text-left" />
+            <HiCheckLauncher id="hi-hero-url" className="mk-rise mk-delay-2 mx-auto mt-7 max-w-[36rem] text-left" />
           </div>
         </div>
       </section>
@@ -174,6 +185,8 @@ export default function HindiHomePage() {
                     <span className={clsx("text-[2.25rem] font-semibold leading-none tracking-[-0.03em] tabular-nums", ink ? "text-bg" : "text-fg")}>
                       {c.price === null ? c.priceLabel : inr(c.price)}
                     </span>
+                    {/* A real space, so the price reads "₹19,999 + GST" (not "₹19,999+ GST") when copied or read aloud. */}
+                    {c.price !== null && " "}
                     {c.price !== null && (
                       <span className={clsx("text-small", ink ? "text-bg/75" : "text-muted")}>{gstOn() ? "+ GST / महीना" : "/ महीना"}</span>
                     )}

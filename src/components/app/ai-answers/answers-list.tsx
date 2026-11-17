@@ -3,12 +3,13 @@
 // AI tool's full answer, Pause per question and an "Add question" box — all on one screen.
 import { useState } from "react";
 import clsx from "clsx";
-import { Check, ChevronDown, ChevronRight, ExternalLink, Plus, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, ExternalLink, Plus, X } from "lucide-react";
 import { questionHref } from "@/components/app/nav";
 import type { QuestionView } from "@/lib/dashboard/ai-answers";
 import { engineName } from "@/components/app/providers-status";
 import { usePromptActions } from "@/components/app/prompts-manager";
-import { Badge, Button, Card, Input, LinkButton } from "@/components/ui";
+import { Badge, Button, Card, Input } from "@/components/ui";
+import Link from "next/link";
 import { AnswerText } from "./answer-text";
 
 export interface PromptState {
@@ -36,7 +37,7 @@ function Answer({ a, brandNames }: { a: QuestionView["answers"][number]; brandNa
   return (
     <div className="space-y-2 rounded-xl border border-border bg-surface p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-small font-semibold text-fg">{engineName(a.platformLabel || a.provider)}</span>
+        <Badge tone="primary" size="sm">{engineName(a.platformLabel || a.provider)}</Badge>
         {a.brandMentioned ? (
           <Badge tone="success" size="sm">Named you</Badge>
         ) : (
@@ -77,7 +78,10 @@ export function AnswersList({
   canEdit,
   brandNames = [],
   runId,
+  checkRunning = false,
 }: {
+  /** An AI check is running or waiting for tomorrow: questions without answers are "being asked", not "not asked yet". */
+  checkRunning?: boolean;
   projectId: string;
   questions: QuestionView[];
   /** The business's own names, highlighted inside answers. */
@@ -111,13 +115,7 @@ export function AnswersList({
             <li key={q.promptId} className={clsx(paused && "opacity-70")}>
               <div className="flex items-start gap-3 px-4 py-3 sm:px-6">
                 <Mark named={q.named} />
-                <button
-                  type="button"
-                  onClick={() => setOpen(isOpen ? null : q.promptId)}
-                  aria-expanded={isOpen}
-                  aria-controls={`q-${q.promptId}`}
-                  className="focus-ring min-w-0 flex-1 rounded text-left"
-                >
+                <div className="min-w-0 flex-1">
                   <span className="block text-small font-medium text-fg">{q.text}</span>
                   {!q.named && q.recommendedInstead.length > 0 && (
                     <span className="mt-0.5 block text-xs text-muted">Recommended instead: {q.recommendedInstead.join(", ")}</span>
@@ -127,22 +125,29 @@ export function AnswersList({
                       Named you in {q.namedCount} of {q.answers.length} answers
                     </span>
                   )}
-                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                    {isOpen ? "Hide answers" : "Read answers"}
-                    <ChevronDown aria-hidden size={14} className={clsx("transition-transform", isOpen && "rotate-180")} />
+                  {/* Which AI tool said what, on every question: the tool's name with a tick or a cross. */}
+                  <span className="mt-1.5 flex flex-wrap gap-1.5">
+                    {q.answers.map((a) => (
+                      <Badge key={a.id} size="sm" tone={a.brandMentioned ? "success" : "neutral"} icon={a.brandMentioned ? <Check /> : <X />}>
+                        {engineName(a.platformLabel || a.provider)}
+                        <span className="sr-only">{a.brandMentioned ? " named you" : " didn't name you"}</span>
+                      </Badge>
+                    ))}
                   </span>
-                </button>
-                <LinkButton
-                  href={questionHref(projectId, q.promptId, runId)}
+                </div>
+                {/* One button (was "Read answers" + "See details"): it opens the answers right here. */}
+                <Button
                   variant="secondary"
                   size="sm"
-                  iconRight={<ChevronRight />}
-                  aria-label={`See details: ${q.text}`}
+                  onClick={() => setOpen(isOpen ? null : q.promptId)}
+                  aria-expanded={isOpen}
+                  aria-controls={`q-${q.promptId}`}
+                  aria-label={`${isOpen ? "Hide what AI said" : "See what AI said"}: ${q.text}`}
+                  iconRight={<ChevronDown className={clsx("transition-transform", isOpen && "rotate-180")} />}
                   className="shrink-0"
                 >
-                  <span className="hidden sm:inline">See details</span>
-                  <span className="sm:hidden">Details</span>
-                </LinkButton>
+                  {isOpen ? "Hide" : "See what AI said"}
+                </Button>
                 {canEdit && p && (
                   <Button
                     variant="ghost"
@@ -160,6 +165,12 @@ export function AnswersList({
                   {q.answers.map((a) => (
                     <Answer key={a.id} a={a} brandNames={brandNames} />
                   ))}
+                  <Link
+                    href={questionHref(projectId, q.promptId, runId)}
+                    className="focus-ring inline-flex items-center gap-1 rounded text-small font-medium text-primary hover:underline"
+                  >
+                    How to get named for this question <ArrowRight aria-hidden size={14} />
+                  </Link>
                 </div>
               )}
             </li>
@@ -172,7 +183,9 @@ export function AnswersList({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-small font-medium text-fg">{p.text}</span>
-              <span className="block text-xs text-muted">Not asked yet. We&apos;ll ask it in the next AI check.</span>
+              <span className="block text-xs text-muted">
+                {checkRunning ? "Your AI check is asking this now. The answers appear here when they're in." : "Not asked yet. We'll ask it in the next AI check."}
+              </span>
             </span>
             {canEdit && (
               <Button variant="ghost" size="sm" loading={busyId === p.id} onClick={() => setActive(p.id, false)} aria-label={`Pause question: ${p.text}`}>

@@ -1,10 +1,13 @@
-// GET /badge/<share token>.svg — public "AI-ready score 82" badge linking back to the shared report.
-// Same access rule as /r/[token]: signed share token + the project's current share settings (enabled, same tokenId).
+// GET /badge/<badge token>.svg — public "Found Score 82" badge.
+// GET /badge/<badge token>     — where a click on the badge goes: the shared report while sharing is on, else our
+//                                home page (the link pasted on a website must never dead-end).
+// Access: signed token + the project's badge switch (Project.settings.badge — its own on/off, independent of the
+// report share link; older badges without that switch follow the share link as before). See isBadgeActive.
 // The score is the stored overall score (getStoredReport — never an LLM call). Cached for an hour at the edge.
 import { db } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
 import { checkRateLimit, clientIp } from "@/lib/auth/rate-limit";
-import { isShareActive, verifyShareToken } from "@/lib/share/token";
+import { isBadgeActive, isShareActive, readShareSettings, shareUrl, signShareToken, verifyShareToken } from "@/lib/share/token";
 import { getStoredReport } from "@/lib/report/stored";
 import { renderBadgeSvg } from "@/lib/growth/badge";
 
@@ -29,17 +32,36 @@ function svgResponse(svg: string, status = 200, maxAge = 3600) {
   });
 }
 
+async function badgeProject(token: string) {
+  const claims = await verifyShareToken(token).catch(() => null);
+  if (!claims) return null;
+  const project = await db.project.findUnique({ where: { id: claims.projectId }, select: { id: true, organizationId: true, settings: true } });
+  if (!project || !isBadgeActive(project.settings, claims)) return null;
+  return { project, claims };
+}
+
+/** Where a click on the badge goes: the live shared report, else the home page. */
+async function clickTarget(project: { id: string; settings: unknown }, token: string, claims: { projectId: string; tokenId: string }): Promise<string> {
+  const share = readShareSettings(project.settings);
+  if (!share?.enabled) return BRAND.appUrl;
+  if (isShareActive(project.settings, claims)) return shareUrl(share.slug ?? token);
+  return shareUrl(share.slug ?? (await signShareToken({ projectId: project.id, tokenId: share.tokenId })));
+}
+
 export async function GET(req: Request, { params }: Ctx) {
   const { file } = await params;
   const home = BRAND.appUrl;
-  const notFound = () => svgResponse(renderBadgeSvg({ score: null, label: "AI-ready score", link: home }), 404);
-  if (!file.endsWith(".svg")) return notFound();
+  const isSvg = file.endsWith(".svg");
+  const notFound = () =>
+    isSvg ? svgResponse(renderBadgeSvg({ score: null, link: home }), 404) : Response.redirect(home, 302);
   if (!checkRateLimit(`badge:${clientIp(req)}`, 120, 60_000).allowed) return notFound();
-  const token = decodeURIComponent(file.slice(0, -4));
-  const claims = await verifyShareToken(token).catch(() => null);
-  if (!claims) return notFound();
-  const project = await db.project.findUnique({ where: { id: claims.projectId }, select: { id: true, organizationId: true, settings: true } });
-  if (!project || !isShareActive(project.settings, claims)) return notFound();
+  const token = decodeURIComponent(isSvg ? file.slice(0, -4) : file);
+  const found = await badgeProject(token);
+  if (!found) return notFound();
+  const { project, claims } = found;
+  const link = new URL(`/badge/${encodeURIComponent(token)}`, home).toString();
+
+  if (!isSvg) return Response.redirect(await clickTarget(project, token, claims), 302);
 
   const key = `${project.id}|${claims.tokenId}`;
   let score: number | null;
@@ -51,6 +73,5 @@ export async function GET(req: Request, { params }: Ctx) {
     if (cache.size >= 500) cache.delete(cache.keys().next().value as string);
     cache.set(key, { at: Date.now(), score });
   }
-  const link = new URL(`/r/${encodeURIComponent(token)}`, home).toString();
   return svgResponse(renderBadgeSvg({ score, link }));
 }

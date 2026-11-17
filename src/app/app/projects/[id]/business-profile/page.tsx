@@ -30,13 +30,13 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
         <EmptyState
           bordered
           picture="search"
-          title="Business Profile monitoring isn't switched on yet."
-          description="The site owner needs to add a Google Places API key (GOOGLE_PLACES_API_KEY) on the server. Nothing else is needed from you."
+          title="This isn't switched on yet."
+          description="We'll tell you when it is. Nothing is needed from you."
         />
       ) : (
         <>
           {!view.configured && (
-            <Notice tone="warning">Monitoring is paused on this server (no Google Places API key), so the details below may be out of date.</Notice>
+            <Notice tone="warning">Updates are paused for now, so the details below may be out of date. We&apos;ll tell you when they restart.</Notice>
           )}
           <BusinessProfileMonitor
             projectId={project.id}
@@ -48,9 +48,9 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
         </>
       )}
       <Notice tone="neutral" title="What this can and can't do">
-        We read the public Google Maps view of your listing (Google Places API), so we can watch your rating, review count, the newest few
-        reviews and missing details. Replying to reviews, seeing every review, and Google&apos;s own views/calls statistics need the official
-        Business Profile API, which requires Google&apos;s approval — that&apos;s planned for later. We never change your listing.
+        We read the public Google Maps view of your listing, so we can watch your rating, review count, the newest few
+        reviews and missing details. Replying to reviews, seeing every review, and Google&apos;s own views/calls statistics need Google&apos;s official
+        Business Profile connection, which requires Google&apos;s approval — that&apos;s planned for later. We never change your listing.
       </Notice>
     </div>
   );

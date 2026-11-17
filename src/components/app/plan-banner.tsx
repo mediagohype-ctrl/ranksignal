@@ -8,6 +8,7 @@ import type { BannerKind } from "@/lib/billing/banner";
 import { trialDaysLeft } from "@/lib/billing/banner";
 import { LinkButton, Notice } from "@/components/ui";
 import { BuyAnswersButton } from "@/components/app/billing/topup-dialog";
+import { UPGRADE_HREF } from "@/lib/billing/links";
 
 type DateLike = Date | string | null | undefined;
 
@@ -31,7 +32,7 @@ export interface PlanBannerProps {
   kind: Exclude<BannerKind, "verify_email">;
   access: PlanBannerAccess;
   ai?: PlanBannerAi | null;
-  /** Billing page link. */
+  /** Where the plan buttons go: the Billing tab, scrolled to the plan cards (Do it myself, Do it for me, Custom). */
   upgradeHref?: string;
   /** Hide upgrade buttons for members who can't change the plan. */
   canManageBilling?: boolean;
@@ -47,7 +48,7 @@ function toDate(d: DateLike): Date | null {
   return Number.isNaN(v.getTime()) ? null : v;
 }
 
-export function PlanBanner({ kind, access, ai, upgradeHref = "/app/settings?tab=billing", canManageBilling = true, className, now = new Date(), timeZone }: PlanBannerProps) {
+export function PlanBanner({ kind, access, ai, upgradeHref = UPGRADE_HREF, canManageBilling = true, className, now = new Date(), timeZone }: PlanBannerProps) {
   const day = (d: Date) => fmtDate(d, { timeZone });
   const upgrade = (label = "See plans") =>
     canManageBilling ? (
@@ -102,14 +103,14 @@ export function PlanBanner({ kind, access, ai, upgradeHref = "/app/settings?tab=
         actions={
           canManageBilling ? (
             <>
-              {upgrade("Upgrade")}
+              {upgrade("See plans")}
               <BuyAnswersButton />
             </>
           ) : null
         }
       >
         {reset
-          ? `You've used all ${ai.cap.toLocaleString("en-IN")} AI answers this month. They reset on ${day(reset)}. Upgrade, or buy extra answers once (not autopay), if you need more before then.`
+          ? `You've used all ${ai.cap.toLocaleString("en-IN")} AI answers this month. They reset on ${day(reset)}. Need more before then? Buy extra AI checks once (not autopay), or see the plans where our team does the work for you.`
           : `You've used the ${ai.cap.toLocaleString("en-IN")} AI answers in your free trial. Choose a plan, or buy extra answers, to keep checking what AI says about you.`}{" "}
         {askAdmin}
       </Notice>

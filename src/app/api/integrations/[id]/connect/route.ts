@@ -15,6 +15,7 @@ import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { publicIntegration } from "@/lib/connectors/serialize";
 import { ConnectorConfigError } from "@/lib/connectors/catalog/types";
 import { CONNECTOR_DESCRIPTORS } from "@/lib/connectors/catalog";
+import { assertCanConnectWebsite } from "@/lib/connectors/offer-guard";
 
 // All credential-based connectors (src/lib/connectors/catalog/index.ts).
 const DESCRIPTORS = CONNECTOR_DESCRIPTORS;
@@ -37,6 +38,8 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
   const s = await requireSession("admin");
   const descriptor = DESCRIPTORS[provider];
   if (!descriptor) throw new HttpError(404, "unknown_provider", `No connector named "${provider}" is available`);
+  // Do it myself has no website connections (owner decision 1): refuse before anything is validated or stored.
+  await assertCanConnectWebsite(s.organizationId);
 
   const rl = checkRateLimit(`integration-connect:${s.organizationId}`, 10, 10 * 60_000);
   if (!rl.allowed) throw new HttpError(429, "rate_limited", `Too many connection attempts. Try again in ${rl.retryAfterSec}s.`);

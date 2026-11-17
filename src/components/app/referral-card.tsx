@@ -3,6 +3,7 @@
 // Drop into Settings → Billing (or anywhere): <ReferralCard />
 import { useEffect, useState } from "react";
 import { Copy, Gift } from "lucide-react";
+import { REFERRAL_TERMS, REFERRAL_TITLE } from "@/lib/growth/referral-copy";
 import { Button, Card, CardBody, CardHeader, Notice, Spinner, useToast } from "@/components/ui";
 
 interface ReferralState {
@@ -15,7 +16,8 @@ interface ReferralState {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-export function ReferralCard() {
+/** `compact`: the small one-row version for Home (the full card lives in Project settings). */
+export function ReferralCard({ compact = false }: { compact?: boolean } = {}) {
   const toast = useToast();
   const [state, setState] = useState<ReferralState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +46,33 @@ export function ReferralCard() {
     ? `https://wa.me/?text=${encodeURIComponent(`I use this to see what Google and ChatGPT say about my business. Try it free: ${state.link}`)}`
     : "#";
 
+  if (compact) {
+    // Home: stay out of the way — nothing while loading or if the link can't be loaded.
+    if (!state) return null;
+    return (
+      <Card variant="subtle" padding="md" as="aside" aria-label={REFERRAL_TITLE}>
+        <div className="flex flex-wrap items-center gap-3">
+          <Gift aria-hidden size={20} className="shrink-0 text-primary" />
+          <div className="min-w-0 flex-1 basis-56">
+            <p className="text-small font-medium text-fg">{REFERRAL_TITLE}</p>
+            <p className="text-xs text-muted">{REFERRAL_TERMS}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button size="sm" variant="secondary" icon={<Copy />} onClick={copy}>
+              Copy invite link
+            </Button>
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="text-small font-medium text-primary hover:underline">
+              Share on WhatsApp<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card>
-      <CardHeader icon={<Gift />} title="Invite a business, get a free month" description="For each business that joins with your link and starts paying, you get one month free." />
+      <CardHeader icon={<Gift />} title={REFERRAL_TITLE} description={REFERRAL_TERMS} />
       <CardBody>
         {!state && !error && <Spinner label="Loading…" />}
         {error && <Notice tone="danger">{error}</Notice>}

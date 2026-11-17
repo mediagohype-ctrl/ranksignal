@@ -95,6 +95,83 @@ export function sizeRunToAllowance(left: number, questions: number, engines: num
   return q >= 1 ? { questions: q, engines } : { questions: 1, engines: Math.min(engines, l) };
 }
 
+/** What the next AI check of a website will really ask and use — shown in the "Check AI" confirmation. */
+export interface AiCheckEstimate {
+  /** AI answers this check will use (questions × AI tools, fitted into the answers left). 0 = free sample answers. */
+  answers: number;
+  questions: number;
+  engines: number;
+  /** AI answers left right now (plan + extra). */
+  left: number;
+  /** What a full check would ask / use if enough answers were left. */
+  fullQuestions: number;
+  fullAnswers: number;
+  /** True when fewer answers are left than a full check needs, so fewer questions will be asked. */
+  partial: boolean;
+  /** False on the free trial (its answers don't reset monthly). */
+  monthly: boolean;
+}
+
+/** Pure: size the next check exactly like the visibility job does (sizeRunToAllowance). */
+export function estimateAiCheck(o: { left: number; activeQuestions: number; questionsPerCheck: number; engines: number; monthly?: boolean }): AiCheckEstimate {
+  const left = Math.max(0, Math.floor(o.left));
+  const fullQuestions = Math.max(0, Math.min(o.activeQuestions, o.questionsPerCheck));
+  const engines = Math.max(0, o.engines);
+  const fit = sizeRunToAllowance(left, fullQuestions, engines);
+  return {
+    answers: fit.questions * fit.engines,
+    questions: fit.questions,
+    engines: fit.engines,
+    left,
+    fullQuestions,
+    fullAnswers: fullQuestions * engines,
+    partial: fit.questions * fit.engines < fullQuestions * engines,
+    monthly: o.monthly !== false,
+  };
+}
+
+const num = (x: number) => x.toLocaleString("en-IN");
+const many = (x: number, one: string) => `${num(x)} ${x === 1 ? one : `${one}s`}`;
+
+/**
+ * The sentence shown before an AI check starts, with the real numbers:
+ * "This uses 75 of your 225 AI answers left this month. Continue?" Null when the check is free (sample answers)
+ * or can't start (the button is already disabled then). Pure.
+ */
+export function aiCheckConfirmText(e: AiCheckEstimate): string | null {
+  if (e.answers <= 0) return null;
+  const when = e.monthly ? " this month" : " in your free trial";
+  const uses = `This uses ${num(e.answers)} of your ${many(e.left, "AI answer")} left${when}.`;
+  if (!e.partial) return `${uses} Continue?`;
+  return (
+    `You have ${many(e.left, "AI answer")} left${when} — not enough for a full check (${num(e.fullAnswers)}). ` +
+    `We'll ask ${num(e.questions)} of your ${many(e.fullQuestions, "question")} on ${many(e.engines, "AI tool")}. ${uses} Continue?`
+  );
+}
+
+/** Estimate for one website: its active questions, the plan's questions per check and the AI tools a check will ask. */
+export async function getAiCheckEstimate(orgId: string, projectId: string, now = new Date()): Promise<AiCheckEstimate> {
+  const [allowance, activeQuestions, limit] = await Promise.all([
+    getVisibilityRunAllowance(orgId, now),
+    db.trackedPrompt.count({ where: { organizationId: orgId, projectId, active: true } }),
+    getOrgEngineLimit(orgId),
+  ]);
+  let engines = limit;
+  try {
+    const { getConfiguredRealProviders } = await import("@/lib/providers/visibility/registry");
+    engines = Math.min(limit, (await getConfiguredRealProviders()).length); // 0 = only sample answers, which are free
+  } catch {
+    // Registry unavailable: assume every AI tool the plan includes.
+  }
+  return estimateAiCheck({
+    left: allowance.remaining,
+    activeQuestions,
+    questionsPerCheck: allowance.maxPromptsPerRun,
+    engines,
+    monthly: allowance.resetsAt !== null,
+  });
+}
+
 /**
  * Seconds until a new crawl may start for this project (0 = allowed). One crawl per CRAWL_MIN_INTERVAL_MS;
  * crawls that failed without reading any page don't count (so a fixed URL can be retried at once).

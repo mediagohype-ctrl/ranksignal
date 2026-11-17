@@ -2,12 +2,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Info, ListChecks, Pencil, Plus, Search, Sparkles } from "lucide-react";
+import { ListChecks, Pencil, Plus, Search, Sparkles, Star } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
-import {
-  Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, Select, Table, TD, TH, THead, TR, Tooltip, fieldDescribedBy,
-  useToast,
-} from "@/components/ui";
+import { isNearDuplicate } from "@/lib/prompts/dedupe";
+import { PRIORITY_IMPORTANT, PRIORITY_NORMAL, QUESTION_ORDER_LINE, questionCapWarning, questionsAskedNext } from "@/lib/prompts/limits";
+import { Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, Notice, Select, Spinner, fieldDescribedBy, useToast } from "@/components/ui";
 
 const INTENTS = ["informational", "commercial", "comparison", "navigational", "transactional"] as const;
 
@@ -15,8 +14,8 @@ const INTENTS = ["informational", "commercial", "comparison", "navigational", "t
 const INTENT_HELP: Record<string, string> = {
   informational: "Learning: “how do I…”, “what is…”",
   commercial: "Shopping around: “best … for …”",
-  comparison: "Weighing options: “X vs Y”, “alternatives to X”",
-  navigational: "Looking for you: “<your brand> pricing”",
+  comparison: "Weighing options: “which is better for …”",
+  navigational: "Looking for one business by name",
   transactional: "Ready to buy: “buy …”, “book …”",
 };
 
@@ -25,12 +24,10 @@ const INTENT_LABEL: Record<string, string> = {
   informational: "Learning",
   commercial: "Shopping around",
   comparison: "Comparing",
-  navigational: "Looking for you",
+  navigational: "Looking for a business",
   transactional: "Ready to buy",
 };
 const intentLabel = (i: string) => INTENT_LABEL[i] ?? i;
-
-const PRIORITY_LABEL: Record<number, string> = { 1: "High", 2: "Normal", 3: "Low" };
 
 export interface PromptRow {
   id: string;
@@ -41,6 +38,8 @@ export interface PromptRow {
   priority: number;
   active: boolean;
   promptSetVersion: number;
+  /** ISO date; within the same importance, older questions are asked first. */
+  createdAt?: string;
 }
 
 interface Candidate {
@@ -49,21 +48,6 @@ interface Candidate {
   topic: string | null;
   locale: string;
   source?: string;
-}
-
-function HelpTH({ children, help }: { children: string; help: string }) {
-  return (
-    <TH>
-      <span className="inline-flex items-center gap-1">
-        {children}
-        <Tooltip content={help}>
-          <button type="button" aria-label={`What is “${children}”?`} className="focus-ring rounded text-muted hover:text-fg">
-            <Info aria-hidden size={13} />
-          </button>
-        </Tooltip>
-      </span>
-    </TH>
-  );
 }
 
 const chipCls = (on: boolean) =>
@@ -121,42 +105,61 @@ export function usePromptActions(projectId: string) {
   return { add, adding, setActive, busyId };
 }
 
-export function PromptsManager({ projectId, prompts, canEdit }: { projectId: string; prompts: PromptRow[]; canEdit: boolean }) {
+export function PromptsManager({
+  projectId,
+  prompts,
+  canEdit,
+  perCheck = 0,
+}: {
+  projectId: string;
+  prompts: PromptRow[];
+  canEdit: boolean;
+  /** Questions one AI check asks on this plan (questionsPerCheck). 0 = unknown, no warning shown. */
+  perCheck?: number;
+}) {
   const router = useRouter();
   const toast = useToast();
-  const [showInactive, setShowInactive] = useState(false);
   const [q, setQ] = useState("");
   const [intent, setIntent] = useState<string>("all");
   const [editing, setEditing] = useState<PromptRow | "new" | null>(null);
-  const [form, setForm] = useState({ text: "", intent: "informational", topic: "", priority: 2 });
+  const [form, setForm] = useState({ text: "", intent: "informational", topic: "", priority: PRIORITY_NORMAL });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Suggestions open in a pop-up: nothing is ticked until the owner ticks it.
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+  const [room, setRoom] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [savingSuggestions, setSavingSuggestions] = useState(false);
+  const [starBusy, setStarBusy] = useState<string | null>(null);
 
-  const visible = useMemo(() => prompts.filter((p) => showInactive || p.active), [prompts, showInactive]);
   const intentCounts = useMemo(() => {
     const c: Record<string, number> = {};
-    for (const p of visible) c[p.intent] = (c[p.intent] ?? 0) + 1;
+    for (const p of prompts) c[p.intent] = (c[p.intent] ?? 0) + 1;
     return c;
-  }, [visible]);
+  }, [prompts]);
   const needle = q.trim().toLowerCase();
-  const shown = visible.filter(
-    (p) =>
-      (intent === "all" || p.intent === intent) &&
-      (!needle || p.text.toLowerCase().includes(needle) || (p.topic ?? "").toLowerCase().includes(needle)),
-  );
+  // Paused questions stay in the list (greyed out, at the bottom) so they can be switched back on.
+  const shown = prompts
+    .filter(
+      (p) =>
+        (intent === "all" || p.intent === intent) &&
+        (!needle || p.text.toLowerCase().includes(needle) || (p.topic ?? "").toLowerCase().includes(needle)),
+    )
+    .sort((a, b) => Number(b.active) - Number(a.active));
   const activeCount = prompts.filter((p) => p.active).length;
+  const pausedCount = prompts.length - activeCount;
+  const asked = useMemo(() => new Set(questionsAskedNext(prompts, perCheck > 0 ? perCheck : prompts.length)), [prompts, perCheck]);
+  const capWarning = questionCapWarning(activeCount, perCheck);
 
   function openEditor(p: PromptRow | "new") {
     setEditing(p);
     setFormError(null);
     setForm(
       p === "new"
-        ? { text: "", intent: "informational", topic: "", priority: 2 }
+        ? { text: "", intent: "informational", topic: "", priority: PRIORITY_NORMAL }
         : { text: p.text, intent: p.intent, topic: p.topic ?? "", priority: p.priority },
     );
   }
@@ -172,7 +175,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
     try {
       if (editing === "new") {
         await api(`/api/projects/${projectId}/prompts`, { body: { prompts: [body] } });
-        toast("Question added.", "success");
+        toast("Question added. It will be asked in the next AI check.", "success");
       } else if (editing) {
         const r = await api<{ discontinuity?: boolean }>(`/api/projects/${projectId}/prompts/${editing.id}`, { method: "PATCH", body });
         toast(
@@ -195,16 +198,37 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
   const setActive = (p: PromptRow, active: boolean) => promptActions.setActive(p.id, active);
   const busyId = promptActions.busyId;
 
+  /** "Important" is the stored priority 1: important questions are asked first in every AI check. */
+  async function toggleImportant(p: PromptRow) {
+    const important = p.priority !== PRIORITY_IMPORTANT;
+    setStarBusy(p.id);
+    try {
+      await api(`/api/projects/${projectId}/prompts/${p.id}`, { method: "PATCH", body: { priority: important ? PRIORITY_IMPORTANT : PRIORITY_NORMAL } });
+      toast(important ? "Marked as important. It will be asked first in every AI check." : "No longer marked as important.", "success");
+      router.refresh();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setStarBusy(null);
+    }
+  }
+
   async function generate() {
+    setSuggestOpen(true);
+    setCandidates(null);
+    setSelected(new Set());
     setGenerating(true);
     try {
-      const r = await api<{ items: Candidate[]; source?: string }>(`/api/projects/${projectId}/prompts`, {
+      const r = await api<{ items: Candidate[]; room?: number }>(`/api/projects/${projectId}/prompts`, {
         body: { generate: true, save: false, max: 25 },
       });
-      setCandidates(r.items);
-      setSelected(new Set(r.items.map((_, i) => i)));
-      if (r.items.length === 0) toast("No new suggestions. You already have questions like these — add your own instead.", "info");
+      const have = prompts.map((p) => p.text);
+      // The server already removes look-alikes; this also covers questions added since the page loaded.
+      const items = r.items.filter((c) => !have.some((t) => isNearDuplicate(t, c.text)));
+      setRoom(typeof r.room === "number" ? r.room : null);
+      setCandidates(typeof r.room === "number" ? items.slice(0, r.room) : items);
     } catch (e) {
+      setSuggestOpen(false);
       toast(errorMessage(e), "error");
     } finally {
       setGenerating(false);
@@ -221,9 +245,10 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
         body: { prompts: chosen.map((c) => ({ text: c.text, intent: c.intent, topic: c.topic, locale: c.locale })) },
       });
       toast(
-        `Saved ${r.items.length} question${r.items.length === 1 ? "" : "s"}${r.skippedDuplicates ? `, skipped ${r.skippedDuplicates} ${r.skippedDuplicates === 1 ? "duplicate" : "duplicates"}` : ""}.`,
+        `Added ${r.items.length} question${r.items.length === 1 ? "" : "s"}${r.skippedDuplicates ? `, skipped ${r.skippedDuplicates} ${r.skippedDuplicates === 1 ? "duplicate" : "duplicates"}` : ""}.`,
         "success",
       );
+      setSuggestOpen(false);
       setCandidates(null);
       router.refresh();
     } catch (e) {
@@ -238,12 +263,16 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
       <Card>
         <CardHeader
           icon={<ListChecks />}
-          title={`Questions we ask AI tools (${activeCount} switched on)`}
-          description="Each AI check asks every switched-on question to every AI tool. If you reword a question, charts mark the change so results stay fair."
+          title={`Questions we ask AI tools (${activeCount} switched on${pausedCount ? `, ${pausedCount} paused` : ""})`}
+          description={
+            perCheck > 0
+              ? `Each AI check asks up to ${perCheck} switched-on questions to every AI tool. If you reword a question, charts mark the change so results stay fair.`
+              : "Each AI check asks your switched-on questions to every AI tool. If you reword a question, charts mark the change so results stay fair."
+          }
           actions={
             canEdit ? (
               <>
-                <Button variant="secondary" icon={<Sparkles />} onClick={generate} loading={generating} loadingText="Thinking…">
+                <Button variant="secondary" icon={<Sparkles />} onClick={generate} loading={generating} loadingText="Finding questions…">
                   Suggest questions
                 </Button>
                 <Button icon={<Plus />} onClick={() => openEditor("new")}>
@@ -253,6 +282,13 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
             ) : undefined
           }
         />
+        {capWarning && (
+          <div className="border-b border-border px-5 py-4 sm:px-6">
+            <Notice tone="warning" title={capWarning}>
+              {QUESTION_ORDER_LINE} Questions marked &ldquo;Waiting&rdquo; below are not asked until a place is free.
+            </Notice>
+          </div>
+        )}
         {prompts.length > 0 && (
           <div className="space-y-3 border-b border-border px-5 py-4 sm:px-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -270,22 +306,13 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
                   className="pl-9"
                 />
               </div>
-              <label className="flex items-center gap-2 text-small text-fg-soft">
-                <input
-                  type="checkbox"
-                  checked={showInactive}
-                  onChange={(e) => setShowInactive(e.target.checked)}
-                  className="size-4 accent-primary"
-                />
-                Show switched-off questions
-              </label>
               <span className="ml-auto text-xs tabular-nums text-muted" aria-live="polite">
-                {shown.length} of {visible.length} shown
+                {shown.length} of {prompts.length} shown
               </span>
             </div>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by what the customer wants">
               <button type="button" aria-pressed={intent === "all"} onClick={() => setIntent("all")} className={chipCls(intent === "all")}>
-                All types <span className="text-xs tabular-nums opacity-80">{visible.length}</span>
+                All types <span className="text-xs tabular-nums opacity-80">{prompts.length}</span>
               </button>
               {INTENTS.filter((i) => (intentCounts[i] ?? 0) > 0).map((i) => (
                 <button
@@ -320,116 +347,138 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
             }
           />
         ) : (
-          <Table caption="Customer questions" zebra>
-            <THead>
-              <tr>
-                <TH>Question</TH>
-                <HelpTH help="What the person asking is trying to do: learn, compare or buy.">Type</HelpTH>
-                <HelpTH help="Optional label to group related questions.">Topic</HelpTH>
-                <HelpTH help="Language and country the question is asked in.">Language</HelpTH>
-                <HelpTH help="High-priority questions are asked first when your plan limits how many questions each AI check can ask.">Priority</HelpTH>
-                <TH>Status</TH>
-                {canEdit && (
-                  <TH>
-                    <span className="sr-only">Actions</span>
-                  </TH>
-                )}
-              </tr>
-            </THead>
-            <tbody>
-              {shown.map((p) => (
-                <TR key={p.id} className={p.active ? undefined : "opacity-60"}>
-                  <TD className="max-w-md font-medium text-fg">{p.text}</TD>
-                  <TD>
-                    <Badge tone="primary" title={INTENT_HELP[p.intent]}>
-                      {intentLabel(p.intent)}
-                    </Badge>
-                  </TD>
-                  <TD className="text-muted">{p.topic ?? "—"}</TD>
-                  <TD className="text-muted">{p.locale}</TD>
-                  <TD>
-                    <span className={clsx("text-small", p.priority === 1 ? "font-medium text-fg" : "text-muted")}>
-                      {PRIORITY_LABEL[p.priority] ?? `P${p.priority}`}
-                    </span>
-                  </TD>
-                  <TD>
-                    {p.active ? (
+          // A list, not a wide table: the question is always the first thing on the row and nothing scrolls sideways.
+          <ul className="divide-y divide-border" aria-label="Customer questions">
+            {shown.map((p) => {
+              const important = p.priority === PRIORITY_IMPORTANT;
+              const waiting = p.active && !asked.has(p.id);
+              return (
+                <li key={p.id} className={clsx("flex flex-wrap items-start gap-x-3 gap-y-2 px-5 py-3 sm:flex-nowrap sm:px-6", !p.active && "bg-surface-2")}>
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => void toggleImportant(p)}
+                      disabled={starBusy === p.id}
+                      aria-pressed={important}
+                      aria-label={`${important ? "Important. Tap to unmark" : "Mark as important"}: ${p.text}`}
+                      title={important ? "Important: asked first in every AI check" : "Mark as important (asked first in every AI check)"}
+                      className={clsx("focus-ring mt-0.5 shrink-0 rounded p-1", important ? "text-warning" : "text-muted hover:text-fg", !p.active && "opacity-60")}
+                    >
+                      <Star aria-hidden size={18} fill={important ? "currentColor" : "none"} />
+                    </button>
+                  ) : (
+                    important && <Star aria-label="Important" size={18} fill="currentColor" className="mt-1 shrink-0 text-warning" />
+                  )}
+                  <div className={clsx("min-w-0 flex-1 basis-[14rem]", !p.active && "opacity-60")}>
+                    <p className="text-small font-medium text-fg">{p.text}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                      <span title={INTENT_HELP[p.intent]}>{intentLabel(p.intent)}</span>
+                      {p.topic && <span>· {p.topic}</span>}
+                      {important && <span className="font-medium text-fg-soft">· Important</span>}
+                      {p.priority === 3 && <span>· Low priority</span>}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!p.active ? (
+                      <Badge variant="dot">Paused</Badge>
+                    ) : waiting ? (
+                      <Badge tone="warning" variant="dot" title="More questions are switched on than one AI check asks. This one waits until a place is free.">
+                        Waiting
+                      </Badge>
+                    ) : (
                       <Badge tone="success" variant="dot">
                         On
                       </Badge>
-                    ) : (
-                      <Badge variant="dot">Off</Badge>
                     )}
-                  </TD>
-                  {canEdit && (
-                    <TD className="whitespace-nowrap text-right">
-                      <Button variant="ghost" size="icon-sm" onClick={() => openEditor(p)} aria-label={`Edit question: ${p.text}`}>
-                        <Pencil />
-                      </Button>
-                      <Button variant="ghost" size="sm" loading={busyId === p.id} onClick={() => setActive(p, !p.active)}>
-                        {p.active ? "Pause" : "Resume"}
-                      </Button>
-                    </TD>
-                  )}
-                </TR>
-              ))}
-            </tbody>
-          </Table>
+                    {canEdit && (
+                      <>
+                        <Button variant="ghost" size="icon-sm" onClick={() => openEditor(p)} aria-label={`Edit question: ${p.text}`}>
+                          <Pencil />
+                        </Button>
+                        <Button
+                          variant={p.active ? "ghost" : "secondary"}
+                          size="sm"
+                          loading={busyId === p.id}
+                          onClick={() => setActive(p, !p.active)}
+                          aria-label={`${p.active ? "Pause" : "Switch on"} question: ${p.text}`}
+                        >
+                          {p.active ? "Pause" : "Switch on"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </Card>
 
-      {candidates && candidates.length > 0 && (
-        <Card className="animate-fade-in">
-          <CardHeader
-            icon={<Sparkles />}
-            title="Suggested questions"
-            description="Tick the ones your customers would really ask. We left out ones that are almost the same as questions you already have."
-            actions={
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelected(new Set(selected.size === candidates.length ? [] : candidates.map((_, i) => i)))}
-                >
-                  {selected.size === candidates.length ? "Select none" : "Select all"}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setCandidates(null)}>
-                  Discard
-                </Button>
-                <Button size="sm" onClick={saveSuggestions} loading={savingSuggestions} disabled={selected.size === 0}>
-                  Save {selected.size} selected
-                </Button>
-              </>
-            }
-          />
-          <ul className="divide-y divide-border">
-            {candidates.map((c, i) => (
-              <li key={`${c.text}-${i}`}>
-                <label className="flex cursor-pointer flex-wrap items-start gap-3 px-5 py-3 hover:bg-surface-2 sm:px-6">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 size-4 accent-primary"
-                    checked={selected.has(i)}
-                    onChange={(e) =>
-                      setSelected((s) => {
-                        const n = new Set(s);
-                        if (e.target.checked) n.add(i);
-                        else n.delete(i);
-                        return n;
-                      })
-                    }
-                  />
-                  <span className="min-w-0 flex-1 text-small text-fg">{c.text}</span>
-                  <Badge tone="primary" title={INTENT_HELP[c.intent]}>
-                    {intentLabel(c.intent)}
-                  </Badge>
-                  {c.source && <Badge>{c.source === "llm" ? "Suggested by AI" : "Common question"}</Badge>}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <Dialog
+        open={suggestOpen}
+        onClose={() => setSuggestOpen(false)}
+        size="lg"
+        icon={<Sparkles />}
+        title="Suggested questions"
+        description="Tick the ones your customers would really ask. Nothing is added until you tick it."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSuggestOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveSuggestions} loading={savingSuggestions} disabled={selected.size === 0}>
+              {selected.size === 0 ? "Add selected" : `Add ${selected.size} selected`}
+            </Button>
+          </>
+        }
+      >
+        {generating || !candidates ? (
+          <div className="flex items-center gap-3 py-6 text-small text-fg-soft">
+            <Spinner size={18} />
+            <span role="status">Finding questions your customers ask. This takes about 10 seconds…</span>
+          </div>
+        ) : candidates.length === 0 ? (
+          <p className="py-4 text-small text-fg-soft">
+            {room === 0
+              ? "Your plan's customer questions are all in use. Pause a question first, then ask for suggestions again."
+              : "No new suggestions. You already have questions like the ones we would suggest. Add your own with “Add question”."}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted">
+              We left out questions that are almost the same as ones you already have.
+              {room !== null && ` Your plan has room for ${room} more ${room === 1 ? "question" : "questions"}.`}
+            </p>
+            <ul className="max-h-[50vh] divide-y divide-border overflow-y-auto rounded-xl border border-border">
+              {candidates.map((c, i) => (
+                <li key={`${c.text}-${i}`}>
+                  <label className="flex cursor-pointer items-start gap-3 px-4 py-3 hover:bg-surface-2">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4 shrink-0 accent-primary"
+                      checked={selected.has(i)}
+                      onChange={(e) =>
+                        setSelected((s) => {
+                          const n = new Set(s);
+                          if (e.target.checked) n.add(i);
+                          else n.delete(i);
+                          return n;
+                        })
+                      }
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-small text-fg">{c.text}</span>
+                      <span className="mt-0.5 block text-xs text-muted" title={INTENT_HELP[c.intent]}>
+                        {intentLabel(c.intent)}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Dialog>
 
       <Dialog
         open={editing !== null}
@@ -438,7 +487,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
         description={
           editing !== "new"
             ? "If you reword a question, charts mark the change so before and after results aren't mixed up."
-            : "Write it the way a customer would type it into ChatGPT or Gemini."
+            : "Write it the way a customer would type it into ChatGPT or Gemini. Leave your business name out, so we can see whether AI names you by itself."
         }
         footer={
           <>
@@ -464,11 +513,7 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Type of question" htmlFor="pm-intent" hint={INTENT_HELP[form.intent]}>
-              <Select
-                id="pm-intent"
-                value={form.intent}
-                onChange={(e) => setForm({ ...form, intent: e.target.value })}
-              >
+              <Select id="pm-intent" value={form.intent} onChange={(e) => setForm({ ...form, intent: e.target.value })}>
                 {INTENTS.map((i) => (
                   <option key={i} value={i}>
                     {intentLabel(i)}
@@ -479,9 +524,9 @@ export function PromptsManager({ projectId, prompts, canEdit }: { projectId: str
             <Field label="Topic" htmlFor="pm-topic" optional>
               <Input id="pm-topic" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} maxLength={120} />
             </Field>
-            <Field label="Priority" htmlFor="pm-pri">
+            <Field label="How important" htmlFor="pm-pri" hint="Important questions are asked first.">
               <Select id="pm-pri" value={form.priority} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}>
-                <option value={1}>High</option>
+                <option value={1}>Important</option>
                 <option value={2}>Normal</option>
                 <option value={3}>Low</option>
               </Select>

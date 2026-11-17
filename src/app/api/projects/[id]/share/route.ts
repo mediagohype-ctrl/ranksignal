@@ -5,7 +5,10 @@ import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit-log";
 import { clientIp } from "@/lib/auth/rate-limit";
 import type { Role } from "@/lib/types";
-import { mergeShareSettings, newTokenId, readShareSettings, shareUrl, signShareToken, type ShareSettings } from "@/lib/share/token";
+import {
+  mergeBadgeSettings, mergeShareSettings, newShareSlug, newTokenId, preserveBadgeOnShareChange, readShareSettings, shareUrl, signShareToken,
+  type ShareSettings,
+} from "@/lib/share/token";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +22,9 @@ const isAdmin = (role: Role) => role === "admin" || role === "owner";
 
 async function view(projectId: string, share: ShareSettings | null, admin: boolean) {
   const enabled = !!share?.enabled;
-  // Only admins get the URL itself; everyone else just learns whether sharing is on.
-  const url = admin && share && enabled ? shareUrl(await signShareToken({ projectId, tokenId: share.tokenId })) : null;
+  // Only admins get the URL itself; everyone else just learns whether sharing is on. Short link when there is one
+  // (mywebrank.tech/r/gohype-k3m9x2p7qa); older links without a slug keep the long signed form.
+  const url = admin && share && enabled ? shareUrl(share.slug ?? (await signShareToken({ projectId, tokenId: share.tokenId }))) : null;
   return { enabled, url, canManage: admin };
 }
 
@@ -42,11 +46,18 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
   const before = readShareSettings(project.settings);
   const enabled = body.enabled ?? before?.enabled ?? false;
   const rotate = !!body.rotate || !before; // first enable always mints a tokenId
-  const next: ShareSettings = { enabled, tokenId: rotate ? newTokenId() : before!.tokenId };
+  // A new link also gets a new short id; an existing link gets one the first time it is turned on again.
+  const slug = rotate || !before?.slug ? newShareSlug(project.websiteUrl) : before.slug;
+  const next: ShareSettings = { enabled, tokenId: rotate ? newTokenId() : before!.tokenId, slug };
+
+  // Turning the link off or replacing it must not break a score badge already pasted on a website: a badge that
+  // still runs on the share link gets its own switch first (same token, stays on until the owner turns it off).
+  const keepBadge = (!enabled || body.rotate) ? preserveBadgeOnShareChange(project.settings) : null;
+  const base = keepBadge ? mergeBadgeSettings(project.settings, keepBadge) : project.settings;
 
   await db.project.update({
     where: { id: project.id },
-    data: { settings: mergeShareSettings(project.settings, next) as Prisma.InputJsonValue },
+    data: { settings: mergeShareSettings(base, next) as Prisma.InputJsonValue },
   });
 
   const action = body.rotate ? "report_share.rotated" : enabled ? "report_share.enabled" : "report_share.disabled";

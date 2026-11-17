@@ -40,7 +40,7 @@ function seed() {
     (db as Record<string, unknown>)[k] = (createFakeDb() as unknown as Record<string, unknown>).action;
   }
   h.db = db;
-  db.organization.rows.push({ id: "o1", publishingEnabled: true });
+  db.organization.rows.push({ id: "o1", publishingEnabled: true, planId: "growth", serviceTier: null });
   db.project.rows.push({
     id: "p1", organizationId: "o1", name: "Acme", websiteUrl: "https://acme.example", brandNames: ["Acme"],
     settings: { automation: { allowClassB: ["update_meta_description"] } },

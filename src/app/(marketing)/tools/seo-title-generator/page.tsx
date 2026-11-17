@@ -53,7 +53,6 @@ export default function SeoTitleGeneratorPage() {
       <section aria-label="Write SEO titles" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <SeoTitleGenerator />
-          <LeadBox tool="seo-title-generator" />
         </div>
       </section>
 
@@ -127,6 +126,14 @@ export default function SeoTitleGeneratorPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="seo-title-generator" />
+          </div>
+        </div>
+      </section>
       <QaSection id="tg-faq" tone="surface" title="SEO titles: common questions" items={FAQ}>
         <p className="text-body leading-relaxed text-fg-soft">
           Want to see every page title on your site in one go?{" "}

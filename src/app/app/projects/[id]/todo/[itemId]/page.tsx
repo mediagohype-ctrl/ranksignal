@@ -14,7 +14,12 @@ import { issueForAction, nextTodo, parseTodoId, timeLabel, todoHref, type TodoIt
 import { loadTodo } from "@/lib/tasks/todo-server";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { FixScreen, type FixMode, type FixScreenProps } from "@/components/app/fix/fix-screen";
-import { issueHref, todoItemHref } from "@/components/app/nav";
+import { todoHelpHref, todoItemHref } from "@/components/app/nav";
+import { CopyBlock } from "@/components/app/actions/copy-block";
+import { canConnectWebsite } from "@/lib/billing/offer";
+import { loadFixSite } from "@/lib/fix-guides/site-server";
+import type { ReadyCode } from "@/lib/fix-guides";
+import { canVerifyNow } from "@/lib/tasks/recheck";
 import { Card, RiskBadge } from "@/components/ui";
 
 export const metadata = { title: "Fix" };
@@ -69,6 +74,10 @@ export default async function TodoItemPage({
   const todo = await loadTodo(session, project.id);
   const canEdit = canEditTasks(session);
   const canPublish = hasRole(session, "admin") || !!session.staffMode;
+  // Do it myself has no website connection: no "Fix it for me" / "Approve" — ready-to-paste text and "I've done it".
+  const offerOrg = await db.organization.findUnique({ where: { id: org }, select: { planId: true, serviceTier: true } });
+  const connects = canConnectWebsite(offerOrg);
+  let ready: ReadyCode | null = null;
 
   // Old "Fixes to approve" links point at one drafted change: open the problem it belongs to.
   if (parsed.kind === "action") {
@@ -104,9 +113,11 @@ export default async function TodoItemPage({
     } else {
       const { issue, pages } = data;
       line = firstSentence(issue.whatsWrong);
-      helpHref = `${issueHref(project.id, issue.id)}/fix`;
+      helpHref = todoHelpHref(project.id, issue.id);
       const brand = asArray<string>(project.brandNames)[0] ?? project.name;
-      const fix = resolveFix({ brand, websiteUrl: project.websiteUrl, platform: "custom", issue, pages });
+      const { site, sitePages } = await loadFixSite(org, project, data.report.crawl.crawlRunId);
+      const fix = resolveFix({ brand, websiteUrl: project.websiteUrl, platform: "custom", issue, pages, site, sitePages });
+      ready = fix.ready;
 
       const rows = issue.relatedActionType
         ? await db.action.findMany({
@@ -128,7 +139,7 @@ export default async function TodoItemPage({
       let recheckUrl: string | null = pages[0]?.url ?? null;
       if (chosen) {
         const connected = !!chosen.a.integrationId && chosen.a.policyDecision !== "blocked" && chosen.a.status !== "blocked";
-        mode = write ? (chosen.a.status === "awaiting_approval" ? "approve" : "manual") : connected ? "auto" : "manual";
+        mode = !connects ? "manual" : write ? (chosen.a.status === "awaiting_approval" ? "approve" : "manual") : connected ? "auto" : "manual";
         diff = { field: chosen.change!.field ?? fieldFor(issue.id), before: chosen.change!.before ?? null, after: chosen.change!.after };
         if (chosen.url) recheckUrl = chosen.url;
         risk = mode === "auto" || mode === "approve" ? chosen.a.riskClass : null;
@@ -154,7 +165,7 @@ export default async function TodoItemPage({
         lastAction: drafted.length <= 1,
         writing,
         recheckUrl,
-        canRecheck: pageLevel,
+        canRecheck: pageLevel || canVerifyNow(issue.id),
       };
     }
   } else if (parsed.kind === "offsite") {
@@ -203,8 +214,16 @@ export default async function TodoItemPage({
           done={done}
           recheck={item.recheck ?? null}
           nextHref={nextHref}
+          points={item.points}
         />
       </Card>
+
+      {ready && !done && (
+        <section aria-label="Ready-to-paste code" className="space-y-2">
+          <CopyBlock text={ready.code} label={ready.label} maxHeight="16rem" />
+          {ready.note && <p className="text-small text-fg-soft">{ready.note}</p>}
+        </section>
+      )}
 
       {(helpHref || external) && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-small font-medium">

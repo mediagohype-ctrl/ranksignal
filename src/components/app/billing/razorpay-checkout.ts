@@ -9,7 +9,7 @@ interface RazorpayOptions {
   description?: string;
   handler: (response: Record<string, string>) => void;
   modal?: { ondismiss?: () => void };
-  prefill?: { email?: string; name?: string };
+  prefill?: CheckoutPrefillValue;
   theme?: { color?: string };
   notes?: Record<string, string>;
 }
@@ -18,6 +18,22 @@ interface RazorpayInstance {
   on(event: string, cb: (resp: unknown) => void): void;
 }
 type RazorpayCtor = new (options: RazorpayOptions) => RazorpayInstance;
+
+/** What we already know about the payer (email, name, phone / WhatsApp number): Razorpay fills its form with it. */
+export interface CheckoutPrefillValue {
+  email?: string;
+  name?: string;
+  contact?: string;
+}
+
+/** Drops empty values; undefined when nothing is known (Razorpay then asks for everything). */
+export function cleanPrefill(p: CheckoutPrefillValue | null | undefined): CheckoutPrefillValue | undefined {
+  const out: CheckoutPrefillValue = {};
+  if (p?.email?.trim()) out.email = p.email.trim();
+  if (p?.name?.trim()) out.name = p.name.trim();
+  if (p?.contact?.trim()) out.contact = p.contact.trim();
+  return Object.keys(out).length ? out : undefined;
+}
 
 let loading: Promise<RazorpayCtor> | null = null;
 
@@ -53,7 +69,7 @@ export async function openRazorpaySubscription(o: {
   subscriptionId: string;
   name: string;
   description: string;
-  email?: string;
+  prefill?: CheckoutPrefillValue | null;
   onSuccess: () => void;
   onDismiss: () => void;
   onFailure: (message: string) => void;
@@ -66,7 +82,7 @@ export async function openRazorpaySubscription(o: {
     description: o.description,
     handler: () => o.onSuccess(),
     modal: { ondismiss: o.onDismiss },
-    prefill: o.email ? { email: o.email } : undefined,
+    prefill: cleanPrefill(o.prefill),
     theme: { color: themeColor() },
   });
   rzp.on("payment.failed", (resp) => {

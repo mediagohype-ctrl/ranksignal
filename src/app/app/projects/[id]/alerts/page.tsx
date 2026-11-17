@@ -6,6 +6,7 @@ import { getAlertsView } from "@/lib/alerts/server";
 import { ALERT_RULES, RULE_META, type AlertRuleId } from "@/lib/alerts/config";
 import { fmtDate } from "@/lib/dashboard/format";
 import { AlertSettingsForm } from "@/components/app/alerts/alert-settings-form";
+import { WhatsAppOptIn } from "@/components/app/whatsapp-optin";
 import { Badge, Card, CardBody, CardHeader, EmptyState, PageHeader, type Tone } from "@/components/ui";
 
 export const metadata = { title: "Alerts" };
@@ -40,6 +41,12 @@ export default async function AlertsPage({ params }: { params: Promise<{ id: str
           limits={view.limits}
           canManage={canManage}
           delivery={view.delivery}
+          whatsappSetup={
+            // Ask for the WhatsApp number right here: nothing is sent on WhatsApp until one is saved.
+            view.limits.whatsapp && !view.delivery.whatsappOptIn ? (
+              <WhatsAppOptIn canManage={canManage} description="Add the number that should get WhatsApp alerts and updates." />
+            ) : null
+          }
         />
 
         <Card className="self-start">

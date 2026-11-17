@@ -7,7 +7,7 @@ export function FreeCheckLauncher({
   id = "free-check-url",
   onDark,
   className,
-  buttonLabel = "Check my website",
+  buttonLabel = "Check my website free",
   hint = "Free · No sign-up · Takes about 30 seconds",
 }: {
   id?: string;
@@ -60,7 +60,8 @@ export function FreeCheckLauncher({
           <ArrowRight aria-hidden />
         </button>
       </div>
-      {hint && <p className={clsx("mt-3 pl-1 text-small", onDark ? "text-bg/70" : "text-muted")}>{hint}</p>}
+      {/* Centred under the box: every place the box is used is a centred hero/band. */}
+      {hint && <p className={clsx("mt-3 text-center text-small", onDark ? "text-bg/70" : "text-muted")}>{hint}</p>}
     </form>
   );
 }

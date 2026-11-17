@@ -1,6 +1,7 @@
 // MyWebRank's side of every comparison, derived from the plan config the app enforces (never typed in by hand),
 // so the /compare pages can't drift from /pricing. Public offer: "Do it myself", "Do it for me" and Custom.
 import { CUSTOM_PLAN, DFY_PLAN, SELF_PLAN, TRIAL_DAYS, inrGst, num } from "@/components/marketing/plans";
+import { SELF_FIX_LINE } from "@/lib/billing/offer";
 import type { Cell } from "./compare-ui";
 
 const ENGINE_NAMES = ["ChatGPT", "Gemini", "Perplexity", "Claude", "Grok"];
@@ -22,9 +23,11 @@ export const OUR = {
   trialDays: TRIAL_DAYS,
   /** "ChatGPT, Gemini and Perplexity". */
   engines: engineList(SELF_PLAN.ai.engines),
-  connectors: "WordPress, Shopify, Webflow, Wix, GitHub, Contentful and Sanity",
-  /** What "publishing a fix" really means per platform. Never claim live publishing beyond WordPress. */
-  publishing: "One-click fixes with undo on WordPress; drafts or copy-paste steps for Shopify, Wix and Webflow",
+  /**
+   * How fixes get made (owner decision, 15 Nov 2026): Do it myself has no website connections, the owner makes every
+   * change by hand from ready-to-paste fixes; on Do it for me our team makes the changes. Never claim one-click publishing.
+   */
+  publishing: `${SELF_FIX_LINE}; on ${DFY_PLAN.name}, our team makes the changes on your website after your OK`,
   pages: num(SELF_PLAN.limits.maxPagesPerCrawl),
 } as const;
 
@@ -39,7 +42,7 @@ export const OUR_CELLS: Record<string, Cell> = {
     note: `${OUR.engines} on ${SELF_PLAN.name}, ${num(SELF_PLAN.ai.answersPerMonth)} AI answers a month`,
   },
   todo: { s: "yes", note: "Plain-English to-do list, each fix linked to the problem it solves" },
-  publish: { s: "yes", note: `${OUR.publishing}. Nothing changes without your OK` },
+  publish: { s: "yes", note: OUR.publishing },
   service: { s: "yes", note: `${DFY_PLAN.name} from ${OUR.serviceFrom}/month, no setup fee` },
   currency: { text: "INR", note: "GST invoices; prices exclude GST" },
   free: { text: "Free check + trial", note: `${TRIAL_DAYS}-day free trial` },

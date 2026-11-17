@@ -4,7 +4,8 @@ import type { OffsiteItem } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/api";
 import { auditActorFromSession, writeAuditLog } from "@/lib/audit-log";
-import type { SessionContext, VisibilityMetrics } from "@/lib/types";
+import type { SessionContext } from "@/lib/types";
+import { getStoredSitePlatform } from "@/lib/platform/server";
 import {
   asSource,
   asStatus,
@@ -15,13 +16,15 @@ import {
   type OffsiteStatus,
   type OffsiteUpdateInput,
 } from "./types";
-import { normalizeDomain, starterSuggestions, suggestFromCitations, type AiCitationSuggestion, type StarterSuggestion } from "./suggestions";
+import { splitCitations, starterSuggestions, type AiCitationSuggestion, type CompetitorSiteSuggestion, type StarterSuggestion } from "./suggestions";
+import { loadAnswerEvidence, suggestionContext } from "./evidence";
+import { businessKind, type BusinessKind } from "./starter";
 
 export * from "./types";
 export * from "./suggestions";
+export * from "./starter";
 
 const MAX_ITEMS = 500;
-const VIS_DONE = ["succeeded", "succeeded_with_warnings"];
 
 export function toView(r: OffsiteItem): OffsiteItemView {
   return {
@@ -165,44 +168,49 @@ export async function listOffsiteForPeriod(projectId: string, organizationId: st
 
 export interface OffsiteSuggestions {
   aiCitations: AiCitationSuggestion[];
+  /** Businesses AI names or links for this project's questions: competitors, never places to be listed. */
+  competitorSites: CompetitorSiteSuggestion[];
   /** When the AI-citation suggestions were measured (latest real, non-simulated check), or null when none yet. */
   measuredAt: string | null;
   starter: StarterSuggestion[];
+  /** What kind of business the starter list was chosen for. */
+  businessKind: BusinessKind;
 }
 
-const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
-function competitorDomains(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((c) => (isObj(c) && typeof c.domain === "string" ? c.domain : null)).filter((d): d is string => !!d);
+/** What kind of business a project is, from the facts confirmed in setup and the platform its website is built on. */
+export async function projectBusinessKind(
+  project: { id: string; organizationId: string; categories?: unknown; keywords?: unknown; audience?: string | null; facts?: unknown },
+): Promise<BusinessKind> {
+  const facts = project.facts && typeof project.facts === "object" ? (project.facts as { sells?: unknown; customers?: unknown; city?: unknown }) : {};
+  const platform = await getStoredSitePlatform(project.organizationId, project.id).catch(() => null);
+  return businessKind({
+    sells: [typeof facts.sells === "string" ? facts.sells : "", ...strings(project.categories)].join(" "),
+    customers: typeof facts.customers === "string" ? facts.customers : project.audience ?? null,
+    city: typeof facts.city === "string" ? facts.city : null,
+    keywords: strings(project.keywords),
+    platform,
+  });
 }
 
 export async function getOffsiteSuggestions(s: SessionContext, projectId: string): Promise<OffsiteSuggestions> {
   const project = await db.project.findFirst({
     where: { id: projectId, organizationId: s.organizationId },
-    select: { id: true, websiteUrl: true, competitors: true },
+    select: { id: true, organizationId: true, websiteUrl: true, competitors: true, categories: true, keywords: true, audience: true, facts: true },
   });
   if (!project) throw new HttpError(404, "not_found", "Project not found");
-  const [tracked, runs] = await Promise.all([
+  const [tracked, evidence, kind] = await Promise.all([
     db.offsiteItem.findMany({ where: { organizationId: s.organizationId, projectId }, select: { url: true, name: true }, take: MAX_ITEMS }),
-    db.visibilityRun.findMany({
-      where: { organizationId: s.organizationId, projectId, status: { in: VIS_DONE } },
-      orderBy: { createdAt: "desc" },
-      select: { metrics: true, finishedAt: true, createdAt: true },
-      take: 10,
-    }),
+    loadAnswerEvidence(s.organizationId, projectId),
+    projectBusinessKind({ ...project, organizationId: s.organizationId }),
   ]);
-  // Latest REAL run: skip simulated metrics so we never suggest from made-up answers.
-  const real = runs.find((r) => isObj(r.metrics) && r.metrics.simulated !== true);
-  const metrics = (real?.metrics as VisibilityMetrics | null | undefined) ?? null;
-  const ctx = {
-    ownedDomains: [normalizeDomain(project.websiteUrl)].filter((d): d is string => !!d),
-    competitorDomains: competitorDomains(project.competitors),
-    tracked,
-  };
+  const { places, competitors } = splitCitations(evidence.sources, suggestionContext(project, evidence, tracked));
   return {
-    aiCitations: suggestFromCitations(metrics?.citationSources, ctx),
-    measuredAt: real ? (real.finishedAt ?? real.createdAt).toISOString() : null,
-    starter: starterSuggestions(tracked),
+    aiCitations: places,
+    competitorSites: competitors.slice(0, 8),
+    measuredAt: evidence.measuredAt,
+    starter: starterSuggestions(tracked, kind),
+    businessKind: kind,
   };
 }

@@ -6,7 +6,7 @@ import type { ExtractedPage } from "@/lib/types";
 import type { AuditPage, SiteContext } from "@/lib/audit/rules";
 import { extractPage } from "@/lib/crawler/extract";
 import { detectPlatform } from "@/lib/platform/detect";
-import { isSameSite, looksLikePage, normalizeUrl, siteHost, urlKey } from "@/lib/crawler/normalize";
+import { crawlTarget, isQueryVariantOf, isSameSite, looksLikePage, normalizeUrl, siteHost, urlKey, type CrawlSkipCounts } from "@/lib/crawler/normalize";
 import { fetchRobots } from "@/lib/crawler/robots";
 import { analyzeAiBots } from "@/lib/audit/ai-bots";
 import { crawlPriority } from "@/lib/audit/page-kind";
@@ -76,11 +76,25 @@ export async function crawlSite(opts: CrawlOptions): Promise<CrawlResult> {
   const navKeys = new Set<string>();
   let seq = 0;
   const discoverLimit = opts.maxPages * 5;
+  // Links we did not read as pages of their own (filter / sort links, account screens, duplicates), each counted once.
+  const skipped: CrawlSkipCounts = { filter: 0, account: 0, duplicate: 0 };
+  const skippedKeys = new Set<string>();
+  const noteSkipped = (reason: keyof CrawlSkipCounts, raw: string) => {
+    const key = urlKey(raw) ?? raw;
+    if (skippedKeys.has(key) || skippedKeys.size >= discoverLimit * 4) return;
+    skippedKeys.add(key);
+    skipped[reason]++;
+  };
   const enqueueUrl = (u: string) => {
-    const n = normalizeUrl(u);
+    const raw = normalizeUrl(u);
+    if (!raw || !isSameSite(raw, hosts) || !looksLikePage(raw)) return;
+    // Filter / sort / search links collapse to the page behind them; account, cart and login screens are not read.
+    const target = crawlTarget(raw);
+    if (!target) return;
+    if (target.skipped) noteSkipped(target.skipped, raw);
+    const n = target.url;
     const k = n && urlKey(n);
     if (!n || !k || seen.has(k) || seen.size >= discoverLimit) return;
-    if (!isSameSite(n, hosts) || !looksLikePage(n)) return;
     seen.add(k);
     queue.push({ url: n, prio: crawlPriority(n, navKeys), seq: seq++ });
   };
@@ -176,6 +190,17 @@ export async function crawlSite(opts: CrawlOptions): Promise<CrawlResult> {
           if (finalKey) crawledFinal.add(finalKey);
           ({ page, bytes } = toAuditPage(url, res));
           if (page.extracted && isSameSite(res.finalUrl, hosts)) page.extracted.internalLinks.forEach(enqueueUrl);
+          // The page names the same address without its query string as its main version (e.g. /shop?x=1 → /shop):
+          // a duplicate. Read the main version instead and don't keep this one as a page.
+          if (page.extracted && isSameSite(res.finalUrl, hosts) && isQueryVariantOf(res.finalUrl, page.extracted.canonical)) {
+            noteSkipped("duplicate", res.finalUrl);
+            try {
+              enqueueUrl(new URL(page.extracted.canonical!, res.finalUrl).toString());
+            } catch {
+              /* unusable canonical: nothing to read instead */
+            }
+            continue;
+          }
         } catch (e) {
           const msg = e instanceof SafeFetchError ? `${e.code}: ${e.message}` : "fetch failed";
           page = { url, finalUrl: url, statusCode: null, redirectChain: [], contentType: null, extracted: null, error: msg };
@@ -209,6 +234,7 @@ export async function crawlSite(opts: CrawlOptions): Promise<CrawlResult> {
       httpRedirectsToHttps,
       maxPages: opts.maxPages,
       pagesDiscovered: Math.max(seen.size, pages.length),
+      skipped,
       checkedAt: new Date().toISOString(),
     },
   };

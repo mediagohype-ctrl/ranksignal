@@ -102,7 +102,7 @@ export type OffsiteFilters = z.infer<typeof offsiteFilterSchema>;
 
 // ------------------------------------------------------------------------------------------------ starter list
 
-export type StarterCategory = "local" | "maps" | "b2b" | "software_reviews" | "reviews" | "entity" | "social";
+export type StarterCategory = "local" | "maps" | "b2b" | "software_reviews" | "agency_reviews" | "marketplace" | "reviews" | "entity" | "social";
 
 export interface StarterListing {
   key: string;
@@ -130,6 +130,17 @@ export const STARTER_LISTINGS: StarterListing[] = [
   { key: "g2", name: "G2", domain: "g2.com", url: "https://sell.g2.com/", type: "review_platform", categories: ["software_reviews", "b2b"], note: "Software reviews and category comparisons." },
   { key: "capterra", name: "Capterra", domain: "capterra.com", url: "https://www.capterra.com/vendors/", type: "review_platform", categories: ["software_reviews", "b2b"], note: "Software directory with user reviews." },
   { key: "trustpilot", name: "Trustpilot", domain: "trustpilot.com", url: "https://business.trustpilot.com/", type: "review_platform", categories: ["reviews"], note: "Public customer reviews for any business." },
+  { key: "amazon", name: "Amazon seller account", domain: "amazon.in", url: "https://sell.amazon.in/", type: "directory", categories: ["marketplace"], note: "India's biggest online marketplace. Shoppers and AI tools look up products here." },
+  { key: "flipkart", name: "Flipkart seller account", domain: "flipkart.com", url: "https://seller.flipkart.com/", type: "directory", categories: ["marketplace"], note: "Large Indian marketplace for most product types." },
+  { key: "meesho", name: "Meesho supplier account", domain: "meesho.com", url: "https://supplier.meesho.com/", type: "directory", categories: ["marketplace"], note: "Marketplace for value-priced products across India." },
+  { key: "instagram", name: "Instagram business profile", domain: "instagram.com", url: "https://business.instagram.com/", type: "social_profile", categories: ["social"], note: "Business profile where customers see your work and can message you." },
+  { key: "instagram_shop", name: "Instagram shop", domain: "instagram.com", url: "https://business.instagram.com/shopping", type: "social_profile", categories: ["social", "marketplace"], note: "Show your products on your Instagram profile." },
+  { key: "facebook", name: "Facebook Page", domain: "facebook.com", url: "https://www.facebook.com/pages/create", type: "social_profile", categories: ["social"], note: "Business page with your name, address, hours and reviews." },
+  { key: "youtube", name: "YouTube channel", domain: "youtube.com", url: "https://www.youtube.com/", type: "social_profile", categories: ["social"], note: "Videos about what you sell. AI tools often link to YouTube." },
+  { key: "clutch", name: "Clutch", domain: "clutch.co", url: "https://clutch.co/", type: "review_platform", categories: ["agency_reviews", "b2b"], note: "Directory of agencies and service firms with client reviews." },
+  { key: "goodfirms", name: "GoodFirms", domain: "goodfirms.co", url: "https://www.goodfirms.co/", type: "review_platform", categories: ["agency_reviews", "b2b"], note: "Directory of agencies and IT service firms with reviews." },
+  { key: "designrush", name: "DesignRush", domain: "designrush.com", url: "https://www.designrush.com/", type: "review_platform", categories: ["agency_reviews", "b2b"], note: "Directory of marketing, design and web agencies." },
+  { key: "producthunt", name: "Product Hunt", domain: "producthunt.com", url: "https://www.producthunt.com/", type: "directory", categories: ["software_reviews"], note: "Where new software and apps are launched and discussed." },
 ];
 
 export const STARTER_CATEGORY_LABEL: Record<StarterCategory, string> = {
@@ -137,6 +148,8 @@ export const STARTER_CATEGORY_LABEL: Record<StarterCategory, string> = {
   maps: "Maps",
   b2b: "B2B",
   software_reviews: "Software reviews",
+  agency_reviews: "Agency reviews",
+  marketplace: "Marketplace",
   reviews: "Reviews",
   entity: "Company facts",
   social: "Profiles",

@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Copy, Eye, PenLine, RefreshCw, Sparkles, Wand2 } from "lucide-react";
+import { CheckCircle2, Copy, Eye, PartyPopper, PenLine, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import type { TaskRecheck } from "@/lib/tasks/types";
-import { recheckLine, todoHref } from "@/lib/tasks/todo";
+import { notSeenDetail, recheckLine, todoHref } from "@/lib/tasks/todo";
 import { todoItemHref } from "@/components/app/nav";
 import { DiffView } from "@/components/app/diff-view";
 import { roleLabel } from "@/components/app/role-label";
@@ -43,15 +43,19 @@ export interface FixScreenProps {
   recheck: TaskRecheck | null;
   /** Fallback when there's no next fix. */
   nextHref: string | null;
+  /** The fix's real "+N points" estimate (0 = not tied to the score). */
+  points?: number;
 }
 
-type Outcome = { tone: "success" | "info"; text: string } | null;
+/** "seen" = confirmed live (small celebration); "notSeen" = we looked and couldn't see it yet. */
+type Outcome = { tone: "success" | "info"; text: string; kind?: "seen" | "notSeen"; detail?: string } | null;
 
 export function FixScreen(p: FixScreenProps) {
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  const [outcome, setOutcome] = useState<Outcome>(p.done ? recheckLine(p.recheck) : null);
+  const points = p.points ?? 0;
+  const [outcome, setOutcome] = useState<Outcome>(p.done ? recheckLine(p.recheck, points) : null);
   const [editing, setEditing] = useState(false);
   const [after, setAfter] = useState(p.diff?.after ?? "");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,12 +122,26 @@ export function FixScreen(p: FixScreenProps) {
       router.refresh();
     });
 
-  const done = () =>
-    run("primary", async () => {
+  // "I've done it": we look at the page (or file) first. Seen → done (+points). Not seen → stays on the list with
+  // "Check again" / "Mark done anyway". Can't be checked by reading the site → done, confirmed at the next check.
+  const done = (key = "primary") =>
+    run(key, async () => {
       const r = await setState("done");
-      const line = recheckLine(r.item.recheck) ?? { tone: "success" as const, text: "Marked as done." };
-      setOutcome(line);
-      goNext(r.item.nextId, line.tone === "success" ? 1800 : 3500);
+      const fixed = r.item.recheck?.fixed;
+      if (fixed === false) {
+        setOutcome({ tone: "info", kind: "notSeen", text: "We couldn't see the change yet.", detail: notSeenDetail(r.item.recheck) });
+        return;
+      }
+      const line = recheckLine(r.item.recheck, points) ?? { tone: "info" as const, text: "Marked done — we'll confirm at your next website check." };
+      setOutcome(fixed === true ? { ...line, kind: "seen" } : line);
+      goNext(r.item.nextId, fixed === true ? 2600 : 3000);
+    });
+
+  const markDoneAnyway = () =>
+    run("anyway", async () => {
+      const r = await setState("done", { recheck: false });
+      setOutcome({ tone: "info", text: "Marked done — we'll confirm at your next website check." });
+      goNext(r.item.nextId, 2500);
     });
 
   const leave = (state: "skipped" | "dismissed") =>
@@ -138,7 +156,8 @@ export function FixScreen(p: FixScreenProps) {
       const r = await api<{ item: TaskRecheck | null }>(`/api/projects/${p.projectId}/tasks/recheck`, {
         body: { issueId: p.itemId, ...(p.recheckUrl ? { url: p.recheckUrl } : {}) },
       });
-      setOutcome(recheckLine(r.item));
+      const line = recheckLine(r.item, points);
+      setOutcome(r.item?.fixed === false ? { tone: "info", kind: "notSeen", text: "We couldn't see the change yet.", detail: notSeenDetail(r.item) } : line && r.item?.fixed === true ? { ...line, kind: "seen" } : line);
     });
 
   async function copy() {
@@ -160,7 +179,8 @@ export function FixScreen(p: FixScreenProps) {
       setEditing(false);
     });
 
-  const disabled = !p.canEdit || !!busy || (!!outcome && !p.done);
+  const notSeen = outcome?.kind === "notSeen";
+  const disabled = !p.canEdit || !!busy || (!!outcome && !p.done && !notSeen);
   const primary = (() => {
     if (p.done) {
       return (
@@ -187,8 +207,19 @@ export function FixScreen(p: FixScreenProps) {
           {p.writing ? "Writing…" : "Write it for me"}
         </Button>
       );
+    if (notSeen)
+      return (
+        <>
+          <Button size="lg" icon={<RefreshCw />} onClick={() => done()} loading={busy === "primary"} disabled={disabled} className="w-full sm:w-auto">
+            Check again
+          </Button>
+          <Button size="lg" variant="secondary" onClick={markDoneAnyway} loading={busy === "anyway"} disabled={disabled} className="w-full sm:w-auto">
+            Mark done anyway
+          </Button>
+        </>
+      );
     return (
-      <Button size="lg" icon={<CheckCircle2 />} onClick={done} loading={busy === "primary"} disabled={disabled} className="w-full sm:w-auto">
+      <Button size="lg" icon={<CheckCircle2 />} onClick={() => done()} loading={busy === "primary"} disabled={disabled} className="w-full sm:w-auto">
         I&apos;ve done it
       </Button>
     );
@@ -234,8 +265,18 @@ export function FixScreen(p: FixScreenProps) {
               : "flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-4 py-3 text-small font-medium text-info"
           }
         >
-          {outcome.tone === "success" ? <CheckCircle2 size={18} aria-hidden className="shrink-0" /> : <Eye size={18} aria-hidden className="shrink-0" />}
-          {outcome.text}
+          {outcome.kind === "seen" ? (
+            <PartyPopper size={18} aria-hidden className="shrink-0 motion-safe:animate-bounce" />
+          ) : outcome.tone === "success" ? (
+            <CheckCircle2 size={18} aria-hidden className="shrink-0" />
+          ) : (
+            <Eye size={18} aria-hidden className="shrink-0" />
+          )}
+          <span>
+            {outcome.kind === "seen" ? "✓ " : ""}
+            {outcome.text}
+            {outcome.detail && <span className="mt-1 block font-normal text-fg-soft">{outcome.detail}</span>}
+          </span>
         </p>
       )}
 

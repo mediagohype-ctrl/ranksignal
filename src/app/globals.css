@@ -526,7 +526,27 @@
   }
 }
 
+/* Homepage AI bars: grow from the left once, as they scroll into view. */
+@keyframes mk-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@utility mk-bar {
+  transform-origin: left center;
+  animation: mk-grow 900ms var(--ease-out-soft) both;
+  @supports (animation-timeline: view()) {
+    animation: mk-grow linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 40%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .mk-bar,
   .mk-rise,
   .mk-reveal,
   .mk-marquee {

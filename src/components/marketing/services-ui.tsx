@@ -1,9 +1,10 @@
-// Done-for-you service: the "Do it for me" offer card (+ Custom), hero delivery log and the sample monthly impact report.
+// Done-for-you service: the "Do it for me" offer card (+ Custom), hero delivery log and the example monthly report.
 // Every business, number and fix shown here is sample data and labelled as such.
 import type { ReactNode } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowRight, ArrowUpRight, Check, RotateCcw } from "lucide-react";
+import { bookCallHref } from "@/lib/brand";
 import { SampleTag } from "./home-ui";
 import { inkPill } from "./ui";
 import {
@@ -55,6 +56,8 @@ function CheckList({ items, ink }: { items: readonly string[]; ink: boolean }) {
 
 function TierCard({ tier: t, Heading }: { tier: ServiceTier; Heading: "h2" | "h3" }) {
   const ink = !!t.featured;
+  // The calendar when one is set (new tab); until then the contact page with this offer pre-filled.
+  const callHref = bookCallHref(servicesContactHref(t.id));
   return (
     <li
       className={clsx(
@@ -89,7 +92,7 @@ function TierCard({ tier: t, Heading }: { tier: ServiceTier; Heading: "h2" | "h3
         </div>
       </dl>
 
-      <Link href={servicesContactHref(t.id)} className={inkPill("lg", ink, "mt-8 w-full")}>
+      <Link href={callHref} {...newTabProps(callHref)} className={inkPill("lg", ink, "mt-8 w-full")}>
         Book a free call
         <ArrowRight aria-hidden />
       </Link>
@@ -139,23 +142,12 @@ export function DeliveryComposition() {
       <div className="relative z-10 rounded-[22px] border border-border bg-surface shadow-xl lg:mr-[14%]">
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-[0.9375rem] font-semibold text-fg">Done this month</p>
+            <p className="text-[0.9375rem] font-semibold text-fg">Fixes this month</p>
             <p className="text-xs text-muted">October · greenleaf-bakery.example</p>
           </div>
           <SampleTag />
         </div>
-        <div className="px-5 pt-5 sm:px-6">
-          <div className="flex items-baseline justify-between gap-3 text-small">
-            <span className="font-medium text-fg">Fixes delivered</span>
-            <span className="tabular-nums text-fg-soft">
-              <span className="font-semibold text-fg">15</span> of 15 agreed
-            </span>
-          </div>
-          <div aria-hidden className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-score-track">
-            <div className="h-full w-full rounded-full bg-primary" />
-          </div>
-        </div>
-        <ol className="mt-3 px-5 pb-16 sm:px-6 lg:pb-20">
+        <ol className="mt-1 px-5 pb-16 sm:px-6 lg:pb-20">
           {LOG.map((l) => (
             <li key={l.title} className="grid grid-cols-[3.25rem_1fr] items-start gap-3 border-b border-border py-3.5 last:border-0">
               <span className="pt-0.5 text-xs tabular-nums text-muted">{l.date}</span>
@@ -172,7 +164,7 @@ export function DeliveryComposition() {
 
       <div className="relative z-20 -mt-10 ml-6 rounded-[22px] border border-border bg-surface p-5 shadow-xl sm:ml-auto sm:w-[70%] sm:p-6 lg:-mt-16 lg:w-[56%]">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted">AI named you, 50 questions</p>
+          <p className="text-xs text-muted">AI named you</p>
           <SampleTag />
         </div>
         <p className="mt-3 flex items-baseline gap-3">
@@ -181,159 +173,65 @@ export function DeliveryComposition() {
             +9 pts
           </span>
         </p>
-        <p className="mt-2 text-xs text-muted">vs 22% in September · from 500 saved answers</p>
+        <p className="mt-2 text-xs text-muted">of the answers we checked · 22% in September</p>
         <p className="mt-4 inline-flex items-center gap-1.5 border-t border-border pt-3 text-xs text-fg-soft">
           <RotateCcw aria-hidden size={13} />
-          Every change recorded; changes on your site undo in one click
+          Every change we make is recorded and shown to you
         </p>
       </div>
     </figure>
   );
 }
 
-/* ------------------------------------------------------------------ sample monthly impact report */
+/* ------------------------------------------------------------------ example monthly report: three numbers */
 
-const KPIS = [
-  { label: "Fixes done", value: "15/15", change: "All agreed fixes", good: true },
-  { label: "AI named you", value: "31%", change: "+9 pts", good: true },
-  { label: "Questions where you’re linked", value: "12", change: "+5 of 50", good: true },
-  { label: "Overall score", value: "68", change: "+7", good: true },
+/** Made-up numbers for a made-up bakery. Always shown with the "Example" label; never a promise. */
+const REPORT_NUMBERS = [
+  { label: "Overall score", before: "61", value: "68", note: "out of 100" },
+  { label: "AI named you", before: "22%", value: "31%", note: "of the answers we checked" },
+  { label: "Fixes done", before: null, value: "9", note: "this month" },
 ];
 
-const ENGINES = [
-  { name: "ChatGPT", before: 26, after: 38 },
-  { name: "Perplexity", before: 29, after: 41 },
-  { name: "Gemini", before: 24, after: 30 },
-  { name: "Claude", before: 13, after: 24 },
-  { name: "Grok", before: 18, after: 22 },
-];
-
-const SHIPPED = [
-  { title: "Answered “Do you deliver to Domlur?” on 3 pages", tag: "Answer" },
-  { title: "Google Business Profile: services and hours fixed", tag: "Profile" },
-  { title: "Business info for Google and AI added to 6 pages", tag: "Info for AI" },
-  { title: "“Custom wedding cakes” page rewritten", tag: "Refresh" },
-];
-
-const NEXT = [
-  "Sugar-free range page (no AI tool names you here yet)",
-  "Fix the wrong opening hours Gemini quotes",
-  "Refresh the corporate orders page",
-];
-
-export function ImpactReportSample() {
+/** The monthly report in one simple picture: score up, AI mentions up, fixes done. */
+export function ReportExample() {
   return (
     <figure
-      aria-label="Sample monthly report for a made-up bakery"
+      aria-label="Example monthly report for a made-up bakery"
       className="relative overflow-hidden rounded-[28px] border border-border bg-surface shadow-xl"
     >
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-6 sm:px-9 sm:py-7">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-6 sm:px-9">
         <div className="min-w-0">
           <p className="mk-label">Monthly report</p>
-          <p className="mt-2 text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-fg">
-            Greenleaf Bakery · October 2026
-          </p>
-          <p className="mt-1 text-xs text-muted">Fix plan · prepared 3 November · compared with September</p>
+          <p className="mt-2 text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-fg">Greenleaf Bakery · October</p>
         </div>
-        <SampleTag />
+        <span className="inline-flex h-6 items-center rounded-full border border-border bg-surface px-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+          Example
+        </span>
       </div>
-
-      {/* Summary */}
-      <p className="border-b border-border px-6 py-6 text-[1.0625rem] leading-relaxed text-fg sm:px-9">
-        We made all 15 fixes we agreed for October. Across your 50 questions, AI assistants now name you in{" "}
-        <strong className="font-semibold">31% of answers</strong>, up from 22%. The biggest change came in the same month we
-        added your delivery areas to your homepage.
-      </p>
-
-      {/* KPIs */}
-      <dl className="grid grid-cols-2 gap-px border-b border-border bg-border lg:grid-cols-4">
-        {KPIS.map((k) => (
-          <div key={k.label} className="bg-surface px-6 py-5 sm:px-7">
-            <dt className="text-xs leading-snug text-muted">{k.label}</dt>
-            <dd className="mt-2">
-              <span className="block text-[1.875rem] font-semibold leading-none tracking-[-0.035em] tabular-nums text-fg">
-                {k.value}
+      <dl className="grid gap-px bg-border sm:grid-cols-3">
+        {REPORT_NUMBERS.map((n) => (
+          <div key={n.label} className="bg-surface px-6 py-7 sm:px-7">
+            <dt className="text-small font-medium text-fg-soft">{n.label}</dt>
+            <dd className="mt-3">
+              <span className="flex items-baseline gap-2">
+                {n.before && (
+                  <span className="text-[1.125rem] tabular-nums text-muted">
+                    {n.before}
+                    <span aria-hidden> →</span>
+                    <span className="sr-only"> last month, now </span>
+                  </span>
+                )}
+                <span className="text-[2.75rem] font-semibold leading-none tracking-[-0.04em] tabular-nums text-fg">{n.value}</span>
               </span>
-              <span className="mt-2 inline-flex text-xs font-semibold text-success">{k.change}</span>
+              <span className="mt-2 block text-xs text-muted">{n.note}</span>
             </dd>
           </div>
         ))}
       </dl>
-
-      <div className="grid lg:grid-cols-2">
-        {/* By engine */}
-        <div className="border-b border-border px-6 py-6 sm:px-9 lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-small font-semibold text-fg">How often each AI assistant named you</p>
-            <span className="flex items-center gap-3 text-[11px] text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <span aria-hidden className="h-1.5 w-3 rounded-full bg-border-strong" />
-                Sep
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span aria-hidden className="h-1.5 w-3 rounded-full bg-primary" />
-                Oct
-              </span>
-            </span>
-          </div>
-          <ul className="mt-5 space-y-4">
-            {ENGINES.map((e) => (
-              <li key={e.name} className="grid grid-cols-[6.5rem_1fr_2.75rem] items-center gap-3 text-xs">
-                <span className="font-medium text-fg">{e.name}</span>
-                <span aria-hidden className="space-y-1">
-                  <span className="block h-1.5 rounded-full bg-border-strong" style={{ width: `${e.before * 2}%` }} />
-                  <span className="block h-1.5 rounded-full bg-primary" style={{ width: `${e.after * 2}%` }} />
-                </span>
-                <span className="text-right tabular-nums text-fg-soft">
-                  <span className="sr-only">
-                    {e.before}% in September, now{" "}
-                  </span>
-                  {e.after}%
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Shipped */}
-        <div className="px-6 py-6 sm:px-9">
-          <p className="text-small font-semibold text-fg">What we did</p>
-          <ul className="mt-3">
-            {SHIPPED.map((s) => (
-              <li key={s.title} className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-0">
-                <span className="flex gap-2.5 text-small leading-snug text-fg-soft">
-                  <Check aria-hidden size={16} strokeWidth={2.5} className="mt-0.5 shrink-0 text-success" />
-                  {s.title}
-                </span>
-                <span className="hidden h-6 shrink-0 items-center rounded-full border border-border px-2.5 text-[11px] font-medium text-fg-soft sm:inline-flex">
-                  {s.tag}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted">+ 11 more in the full change log</p>
-        </div>
-      </div>
-
-      {/* Next month + method */}
-      <div className="grid gap-6 border-t border-border bg-surface-2/60 px-6 py-6 sm:px-9 lg:grid-cols-[1fr_1fr]">
-        <div>
-          <p className="text-small font-semibold text-fg">Planned for November</p>
-          <ol className="mt-3 space-y-2">
-            {NEXT.map((n, i) => (
-              <li key={n} className="flex gap-3 text-small leading-snug text-fg-soft">
-                <span className="w-4 shrink-0 tabular-nums text-muted">{i + 1}.</span>
-                {n}
-              </li>
-            ))}
-          </ol>
-        </div>
-        <p className="self-end text-xs leading-relaxed text-muted lg:text-right">
-          Based on 500 saved answers (50 questions × 5 AI assistants, checked twice this month). Small numbers move a lot,
-          and AI answers change from day to day. Nobody can promise a Google position or an AI mention.
-        </p>
-      </div>
+      <p className="border-t border-border bg-surface-2/60 px-6 py-5 text-small leading-relaxed text-fg-soft sm:px-9">
+        Fixes this month: delivery areas on the homepage, Google profile hours and photos, 2 new pages, and more. Each one
+        is listed in plain words.
+      </p>
     </figure>
   );
 }
@@ -363,7 +261,7 @@ export function ServicesCta({
           <div className="mk-lead mt-6 max-w-xl text-bg/75">{body}</div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row lg:col-span-5 lg:justify-end">
-          <Link href={primary.href} className={inkPill("lg", true)}>
+          <Link href={primary.href} {...newTabProps(primary.href)} className={inkPill("lg", true)}>
             {primary.label}
             <ArrowRight aria-hidden />
           </Link>
@@ -383,11 +281,12 @@ export function ServicesCta({
 
 /* ------------------------------------------------------------------ FAQ list (homepage style) */
 
-export function FaqList({ items }: { items: { q: string; a: string }[] }) {
+/** `openFirst` shows the first answer without a click (the question most people have). */
+export function FaqList({ items, openFirst = false }: { items: { q: string; a: string }[]; openFirst?: boolean }) {
   return (
     <div className="border-t border-fg">
-      {items.map((f) => (
-        <details key={f.q} className="group border-b border-border">
+      {items.map((f, i) => (
+        <details key={f.q} open={openFirst && i === 0} className="group border-b border-border">
           <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-6 [&::-webkit-details-marker]:hidden">
             <h3 className="text-[1.125rem] font-medium leading-snug tracking-[-0.015em] text-fg sm:text-[1.25rem]">{f.q}</h3>
             <span

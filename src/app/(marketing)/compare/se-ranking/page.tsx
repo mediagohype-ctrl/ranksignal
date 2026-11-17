@@ -31,7 +31,7 @@ const ROWS: Row[] = [
   { label: "Rank tracking", cells: [OUR_CELLS.rank, { s: "yes", note: "2,000 keywords tracked daily on Core" }] },
   { label: "AI answer tracking", cells: [OUR_CELLS.ai, { s: "yes", note: "25 prompts a day across 5 AI engines on Core and Growth; more from $71/mo" }] },
   { label: "Plain-English to-do list", cells: [OUR_CELLS.todo, { s: "unknown" }] },
-  { label: "Fixes published to your site with approval and undo", cells: [OUR_CELLS.publish, { s: "unknown" }] },
+  { label: "Ready-to-paste fixes, or a team that makes them", cells: [OUR_CELLS.publish, { s: "unknown" }] },
   { label: "Done-for-you service", cells: [OUR_CELLS.service, { s: "unknown" }] },
   { label: "Prices shown in", cells: [OUR_CELLS.currency, { text: "USD", note: "On their pricing page" }] },
   { label: "Starting price", cells: [OUR_CELLS.from, { text: "$129/mo", note: "Core; $103.20/mo billed annually" }] },
@@ -44,7 +44,7 @@ const FAQ: Qa[] = [
     a: (
       <>
         It depends on who does the work. SE Ranking gives you more data for the money, including rank tracking and backlinks,
-        from $129 a month. MyWebRank gives you a shorter, plain-English to-do list and fixes after your OK, from{" "}
+        from $129 a month. MyWebRank gives you a shorter, plain-English to-do list and ready-to-paste fixes, from{" "}
         {OUR.fromPrice} a month. If you have a marketer, SE Ranking; if you don&apos;t, MyWebRank.
       </>
     ),
@@ -79,11 +79,12 @@ const FAQ: Qa[] = [
     ),
   },
   {
-    q: "How are MyWebRank fixes published?",
+    q: "How are MyWebRank fixes made?",
     a: (
       <>
-        {OUR.publishing}. Every change waits for your OK. On WordPress the old version is saved
-        first, and you can undo it in one click. On GitHub, changes arrive as pull requests for your developer to review.
+        On {OUR.self.name}, we show exactly what to change and you make the change yourself, with ready-to-paste fixes and
+        step-by-step help for any website. On {OUR.dfy.name}, our team makes the changes on your website, and asks for
+        your OK first.
       </>
     ),
   },
@@ -109,7 +110,7 @@ export default function CompareSeRankingPage() {
           <p>
             SE Ranking is an all-round SEO platform with rank tracking, keyword research, backlinks, a site audit and AI
             tracking, priced in US dollars from $129 a month. MyWebRank is narrower and simpler: a weekly website check, AI
-            answer tracking, and fixes only after you approve them (one-click with undo on WordPress), from{" "}
+            answer tracking, and ready-to-paste fixes with step-by-step help, from{" "}
             {OUR.fromPrice} a month in rupees. SE Ranking suits marketers who want data; MyWebRank suits owners who want fixes.
           </p>
         }
@@ -134,7 +135,7 @@ export default function CompareSeRankingPage() {
         ours={[
           "A plain-English to-do list, sorted by impact and effort, so you know what to do first.",
           `AI answer tracking included in ${OUR.self.name} at ${OUR.fromPrice} a month.`,
-          `${OUR.publishing}, only after your OK.`,
+          `${OUR.publishing}.`,
           `${OUR.dfy.name} at ${OUR.serviceFrom} a month, with no setup fee, if you'd rather not do it yourself.`,
           "Rupee pricing with GST invoices, and support from a team based in India.",
         ]}
@@ -143,7 +144,7 @@ export default function CompareSeRankingPage() {
       <PricingSection id="pricing" competitors={[SE]}>
         <p>
           SE Ranking Core and MyWebRank {OUR.self.name} both include AI tracking. Core costs $129 a month and adds rank
-          tracking, keywords and backlinks. {OUR.self.name} costs {OUR.fromPrice} a month, covers one website and adds approved fixes and a
+          tracking, keywords and backlinks. {OUR.self.name} costs {OUR.fromPrice} a month, covers one website and adds ready-to-paste fixes and a
           plain-English to-do list.
         </p>
       </PricingSection>
@@ -156,7 +157,7 @@ export default function CompareSeRankingPage() {
           {
             situation: "You own one business website and want a clear list of what to fix",
             pick: "MyWebRank",
-            why: "Plain-English to-dos, and fixes after your OK: one-click with undo on WordPress, copy-paste steps elsewhere.",
+            why: "Plain-English to-dos, and ready-to-paste fixes for any website, with step-by-step help.",
           },
           {
             situation: "You want to pay in rupees with a GST invoice",
@@ -168,7 +169,7 @@ export default function CompareSeRankingPage() {
             pick: `MyWebRank ${OUR.dfy.name}`,
             why: `Our team does the work for ${OUR.serviceFrom} a month, with no setup fee, and reports what changed.`,
           },
-          { situation: "You're an agency with both needs", pick: "both", why: "SE Ranking for rankings and links, MyWebRank for AI tracking and approved fixes." },
+          { situation: "You're an agency with both needs", pick: "both", why: "SE Ranking for rankings and links, MyWebRank for AI tracking and ready-to-paste fixes." },
         ]}
       />
 

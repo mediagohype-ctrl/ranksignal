@@ -5,7 +5,7 @@ import { enqueue, type JobContext, type JobHandler } from "@/lib/jobs/queue";
 import { getEngineLimit, getPlan } from "@/lib/billing/plans";
 import { aiLimitMessage, getRunPromptCap, sizeRunToAllowance } from "@/lib/billing/ai-limits";
 import { getAiAllowance } from "@/lib/billing/allowance";
-import { isAiBudgetExhausted, nextUtcDayStart } from "@/lib/billing/ai-budget";
+import { aiBudgetPeriod, isAiBudgetExhausted, nextUtcDayStart } from "@/lib/billing/ai-budget";
 import { recordUsage, releaseReservation, reserveCredits } from "@/lib/billing/usage";
 import { getAvailableProviders } from "@/lib/providers/visibility/registry";
 import { withTimeout } from "@/lib/providers/visibility/errors";
@@ -17,6 +17,8 @@ import { computeMetrics, type MetricObservation } from "./metrics";
 import { parseAnswer } from "./parse";
 import { projectVisibilityContext } from "./project-context";
 import { BRAND_PROBE_TASK_TYPE, brandProbePrompts, loadBrandFacts, runBrandKnowledgeProbe, type BrandKnowledgeResult } from "./brand-knowledge";
+import { readDeferral, type AiPauseReason } from "./run-state";
+import { celebrateFirstMention, notifyCheckPaused } from "./notify";
 
 export const VISIBILITY_TASK_TYPE = "visibility_prompt";
 /** Concurrent calls per provider (shared by every run in this process). Keys: full provider id, else the part before ":". */
@@ -25,6 +27,38 @@ export const DEFAULT_PROVIDER_CONCURRENCY = 3;
 const CALL_TIMEOUT_MS = 120_000;
 /** Resumed runs start a few minutes after 00:00 UTC (spread out so they don't all hit the providers at once). */
 const RESUME_DELAY_MS = 5 * 60_000;
+/**
+ * A check stopped by an AI spend limit is put off to the next day at most this many times. After that it is
+ * finished with the answers it has (so it can't sit "waiting" forever holding the customer's AI answers).
+ */
+export const MAX_AI_DEFERRALS = 3;
+/** Stored on the run's metrics when a limit ended the check early (the UI explains the smaller number). */
+export interface StoppedEarly {
+  reason: AiPauseReason;
+  collected: number;
+  expected: number;
+  deferrals: number;
+}
+/** JobError message when a limit ended the check before a single answer came in (see plainFailureReason). */
+export const AI_LIMIT_NO_ANSWERS_ERROR = "AI limit reached several days in a row: the AI check was stopped with no answers";
+
+/**
+ * A spend limit stopped the check: wait for tomorrow, or finish now with what we have? Pure.
+ *  - daily limit (platform or workspace): wait, up to MAX_AI_DEFERRALS times;
+ *  - monthly workspace limit: waiting a day can't help unless tomorrow is a new month, so finish now.
+ */
+export function deferralDecision(o: { priorDeferrals: number; reason: AiPauseReason; now: Date }): "defer" | "stop" {
+  if (o.priorDeferrals >= MAX_AI_DEFERRALS) return "stop";
+  if (o.reason === "monthly" && nextUtcDayStart(o.now).getUTCMonth() === o.now.getUTCMonth()) return "stop";
+  return "defer";
+}
+
+/** Final status of a check from what it collected. `stoppedByLimit`: a spend limit ended it early. Pure. */
+export function finalRunStatus(o: { collected: number; failures: number; stoppedByLimit: boolean }): "failed" | "succeeded_with_warnings" | "succeeded" {
+  if (o.collected === 0) return "failed";
+  return o.failures > 0 || o.stoppedByLimit ? "succeeded_with_warnings" : "succeeded";
+}
+
 /** Simulated demo answers are free (no credits) — they are not real measurements. */
 const creditsFor = (p: VisibilityProvider) => (p.simulated ? 0 : 1);
 /**
@@ -241,6 +275,7 @@ export const visibilityJob: JobHandler = async (ctx) => {
   const errorsByProvider: Record<string, string> = {};
   // Set when today's AI budget runs out: the rest of the questions wait for tomorrow (not counted as failed).
   let deferred = false;
+  let deferReason: AiPauseReason = "daily";
 
   try {
     // Every engine in parallel; each provider limited to its own number of concurrent calls.
@@ -282,6 +317,7 @@ export const visibilityJob: JobHandler = async (ctx) => {
           } catch (err) {
             if (isAiBudgetExhausted(err)) {
               deferred = true;
+              deferReason = aiBudgetPeriod(err);
               return;
             }
             failures.push({ provider: provider.id, brandMentioned: false, brandCited: false, brandRecommended: false, simulated: provider.simulated, ok: false });
@@ -301,7 +337,17 @@ export const visibilityJob: JobHandler = async (ctx) => {
     }
   }
   if (ctx.signal?.aborted) throw new JobError("Visibility run aborted (timeout or shutdown); collected answers are kept", "transient");
-  if (deferred) return deferToTomorrow(ctx, { runId: run.id, projectId: project.id, orgId, expected, prompts: prompts.length });
+  // A spend limit stopped the check. Usually: keep what we have and continue tomorrow. But never forever — after
+  // MAX_AI_DEFERRALS days (or at once for the monthly limit) finish with the answers collected, so the answers it
+  // was still holding go back to the customer's allowance (a finished run holds nothing; see allowance.ts).
+  let stoppedEarly: StoppedEarly | null = null;
+  if (deferred) {
+    const prior = readDeferral(ctx.run.input).deferrals;
+    if (deferralDecision({ priorDeferrals: prior, reason: deferReason, now: new Date() }) === "defer") {
+      return deferToTomorrow(ctx, { runId: run.id, projectId: project.id, orgId, expected, prompts: prompts.length, reason: deferReason, deferrals: prior + 1 });
+    }
+    stoppedEarly = { reason: deferReason, collected: 0, expected, deferrals: prior };
+  }
 
   const rows = await db.observation.findMany({
     where: { visibilityRunId: run.id },
@@ -325,13 +371,15 @@ export const visibilityJob: JobHandler = async (ctx) => {
     { from: run.startedAt ?? run.createdAt, to: finishedAt, brandLabel: pctx.brandNames[0] },
   );
 
-  const status = rows.length === 0 ? "failed" : failures.length > 0 ? "succeeded_with_warnings" : "succeeded";
+  const status = finalRunStatus({ collected: rows.length, failures: failures.length, stoppedByLimit: !!stoppedEarly });
+  if (stoppedEarly) stoppedEarly.collected = rows.length;
 
   // Brand knowledge probe (GEO signal) — real providers only; failures never fail the run.
   let brandKnowledge: BrandKnowledgeResult[] | undefined;
   // SERP engines (Google AI Overviews / AI Mode) answer searches, not "what do you know about X" questions: not probed.
   const realProviders = providers.filter((p) => !p.simulated && !isSerpProviderId(p.id));
-  if (status !== "failed" && realProviders.length > 0) {
+  // Not when a spend limit ended the check: the probe's own AI calls would be refused too.
+  if (status !== "failed" && !stoppedEarly && realProviders.length > 0) {
     brandKnowledge = await runBrandProbeStep(ctx, {
       orgId,
       runId: run.id,
@@ -343,19 +391,32 @@ export const visibilityJob: JobHandler = async (ctx) => {
     });
   }
 
+  // First time any AI tool names this business (real answers only): celebrate it. Never fails the run.
+  const firstMention =
+    status !== "failed" && !metrics.simulated
+      ? await celebrateFirstMention({ organizationId: orgId, projectId: project.id, runId: run.id, rows })
+      : null;
+
   await db.visibilityRun.update({
     where: { id: run.id },
     data: {
       status,
-      metrics: (brandKnowledge ? { ...metrics, brandKnowledge } : metrics) as unknown as Prisma.InputJsonValue,
+      metrics: {
+        ...metrics,
+        ...(brandKnowledge ? { brandKnowledge } : {}),
+        ...(stoppedEarly ? { stoppedEarly } : {}),
+        ...(firstMention ? { firstMention: { tools: firstMention } } : {}),
+      } as unknown as Prisma.InputJsonValue,
       finishedAt,
     },
   });
 
   if (status === "failed") {
-    await ctx.event("visibility_run.failed", { errors: errorsByProvider });
+    await ctx.event("visibility_run.failed", { errors: errorsByProvider, ...(stoppedEarly ? { stoppedEarly } : {}) });
+    if (stoppedEarly) throw new JobError(AI_LIMIT_NO_ANSWERS_ERROR, "quota");
     throw new JobError("All provider calls failed", "permanent");
   }
+  if (stoppedEarly) await ctx.event("visibility_run.stopped_by_limit", { ...stoppedEarly });
 
   await ctx.event("visibility_run.completed", {
     visibilityRunId: run.id,
@@ -426,7 +487,7 @@ async function sizeRun(
  */
 async function deferToTomorrow(
   ctx: JobContext,
-  o: { runId: string; projectId: string; orgId: string; expected: number; prompts: number },
+  o: { runId: string; projectId: string; orgId: string; expected: number; prompts: number; reason: AiPauseReason; deferrals: number },
 ): Promise<Record<string, unknown>> {
   const now = new Date();
   const resumeAt = new Date(nextUtcDayStart(now).getTime() + RESUME_DELAY_MS + Math.floor(Math.random() * RESUME_DELAY_MS));
@@ -437,27 +498,23 @@ async function deferToTomorrow(
     kind: "visibility",
     organizationId: o.orgId,
     projectId: o.projectId,
-    input: { ...ctx.run.input, visibilityRunId: o.runId, maxPrompts: o.prompts, resumedFrom: ctx.run.id },
+    // deferrals + deferReason are what the UI reads to say "waiting until tomorrow" (see ./run-state.ts).
+    input: { ...ctx.run.input, visibilityRunId: o.runId, maxPrompts: o.prompts, resumedFrom: ctx.run.id, deferrals: o.deferrals, deferReason: o.reason },
     idempotencyKey: `visibility:${o.runId}:resume:${day}`,
     runAfter: resumeAt,
   });
   // Still in flight (holds its expected answers); point it at the new workflow so recovery doesn't fail it.
   await db.visibilityRun.update({ where: { id: o.runId }, data: { status: "queued", workflowRunId: wf.id } });
-  await ctx.event("visibility_run.deferred", { reason: "daily_ai_budget", collected, expected: o.expected, resumeAt: resumeAt.toISOString() });
-  const link = `/app/projects/${o.projectId}/visibility?run=${o.runId}&waiting=${day}`;
-  const already = await db.notification.findFirst({ where: { organizationId: o.orgId, type: "visibility_deferred", link }, select: { id: true } });
-  if (!already) {
-    await db.notification.create({
-      data: {
-        organizationId: o.orgId,
-        type: "visibility_deferred",
-        title: "We'll finish the rest of your AI check tomorrow",
-        body: `We collected ${collected} of ${o.expected} AI answers today. We'll collect the rest automatically tomorrow — there's nothing you need to do.`,
-        link,
-      },
-    });
-  }
-  return { visibilityRunId: o.runId, deferred: true, collected, expected: o.expected, resumeAt: resumeAt.toISOString() };
+  await ctx.event("visibility_run.deferred", {
+    reason: o.reason === "monthly" ? "monthly_ai_budget" : "daily_ai_budget",
+    deferrals: o.deferrals,
+    collected,
+    expected: o.expected,
+    resumeAt: resumeAt.toISOString(),
+  });
+  // In-app note each day it waits; one email per check (on the first pause). Never throws.
+  await notifyCheckPaused({ organizationId: o.orgId, projectId: o.projectId, runId: o.runId, collected, expected: o.expected, reason: o.reason, deferrals: o.deferrals, day });
+  return { visibilityRunId: o.runId, deferred: true, deferrals: o.deferrals, collected, expected: o.expected, resumeAt: resumeAt.toISOString() };
 }
 
 async function runBrandProbeStep(

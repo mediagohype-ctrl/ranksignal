@@ -5,6 +5,7 @@
 import { Badge, Notice } from "@/components/ui";
 import type { SchemaReport } from "@/lib/tools/schema";
 import { CheckResults, PageUrlForm, ResultCard, ToolStatusBadge, usePageCheck } from "./page-check-ui";
+import { WholeSiteCta } from "./whole-site-cta";
 
 type Result = SchemaReport & { url: string; finalUrl: string };
 
@@ -121,6 +122,7 @@ export function SchemaChecker() {
             Valid markup makes a page eligible for rich results, such as stars or breadcrumbs in Google. It never guarantees them:
             Google decides case by case, and the markup must match what visitors see on the page.
           </Notice>
+          <WholeSiteCta />
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import { loadTodo } from "@/lib/tasks/todo-server";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { RunButtons } from "@/components/app/run-buttons";
 import { PutBackButton } from "@/components/app/fix/fix-screen";
+import { StarterListingsPreview } from "@/components/app/offsite/starter-preview";
 import { todoItemHref } from "@/components/app/nav";
 import { Card, EmptyState, LinkButton, Meter, PageHeader } from "@/components/ui";
 
@@ -105,14 +106,17 @@ export default async function TodoPage({
                   )}
                 >
                   <span className="truncate">{t.label}</span>
-                  <span className="tabular-nums text-xs text-muted">{n}</span>
+                  {/* Outside with nothing yet shows starter suggestions below, so a bare "0" would look empty. */}
+                  {(n > 0 || t.key === "website") && <span className="tabular-nums text-xs text-muted">{n}</span>}
                 </Link>
               );
             })}
           </nav>
 
           <Card as="section" aria-label={TABS.find((t) => t.key === tab)!.label}>
-            {shown.length === 0 ? (
+            {shown.length === 0 && tab === "outside" ? (
+              <StarterListingsPreview project={project} listingsHref={`${todoHref(project.id)}/listings`} />
+            ) : shown.length === 0 ? (
               <div className="p-5 sm:p-6">
                 <EmptyState
                   size="sm"

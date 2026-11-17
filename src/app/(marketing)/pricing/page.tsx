@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowRight, Check } from "lucide-react";
-import { BRAND } from "@/lib/brand";
+import { BRAND, bookCallHref } from "@/lib/brand";
+import { OFFER_SALES_LINE } from "@/lib/billing/offer";
 import { ProofLine } from "@/components/marketing/proof-line";
 import { JsonLd, inkPill } from "@/components/marketing/ui";
 import {
@@ -62,7 +63,7 @@ const CARDS: PlanCard[] = [
     start: `Free 30-minute call.${DFY_PLAN.setup === 0 ? " No setup fee." : ""}`,
     term: DFY_PLAN.termNote,
     cta: "Book a free call",
-    href: servicesContactHref("fix"),
+    href: bookCallHref(servicesContactHref("fix")),
     dark: true,
     tag: "Most chosen",
     listTitle: DFY_PLAN.inherits ?? "What you get",
@@ -83,10 +84,17 @@ const CARDS: PlanCard[] = [
 
 const WHICH: { label: string; diy: string; dfy: string }[] = [
   { label: "Who does the work", diy: "You, with our step-by-step help", dfy: "Our team" },
+  {
+    label: "Changes on your website",
+    diy: "We show exactly what to change. You make the change.",
+    dfy: "Our team makes the changes on your website, after your OK.",
+  },
   { label: "Your time each month", diy: "2–3 hours", dfy: "15 minutes to say OK" },
   { label: "Best for", diy: "Owners who like to do it themselves", dfy: "Busy owners who want it done" },
 ];
 
+// The first answer is shown open. It matches src/lib/billing/access.ts: the trial needs no card and simply ends;
+// nothing is charged unless the owner picks a plan and pays.
 const PRICING_FAQ = [
   { q: `What happens after ${TRIAL_DAYS} days?`, a: "Pick a plan, or do nothing and pay nothing." },
   { q: "Can I switch plans later?", a: "Yes, any time. Your history moves with you." },
@@ -127,7 +135,7 @@ export default function PricingPage() {
     "@context": "https://schema.org",
     "@type": "Service",
     name: "Done-for-you website fixes for Google and AI",
-    url: `${SITE}/services`,
+    url: `${SITE}/done-for-you`,
     provider: { "@type": "Organization", name: BRAND.name, url: SITE },
     offers: [offer(DFY_PLAN.name, DFY_PLAN.price, `${SITE}/pricing#plans`)],
   };
@@ -249,6 +257,7 @@ export default function PricingPage() {
           <h2 id="which-title" className="mk-reveal mk-title max-w-[16ch] text-fg">
             Which is right for me?
           </h2>
+          <p className="mk-reveal mk-lead mt-5 max-w-2xl text-fg-soft">{OFFER_SALES_LINE}</p>
           <div className="mk-reveal mt-10 overflow-hidden rounded-[24px] border border-border bg-surface">
             <table className="w-full table-fixed text-left">
               <caption className="sr-only">
@@ -297,7 +306,7 @@ export default function PricingPage() {
             </p>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">
-            <FaqList items={PRICING_FAQ} />
+            <FaqList items={PRICING_FAQ} openFirst />
           </div>
         </div>
       </section>

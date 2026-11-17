@@ -5,7 +5,10 @@ import { BRAND } from "@/lib/brand";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { renderEmail } from "@/lib/email/layout";
 import { wantsEmail } from "@/lib/dashboard/project-schema";
-import { getStoredReport } from "@/lib/report/stored";
+import { Prisma } from "@prisma/client";
+import { getStoredReport, isSiteReport } from "@/lib/report/stored";
+import { problemChange, problemCounts } from "@/lib/report/counts";
+import type { SiteReport } from "@/lib/report/types";
 import {
   approvalsNotice, filterUnsent, jobFailedNotice, reportReadyNotice, visibilityReadyNotice, type RunNotice,
 } from "./templates";
@@ -31,6 +34,27 @@ interface FinishedRun {
 const str = (v: unknown) => (typeof v === "string" ? v : null);
 const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
 
+/**
+ * The stored report of the website check before `crawlRunId` (its newest stored copy, i.e. with that check's AI
+ * answers when they arrived). Null on the first check or when no report was stored for it.
+ */
+async function previousCheckReport(organizationId: string, projectId: string, crawlRunId: string): Promise<SiteReport | null> {
+  const current = await db.crawlRun.findFirst({ where: { id: crawlRunId, organizationId }, select: { createdAt: true } });
+  if (!current) return null;
+  const prev = await db.crawlRun.findFirst({
+    where: { organizationId, projectId, status: "succeeded", createdAt: { lt: current.createdAt } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (!prev) return null;
+  const snap = await db.reportSnapshot.findFirst({
+    where: { organizationId, projectId, crawlRunId: prev.id, report: { not: Prisma.DbNull } },
+    orderBy: { createdAt: "desc" },
+    select: { report: true },
+  });
+  return isSiteReport(snap?.report) ? snap.report : null;
+}
+
 async function noticeFor(run: FinishedRun, projectName: string): Promise<RunNotice | null> {
   const projectId = run.projectId!;
   const base = { organizationId: run.organizationId, projectId, projectName };
@@ -48,9 +72,13 @@ async function noticeFor(run: FinishedRun, projectName: string): Promise<RunNoti
       select: { status: true, pagesCrawled: true },
     });
     if (!cr || cr.status !== "succeeded") return null;
-    // Same grouped issues (and count) as the report page.
+    // Same problem list, count and urgent/important split as Home and the Full report (problemCounts).
     const report = await getStoredReport(projectId, run.organizationId);
-    return reportReadyNotice({ ...base, crawlRunId, pagesCrawled: cr.pagesCrawled, issues: report?.issues ?? [] });
+    const counts = problemCounts(report);
+    // A re-check is about the CHANGE since the previous website check ("2 problems fixed, 1 new. Score 49 → 52.").
+    const previous = report ? await previousCheckReport(run.organizationId, projectId, crawlRunId) : null;
+    const change = report && previous ? problemChange({ issues: previous.issues, score: previous.overall.score }, { issues: report.issues, score: report.overall.score }) : null;
+    return reportReadyNotice({ ...base, crawlRunId, pagesCrawled: cr.pagesCrawled, counts, change, aiPending: report?.overall.partial === true });
   }
 
   if (run.kind === "visibility") {
@@ -67,6 +95,7 @@ async function noticeFor(run: FinishedRun, projectName: string): Promise<RunNoti
     const questions = (await db.observation.groupBy({ by: ["promptId"], where: { visibilityRunId } })).length;
     return visibilityReadyNotice({
       ...base, visibilityRunId, metrics: obj(vr.metrics), partial: vr.status === "succeeded_with_warnings", questions, expected: vr.sampleSize,
+      stoppedByLimit: !!obj(vr.metrics).stoppedEarly,
     });
   }
 

@@ -7,7 +7,8 @@ import { Bell, ChevronDown, ChevronsUpDown, Code2, FileText, FolderKanban, Layou
 import { BRAND } from "@/lib/brand";
 import { Avatar } from "@/components/ui";
 import { LogoLockup } from "@/components/brand/logo";
-import { APP_TABS, projectHref, tabForSection } from "@/components/app/nav";
+import { projectHref, tabForSection, type MenuLink } from "@/components/app/nav";
+import { useAppMenu } from "@/components/app/menu-context";
 
 interface ProjectLite {
   id: string;
@@ -15,17 +16,17 @@ interface ProjectLite {
   websiteUrl: string;
 }
 
-const SETUP_ICONS = { integrations: Plug, alerts: Bell, indexnow: Send, settings: SlidersHorizontal } as const;
-const SETUP_SLUGS = ["integrations", "alerts", "indexnow", "settings"] as const;
-const SETUP_LABELS: Record<keyof typeof SETUP_ICONS, string> = { integrations: "Connect website", alerts: "Alerts", indexnow: "IndexNow", settings: "Settings" };
-
-const ACCOUNT_LINKS = [
-  { href: "/app", label: "All websites", icon: FolderKanban, exact: true },
-  { href: "/app/portfolio", label: "Portfolio", icon: LayoutGrid, exact: false },
-  { href: "/app/prospect", label: "Prospect report", icon: FileText, exact: false },
-  { href: "/app/settings", label: "Settings & billing", icon: Settings, exact: true },
-  { href: "/app/settings/api", label: "API keys", icon: Code2, exact: false },
-] as const;
+// Which pages each group holds is decided by buildMenu (src/components/app/nav.ts); only the icons live here.
+type IconType = React.ComponentType<{ size?: number; "aria-hidden"?: boolean; className?: string }>;
+const SETUP_ICONS: Record<string, IconType> = { integrations: Plug, alerts: Bell, settings: SlidersHorizontal };
+const LINK_ICONS: Record<MenuLink["key"], IconType> = {
+  websites: FolderKanban,
+  portfolio: LayoutGrid,
+  prospect: FileText,
+  settings: Settings,
+  api: Code2,
+  indexnow: Send,
+};
 
 const LAST_PROJECT_KEY = "app.lastProjectId";
 
@@ -46,7 +47,7 @@ function NavLink({
 }: {
   href: string;
   active: boolean;
-  icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean; className?: string }>;
+  icon: IconType;
   /** The question this tab answers, under the label. */
   hint?: string;
   children: React.ReactNode;
@@ -127,19 +128,30 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [remembered, setRemembered] = useState<string | null>(null);
+  const menu = useAppMenu();
 
   const match = pathname.match(/^\/app\/projects\/([^/]+)(?:\/([^/]+))?/);
   const routeProjectId = match?.[1] ?? null;
   const section = match?.[2] ?? "";
 
+  // Remember the website last opened — but only one that still exists. After a website is replaced or deleted the
+  // remembered id is cleared, so the switcher never keeps showing (or opening) a website that is gone.
+  const projectIds = projects.map((p) => p.id).join(",");
   useEffect(() => {
+    const ids = projectIds.split(",");
+    const exists = (id: string | null): id is string => !!id && ids.includes(id);
     try {
-      if (routeProjectId) localStorage.setItem(LAST_PROJECT_KEY, routeProjectId);
-      else setRemembered(localStorage.getItem(LAST_PROJECT_KEY));
+      if (exists(routeProjectId)) {
+        localStorage.setItem(LAST_PROJECT_KEY, routeProjectId);
+        return;
+      }
+      const saved = localStorage.getItem(LAST_PROJECT_KEY);
+      if (saved && !exists(saved)) localStorage.removeItem(LAST_PROJECT_KEY);
+      setRemembered(exists(saved) ? saved : null);
     } catch {
       /* storage unavailable */
     }
-  }, [routeProjectId]);
+  }, [routeProjectId, projectIds]);
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
@@ -148,11 +160,20 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const isAccountActive = (href: string, exact: boolean) => (exact ? pathname === href : pathname.startsWith(href));
-  const accountActive = ACCOUNT_LINKS.some(({ href, exact }) => isAccountActive(href, exact));
+  const isAccountActive = (href: string, exact?: boolean) => (exact ? pathname === href : pathname.startsWith(href));
+  const accountActive = menu.account.some(({ href, exact }) => !!href && isAccountActive(href, exact));
 
   const current =
     projects.find((p) => p.id === routeProjectId) ?? projects.find((p) => p.id === remembered) ?? projects[0] ?? null;
+
+  // Website pages in the Advanced group need a website to open; account pages always show.
+  const advancedLinks = menu.advanced.flatMap((l) => {
+    if (l.href) return [{ key: l.key, label: l.label, href: l.href, active: isAccountActive(l.href, l.exact) }];
+    if (l.slug && current) {
+      return [{ key: l.key, label: l.label, href: projectHref(current.id, l.slug), active: routeProjectId === current.id && section === l.slug }];
+    }
+    return [];
+  });
 
   const nav = (
     <nav aria-label="Primary" className="flex h-full flex-col">
@@ -213,7 +234,7 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
         {current && (
           <div>
             <ul className="space-y-0.5">
-              {APP_TABS.map((tab) => {
+              {menu.tabs.map((tab) => {
                 const active = routeProjectId === current.id && tabForSection(section)?.key === tab.key;
                 return (
                   <li key={tab.key}>
@@ -235,29 +256,43 @@ export function AppSidebar({ projects }: { projects: ProjectLite[] }) {
           <NavGroup
             id="setup"
             title="Setup"
-            hasActive={routeProjectId === current.id && (SETUP_SLUGS as readonly string[]).includes(section)}
+            hasActive={routeProjectId === current.id && menu.setup.some((p) => p.slug === section)}
           >
-            {SETUP_SLUGS.map((slug) => (
+            {menu.setup.map(({ slug, label }) => (
               <li key={slug}>
                 <NavLink
                   href={projectHref(current.id, slug)}
                   active={routeProjectId === current.id && section === slug}
-                  icon={SETUP_ICONS[slug]}
+                  icon={SETUP_ICONS[slug] ?? SlidersHorizontal}
                 >
-                  {SETUP_LABELS[slug]}
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </NavGroup>
+        )}
+        {/* Advanced: only with Expert mode on (API keys; IndexNow where our team works on the website). */}
+        {advancedLinks.length > 0 && (
+          <NavGroup id="advanced" title="Advanced" hasActive={advancedLinks.some((l) => l.active)}>
+            {advancedLinks.map((l) => (
+              <li key={l.key}>
+                <NavLink href={l.href} active={l.active} icon={LINK_ICONS[l.key]}>
+                  {l.label}
                 </NavLink>
               </li>
             ))}
           </NavGroup>
         )}
         <NavGroup id="account" title="Account" hasActive={accountActive}>
-          {ACCOUNT_LINKS.map(({ href, label, icon, exact }) => (
-            <li key={href}>
-              <NavLink href={href} active={isAccountActive(href, exact)} icon={icon}>
-                {label}
-              </NavLink>
-            </li>
-          ))}
+          {menu.account.map(({ key, href, label, exact }) =>
+            href ? (
+              <li key={key}>
+                <NavLink href={href} active={isAccountActive(href, exact)} icon={LINK_ICONS[key]}>
+                  {label}
+                </NavLink>
+              </li>
+            ) : null,
+          )}
         </NavGroup>
       </div>
     </nav>

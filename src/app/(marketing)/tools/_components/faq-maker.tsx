@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { Button, Field, Input, Textarea } from "@/components/ui";
 import { FAQ_MAX_ITEMS, faqScriptTag, type FaqItem } from "@/lib/growth/tools";
+import { WholeSiteCta } from "./whole-site-cta";
 
 const START: FaqItem[] = [
   { question: "", answer: "" },
@@ -68,6 +69,11 @@ export function FaqMaker() {
             {copied ? "Copied" : "Copy code"}
           </Button>
         </div>
+        {code && (
+          <div className="mt-4">
+            <WholeSiteCta lead="This code is for one page." />
+          </div>
+        )}
       </div>
     </div>
   );

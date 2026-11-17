@@ -11,7 +11,9 @@ import {
   prefillFromSource,
   type TaskDraft,
 } from "@/lib/tasks";
-import { PageHeader } from "@/components/ui";
+import { LinkButton, PageHeader } from "@/components/ui";
+import { db } from "@/lib/db";
+import { isManagedOffer } from "@/lib/billing/offer";
 import { WorkClient } from "@/components/app/work/work-client";
 import type { WorkLogMonth } from "@/components/app/work/work-log";
 
@@ -37,6 +39,9 @@ export default async function WorkPage({
   const sp = await searchParams;
   const { session, project } = await requireAppProject(id);
   const internal = canSeeInternal(session);
+  // Do it myself (and not staff support): the board is the owner's own list — owner words, no team / client fields.
+  const offerOrg = await db.organization.findUnique({ where: { id: session.organizationId }, select: { planId: true, serviceTier: true } });
+  const selfMode = !isManagedOffer(offerOrg) && !session.staffMode;
   const canEdit = canEditTasks(session);
 
   const now = new Date();
@@ -82,14 +87,28 @@ export default async function WorkPage({
         breadcrumbs={[{ label: "To-do", href: `/app/projects/${project.id}/todo` }, { label: "Task board" }]}
         eyebrow="To-do"
         title="Task board"
-        description="Every task for this website — planned, in progress and done — plus what was delivered each month."
+        description={
+          selfMode
+            ? "Your own list of jobs for this website, from to do to done. Your fixes are on the To-do list."
+            : "Every task for this website — planned, in progress and done — plus what was delivered each month."
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <LinkButton href={`/app/projects/${project.id}/todo`} variant="secondary" size="sm">
+              To-do list
+            </LinkButton>
+            <LinkButton href={`/app/projects/${project.id}/todo/listings`} variant="ghost" size="sm">
+              Your listings
+            </LinkButton>
+          </div>
+        }
       />
       <WorkClient
         projectId={project.id}
         initialTasks={tasks}
         assignees={assignees}
         months={months}
-        perms={{ canEdit, canSeeInternal: internal, canDelete: canDeleteTasks(session), staffMode: !!session.staffMode }}
+        perms={{ canEdit, canSeeInternal: internal, canDelete: canDeleteTasks(session), staffMode: !!session.staffMode, selfMode }}
         currentUserId={session.userId}
         prefill={prefill}
         prefillError={prefillError}

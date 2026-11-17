@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { APP_TABS, projectHref, tabForSection } from "@/components/app/nav";
+import { projectHref, tabForSection } from "@/components/app/nav";
+import { useAppMenu } from "@/components/app/menu-context";
 
 function useProjectRoute() {
   const pathname = usePathname();
@@ -13,6 +14,7 @@ function useProjectRoute() {
 /** Mobile bottom bar with the same main tabs as the sidebar (hidden on desktop). */
 export function MobileTabBar() {
   const { projectId, section } = useProjectRoute();
+  const menu = useAppMenu();
   if (!projectId) return null;
   const activeKey = tabForSection(section)?.key;
   return (
@@ -21,7 +23,7 @@ export function MobileTabBar() {
       className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       <ul className="grid grid-cols-5">
-        {APP_TABS.map((tab) => {
+        {menu.tabs.map((tab) => {
           const active = tab.key === activeKey;
           const Icon = tab.icon;
           return (
@@ -48,7 +50,9 @@ export function MobileTabBar() {
 /** Links between the pages inside the current tab, e.g. To-do: Website problems · Fixes to approve · … */
 export function SectionTabs() {
   const { projectId, section } = useProjectRoute();
-  const tab = tabForSection(section);
+  const menu = useAppMenu();
+  // Only the pages this account can use right now (a page that isn't switched on is left out of the menu).
+  const tab = menu.tabs.find((t) => t.key === tabForSection(section)?.key);
   if (!projectId || !tab || tab.pages.length < 2) return null;
   return (
     <nav aria-label={`${tab.label} pages`} className="no-print -mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">

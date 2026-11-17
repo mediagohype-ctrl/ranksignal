@@ -4,6 +4,7 @@ import type { FixGuide } from "../../types";
 import { isHome, pageName, topicOf } from "../../helpers";
 import { ADD_LINK, OPEN_PAGE, PUBLISH, lower, perPlatform } from "./shared";
 import { orgSteps, ORG_HINTS } from "./org";
+import { llmsTxtCode } from "../../ready-code";
 
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -120,6 +121,7 @@ const LLMS_CONTENT =
   "Write the file as plain text: first line `# <Brand>`, then a line starting with `>` that says in one sentence what you do and where, then a list of your key pages, one per line: `- [Services](https://yoursite.com/services): what's included and prices`.";
 
 export const llmsTxtGuide: FixGuide = {
+  ready: (ctx) => (ctx.site ? llmsTxtCode(ctx.site, ctx.sitePages ?? []) : null),
   effect: () =>
     "Optional: an AI guide file is a short text file that points AI assistants to your most important pages. It's a new idea with no proven effect yet, so it's a low-priority extra.",
   steps: {

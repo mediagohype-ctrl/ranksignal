@@ -30,14 +30,13 @@ export interface MarketingRoute {
 const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/", title: "Home", summary: "SEO, AEO and GEO platform: website SEO report, AI visibility tracking in ChatGPT, Gemini, Perplexity and Claude, and approval-gated fixes.", changeFrequency: "weekly", priority: 1, section: "Product" },
   { path: "/free-check", title: "Free website SEO checker", summary: "Free, no-sign-up SEO, AEO and GEO checker that scores a website's homepage and key pages in about 30 seconds and lists the top fixes.", changeFrequency: "monthly", priority: 0.9, section: "Product" },
-  { path: "/features", title: "Features", summary: "SEO audit, AI visibility tracking across ChatGPT, Gemini, Perplexity and Google AI Overviews, competitor share of voice, recommendations and safe publishing.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
-  { path: "/how-it-works", title: "How it works", summary: "The workflow: connect a site, audit, measure AI answers, review fixes, approve, publish, roll back and re-measure.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
-  { path: "/services", title: "SEO, AEO & GEO services (done for you)", summary: "Managed SEO, AEO and GEO service from an India-based team: we ship agreed fixes every month and send a monthly impact report. Fix, Grow and Authority tiers from ₹19,999/month plus GST; delivery guaranteed, rankings never promised.", changeFrequency: "monthly", priority: 0.9, section: "Product" },
-  { path: "/pricing", title: "Pricing", summary: "Self-serve Starter, Growth and Agency software plans with a free trial, plus done-for-you service tiers, in Indian rupees excluding GST.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
-  { path: "/tools", title: "Free SEO and AI tools", summary: "15 free SEO and AI tools: website check, meta tag, heading, schema, broken link, robots.txt, AI crawler and sitemap checkers, and AI title, meta description and FAQ generators, plus a browser extension.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
-  { path: "/tools/ai-mention-checker", title: "AI visibility checker", summary: "Free check of whether ChatGPT, Gemini and Perplexity can read and recommend your website.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
-  { path: "/tools/faq-markup-maker", title: "FAQ schema generator", summary: "Free FAQ schema (FAQPage JSON-LD) generator for Google rich results and AI answers.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
-  { path: "/tools/ai-guide-file-maker", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/features", title: "Features", summary: "What MyWebRank does, in four parts: a weekly website check, AI answer checks in ChatGPT, Gemini and Perplexity, ready-to-paste fixes with step-by-step help, and a monthly report.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
+  { path: "/how-it-works", title: "How it works", summary: "Three steps: check the website and AI answers, fix what matters most (you make the change with our steps, or our team does it for you), and see what changed in a monthly report.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
+  { path: "/done-for-you", title: "SEO, AEO & GEO services (done for you)", summary: "Done-for-you SEO, AEO and GEO service from an India-based team (\"Do it for me\"): the team makes the fixes on the website, Google Business Profile and listings every month and sends a monthly report. ₹19,999/month, no setup fee; the work is promised, rankings never are.", changeFrequency: "monthly", priority: 0.9, section: "Product" },
+  { path: "/pricing", title: "Pricing", summary: "Three ways to buy, in Indian rupees: Do it myself (software with a free trial; it shows exactly what to change and the owner makes the changes), Do it for me (the team changes the website) and Custom.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
+  { path: "/tools", title: "Free SEO and AI tools", summary: "Free SEO and AI tools, no sign-up: website check, meta tag, heading, schema, broken link, robots.txt, AI crawler and sitemap checkers, and title, meta description, FAQ, FAQ schema and llms.txt generators.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/tools/faq-schema-generator", title: "FAQ schema generator", summary: "Free FAQ schema (FAQPage JSON-LD) generator for Google rich results and AI answers.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/tools/llms-txt-generator", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/meta-tag-checker", title: "Meta title & description checker", summary: "Free checker for a page's title tag, meta description and share preview, with fixes.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/heading-checker", title: "Heading structure checker", summary: "Free H1-H6 heading outline checker for any web page.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/schema-checker", title: "Schema markup checker", summary: "Free JSON-LD / schema.org structured data checker for any web page.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
@@ -56,17 +55,16 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/blog", title: "Blog", summary: "News, research and how-tos on SEO, AEO and GEO from the MyWebRank team.", changeFrequency: "weekly", priority: 0.8, section: "Blog" },
   { path: "/learn", title: "SEO, AEO & GEO guides", summary: "Plain-English guides to ranking on Google and getting mentioned in AI answers.", changeFrequency: "weekly", priority: 0.8, section: "Guides" },
   { path: "/about", title: "About us", summary: "Who runs MyWebRank: the India-based SEO, AEO and GEO team behind the product and service, and how to reach us.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
-  { path: "/docs", title: "Getting started", summary: "Onboarding, connecting WordPress, the approval policy and known limitations.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
+  { path: "/docs", title: "Getting started", summary: "Getting started, how fixes work on each offer, how approvals and connections work when our team does the work, check schedules, method and known limitations.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/docs/api", title: "API and MCP docs", summary: "Read-only REST API v1, MCP server for AI assistants and a Looker Studio connector for MyWebRank data, authenticated with API keys.", changeFrequency: "monthly", priority: 0.5, section: "Docs" },
-  { path: "/tools/seo-extension", title: "SEO browser extension", summary: "Free Chrome and Edge extension that checks a page's title, headings, schema, share tags and AI readiness in the browser.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
-  { path: "/contact", title: "Contact", summary: "Contact form for agency plans, questions and support.", changeFrequency: "yearly", priority: 0.5, section: "Docs" },
+  { path: "/contact", title: "Contact", summary: "Contact form for Custom plans, free calls, questions and support.", changeFrequency: "yearly", priority: 0.5, section: "Docs" },
   { path: "/privacy", title: "Privacy policy", summary: "How customer data is handled.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
   { path: "/terms", title: "Terms of service", summary: "Terms of use.", changeFrequency: "yearly", priority: 0.2, section: "Optional" },
   // Hindi versions (hreflang pairs in src/components/marketing/hi/pairs.ts).
   { path: "/hi", title: "होम (Hindi home page)", summary: "Hindi version of the home page: the free SEO, AEO and GEO website check, the three steps and the plans in rupees.", changeFrequency: "monthly", priority: 0.7, section: "Hindi" },
-  { path: "/hi/free-check", title: "फ्री वेबसाइट SEO चेकर (Hindi)", summary: "Hindi page for the free website SEO, AEO and GEO checker (results are shown in English).", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
-  { path: "/hi/services", title: "SEO, AEO और GEO सेवाएँ (Hindi)", summary: "Hindi page for the done-for-you SEO, AEO and GEO service: Fix, Grow and Authority tiers in rupees plus GST.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
-  { path: "/hi/pricing", title: "कीमतें (Hindi pricing)", summary: "Hindi pricing page: software plans with a free trial and done-for-you service tiers, in rupees excluding GST.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
+  { path: "/hi/free-check", title: "फ्री वेबसाइट SEO चेकर (Hindi)", summary: "Hindi page for the free website SEO, AEO and GEO checker, with the result and fixes in Hindi.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
+  { path: "/hi/services", title: "SEO, AEO और GEO सेवाएँ (Hindi)", summary: "Hindi page for the done-for-you SEO, AEO and GEO service (Do it for me), in rupees.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
+  { path: "/hi/pricing", title: "कीमतें (Hindi pricing)", summary: "Hindi pricing page: Do it myself (software with a free trial), Do it for me and Custom, in rupees.", changeFrequency: "monthly", priority: 0.6, section: "Hindi" },
   { path: "/hi/about", title: "हमारे बारे में (Hindi about page)", summary: "Hindi page about the India-based MyWebRank team, what it does and how it measures websites.", changeFrequency: "monthly", priority: 0.5, section: "Hindi" },
   { path: "/hi/contact", title: "संपर्क करें (Hindi contact page)", summary: "Hindi contact page for the MyWebRank team.", changeFrequency: "yearly", priority: 0.4, section: "Hindi" },
 ];
@@ -164,17 +162,17 @@ export function buildRobots(base = siteBase()): MetadataRoute.Robots {
   };
 }
 
-const SUMMARY = `${BRAND.name} is an SEO, AEO and GEO platform and done-for-you service for small businesses and agencies, based in India. It checks how search engines and AI assistants (ChatGPT, Gemini, Perplexity, Claude, Grok and Google AI Overviews) see a brand: it audits a website for search engine optimisation (SEO), answer-engine optimisation (AEO) and generative-engine optimisation (GEO), measures how often AI answers mention and cite the brand, explains each problem in plain English with step-by-step fixes, and can publish approved low-risk changes with rollback.`;
+const SUMMARY = `${BRAND.name} is an SEO, AEO and GEO platform and done-for-you service for small businesses and agencies, based in India. It checks how search engines and AI assistants (ChatGPT, Gemini, Perplexity, Claude, Grok and Google AI Overviews) see a brand: it audits a website for search engine optimisation (SEO), answer-engine optimisation (AEO) and generative-engine optimisation (GEO), measures how often AI answers mention and cite the brand, and explains each problem in plain English with ready-to-paste, step-by-step fixes. On the done-for-you service the team makes the changes on the customer's website, with the customer's approval.`;
 
 function keyFacts(base: string): string[] {
   return [
     "- Category: SEO software, website SEO report and audit tool, AI search visibility tracker, and SEO/AEO/GEO agency service.",
     "- Scores: four pillars (SEO, AEO, GEO, Brand), each 0–100 with a letter grade, computed from crawled pages and sampled AI answers.",
     "- AI visibility is reported as rates over many sampled answers with the sample size shown; results are measured, not guaranteed.",
-    "- Changes to a customer's website are only published after approval of the exact draft, and every change can be rolled back.",
+    "- Nothing on a customer's website changes without the customer: on the self-serve plan (Do it myself) the owner makes every change by hand from ready-to-paste fixes; on the done-for-you service (Do it for me) the team makes the changes after the customer's approval.",
     `- A free website SEO, AEO and GEO check (no sign-up) is available at ${base}/free-check.`,
     `- Who runs ${BRAND.name}, and how to contact the team: ${base}/about and ${base}/contact.`,
-    `- Two ways to buy: self-serve software plans (with a free trial) or a done-for-you service where the team ships fixes monthly and reports the impact (${base}/services). Prices are in Indian rupees, excluding GST. Contact: ${BRAND.supportEmail}.`,
+    `- Two ways to buy: self-serve software plans (with a free trial) or a done-for-you service where the team ships fixes monthly and reports the impact (${base}/done-for-you). Prices are in Indian rupees, excluding GST. Contact: ${BRAND.supportEmail}.`,
   ];
 }
 

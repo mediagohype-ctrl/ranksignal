@@ -65,3 +65,21 @@ describe("templates", () => {
     expect(plainFailureReason("TypeError: x is undefined at /srv/app.js", "transient")).not.toContain("TypeError");
   });
 });
+
+describe("website results use the one problem count and talk about the change", () => {
+  const issues = [{ impact: "high" }, { impact: "medium" }, { impact: "medium" }, { impact: "low" }];
+  it("first check: the full count, from problemCounts", () => {
+    const n = reportReadyNotice({ ...base, crawlRunId: "c1", pagesCrawled: 29, issues, aiPending: true });
+    expect(n.title).toBe("Your website results are ready — Acme");
+    expect(n.body).toContain("4 problems to fix: 1 urgent, 2 important, 1 nice to have");
+    expect(n.email.paragraphs.join(" ")).toMatch(/AI results arrive they can add problems/);
+  });
+  it("re-check: leads with what changed", () => {
+    const n = reportReadyNotice({
+      ...base, crawlRunId: "c2", pagesCrawled: 29, issues, change: { fixed: 2, added: 1, scoreBefore: 49, scoreAfter: 52 },
+    });
+    expect(n.title).toBe("What changed on your website — Acme");
+    expect(n.body).toBe("2 problems fixed, 1 new. Score 49 → 52. You now have 4 problems to fix: 1 urgent, 2 important, 1 nice to have.");
+    expect(n.link).toBe("/app/projects/p1/report?run=c2");
+  });
+});

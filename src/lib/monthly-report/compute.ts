@@ -248,6 +248,49 @@ export function classifyIssues(findings: FindingRow[], range: { start: Date; end
   };
 }
 
+/** A report problem as the monthly report needs it (ReportIssue subset). */
+export interface ProblemRow {
+  id: string;
+  title: string;
+  impact: string;
+  affectedCount?: number;
+}
+
+const IMPACT_SEVERITY: Record<string, Severity> = { high: "high", medium: "medium", low: "low" };
+const toLine = (i: ProblemRow): IssueLine => ({ code: i.id, title: i.title, severity: IMPACT_SEVERITY[i.impact] ?? "low", count: Math.max(1, i.affectedCount ?? 1) });
+const byPriority = (a: IssueLine, b: IssueLine) => sevRank(a.severity) - sevRank(b.severity) || b.count - a.count || a.title.localeCompare(b.title);
+
+/**
+ * The ONE problem count (src/lib/report/counts.ts): problem TYPES from the report's problem list, not finding rows.
+ * Still open = the end-of-month report's list (urgent → high, important → medium, nice to have → low). Fixed / new =
+ * problems that left / joined the list between the start and end reports. Without a start report, fixed / new fall back
+ * to the finding rows grouped by problem (one per problem type), so the numbers stay "problems", never "pages".
+ */
+export function classifyProblems(
+  endIssues: ProblemRow[],
+  startIssues: ProblemRow[] | null,
+  fallback: MonthlyReportPayload["issues"] | null,
+  max = 6,
+): MonthlyReportPayload["issues"] {
+  const openBySeverity = { critical: 0, high: 0, medium: 0, low: 0, info: 0, total: endIssues.length };
+  for (const i of endIssues) openBySeverity[IMPACT_SEVERITY[i.impact] ?? "low"]++;
+  if (startIssues) {
+    const endIds = new Set(endIssues.map((i) => i.id));
+    const startIds = new Set(startIssues.map((i) => i.id));
+    const fixed = startIssues.filter((i) => !endIds.has(i.id)).map(toLine).sort(byPriority);
+    const fresh = endIssues.filter((i) => !startIds.has(i.id)).map(toLine).sort(byPriority);
+    return { fixed: { total: fixed.length, top: fixed.slice(0, max) }, new: { total: fresh.length, top: fresh.slice(0, max) }, openBySeverity };
+  }
+  // `fallback` must come from classifyIssues(..., Infinity) so `top` holds every problem type (one line per code).
+  const distinct = (x: { top: IssueLine[]; total: number } | undefined) => (x ? { total: x.top.length, top: x.top.slice(0, max) } : { total: 0, top: [] });
+  return { fixed: distinct(fallback?.fixed), new: distinct(fallback?.new), openBySeverity };
+}
+
+/** True when nothing happened that the owner did: no work shipped and no problem fixed this month. */
+export function nothingDone(p: Pick<MonthlyReportPayload, "work" | "issues">): boolean {
+  return p.work.shipped.length === 0 && p.issues.fixed.total === 0;
+}
+
 // ---- plan ----------------------------------------------------------------------------------------------------------
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();

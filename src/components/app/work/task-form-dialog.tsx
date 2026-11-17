@@ -6,7 +6,8 @@ import {
   CATEGORY_LABEL,
   PERFORMER_LABEL,
   PRIORITY_LABEL,
-  STATUS_LABEL,
+  defaultPerformer,
+  statusLabel,
   TASK_CATEGORIES,
   TASK_PERFORMERS,
   TASK_PRIORITIES,
@@ -35,7 +36,7 @@ interface FormState {
   clientVisible: boolean;
 }
 
-function initialState(task: TaskView | null, draft: TaskDraft | null, status?: TaskStatus): FormState {
+function initialState(task: TaskView | null, draft: TaskDraft | null, status?: TaskStatus, selfMode = false): FormState {
   if (task) {
     return {
       title: task.title,
@@ -55,7 +56,7 @@ function initialState(task: TaskView | null, draft: TaskDraft | null, status?: T
     title: draft?.title ?? "",
     description: draft?.description ?? "",
     category: draft?.category ?? "onsite",
-    performedBy: draft?.performedBy ?? "agency",
+    performedBy: draft?.performedBy ?? defaultPerformer(selfMode),
     status: status ?? "backlog",
     priority: draft?.priority ?? "medium",
     assigneeId: "",
@@ -77,7 +78,10 @@ export function TaskFormDialog({
   assignees,
   canSeeInternal,
   onSaved,
+  selfMode = false,
 }: {
+  /** Do it myself: "Who does it" defaults to you, and team / client-only fields are hidden. */
+  selfMode?: boolean;
   open: boolean;
   onClose: () => void;
   projectId: string;
@@ -88,16 +92,16 @@ export function TaskFormDialog({
   canSeeInternal: boolean;
   onSaved: (t: TaskView, created: boolean) => void;
 }) {
-  const [f, setF] = useState<FormState>(() => initialState(task, draft, defaultStatus));
+  const [f, setF] = useState<FormState>(() => initialState(task, draft, defaultStatus, selfMode));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setF(initialState(task, draft, defaultStatus));
+      setF(initialState(task, draft, defaultStatus, selfMode));
       setError(null);
     }
-  }, [open, task, draft, defaultStatus]);
+  }, [open, task, draft, defaultStatus, selfMode]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((p) => ({ ...p, [k]: v }));
   const links = f.links
@@ -195,6 +199,7 @@ export function TaskFormDialog({
               ))}
             </Select>
           </Field>
+          {!selfMode && (
           <Field label="Who does it" htmlFor={id("who")}>
             <Select id={id("who")} value={f.performedBy} onChange={(e) => set("performedBy", e.target.value as TaskPerformer)}>
               {TASK_PERFORMERS.map((p) => (
@@ -204,11 +209,12 @@ export function TaskFormDialog({
               ))}
             </Select>
           </Field>
+          )}
           <Field label="Status" htmlFor={id("status")}>
             <Select id={id("status")} value={f.status} onChange={(e) => set("status", e.target.value as TaskStatus)}>
               {TASK_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
+                  {statusLabel(s, selfMode)}
                 </option>
               ))}
             </Select>
@@ -248,7 +254,12 @@ export function TaskFormDialog({
             aria-describedby={fieldDescribedBy(id("url"), { hint: true })}
           />
         </Field>
-        <Field label="Evidence links" htmlFor={id("links")} optional hint="One link per line: screenshots, docs, published posts, listings.">
+        <Field
+          label={selfMode ? "Useful links" : "Evidence links"}
+          htmlFor={id("links")}
+          optional
+          hint={selfMode ? "One link per line, e.g. the page you changed." : "One link per line: screenshots, docs, published posts, listings."}
+        >
           <Textarea
             id={id("links")}
             rows={3}
@@ -259,7 +270,7 @@ export function TaskFormDialog({
             className="font-mono text-small"
           />
         </Field>
-        {canSeeInternal && (
+        {canSeeInternal && !selfMode && (
           <label className="flex items-start gap-3 rounded-xl border border-border bg-surface-2 p-3 text-small text-fg">
             <input
               type="checkbox"

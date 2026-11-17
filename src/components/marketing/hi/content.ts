@@ -8,9 +8,10 @@
 //   "Custom" (कस्टम — बात करें)      = big companies and agencies, no public price.
 import {
   CUSTOM_CONTACT_HREF_HI, DFY_PLAN, MARKETING_PLANS, SELF_PLAN, SERVICE_TIERS, TRIAL_AI, TRIAL_DAYS,
-  freq, inrGst, num, planSignupHref, priceNote, servicesContactHref,
+  engineNamesLine, freq, inrGst, num, planSignupHref, priceNote, servicesContactHref,
   type PaidPlanId, type ServiceTierId,
 } from "@/components/marketing/plans";
+import { bookCallHref } from "@/lib/brand";
 
 export const SOFTWARE_FROM = SELF_PLAN.price;
 
@@ -20,11 +21,13 @@ const weekly = (days: number) => (freq(days) === "Daily" ? "हर दिन" : 
 
 /** "Do it myself" highlights, mirroring SELF_PLAN.highlights with the same limits. */
 const SELF_HIGHLIGHTS = [
-  "आपका Found Score, साथ में SEO, AEO, GEO और Brand स्कोर",
+  "100 में से आपका Found Score, साथ में SEO, AEO, GEO और Brand स्कोर",
   `${weekly(SELF_PLAN.limits.minScanIntervalDays)} आपकी वेबसाइट का चेक, ${num(SELF_PLAN.limits.maxPagesPerCrawl)} पेज तक`,
-  `ChatGPT जैसे ${SELF_PLAN.ai.engines} AI असिस्टेंट आपके बारे में क्या कहते हैं (हर महीने ${num(SELF_PLAN.ai.answersPerMonth)} AI जवाब)`,
+  // Same promise as aiCheckedLine() in plans.ts: the engines by name, "every week" when the plan covers 4+ checks a month.
+  `${engineNamesLine(SELF_PLAN.id).replace(" and ", " और ")} की जाँच ${SELF_PLAN.ai.checksPerMonth >= 4 ? "हर हफ़्ते" : `महीने में ${SELF_PLAN.ai.checksPerMonth} बार`}`,
   "आसान भाषा में काम की लिस्ट, सबसे ज़रूरी काम पहले",
-  "WordPress पर एक क्लिक में सुधार, undo के साथ; दूसरी वेबसाइटों के लिए आसान copy-paste स्टेप",
+  // Hindi of SELF_FIX_LINE (src/lib/billing/offer.ts): no one-click publishing on Do it myself.
+  "किसी भी वेबसाइट के लिए तैयार copy-paste सुधार, स्टेप-दर-स्टेप मदद के साथ",
   "हर महीने एक रिपोर्ट, जो 2 मिनट में पढ़ी जा सके",
 ];
 
@@ -92,7 +95,8 @@ export const HI_DFY: HindiOfferCard = {
   includes: DFY_INCLUDES,
   inherits: "“मैं ख़ुद करूँगा” की हर चीज़, और सारा काम हमारी टीम करती है:",
   cta: "फ्री कॉल बुक करें",
-  href: `/hi${servicesContactHref(DFY_PLAN.id)}`,
+  // The calendar when one is set (BRAND_BOOKING_URL), else the Hindi contact page.
+  href: bookCallHref(`/hi${servicesContactHref(DFY_PLAN.id)}`),
   featured: true,
   tag: "सबसे ज़्यादा चुना गया",
 };
@@ -192,7 +196,7 @@ export const HOME_FAQ: HiFaq[] = [
   },
   {
     q: "क्या आप मेरी वेबसाइट पर अपने-आप बदलाव कर देंगे?",
-    a: "नहीं। हर बदलाव पहले आपको दिखाया जाता है और आपकी मंज़ूरी के बाद ही लाइव होता है। हर बदलाव को undo भी किया जा सकता है।",
+    a: "नहीं। “मैं ख़ुद करूँगा” में हम साफ़ बताते हैं कि क्या बदलना है, और बदलाव आप खुद करते हैं। “आप कर दीजिए” में हमारी टीम बदलाव करती है, आपकी मंज़ूरी के बाद। आपकी जानकारी के बिना आपकी वेबसाइट पर कुछ नहीं बदलता।",
   },
   {
     q: "कीमत कितनी है?",
@@ -280,6 +284,6 @@ export const ABOUT_FAQ: HiFaq[] = [
   },
   {
     q: "क्या MyWebRank रैंकिंग या AI में नाम आने की गारंटी देता है?",
-    a: "नहीं। Google किसी पेज को कहाँ रखेगा या AI असिस्टेंट क्या कहेगा, यह कोई तय नहीं कर सकता। हम ईमानदार माप, आसान भाषा में सुधार, और सिर्फ़ आपकी मंज़ूरी के बाद लाइव होने वाले बदलावों (undo के साथ) का वादा करते हैं।",
+    a: "नहीं। Google किसी पेज को कहाँ रखेगा या AI असिस्टेंट क्या कहेगा, यह कोई तय नहीं कर सकता। हम ईमानदार माप और आसान भाषा में सुधार का वादा करते हैं। आपकी जानकारी के बिना आपकी वेबसाइट पर कुछ नहीं बदलता।",
   },
 ];

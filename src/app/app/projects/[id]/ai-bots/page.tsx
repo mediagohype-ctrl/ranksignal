@@ -9,6 +9,8 @@ import { addDays, buildDashboard, chartSeries, type BotSummary } from "@/lib/ai-
 import { loadDailyRows } from "@/lib/ai-bots-analytics/store";
 import { aiBotLimitsFor } from "@/lib/ai-bots-analytics/limits";
 import { cloudflareWorkerSnippet } from "@/lib/ai-bots-analytics/ingest";
+import { hostedBuilderNote } from "@/lib/ai-bots-analytics/hosting";
+import { getStoredSitePlatform } from "@/lib/platform/server";
 import { Badge, Card, CardBody, CardHeader, EmptyState, Notice, PageHeader, Stat, Table, TD, TH, THead, TR } from "@/components/ui";
 import { UploadLog } from "./upload-log";
 import { CopyBlock, IngestToken } from "./ingest-token";
@@ -50,12 +52,15 @@ export default async function AiBotsPage({ params, searchParams }: { params: Pro
   const days = RANGES.find((d) => String(d) === daysParam) ?? 30;
   const scope = { organizationId: session.organizationId, projectId: project.id };
 
-  const [org, latest, ingestKey, imports] = await Promise.all([
+  const [org, latest, ingestKey, imports, platform] = await Promise.all([
     db.organization.findUnique({ where: { id: session.organizationId }, select: { planId: true } }),
     db.aiBotDaily.findFirst({ where: scope, orderBy: { date: "desc" }, select: { date: true } }),
     db.aiBotIngestKey.findFirst({ where: scope, select: { tokenPrefix: true, lastUsedAt: true } }),
     db.aiBotLogImport.findMany({ where: scope, orderBy: { createdAt: "desc" }, take: 5 }),
+    getStoredSitePlatform(session.organizationId, project.id).catch(() => null),
   ]);
+  // Shopify, Wix, Framer, Squarespace and Webflow don't give owners server logs: say so before the upload steps.
+  const hosted = latest ? null : hostedBuilderNote(platform);
   const limits = aiBotLimitsFor(org?.planId);
   // Window ends on the newest day we have (uploaded logs are often a few days old).
   const end = latest?.date ?? new Date().toISOString().slice(0, 10);
@@ -77,12 +82,21 @@ export default async function AiBotsPage({ params, searchParams }: { params: Pro
         icon={<Bot />}
       />
 
+      {hosted && (
+        <Notice tone="warning" title={hosted.title}>
+          {hosted.body}
+        </Notice>
+      )}
+
+      {!hosted && (
       <Notice tone="info" title="Why we need your server logs">
         AI crawlers don&apos;t run JavaScript, so Google Analytics and similar tools never see them. Your web server&apos;s access log does. We
         read it once, keep only daily counts per crawler and the most-read pages, and throw the log lines away. IP addresses and
         query strings are never stored.
       </Notice>
+      )}
 
+      {!hosted && (
       <Card>
         <CardHeader icon={<FileUp />} title="Upload an access log" description="Apache or Nginx access logs (combined format), or JSON logs such as Cloudflare Logpush. .log or .gz, up to 50 MB." />
         <CardBody className="space-y-4">
@@ -102,8 +116,9 @@ export default async function AiBotsPage({ params, searchParams }: { params: Pro
           </details>
         </CardBody>
       </Card>
+      )}
 
-      {rows.length === 0 ? (
+      {hosted ? null : rows.length === 0 ? (
         <EmptyState
           icon={<Bot />}
           title={latest ? "No crawler visits in this period." : "No crawler visits yet."}
@@ -244,7 +259,7 @@ export default async function AiBotsPage({ params, searchParams }: { params: Pro
           {limits.ingest ? (
             <IngestToken projectId={project.id} prefix={ingestKey?.tokenPrefix ?? null} lastUsedAt={ingestKey?.lastUsedAt?.toISOString() ?? null} canManage={canManage} />
           ) : (
-            <p className="text-small text-muted">Live logging is included from the Starter plan. Log uploads work on every plan.</p>
+            <p className="text-small text-muted">Live logging is included on paid plans (Do it myself and above). Log uploads work on every plan, including the free trial.</p>
           )}
           <div className="space-y-2">
             <h3 className="text-small font-medium text-fg">Worker code</h3>

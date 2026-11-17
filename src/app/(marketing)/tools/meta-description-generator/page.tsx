@@ -54,7 +54,6 @@ export default function MetaDescriptionGeneratorPage() {
       <section aria-label="Write meta descriptions" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <MetaDescriptionGenerator />
-          <LeadBox tool="meta-description-generator" />
         </div>
       </section>
 
@@ -131,6 +130,14 @@ export default function MetaDescriptionGeneratorPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="meta-description-generator" />
+          </div>
+        </div>
+      </section>
       <QaSection id="md-faq" tone="surface" title="Meta descriptions: common questions" items={FAQ}>
         <p className="text-body leading-relaxed text-fg-soft">
           Find every page with a missing or too-long description:{" "}

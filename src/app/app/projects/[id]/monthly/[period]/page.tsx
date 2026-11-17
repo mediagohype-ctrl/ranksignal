@@ -7,6 +7,8 @@ import { MonthlyReportView } from "@/components/app/monthly/report-view";
 import { PrintButton } from "@/components/app/print-button";
 import { LinkButton, Notice, buttonClass } from "@/components/ui";
 import { getBranding, toPublicBranding } from "@/lib/branding";
+import { bookCallHref } from "@/lib/brand";
+import { monthlyNudge } from "@/lib/monthly-report/email";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,9 @@ export default async function MonthlyReportPage({ params }: { params: Promise<{ 
   const report = await getProjectReport(session, project.id, period);
   const payload = report ? payloadOf(report) : null;
   if (!report || !payload) notFound();
+  // A month with nothing done leads with the next fix, not a page of zeros (same nudge as the email).
+  const nudge = monthlyNudge(payload);
+  const fixHref = payload.topFix ? `/app/projects/${project.id}/todo/${encodeURIComponent(payload.topFix.id)}` : `/app/projects/${project.id}/todo`;
 
   return (
     <>
@@ -40,6 +45,25 @@ export default async function MonthlyReportPage({ params }: { params: Promise<{ 
       {report.status !== "sent" && (
         <Notice tone="warning" title="Draft — your customer can't see this yet" className="no-print mb-6">
           This report is waiting for staff review. Approve and send it from the staff review queue.
+        </Notice>
+      )}
+      {nudge && (
+        <Notice
+          tone="info"
+          title={nudge.headline}
+          className="no-print mb-6"
+          actions={
+            <>
+              <LinkButton href={fixHref} size="sm">
+                {payload.topFix ? "Start fix #1" : "Open your To-do list"}
+              </LinkButton>
+              <a href={bookCallHref()} target="_blank" rel="noopener noreferrer" className="text-small font-medium text-primary hover:underline">
+                Book a free call<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </>
+          }
+        >
+          {nudge.fix ?? "Your first fix is waiting on your To-do list."} {nudge.help}
         </Notice>
       )}
       <MonthlyReportView payload={payload} summary={report.summary ?? ""} branding={toPublicBranding(await getBranding(session.organizationId))} />

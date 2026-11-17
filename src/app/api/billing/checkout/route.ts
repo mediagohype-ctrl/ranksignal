@@ -7,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 import { BRAND } from "@/lib/brand";
 import { getCurrentProviderSubscription } from "@/lib/billing/subscription";
 import { planPriceWithGst } from "@/lib/billing/gst";
-import { getBillingDetails } from "@/lib/billing/billing-details";
+import { checkoutPrefill, requireBillingDetailsForPayment } from "@/lib/billing/billing-details";
 
 const schema = z.object({ planId: z.enum(PAID_PLAN_IDS) });
 
@@ -47,6 +47,9 @@ export const POST = handler(async (req: Request) => {
     );
   }
 
+  // No payment without a business name and state: they decide what the GST invoice says (CGST + SGST or IGST).
+  const details = await requireBillingDetailsForPayment(s.organizationId);
+
   let sub;
   try {
     sub = await createRazorpaySubscription({ razorpayPlanId, organizationId: s.organizationId, planId });
@@ -64,9 +67,10 @@ export const POST = handler(async (req: Request) => {
   });
   // What Razorpay will charge each month: price + GST (the Razorpay plan amount must equal totalPaise — see the
   // admin System page check). Shown to the customer before they pay.
-  const details = await getBillingDetails(s.organizationId).catch(() => null);
-  const price = planPriceWithGst(planId, details?.stateCode);
+  const price = planPriceWithGst(planId, details.stateCode);
+  // Email, name and phone we already know, so the customer doesn't type them again in the payment window.
+  const prefill = await checkoutPrefill(s.organizationId, s.userId).catch(() => ({}));
   return json({
-    item: { provider: "razorpay", subscriptionId: sub.id, shortUrl: sub.short_url ?? null, keyId: process.env.RAZORPAY_KEY_ID, planId, price },
+    item: { provider: "razorpay", subscriptionId: sub.id, shortUrl: sub.short_url ?? null, keyId: process.env.RAZORPAY_KEY_ID, planId, price, prefill },
   });
 });

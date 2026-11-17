@@ -8,6 +8,7 @@ import { Button, Field, Input, Skeleton, SkeletonText, fieldDescribedBy } from "
 import { Turnstile, isTurnstileConfigured } from "@/components/turnstile";
 import { AuthHeading, EMAIL_RE, FormError, PasswordInput, inviteTokenFromNext, passwordStrength, postJson, safeNext } from "../auth-ui";
 import { GoogleButton, OrDivider, googleErrorMessage, googleStartHref } from "../google-button";
+import { FreeCheckScore } from "./free-check-score";
 
 const MIN_PASSWORD = 10;
 
@@ -129,6 +130,10 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
           </>
         }
       />
+      {/* Phones: the brand panel (with the score) is hidden, so show the score above the buttons. */}
+      <div className="mb-6 empty:hidden lg:hidden">
+        <FreeCheckScore />
+      </div>
       {googleEnabled && !inviteToken && (
         <>
           <GoogleButton href={googleStartHref({ next, ref, from: "signup" })} />

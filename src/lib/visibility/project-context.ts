@@ -1,5 +1,6 @@
 import type { Project } from "@prisma/client";
 import { normalizeDomain, type EntityRef } from "./parse";
+import { brandNameVariants } from "@/lib/setup/brand-names";
 
 export interface ProjectVisibilityContext {
   brandNames: string[];
@@ -14,7 +15,8 @@ export function projectVisibilityContext(project: Pick<Project, "brandNames" | "
     .filter((c) => c && typeof c.name === "string" && c.name.trim())
     .map((c) => ({ name: c.name, domain: c.domain || undefined, aliases: Array.isArray(c.aliases) ? c.aliases : [] }));
   return {
-    brandNames: brandNames.length ? brandNames : [project.name],
+    // Every name people use, in every spacing ("Go Hype Media" → also "GoHype Media", "GoHypeMedia"); the main name stays first.
+    brandNames: brandNameVariants(brandNames.length ? brandNames : [project.name]),
     competitors,
     websiteUrl: project.websiteUrl,
     websiteDomain: normalizeDomain(project.websiteUrl),

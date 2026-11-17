@@ -3,21 +3,22 @@ import { useState } from "react";
 import clsx from "clsx";
 import { Plus } from "lucide-react";
 import { Avatar, Button, Select } from "@/components/ui";
-import { STATUS_HINT, STATUS_LABEL, TASK_STATUSES, type TaskStatus, type TaskView } from "@/lib/tasks/types";
+import { boardColumns, statusHint, statusLabel, TASK_STATUSES, type TaskStatus, type TaskView } from "@/lib/tasks/types";
 import { CategoryBadge, DueText, InternalBadge, PerformerBadge, PriorityBadge, STATUS_DOT } from "./task-meta";
 
-const BOARD_COLUMNS: TaskStatus[] = ["backlog", "in_progress", "client_review", "blocked", "done"];
 
 function TaskCard({
   task,
   canEdit,
   moving,
+  selfMode,
   onOpen,
   onMove,
 }: {
   task: TaskView;
   canEdit: boolean;
   moving: boolean;
+  selfMode: boolean;
   onOpen: (t: TaskView) => void;
   onMove: (t: TaskView, s: TaskStatus) => void;
 }) {
@@ -39,8 +40,8 @@ function TaskCard({
       <div className="mt-2 flex flex-wrap gap-1.5">
         <CategoryBadge category={task.category} />
         <PriorityBadge priority={task.priority} hideMedium />
-        {task.performedBy !== "agency" && <PerformerBadge performedBy={task.performedBy} />}
-        {!task.clientVisible && <InternalBadge />}
+        {!selfMode && task.performedBy !== "agency" && <PerformerBadge performedBy={task.performedBy} />}
+        {!selfMode && !task.clientVisible && <InternalBadge />}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2 text-caption">
         <DueText dueAt={task.dueAt} status={task.status} />
@@ -65,7 +66,7 @@ function TaskCard({
           >
             {TASK_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s === task.status ? `${STATUS_LABEL[s]} (current)` : `Move to ${STATUS_LABEL[s]}`}
+                {s === task.status ? `${statusLabel(s, selfMode)} (current)` : `Move to ${statusLabel(s, selfMode)}`}
               </option>
             ))}
           </Select>
@@ -82,8 +83,11 @@ export function BoardView({
   onOpen,
   onMove,
   onCreate,
+  selfMode = false,
 }: {
   tasks: TaskView[];
+  /** Do it myself: owner words, no team / client fields. */
+  selfMode?: boolean;
   canEdit: boolean;
   movingId: string | null;
   onOpen: (t: TaskView) => void;
@@ -91,13 +95,15 @@ export function BoardView({
   onCreate: (status: TaskStatus) => void;
 }) {
   const [showCancelled, setShowCancelled] = useState(false);
-  const columns = showCancelled ? [...BOARD_COLUMNS, "cancelled" as const] : BOARD_COLUMNS;
+  const base = boardColumns(selfMode, tasks);
+  const columns: TaskStatus[] = showCancelled ? [...base, "cancelled"] : base;
   const cancelledCount = tasks.filter((t) => t.status === "cancelled").length;
   const rank = { high: 0, medium: 1, low: 2 } as const;
 
   return (
     <div className="space-y-3">
-      <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-3">
+      {/* Columns wrap instead of scrolling sideways, so Done is always in view (fits 1280px without scrolling). */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(13.5rem,1fr))] items-start gap-4 pb-3">
         {columns.map((status) => {
           const items = tasks
             .filter((t) => t.status === status)
@@ -111,22 +117,22 @@ export function BoardView({
             <section
               key={status}
               aria-labelledby={headingId}
-              className="flex w-[17.5rem] shrink-0 snap-start flex-col rounded-2xl bg-surface-2 p-3"
+              className="flex min-w-0 flex-col rounded-2xl bg-surface-2 p-3"
             >
               <header className="mb-3 flex items-start justify-between gap-2 px-1">
                 <div className="min-w-0">
                   <h3 id={headingId} className="flex items-center gap-2 text-small font-semibold text-fg">
                     <span aria-hidden className={clsx("size-2 rounded-full", STATUS_DOT[status])} />
-                    {STATUS_LABEL[status]}
+                    {statusLabel(status, selfMode)}
                     <span className="rounded-full bg-surface-3 px-1.5 text-xs tabular-nums leading-5 text-fg-soft">{items.length}</span>
                   </h3>
-                  <p className="mt-0.5 text-caption text-muted">{STATUS_HINT[status]}</p>
+                  <p className="mt-0.5 text-caption text-muted">{statusHint(status, selfMode)}</p>
                 </div>
                 {canEdit && status !== "done" && status !== "cancelled" && (
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Add a task to ${STATUS_LABEL[status]}`}
+                    aria-label={`Add a task to ${statusLabel(status, selfMode)}`}
                     onClick={() => onCreate(status)}
                   >
                     <Plus />
@@ -140,7 +146,7 @@ export function BoardView({
               ) : (
                 <ul className="space-y-2.5">
                   {items.map((t) => (
-                    <TaskCard key={t.id} task={t} canEdit={canEdit} moving={movingId === t.id} onOpen={onOpen} onMove={onMove} />
+                    <TaskCard key={t.id} task={t} canEdit={canEdit} moving={movingId === t.id} selfMode={selfMode} onOpen={onOpen} onMove={onMove} />
                   ))}
                 </ul>
               )}

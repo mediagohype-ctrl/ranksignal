@@ -14,7 +14,25 @@ export interface BusinessFacts {
   country: string;
   /** ISO 639-1, e.g. "en", "hi". */
   language: string;
+  // "Confirm your facts" — all optional. Stored with the rest in Project.facts (plain strings).
+  /** Founder or owner's name. */
+  founder?: string;
+  /** Street address customers can visit or post to. */
+  address?: string;
+  /** Public phone number, as the owner writes it. */
+  phone?: string;
+  /** Main services or products, comma separated ("Boiler repair, Bathroom fitting"). */
+  services?: string;
 }
+
+/** The optional "Confirm your facts" fields, in display order. */
+export const EXTRA_FACT_FIELDS = [
+  { key: "founder", label: "Founder or owner", placeholder: "Asha Sharma", max: 120 },
+  { key: "phone", label: "Phone", placeholder: "Your public phone number", max: 40 },
+  { key: "address", label: "Address", placeholder: "12 MG Road, Pune 411001", max: 300 },
+  { key: "services", label: "Main services or products", placeholder: "Wedding cakes, Birthday cakes, Sweets", max: 300 },
+] as const;
+export type ExtraFactKey = (typeof EXTRA_FACT_FIELDS)[number]["key"];
 
 export const COUNTRIES: [string, string][] = [
   ["IN", "India"],
@@ -146,6 +164,10 @@ export const businessFactsSchema = z.object({
     .regex(/^[A-Za-z]{2,3}$/, "Use a language code, e.g. en")
     .transform((l) => l.toLowerCase())
     .default("en"),
+  founder: text(120).optional(),
+  address: text(300).optional(),
+  phone: text(40).optional(),
+  services: text(300).optional(),
 });
 
 export function emptyFacts(name = ""): BusinessFacts {
@@ -175,6 +197,7 @@ export function projectFieldsFromFacts(f: BusinessFacts): {
   const audience = [f.customers.trim(), f.city.trim() ? `in ${f.city.trim()}` : ""].filter(Boolean).join(" ");
   return {
     name: f.name.trim().slice(0, 120),
+    // Setup adds the "other names people use" after this one (the business name always stays first).
     brandNames: [f.name.trim().slice(0, 120)],
     categories: sells ? [sells.slice(0, 120)] : [],
     audience: audience ? audience.slice(0, 500) : undefined,

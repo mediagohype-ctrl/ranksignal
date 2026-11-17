@@ -1,6 +1,6 @@
 // Opens Razorpay Checkout for a one-time ORDER (AI-answer top-up). checkout.js is loaded only when someone clicks
 // "Pay" (loadRazorpay). The success callback is informational: answers are added by the signed webhook.
-import { loadRazorpay } from "./razorpay-checkout";
+import { cleanPrefill, loadRazorpay, type CheckoutPrefillValue } from "./razorpay-checkout";
 
 interface OrderCheckoutOptions {
   key: string;
@@ -11,6 +11,7 @@ interface OrderCheckoutOptions {
   description?: string;
   handler: (response: { razorpay_order_id?: string; razorpay_payment_id?: string; razorpay_signature?: string }) => void;
   modal?: { ondismiss?: () => void };
+  prefill?: CheckoutPrefillValue;
   theme?: { color?: string };
 }
 type OrderCtor = new (o: OrderCheckoutOptions) => { open(): void; on(event: string, cb: (resp: unknown) => void): void };
@@ -32,6 +33,7 @@ export async function openRazorpayOrder(o: {
   amount: number;
   name: string;
   description: string;
+  prefill?: CheckoutPrefillValue | null;
   onSuccess: (r: CheckoutSuccess | null) => void;
   onDismiss: () => void;
   onFailure: (message: string) => void;
@@ -51,6 +53,7 @@ export async function openRazorpayOrder(o: {
           : null,
       ),
     modal: { ondismiss: o.onDismiss },
+    prefill: cleanPrefill(o.prefill),
     theme: { color: themeColor() },
   });
   rzp.on("payment.failed", (resp) => {

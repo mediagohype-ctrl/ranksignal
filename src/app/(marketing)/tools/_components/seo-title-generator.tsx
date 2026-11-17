@@ -6,6 +6,7 @@ import { Button, Card, Field, Input, Select } from "@/components/ui";
 import { AI_INPUT_LIMITS as L, type DraftCheck } from "@/lib/tools/ai-writing-checks";
 import { PAGE_TYPES, PAGE_TYPE_LABELS, type PageType } from "@/lib/tools/ai-writing-prompts";
 import { AiDraftNotice, CheckBadge, CopyButton, GooglePreview, useAiTool } from "./ai-tool-form";
+import { WholeSiteCta } from "./whole-site-cta";
 
 export function SeoTitleGenerator() {
   const [topic, setTopic] = useState("");
@@ -114,6 +115,7 @@ export function SeoTitleGenerator() {
                 description="Google usually shows your meta description here. Write one with our free meta description generator."
               />
             )}
+            <WholeSiteCta lead="These titles are for one page." />
           </>
         )}
       </div>

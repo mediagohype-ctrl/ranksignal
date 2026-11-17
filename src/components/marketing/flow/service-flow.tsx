@@ -8,19 +8,19 @@ type Step = { when: string; title: string };
 /** What you do and what we do at each step, in the same order as the steps passed in. */
 const LANES: { you: string; team: string }[] = [
   {
-    you: "Give us access to your website and a manager role on your Google Business Profile.",
-    team: "Read your website, check your profile and ask AI assistants about your business.",
+    you: "Tell us about your business. Give us access to your website and a manager role on your Google Business Profile.",
+    team: "Meet you, then read your website, check your profile and ask AI assistants about your business.",
   },
   {
-    you: "About an hour to agree the customer questions and approve the first fix plan.",
-    team: "Research the questions your customers really ask.",
+    you: "Agree the questions your customers ask and approve the plan.",
+    team: "Write your plan: the fixes that matter most, most important first.",
   },
   {
     you: "Quick OKs for anything that changes what your business says publicly.",
-    team: "Make the agreed fixes on your site, profile and listings, each one recorded.",
+    team: "Make the first agreed fixes on your site, profile and listings, each one recorded.",
   },
   {
-    you: "Read the report and approve next month’s plan — about 30 minutes.",
+    you: "Read the report and approve next month’s plan. About 30 minutes.",
     team: "Report what we did, what changed, what didn’t and what’s next.",
   },
 ];
@@ -41,7 +41,7 @@ function Lane({ who, children }: { who: "You" | "Our team"; children: React.Reac
   );
 }
 
-/** Swimlane flow for /services: four steps across, "You" and "Our team" rows, then month to month. */
+/** Swimlane flow for /done-for-you: four steps across, "You" and "Our team" rows, then month to month. */
 export function ServiceFlow({ steps, className }: { steps: Step[]; className?: string }) {
   return (
     <figure className={clsx("min-w-0", className)}>
@@ -78,7 +78,7 @@ export function ServiceFlow({ steps, className }: { steps: Step[]; className?: s
       </div>
       <figcaption className="mt-5 inline-flex items-start gap-2 text-small text-fg-soft lg:mt-3">
         <RotateCw aria-hidden size={15} className="mt-0.5 shrink-0 text-primary" />
-        Who does what at each step. Steps 3 and 4 repeat every month, so your part stays small.
+        Who does what at each step. After the first month, fixes and a report repeat every month, so your part stays small.
       </figcaption>
     </figure>
   );

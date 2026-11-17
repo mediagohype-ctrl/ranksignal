@@ -1,4 +1,4 @@
-// POST /api/projects/[id]/competitors/suggestions/add {domain} — add a suggested website to the project's saved
+// POST /api/projects/[id]/competitors/suggestions/add {domain, name?} — add a suggested website to the project's saved
 // competitor list (Project.competitors, max 20). member+ (same as editing the project). Free: no DataForSEO call.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody, requireProject, requireSession } from "@/lib/api";
@@ -8,14 +8,14 @@ import { addSavedCompetitor, getCompetitorsView, MAX_SAVED_COMPETITORS } from "@
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ domain: domainSchema });
+const schema = z.object({ domain: domainSchema, name: z.string().trim().min(1).max(120).optional() });
 
 export const POST = handler(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const s = await requireSession("member");
   const project = await requireProject(s, id);
-  const { domain } = await parseBody(req, schema);
-  const r = await addSavedCompetitor(s.organizationId, project.id, domain);
+  const { domain, name } = await parseBody(req, schema);
+  const r = await addSavedCompetitor(s.organizationId, project.id, domain, name);
   if (!r.added && r.reason === "full") {
     throw new HttpError(409, "competitors_full", `You can save up to ${MAX_SAVED_COMPETITORS} competitors. Remove one in project settings first.`);
   }

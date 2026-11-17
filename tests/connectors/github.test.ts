@@ -28,6 +28,8 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(),
     },
     auditLog: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => void routeState.audits.push(data)) },
+    // Website connections exist only on Do it for me / Custom (owner decision 1): this workspace is on a Custom plan.
+    organization: { findUnique: vi.fn(async () => ({ planId: "growth", serviceTier: null })) },
   },
 }));
 vi.mock("@/lib/api", async (importOriginal) => {

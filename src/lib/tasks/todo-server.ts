@@ -1,6 +1,7 @@
 // Server side of the To-do tab: loads the one list (report problems + off-site items + tasks) and records what
 // people do with an item (done / skip / not for me) as a Task, so it leaves the list and shows in the work log.
 // Every query is scoped by the session's organizationId.
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/api";
 import { getStoredReport } from "@/lib/report/stored";
@@ -12,7 +13,7 @@ import type { SessionContext } from "@/lib/types";
 import { canEditTasks, createTask, taskVisibilityWhere, updateTask } from "./index";
 import { readEvidence, type TaskPriority, type TaskRecheck, type TaskStatus } from "./types";
 import { buildTodo, nextTodo, parseTodoId, splitTodo, type PlainTaskInput, type StateTaskInput, type TodoItem, type TodoLists } from "./todo";
-import { recheckIssuePage } from "./recheck";
+import { canVerifyNow, recheckIssuePage } from "./recheck";
 
 export interface TodoData {
   report: SiteReport | null;
@@ -103,6 +104,7 @@ async function upsertStateTask(
 }
 
 export interface TodoChangeResult {
+  /** What the item is now. "done" asked for but the change isn't visible yet → "open" (nothing was marked done). */
   state: TodoAction;
   recheck: TaskRecheck | null;
   /** The fix to open next (null when the list is empty). */
@@ -110,8 +112,11 @@ export interface TodoChangeResult {
 }
 
 /**
- * Records what someone did with a To-do item. "done" on a website problem also looks at the page again
- * (recheck) so the screen can say "Fixed — we can see it" or "We can't see this change yet".
+ * Records what someone did with a To-do item. "done" on a website problem FIRST looks at the page (or file) again:
+ * - we can see the fix → marked done ("Confirmed live. +5 points");
+ * - we can't see it yet → NOT marked done; the screen offers "Check again" / "Mark done anyway" (recheck: false);
+ * - it can't be confirmed by reading the website (work outside the site, AI answers…) → marked done, confirmed at
+ *   the next website check.
  */
 export async function changeTodo(
   s: SessionContext,
@@ -146,6 +151,26 @@ export async function changeTodo(
     const issue = report?.issues.find((i) => i.id === parsed.issueId) ?? null;
     const existing = issue ? null : await findStateTask(s, project.id, parsed.issueId);
     if (!issue && !existing) throw new HttpError(404, "not_found", "That problem isn't in your latest check");
+    // Look before marking: "I've done it" must not count a fix we can't see on the website.
+    const url = opts.url ?? issue?.affectedUrls[0] ?? (issue && canVerifyNow(issue.id) ? project.websiteUrl : undefined);
+    if (action === "done" && opts.recheck !== false && issue && url) {
+      recheck = await recheckIssuePage({
+        organizationId: s.organizationId,
+        projectId: project.id,
+        crawlRunId: report?.crawl.crawlRunId ?? null,
+        websiteUrl: project.websiteUrl,
+        brandNames: strArr(project.brandNames),
+        competitors: competitorsOf(project.competitors),
+        issueId: issue.id,
+        url,
+      }).catch(() => null);
+      if (recheck?.fixed === false) {
+        // Remember what we saw on the item's task when it already has one; never create a "done" record.
+        const st = await findStateTask(s, project.id, issue.id, fixTitle(issue));
+        if (st) await saveRecheck(s, st.id, recheck);
+        return { state: "open", recheck, nextId: null };
+      }
+    }
     let taskId: string;
     if (issue) {
       const fix = resolveFix({ brand: project.name, websiteUrl: project.websiteUrl, platform: "custom", issue, pages: [] });
@@ -160,20 +185,7 @@ export async function changeTodo(
       taskId = existing!.id;
       await updateTask(s, taskId, { status: TASK_STATUS[action] });
     }
-    const url = opts.url ?? issue?.affectedUrls[0];
-    if (action === "done" && opts.recheck !== false && issue && url) {
-      recheck = await recheckIssuePage({
-        organizationId: s.organizationId,
-        projectId: project.id,
-        crawlRunId: report?.crawl.crawlRunId ?? null,
-        websiteUrl: project.websiteUrl,
-        brandNames: strArr(project.brandNames),
-        competitors: competitorsOf(project.competitors),
-        issueId: issue.id,
-        url,
-      }).catch(() => null);
-      if (recheck) await saveRecheck(s, taskId, recheck);
-    }
+    if (recheck) await saveRecheck(s, taskId, recheck);
   }
 
   const { items } = await loadTodo(s, project.id, report);
@@ -186,7 +198,7 @@ async function saveRecheck(s: SessionContext, taskId: string, recheck: TaskReche
   const ev = readEvidence(t.evidence);
   await db.task.updateMany({
     where: { id: taskId, organizationId: s.organizationId },
-    data: { evidence: { links: ev.links, ...(ev.todoKey ? { todoKey: ev.todoKey } : {}), recheck: { ...recheck } } },
+    data: { evidence: { links: ev.links, ...(ev.todoKey ? { todoKey: ev.todoKey } : {}), recheck: { ...recheck } } as Prisma.InputJsonValue },
   });
 }
 
@@ -200,7 +212,7 @@ export async function recheckTodo(
   if (!canEditTasks(s)) throw new HttpError(403, "forbidden", "Your role can't run checks");
   const report = await getStoredReport(project.id, s.organizationId).catch(() => null);
   const issue = report?.issues.find((i) => i.id === issueId);
-  const target = url && issue?.affectedUrls.includes(url) ? url : issue?.affectedUrls[0];
+  const target = url && issue?.affectedUrls.includes(url) ? url : (issue?.affectedUrls[0] ?? (issue && canVerifyNow(issue.id) ? project.websiteUrl : undefined));
   if (!issue || !target) return null;
   const recheck = await recheckIssuePage({
     organizationId: s.organizationId,

@@ -45,7 +45,7 @@ export default async function KeywordsPage({ params }: { params: Promise<{ id: s
           description={
             isGoogleConfigured()
               ? "It's free and read-only. We fetch the searches you appear for once a day — nothing on your site changes."
-              : "Google connections aren't set up on this server yet — the site owner needs to add the Google OAuth keys first."
+              : "Connecting Google isn't switched on yet. We'll tell you when it is."
           }
           action={
             canConnect ? (

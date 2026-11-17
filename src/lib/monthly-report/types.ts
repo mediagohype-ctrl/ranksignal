@@ -150,12 +150,15 @@ export interface MonthlyReportPayload {
     promptsLost: PromptChange[];
   };
 
+  /** Problem TYPES (rows of the report's problem list — src/lib/report/counts.ts), not pages. Older reports counted finding rows. */
   issues: {
     fixed: { total: number; top: IssueLine[] };
     new: { total: number; top: IssueLine[] };
     openBySeverity: Record<"critical" | "high" | "medium" | "low" | "info", number> & { total: number };
   };
 
+  /** The biggest fix on the end-of-month report (most points, then least time); absent on older reports. */
+  topFix?: { id: string; title: string; minutes: number; points: number } | null;
   work: { shipped: ShippedLine[]; byPerformer: Record<"agency" | "client" | "system", number> };
   nextMonth: PlanLine[];
   wrongAnswers: WrongAnswer[];

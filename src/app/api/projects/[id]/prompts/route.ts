@@ -2,7 +2,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { handler, HttpError, json, parseBody, requireProject, requireSession } from "@/lib/api";
 import { assertPromptLimit } from "@/lib/billing/usage";
+import { getPlanWithAiLimits } from "@/lib/billing/plans";
 import { dedupePrompts, PROMPT_INTENTS, researchPrompts } from "@/lib/prompts/research";
+import { dedupeQuestions } from "@/lib/prompts/dedupe";
 import { currentPromptSetVersion, defaultLocale, researchProfileFromProject } from "@/lib/prompts/service";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -61,11 +63,22 @@ export const POST = handler(async (req: Request, { params }: Ctx) => {
 
   let toSave: { text: string; intent: string; topic: string | null; locale: string; priority?: number }[];
   if ("generate" in body) {
-    const { candidates, source, costMicros } = await researchPrompts(researchProfileFromProject(project), {
-      max: body.max ?? 25,
-      existing: existingTexts,
-    });
-    if (!body.save) return json({ items: candidates, source, costMicros, saved: false });
+    // Never suggest more than the plan can still track, and never a near-duplicate of a question the owner
+    // already has (switched on or paused) or of another suggestion.
+    const [org, activeInOrg, paused] = await Promise.all([
+      db.organization.findUnique({ where: { id: s.organizationId }, select: { planId: true } }),
+      db.trackedPrompt.count({ where: { organizationId: s.organizationId, active: true } }),
+      db.trackedPrompt.findMany({ where: { organizationId: s.organizationId, projectId: project.id, active: false }, select: { text: true } }),
+    ]);
+    const plan = getPlanWithAiLimits(org?.planId ?? "trial");
+    const room = Math.max(0, plan.maxTrackedPrompts - activeInOrg);
+    if (room === 0 && !body.save) return json({ items: [], source: "none", costMicros: 0, saved: false, room: 0, limit: plan.maxTrackedPrompts });
+    const known = [...existingTexts, ...paused.map((p) => p.text)];
+    const want = Math.min(body.max ?? 25, room || 1);
+    const research = await researchPrompts(researchProfileFromProject(project), { max: Math.min(50, want + 10), existing: known });
+    const { source, costMicros } = research;
+    const candidates = dedupeQuestions(research.candidates, known).slice(0, want);
+    if (!body.save) return json({ items: candidates, source, costMicros, saved: false, room, limit: plan.maxTrackedPrompts });
     toSave = candidates.map((c) => ({ text: c.text, intent: c.intent, topic: c.topic, locale: c.locale }));
   } else {
     toSave = dedupePrompts(body.prompts, existingTexts).map((p) => ({

@@ -43,8 +43,8 @@ export const TOOL_LINKS = {
   links: { path: "/tools/broken-link-checker", label: "Broken link checker" },
   aiCrawlers: { path: "/tools/ai-crawler-checker", label: "AI crawler checker" },
   robots: { path: "/tools/robots-txt-tester", label: "Robots.txt tester" },
-  llms: { path: "/tools/ai-guide-file-maker", label: "llms.txt generator" },
-  faq: { path: "/tools/faq-markup-maker", label: "FAQ schema generator" },
+  llms: { path: "/tools/llms-txt-generator", label: "llms.txt generator" },
+  faq: { path: "/tools/faq-schema-generator", label: "FAQ schema generator" },
 };
 
 /** Full free-check link for a page's origin. Only http(s) origins are accepted. */

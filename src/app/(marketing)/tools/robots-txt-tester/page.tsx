@@ -48,7 +48,6 @@ export default function RobotsTxtTesterPage() {
       <section aria-label="Test your robots.txt" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <RobotsTxtTester />
-          <LeadBox tool="robots-txt-tester" />
         </div>
       </section>
 
@@ -124,6 +123,14 @@ export default function RobotsTxtTesterPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="robots-txt-tester" />
+          </div>
+        </div>
+      </section>
       <QaSection id="rtt-faq" tone="surface" title="Robots.txt questions" items={FAQ}>
         <SourcesList
           links={[

@@ -6,6 +6,16 @@ export const BRAND = {
   domain: "mywebrank.tech",
   /** The promise (Website Blueprint, Nov 2026): used everywhere a one-line description of the product is needed. */
   tagline: "Get found on Google and ChatGPT. We show you what to fix, or we fix it for you.",
+  /**
+   * The brand tagline (team decision, 15 Nov 2026): "Check. Fix. Grow." stays as MyWebRank's tagline — people see it
+   * and remember the brand. The audit's suggested line ("Customers are searching…") sits under it as a heading.
+   */
+  slogan: "Check. Fix. Grow.",
+  /**
+   * Calendar link for "Book a free call" (Calendly, Cal.com…). Set BRAND_BOOKING_URL (https) once the calendar
+   * exists; until then every "Book a free call" button falls back to the contact page (see bookCallHref).
+   */
+  bookingUrl: /^https:\/\/\S+$/.test((process.env.BRAND_BOOKING_URL ?? "").trim()) ? (process.env.BRAND_BOOKING_URL ?? "").trim() : "",
   /** The proof line (Website Blueprint): shown on the homepage, Pricing and Done-for-you. Owner-confirmed figure. */
   proof: "10,000+ businesses served by our team",
   /** One-sentence entity description used in schema.org, llms.txt and social cards (search + AI engines). */
@@ -33,6 +43,27 @@ export const BRAND = {
     country: (process.env.BRAND_ADDRESS_COUNTRY ?? "").trim() || "IN",
   },
 };
+
+/** WhatsApp chat link with a ready-typed message (opens the app on phones, WhatsApp Web on computers). */
+export function brandWhatsappHref(message: string): string {
+  return `https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(message)}`;
+}
+
+/** The ready-typed message for the general "Chat on WhatsApp" links (header, footer, contact, in-app help). */
+export const WHATSAPP_HELP_MESSAGE = "Hi, I checked my website on MyWebRank and want help.";
+
+/**
+ * Where every "Book a free call" button goes: the calendar when BRAND_BOOKING_URL is set, otherwise the
+ * fallback (the contact page with the services topic). One helper, so every button books the same way.
+ */
+export function bookCallHref(fallback = "/contact?topic=services&tier=fix"): string {
+  return BRAND.bookingUrl || fallback;
+}
+
+/** True when "Book a free call" opens a real calendar (so pages can embed it / say "pick a time"). */
+export function hasBookingCalendar(): boolean {
+  return BRAND.bookingUrl !== "";
+}
 
 /** True when at least a street or town is configured (a country alone is not an address). */
 export function hasBrandAddress(): boolean {

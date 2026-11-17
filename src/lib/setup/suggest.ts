@@ -51,9 +51,11 @@ export async function suggestCompetitors(facts: BusinessFacts, host: string): Pr
     schema: competitorLlmSchema,
     system:
       "You name real businesses that compete with a small business for the same customers. Prefer direct local " +
-      "competitors in the same city when a city is given, otherwise well-known competitors in the same country. Only " +
-      "name businesses you are confident exist; give their main website domain (or '' if unsure). Never include the " +
-      "business itself. Return 5 so the best 3 can be kept.",
+      "competitors in the same city when a city is given, otherwise well-known competitors in the same country. Do " +
+      "not list only big national brands: put 1 or 2 smaller businesses of about the same size first when you know " +
+      "any (for an online store, smaller online stores selling the same kind of products; for a service business, " +
+      "independent firms like it), then the well-known names. Only name businesses you are confident exist; give " +
+      "their main website domain (or '' if unsure). Never include the business itself. Return 5 so the best 3 can be kept.",
     user: JSON.stringify({
       business: facts.name,
       website: host,

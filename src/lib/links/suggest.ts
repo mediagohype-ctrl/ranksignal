@@ -59,6 +59,8 @@ export interface LinkSuggestion {
 export interface WeakPage {
   url: string;
   label: string;
+  /** Looks like a test / leftover page (/test, /demo, lorem ipsum…): suggest deleting or hiding it instead. */
+  testPage?: boolean;
   linksIn: number;
   strength: Exclude<LinkStrength, "ok">;
   suggestionCount: number;
@@ -442,6 +444,7 @@ export function suggestInternalLinks(pages: LinkPage[], opts: SuggestOptions = {
     .map((n) => ({
       url: n.url,
       label: n.label,
+      ...(isLikelyTestPage(n.url, n.page.extracted?.textSample ?? n.page.extracted?.title) ? { testPage: true } : {}),
       linksIn: n.inbound.size,
       strength: n.inbound.size === 0 ? ("orphan" as const) : ("weak" as const),
       suggestionCount: finalByTarget.get(n.url) ?? 0,
@@ -497,3 +500,36 @@ export function linkTaskDescription(s: LinkSuggestion): string {
     `Why: ${s.why}`,
   ].join("\n").slice(0, 5000);
 }
+
+// ---------------------------------------------------------------------------------------------
+// Telling pages apart (audit: many pages share one title, e.g. "Creative Digital Marketing Agency in Delhi")
+
+/** The page address people read: "/about-us", "/shop?page=2"; "/" for the home page. */
+export function pagePath(u: string): string {
+  try {
+    const x = new URL(u);
+    return `${x.pathname}${x.search}` || "/";
+  } catch {
+    return u;
+  }
+}
+
+const TEST_PATH = /(^|[/_-])(fiz)?test(ing|s)?\d*([/_.-]|$)|(^|[/_-])(demo|sample(-page)?|dummy|staging|temp|tmp|untitled|lorem|hello-world|draft|copy-of)([/_.-]|\d|$)/i;
+const TEST_TEXT = /\blorem ipsum\b|\bhello world\b|\bsample page\b|\bthis is a test\b/i;
+
+/**
+ * Looks like a test or leftover page (/fiztest, /test, /demo, /sample-page, "Lorem ipsum…"), which should usually be
+ * deleted or hidden rather than linked. Pure heuristic; the owner decides.
+ */
+export function isLikelyTestPage(url: string, text?: string | null): boolean {
+  let path = url;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    /* use as given */
+  }
+  if (path === "/" || path === "") return false;
+  return TEST_PATH.test(path) || (!!text && TEST_TEXT.test(text));
+}
+
+export const TEST_PAGE_NOTE = "Looks like a test page — delete or hide this page?";

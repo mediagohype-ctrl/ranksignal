@@ -51,7 +51,6 @@ export default function SitemapCheckerPage() {
       <section aria-label="Check or make your sitemap" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <SitemapChecker />
-          <LeadBox tool="sitemap-checker" />
         </div>
       </section>
 
@@ -133,6 +132,14 @@ export default function SitemapCheckerPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="sitemap-checker" />
+          </div>
+        </div>
+      </section>
       <QaSection id="smc-faq" tone="surface" title="Sitemap questions" items={FAQ}>
         <SourcesList
           links={[

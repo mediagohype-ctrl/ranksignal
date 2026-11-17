@@ -1,19 +1,17 @@
 "use client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import {
-  Activity, BarChart3, Blocks, Check, ChevronRight, Database, Eye, EyeOff, FileDown, GitBranch, Globe, Layers, LayoutTemplate, MousePointerClick,
-  PanelsTopLeft, Plug, PlugZap, ShieldCheck, ShoppingBag, Unplug, X,
-} from "lucide-react";
+import { Activity, Check, Eye, EyeOff, FileDown, Globe, Hand, Plug, PlugZap, ShieldCheck, Unplug } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate, fmtRelative, hostOf } from "@/lib/dashboard/format";
 import type { ConnectorCapabilities } from "@/lib/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, Dialog, EmptyState, Field, Input, Notice, SectionHeading, fieldDescribedBy, useToast,
+  Badge, Button, Card, CardBody, CardHeader, Dialog, EmptyState, Field, Input, Notice, SectionHeading, Select, fieldDescribedBy, useToast,
   type Tone,
 } from "@/components/ui";
-import { CapabilityMatrix, type CatalogEntry } from "./integrations/capability-matrix";
+import { CapabilityList, type CatalogEntry } from "./integrations/capability-matrix";
+import { PLATFORM_CHOICES, noConnectionLine } from "./integrations/platforms";
 import { WordPressHelp } from "./integrations/wordpress-help";
 import { ConnectGeneric } from "./integrations/connect-generic";
 import { ConnectGoogle } from "./integrations/connect-google";
@@ -61,32 +59,24 @@ const PROVIDER_NAME: Record<string, string> = {
   gsc: "Google Search Console",
   ga4: "Google Analytics 4",
 };
-const PROVIDER_ICON: Record<string, React.ReactNode> = {
-  github: <GitBranch />,
-  shopify: <ShoppingBag />,
-  webflow: <LayoutTemplate />,
-  contentful: <Layers />,
-  sanity: <Database />,
-  wix: <PanelsTopLeft />,
-};
-
 const providerName = (p: string) => PROVIDER_NAME[p] ?? p.replace(/^\w/, (c) => c.toUpperCase());
 
 export function IntegrationsPanel({
   projectId,
   defaultSiteUrl,
   integrations,
-  catalog,
   capabilityMap,
   descriptors = [],
+  detected = null,
   canAdmin,
   canTest,
 }: {
   projectId: string;
   defaultSiteUrl: string;
   integrations: IntegrationView[];
-  catalog: CatalogEntry[];
   capabilityMap: Record<string, ConnectorCapabilities>;
+  /** What our website check found the site is built with: the choice to pre-select and the name to show. */
+  detected?: { choiceId: string; name: string } | null;
   /** Credential-based connectors other than WordPress (GitHub, Shopify, Webflow, Contentful, Sanity, Wix). */
   descriptors?: PublicConnectorDescriptor[];
   canAdmin: boolean;
@@ -102,7 +92,6 @@ export function IntegrationsPanel({
   const [confirm, setConfirm] = useState<IntegrationView | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; text: string }>>({});
 
-  const planned = catalog.filter((c) => c.status === "planned");
   const hasWordPress = integrations.some((i) => i.provider === "wordpress");
 
   async function connect(e: React.FormEvent) {
@@ -157,35 +146,13 @@ export function IntegrationsPanel({
     }
   }
 
-  const [picked, setPicked] = useState<string | null>(null);
-  const setupRef = useRef<HTMLDivElement>(null);
-  function pick(id: string) {
-    setPicked((cur) => (cur === id ? null : id));
-    requestAnimationFrame(() => setupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
-
-  const catalogBlurb = (id: string) => catalog.find((c) => c.id === id)?.description ?? "";
-  const options: { id: string; name: string; family: string; blurb: string; icon: React.ReactNode; connected: boolean; planned?: boolean }[] = [
-    { id: "wordpress", name: "WordPress", family: "Website CMS", blurb: catalogBlurb("wordpress"), icon: <Globe />, connected: hasWordPress },
-    {
-      id: "google",
-      name: "Google Search Console & GA4",
-      family: "Analytics · read-only",
-      blurb: "Real clicks, impressions and AI-referred visits in your reports.",
-      icon: <BarChart3 />,
-      connected: integrations.some((i) => i.provider === "gsc" || i.provider === "ga4"),
-    },
-    ...descriptors.map((d) => ({
-      id: d.id,
-      name: d.name,
-      family: d.family,
-      blurb: d.description,
-      icon: PROVIDER_ICON[d.id] ?? <Blocks />,
-      connected: integrations.some((i) => i.provider === d.id),
-    })),
-    { id: "manual", name: "Copy-and-paste steps", family: "Any platform", blurb: catalogBlurb("manual"), icon: <FileDown />, connected: true },
-    ...planned.map((c) => ({ id: c.id, name: c.name, family: c.family, blurb: c.description, icon: <Blocks />, connected: false, planned: true })),
-  ];
+  // "Where is your website built?" — one platform at a time. The platform our website check found is pre-selected
+  // ("We found Shopify. Is that right?"); the owner can pick another.
+  const [picked, setPicked] = useState<string | null>(detected?.choiceId ?? null);
+  const [confirmed, setConfirmed] = useState(false);
+  const choice = PLATFORM_CHOICES.find((c) => c.id === picked) ?? null;
+  const isConnected = (provider: string | null) => !!provider && integrations.some((i) => i.provider === provider);
+  const showDetected = !!detected && picked === detected.choiceId && !confirmed;
 
   const wordpressPanel = (
     <Card>
@@ -290,7 +257,7 @@ export function IntegrationsPanel({
             bordered
             icon={<Plug />}
             title="Nothing connected yet"
-            description="That's fine — without a connection, every approved fix comes with copy-and-paste steps for your website editor. Pick your platform below to connect."
+            description="That's fine. Without a connection our team makes each change for you by hand. Tell us below where your website is built."
           />
         ) : (
           <ul className="grid gap-4 lg:grid-cols-2">
@@ -354,124 +321,108 @@ export function IntegrationsPanel({
         )}
       </section>
 
-      {/* Connect a platform: pick one, then only that platform's setup is shown */}
+      {/* Connect a platform: ask where the website is built, then show ONE card for that platform */}
       <section aria-labelledby="int-connect">
         <SectionHeading
           id="int-connect"
           title="Where is your website built?"
-          description="Choose where your website lives. We'll show the setup steps for just that platform."
+          description="Tell us and we'll show what we can change for you there, and how to connect it."
         />
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {options.map((o) => {
-            const selected = picked === o.id;
-            return (
-              <li key={o.id}>
-                <button
-                  type="button"
-                  aria-pressed={selected}
-                  aria-controls="int-setup"
-                  disabled={o.planned}
-                  onClick={() => pick(o.id)}
-                  className={clsx(
-                    "focus-ring group flex h-full w-full items-start gap-3 rounded-2xl border bg-surface p-4 text-left transition",
-                    selected ? "border-primary shadow-sm ring-2 ring-primary/20" : "border-border hover:border-primary/50 hover:shadow-sm",
-                    o.planned && "cursor-not-allowed opacity-60 hover:border-border hover:shadow-none",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={clsx(
-                      "flex size-10 shrink-0 items-center justify-center rounded-xl [&_svg]:size-5",
-                      selected ? "bg-primary text-white" : "bg-primary-soft text-primary-soft-fg",
-                    )}
-                  >
-                    {o.icon}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-small font-semibold text-fg">{o.name}</span>
-                      {o.connected && (
-                        <Badge tone="success" size="sm">
-                          <Check aria-hidden className="size-3" />
-                          {o.id === "manual" ? "Always on" : "Connected"}
-                        </Badge>
-                      )}
-                      {o.planned && <Badge size="sm">Planned</Badge>}
-                    </span>
-                    <span className="mt-0.5 block text-caption font-normal text-muted">{o.family}</span>
-                    <span className="mt-1.5 line-clamp-2 block text-caption font-normal text-fg-soft">{o.blurb}</span>
-                  </span>
-                  <ChevronRight
-                    aria-hidden
-                    className={clsx("mt-0.5 size-4 shrink-0 text-muted transition", selected ? "rotate-90 text-primary" : "group-hover:translate-x-0.5")}
-                  />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div id="int-setup" ref={setupRef} className="scroll-mt-24">
-          {picked ? (
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-small text-muted">
-                  Setting up <span className="font-semibold text-fg">{options.find((o) => o.id === picked)?.name}</span>
-                </p>
-                <Button variant="ghost" size="sm" icon={<X />} onClick={() => setPicked(null)}>
-                  Close
+        <Card padding="md" className="space-y-4">
+          {showDetected && detected && (
+            <Notice
+              tone="info"
+              title={`We found ${detected.name}. Is that right?`}
+              actions={
+                <Button size="sm" icon={<Check />} onClick={() => setConfirmed(true)}>
+                  Yes, that&apos;s right
                 </Button>
-              </div>
-              {picked === "wordpress" && wordpressPanel}
-              {picked === "google" && <ConnectGoogle projectId={projectId} canAdmin={canAdmin} />}
-              {picked === "manual" && (
-                <Card padding="lg">
-                  <div className="flex items-start gap-3">
-                    <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
-                      <Check className="size-5" />
-                    </span>
-                    <div>
-                      <h3 className="text-h4 text-fg">No setup needed</h3>
-                      <p className="mt-1 max-w-2xl text-small text-fg-soft">
-                        Copy-and-paste steps are always on. Every approved fix comes with steps you can paste into any website editor. Nothing is
-                        changed on your site for you.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
-              {descriptors
-                .filter((d) => d.id === picked)
-                .map((d) => (
-                  <ConnectGeneric
-                    key={d.id}
-                    descriptor={d}
-                    projectId={projectId}
-                    canAdmin={canAdmin}
-                    defaults={{ siteUrl: defaultSiteUrl }}
-                    connected={integrations.some((i) => i.provider === d.id)}
-                    onConnected={() => router.refresh()}
-                  />
-                ))}
-            </div>
-          ) : (
-            <p className="mt-4 flex items-center gap-2 text-small text-muted">
-              <MousePointerClick aria-hidden className="size-4" />
-              Select a platform above to see how to connect it.
-            </p>
+              }
+            >
+              If not, choose where your website is built below.
+            </Notice>
           )}
-        </div>
+          <Field label="My website is built with" htmlFor="int-platform">
+            <Select
+              id="int-platform"
+              value={picked ?? ""}
+              onChange={(e) => {
+                setPicked(e.target.value || null);
+                setConfirmed(true);
+              }}
+            >
+              <option value="">Choose…</option>
+              {PLATFORM_CHOICES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {isConnected(c.connector) ? " (connected)" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </Card>
+
+        {choice && (
+          <div id="int-setup" className="mt-6 space-y-4">
+            {choice.connector ? (
+              <>
+                <Card padding="md">
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <h3 className="text-h4 text-fg">{choice.name}</h3>
+                    {isConnected(choice.connector) && (
+                      <Badge tone="success" size="sm">
+                        <Check aria-hidden className="size-3" />
+                        Connected
+                      </Badge>
+                    )}
+                  </div>
+                  <CapabilityList name={choice.name} caps={capabilityMap[choice.connector]} />
+                </Card>
+                {choice.connector === "wordpress" && wordpressPanel}
+                {descriptors
+                  .filter((d) => d.id === choice.connector)
+                  .map((d) => (
+                    <ConnectGeneric
+                      key={d.id}
+                      descriptor={d}
+                      projectId={projectId}
+                      canAdmin={canAdmin}
+                      defaults={{ siteUrl: defaultSiteUrl }}
+                      connected={isConnected(d.id)}
+                      onConnected={() => router.refresh()}
+                    />
+                  ))}
+              </>
+            ) : (
+              <Card padding="lg">
+                <div className="flex items-start gap-3">
+                  <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-fg">
+                    <Hand className="size-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-h4 text-fg">{choice.id === "other" ? "No connection needed" : `No ${choice.name} connection`}</h3>
+                    <p className="mt-1 max-w-2xl text-small text-fg-soft">
+                      {choice.id === "other"
+                        ? "We don't have a connection for this kind of website. Our team makes the changes for you by hand."
+                        : noConnectionLine(choice.name)}{" "}
+                      Nothing to set up here.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
       </section>
 
-      <section aria-labelledby="int-matrix">
+      {/* Google is for reports, not for fixes: kept apart from the website connection above */}
+      <section aria-labelledby="int-google">
         <SectionHeading
-          id="int-matrix"
-          title="What each connection can do"
-          description="A tick means we can do it for you (after your OK where needed). Platforms marked “Planned” aren't ready yet."
+          id="int-google"
+          title="Connect Google for reports"
+          description="Optional and read-only. Adds real Google clicks, searches and visits to your reports. Nothing on your website changes."
         />
-        <Card className="overflow-hidden">
-          <CapabilityMatrix catalog={catalog} capabilityMap={capabilityMap} />
-        </Card>
+        <ConnectGoogle projectId={projectId} canAdmin={canAdmin} />
       </section>
 
       <Dialog

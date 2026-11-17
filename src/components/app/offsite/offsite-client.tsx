@@ -17,7 +17,9 @@ import {
   type OffsiteStatus,
   type OffsiteType,
 } from "@/lib/offsite/types";
-import type { AiCitationSuggestion, StarterSuggestion } from "@/lib/offsite/suggestions";
+import type { AiCitationSuggestion, CompetitorSiteSuggestion, StarterSuggestion } from "@/lib/offsite/suggestions";
+import { BUSINESS_KIND_LABEL, type BusinessKind } from "@/lib/offsite/starter";
+import { CompetitorSuggestions } from "@/components/app/ai-answers/competitor-suggestions";
 import { OffsiteFormDialog, type OffsiteDraft } from "./offsite-form-dialog";
 import { offsiteApi } from "./offsite-api";
 import { fmtDate } from "@/lib/dashboard/format";
@@ -42,6 +44,9 @@ export interface OffsiteSuggestionsView {
   aiCitations: AiCitationSuggestion[];
   measuredAt: string | null;
   starter: StarterSuggestion[];
+  /** Businesses AI names or links: competitors, never places to be listed. */
+  competitorSites?: CompetitorSiteSuggestion[];
+  businessKind?: BusinessKind;
 }
 
 export function OffsiteClient({
@@ -49,11 +54,14 @@ export function OffsiteClient({
   initialItems,
   suggestions,
   canEdit,
+  aiCheckInFlight = null,
 }: {
   projectId: string;
   initialItems: OffsiteItemView[];
   suggestions: OffsiteSuggestionsView | null;
   canEdit: boolean;
+  /** Set while an AI check is running or waiting for tomorrow (plain-word title and detail). */
+  aiCheckInFlight?: { title: string; detail: string } | null;
 }) {
   const toast = useToast();
   const [items, setItems] = useState(initialItems);
@@ -299,7 +307,7 @@ export function OffsiteClient({
           <Card>
             <CardHeader
               icon={<Sparkles />}
-              title="Sites AI answers already link to"
+              title="Websites AI answers already link to"
               description={
                 suggestions?.measuredAt
                   ? `Other websites linked in your latest AI check (${day(suggestions.measuredAt)}) that aren't on your list yet.`
@@ -309,6 +317,8 @@ export function OffsiteClient({
             <CardBody>
               {!suggestions ? (
                 <Notice tone="warning" title="Couldn't load suggestions">Refresh the page to try again.</Notice>
+              ) : !suggestions.measuredAt && aiCheckInFlight ? (
+                <EmptyState size="sm" icon={<Hourglass />} title={aiCheckInFlight.title} description={`${aiCheckInFlight.detail} When it's done, the websites the answers link to appear here.`} action={<LinkButton href={`/app/projects/${projectId}/visibility`} size="sm" variant="secondary">See progress</LinkButton>} />
               ) : !suggestions.measuredAt ? (
                 <EmptyState size="sm" icon={<Lightbulb />} title="No AI check yet" description="Run an AI check and we'll list the websites the answers link to." action={<LinkButton href={`/app/projects/${projectId}/visibility`} size="sm" variant="secondary">Go to AI answers</LinkButton>} />
               ) : aiSuggestions.length === 0 ? (
@@ -320,8 +330,16 @@ export function OffsiteClient({
                       <div className="min-w-0">
                         <div className="truncate text-small font-medium text-fg">{s.name === s.domain ? s.domain : `${s.name} · ${s.domain}`}</div>
                         <div className="text-xs text-muted">
-                          {TYPE_LABEL[s.type]} · linked in <span className="tabular-nums">{s.count}</span> {s.count === 1 ? "answer" : "answers"}
+                          {s.kind === "listing" ? TYPE_LABEL[s.type] : "A website AI links to"} · linked in <span className="tabular-nums">{s.count}</span>{" "}
+                          {s.count === 1 ? "answer" : "answers"}
                         </div>
+                        <div className="mt-0.5 text-xs text-fg-soft">{s.advice}</div>
+                        {s.kind === "website" && (
+                          <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="focus-ring mt-0.5 inline-flex items-center gap-1 rounded text-xs text-primary hover:underline">
+                            Open the page <ExternalLink aria-hidden className="size-3" />
+                            <span className="sr-only">(opens in a new tab)</span>
+                          </a>
+                        )}
                       </div>
                       {canEdit && (
                         <Button
@@ -350,7 +368,11 @@ export function OffsiteClient({
           </Card>
 
           <Card>
-            <CardHeader icon={<Lightbulb />} title="Starter list for India" description="Common places customers — and AI tools — look a business up." />
+            <CardHeader
+              icon={<Lightbulb />}
+              title={`Starter list for ${BUSINESS_KIND_LABEL[suggestions?.businessKind ?? "default"]}`}
+              description="Common places customers — and AI tools — look up a business like yours in India."
+            />
             <CardBody>
               <ul className="divide-y divide-border">
                 {starter.map((s) => {
@@ -391,6 +413,15 @@ export function OffsiteClient({
           </Card>
         </div>
       </section>
+
+      {suggestions && (suggestions.competitorSites?.length ?? 0) > 0 && (
+        <CompetitorSuggestions
+          projectId={projectId}
+          canEdit={canEdit}
+          initial={suggestions.competitorSites}
+          title="Businesses like yours that AI names — competitors, not places to be listed"
+        />
+      )}
 
       <OffsiteFormDialog open={formOpen} onClose={() => setFormOpen(false)} projectId={projectId} item={editing} draft={draft} onSaved={onSaved} />
       <Dialog

@@ -19,9 +19,9 @@ describe("temporary ₹10 test pack", () => {
     expect(packs).toHaveLength(TOPUP_PACKS.length + 1);
   });
 
-  it("never changes the public 'from ₹250' price, and a paid test order can always be granted", () => {
+  it("never changes the public 'from ₹499' price, and a paid test order can always be granted", () => {
     process.env.TOPUP_TEST_PACK = "true";
-    expect(TOPUP_FROM_PAISE).toBe(25_000);
+    expect(TOPUP_FROM_PAISE).toBe(49_900);
     expect(TOPUP_PACKS).not.toContain(TOPUP_TEST_PACK);
     delete process.env.TOPUP_TEST_PACK;
     expect(getTopUpPack("answers_test")?.answers).toBe(5);

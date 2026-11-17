@@ -60,7 +60,7 @@ function ctxFor(input: Record<string, unknown>) {
 }
 
 function seedApproved() {
-  h.db.organization.rows.push({ id: "o1", publishingEnabled: true });
+  h.db.organization.rows.push({ id: "o1", publishingEnabled: true, planId: "growth", serviceTier: null });
   h.db.project.rows.push({ id: "p1", organizationId: "o1", websiteUrl: "https://acme.example", settings: null });
   h.db.integration.rows.push({ id: "i1", organizationId: "o1", projectId: "p1", provider: "wordpress", credentialEncrypted: "v1:x", capabilities: WORDPRESS_CAPABILITIES });
   const base = {

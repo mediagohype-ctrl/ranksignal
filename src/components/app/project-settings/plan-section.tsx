@@ -1,7 +1,10 @@
-// Settings → Plan (brief 5.8): plan name, "AI answers left: X of Y", renew date, Upgrade. Server component.
+// Settings → Plan (brief 5.8): plan name, "AI answers left: X of Y", renew date, Upgrade (→ the plan cards in
+// Billing: Do it myself, Do it for me, Custom). Server component.
 import { CreditCard } from "lucide-react";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
+import { offerName } from "@/lib/billing/offer";
+import { UPGRADE_HREF } from "@/lib/billing/links";
 import { getAiAllowance } from "@/lib/billing/allowance";
 import { answersLeftLabel } from "@/lib/billing/topups";
 import { fmtDate } from "@/lib/dashboard/format";
@@ -9,7 +12,7 @@ import { Card, CardBody, CardHeader, KeyValueList, LinkButton, Meter } from "@/c
 
 export async function PlanSection({ organizationId, timeZone }: { organizationId: string; timeZone?: string | null }) {
   const [org, sub, allowance] = await Promise.all([
-    db.organization.findUnique({ where: { id: organizationId }, select: { planId: true } }),
+    db.organization.findUnique({ where: { id: organizationId }, select: { planId: true, serviceTier: true } }),
     db.subscription.findFirst({
       where: { organizationId },
       orderBy: { createdAt: "desc" },
@@ -31,15 +34,15 @@ export async function PlanSection({ organizationId, timeZone }: { organizationId
         icon={<CreditCard />}
         title="Plan"
         actions={
-          <LinkButton href="/app/settings?tab=billing" variant="secondary" size="sm">
-            Upgrade
+          <LinkButton href={UPGRADE_HREF} variant="secondary" size="sm">
+            {org?.serviceTier ? "See plans" : "Upgrade"}
           </LinkButton>
         }
       />
       <CardBody className="space-y-4">
         <KeyValueList
           items={[
-            { label: "Plan", value: plan.name },
+            { label: "Plan", value: org?.serviceTier ? offerName(org) : plan.name },
             ...(allowance
               ? [
                   {

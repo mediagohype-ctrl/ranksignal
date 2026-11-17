@@ -1,18 +1,21 @@
 import Link from "next/link";
-import { BRAND, brandLocationLine } from "@/lib/brand";
+import { MessageCircle } from "lucide-react";
+import { BRAND, WHATSAPP_HELP_MESSAGE, brandLocationLine, brandWhatsappHref } from "@/lib/brand";
 import { Logo } from "./logo";
-import { ENGINES } from "./ui";
+import { ENGINES_MEASURED_LINE } from "./engine-names";
+import { ProofLine } from "./proof-line";
+import { AccountLink } from "./signed-in";
 import { LanguageSwitch } from "./hi/language-switch";
 
-const COLS = [
+type FooterLink = { href: string; label: string; account?: boolean };
+
+const COLS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Product",
     links: [
-      { href: "/features", label: "Features" },
       { href: "/how-it-works", label: "How it works" },
-      { href: "/services", label: "Done-for-you services" },
+      { href: "/done-for-you", label: "Done-for-you services" },
       { href: "/pricing", label: "Pricing" },
-      { href: "/#sample", label: "Sample result" },
       { href: "/compare", label: "Compare SEO tools" },
       { href: "/compare/ahrefs", label: "MyWebRank vs Ahrefs" },
       { href: "/compare/semrush", label: "MyWebRank vs Semrush" },
@@ -24,7 +27,6 @@ const COLS = [
     links: [
       { href: "/tools", label: "All free tools" },
       { href: "/free-check", label: "Free SEO checker" },
-      { href: "/tools/ai-mention-checker", label: "AI visibility checker" },
       { href: "/tools/ai-crawler-checker", label: "AI crawler checker" },
       { href: "/tools/meta-tag-checker", label: "Meta tag checker" },
       { href: "/tools/broken-link-checker", label: "Broken link checker" },
@@ -32,9 +34,8 @@ const COLS = [
       { href: "/tools/robots-txt-tester", label: "Robots.txt tester" },
       { href: "/tools/sitemap-checker", label: "Sitemap checker" },
       { href: "/tools/seo-title-generator", label: "SEO title generator" },
-      { href: "/tools/faq-markup-maker", label: "FAQ schema generator" },
-      { href: "/tools/ai-guide-file-maker", label: "llms.txt generator" },
-      { href: "/tools/seo-extension", label: "SEO browser extension" },
+      { href: "/tools/faq-schema-generator", label: "FAQ schema generator" },
+      { href: "/tools/llms-txt-generator", label: "llms.txt generator" },
     ],
   },
   {
@@ -57,7 +58,8 @@ const COLS = [
     title: "Account",
     links: [
       { href: "/signup", label: "Start free trial" },
-      { href: "/login", label: "Log in" },
+      // "Log in" becomes "Open app" for signed-in visitors (checked in the browser, so pages stay cacheable).
+      { href: "/login", label: "Log in", account: true },
     ],
   },
   {
@@ -100,6 +102,7 @@ function profileName(url: string): string {
 
 export function SiteFooter() {
   const location = brandLocationLine();
+  const whatsapp = brandWhatsappHref(WHATSAPP_HELP_MESSAGE);
   return (
     <footer className="border-t border-border bg-bg">
       <div className="container-marketing grid gap-14 pb-14 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-10">
@@ -108,16 +111,33 @@ export function SiteFooter() {
           <p className="mk-body mt-5 max-w-sm text-fg-soft">
             Find out what AI assistants say about your business, and what to fix so they get it right.
           </p>
-          <p className="mt-6 text-small text-muted">Measures answers from {ENGINES.join(", ")}.</p>
-          <p className="mt-6">
-            <a
-              href={`mailto:${BRAND.supportEmail}`}
-              className="text-[0.9375rem] font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
-            >
-              {BRAND.supportEmail}
-            </a>
-          </p>
-          {location && <p className="mt-2 text-small text-muted">{location}</p>}
+          {/* Built from the plan limits (engine-names.ts), so the footer never claims more AI tools than a plan checks. */}
+          <p className="mt-6 max-w-sm text-small text-muted">{ENGINES_MEASURED_LINE}</p>
+          <ProofLine className="mt-6" />
+          <ul className="mt-4 space-y-2">
+            <li>
+              <a
+                href={whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-[0.9375rem] font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+              >
+                <MessageCircle aria-hidden size={16} className="shrink-0 text-success" />
+                Chat on WhatsApp
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href={`mailto:${BRAND.supportEmail}`}
+                className="text-[0.9375rem] font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
+              >
+                {BRAND.supportEmail}
+              </a>
+            </li>
+          </ul>
+          {/* Office city, from BRAND_ADDRESS_LOCALITY (nothing is shown until it is set). */}
+          {location && <p className="mt-3 text-small text-muted">Office: {location}</p>}
           {BRAND.sameAs.length > 0 && (
             <ul aria-label={`${BRAND.name} on other sites`} className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
               {BRAND.sameAs.map((url) => {
@@ -146,9 +166,13 @@ export function SiteFooter() {
               <ul className="mt-5 space-y-3.5">
                 {c.links.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className="text-[0.9375rem] text-fg-soft transition-colors hover:text-fg">
-                      {l.label}
-                    </Link>
+                    {l.account ? (
+                      <AccountLink className="text-[0.9375rem] text-fg-soft transition-colors hover:text-fg" />
+                    ) : (
+                      <Link href={l.href} className="text-[0.9375rem] text-fg-soft transition-colors hover:text-fg">
+                        {l.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { CheckCircle2, Eye, ShieldCheck, Wrench } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { LogoLockup } from "@/components/brand/logo";
+import { FreeCheckScore } from "./signup/free-check-score";
 
 const VALUES = [
   {
@@ -17,7 +19,7 @@ const VALUES = [
   {
     icon: ShieldCheck,
     title: "Stay in control",
-    body: "Nothing changes on your site without your OK. Every edit is recorded and can be undone.",
+    body: "Nothing on your website changes without you. We show you exactly what to change, or our team does it after your OK.",
   },
 ];
 
@@ -32,6 +34,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </Link>
 
         <div className="relative max-w-lg">
+          {/* Sign-up only: the visitor's own free-check score, when this tab really ran one. */}
+          <Suspense fallback={null}>
+            <div className="mb-8 empty:hidden">
+              <FreeCheckScore tone="navy" />
+            </div>
+          </Suspense>
           <p className="eyebrow text-navy-fg/75">Check · Fix · Grow</p>
           <h2 className="mt-3 text-h1 text-balance text-navy-fg">See how Google and AI see your business.</h2>
           <ul className="mt-10 space-y-6">

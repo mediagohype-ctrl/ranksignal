@@ -15,6 +15,7 @@ import {
   type RobotsFetchResult,
   type RobotsLine,
 } from "@/lib/tools/robots-tester";
+import { WholeSiteCta } from "./whole-site-cta";
 
 const MAX_SHOWN_LINES = 2_000;
 const SAMPLE = "User-agent: *\nDisallow: /cart/\nDisallow: /search\nAllow: /search/help\n\nUser-agent: GPTBot\nDisallow: /\n\nSitemap: https://example.com/sitemap.xml\n";
@@ -280,6 +281,7 @@ export function RobotsTxtTester() {
                 <p className="mt-2 text-xs text-muted">Showing the first {MAX_SHOWN_LINES.toLocaleString("en-US")} lines. Tests still use the whole file.</p>
               )}
             </div>
+            <WholeSiteCta lead="This checked one file." />
           </>
         )}
       </div>

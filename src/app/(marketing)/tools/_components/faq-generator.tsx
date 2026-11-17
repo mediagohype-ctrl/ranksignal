@@ -7,6 +7,7 @@ import { Badge, Button, Card, Field, Input, Notice, Textarea } from "@/component
 import { AI_INPUT_LIMITS as L, evaluateFaqAnswer, isNotStated } from "@/lib/tools/ai-writing-checks";
 import { faqScriptTag, type FaqItem } from "@/lib/growth/tools";
 import { AiDraftNotice, CheckBadge, CopyButton, useAiTool } from "./ai-tool-form";
+import { WholeSiteCta } from "./whole-site-cta";
 
 type Mode = "url" | "text";
 interface FaqResult {
@@ -143,6 +144,9 @@ export function FaqGenerator() {
                   </div>
                 </div>
               </div>
+            </div>
+            <div className="mx-auto max-w-3xl">
+              <WholeSiteCta lead="These questions are for one page." />
             </div>
           </>
         )}

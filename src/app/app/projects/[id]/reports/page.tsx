@@ -12,6 +12,11 @@ import { fmtDate, humanize, pct } from "@/lib/dashboard/format";
 import { appliedChangeWhere, APPLIED_STATUSES } from "@/lib/actions/service";
 import { backfillSnapshots, getPeriodComparison, listSnapshots, type SnapshotView } from "@/lib/snapshots";
 import { SinceLastMonth } from "@/components/app/history/since-last-month";
+import { explainScoreChangeFor } from "@/lib/snapshots/explain-server";
+import { getStoredReport } from "@/lib/report/stored";
+import { placesLine, prioritySplit, problemCounts, problemCountsFromSnapshot, problemsLabel } from "@/lib/report/counts";
+import { reportPagesReadNote } from "@/lib/report/present";
+import { getUserTimeZone } from "@/lib/dashboard/tz";
 import { TrendChart } from "@/components/app/charts";
 import { HistoryExplorer, type HistorySnapshotRow, type ShippedChange } from "@/components/app/history/history-explorer";
 import { PrintButton } from "@/components/app/print-button";
@@ -63,6 +68,22 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
   const answers = m && !m.simulated ? m.collected : 0;
   const named = m && !m.simulated ? Math.round(m.mentionRate * m.collected) : 0;
   const canEdit = hasRole(session, "member");
+  // ONE problem count everywhere (src/lib/report/counts.ts): the report's problem list, the same source as Home and
+  // the Full report. Falls back to the newest history row (the same list, frozen) if the report can't be read.
+  const report = d.findings.crawledAt ? await getStoredReport(project.id, orgId).catch(() => null) : null;
+  const latestSnap = [...snapshots].reverse().find((s) => !s.simulated && s.openIssues) ?? null;
+  const counts = report ? problemCounts(report) : problemCountsFromSnapshot(latestSnap?.openIssues ?? null, d.findings.pagesCrawled);
+  const pagesChecked = counts?.pages ?? d.findings.pagesCrawled;
+  const pagesNote = report ? reportPagesReadNote(report) : null;
+  // The main reason the score moved since the first check — from the two measurements, never a guess.
+  const tz = await getUserTimeZone(session).catch(() => null);
+  const why =
+    change !== null && change !== 0
+      ? await explainScoreChangeFor(project.id, orgId, "start", {
+          snapshots: snapshots.filter((s) => !s.simulated),
+          fmtDate: (x) => fmtDate(x, { timeZone: tz }).replace(/ [0-9]{4}$/, ""),
+        })
+      : null;
 
   return (
     <div className="space-y-8">
@@ -97,6 +118,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
           value={change === null ? "—" : change > 0 ? `+${change}` : change < 0 ? `−${Math.abs(change)}` : "0"}
           icon={<TrendingUp />}
           hint={change === null ? "Shows after your second check" : "Points out of 100"}
+          footer={why && why.delta === change ? <span data-testid="score-change-reason">{why.line}</span> : undefined}
         />
       </section>
 
@@ -261,10 +283,13 @@ export default async function ReportsPage({ params }: { params: Promise<{ id: st
       </Card>
       </>
       )}
-      <p className="text-xs text-muted">
-        {d.findings.totalOpen} {d.findings.totalOpen === 1 ? "problem" : "problems"} to fix across {d.findings.pagesCrawled}{" "}
-        {d.findings.pagesCrawled === 1 ? "page" : "pages"} checked (website check {fmtDate(d.findings.crawledAt)}). AI mentions are measured
-        from a sample of answers and don&apos;t guarantee a place on Google or in AI answers.
+      <p className="text-xs text-muted" data-testid="progress-footer">
+        {counts
+          ? `${problemsLabel(counts)} to fix${prioritySplit(counts) ? ` (${prioritySplit(counts)})` : ""}${placesLine(counts) ? ` ${placesLine(counts)}` : ""}, from `
+          : ""}
+        {pagesChecked} {pagesChecked === 1 ? "page" : "pages"} checked (website check {fmtDate(d.findings.crawledAt)}).{" "}
+        {pagesNote ? `${pagesNote} ` : ""}AI mentions are measured from a sample of answers and don&apos;t guarantee a place on Google or in AI
+        answers.
       </p>
     </div>
   );

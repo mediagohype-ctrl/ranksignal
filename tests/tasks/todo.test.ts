@@ -90,7 +90,7 @@ describe("buildTodo / progress", () => {
   it("merges problems, listings and tasks into one list with the right sides and states", () => {
     const items = buildTodo(base);
     const by = Object.fromEntries(items.map((i) => [i.id, i]));
-    expect(by["seo-titles"]).toMatchObject({ side: "website", state: "open", points: 6, minutes: 15 });
+    expect(by["seo-titles"]).toMatchObject({ side: "website", state: "open", points: 6, minutes: 5 }); // one page × 2 min, at least 5 (fixMinutes)
     expect(by["seo-h1"]).toMatchObject({ state: "done", recheck: { fixed: true } });
     expect(by["brand-ai_knowledge"].side).toBe("outside");
     expect(by["aeo-readability"].state).toBe("skipped");
@@ -186,8 +186,8 @@ describe("ids, links and old routes", () => {
     expect(timeLabel(15)).toBe("About 15 min");
     expect(timeLabel(60)).toBe("About 1 hour");
     expect(timeLabel(240)).toBe("Half a day or more");
-    expect(recheckLine({ url: "u", at: "t", fixed: true })?.text).toBe("Fixed — we can see it.");
-    expect(recheckLine({ url: "u", at: "t", fixed: false })?.text).toMatch(/^We can't see this change yet/);
+    expect(recheckLine({ url: "u", at: "t", fixed: true })?.text).toBe("Confirmed live.");
+    expect(recheckLine({ url: "u", at: "t", fixed: false })?.text).toBe("We couldn't see the change yet.");
     expect(recheckLine(null)).toBeNull();
   });
 });

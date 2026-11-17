@@ -24,9 +24,9 @@ export const keywordPatchSchema = keywordInputSchema.partial();
 
 /** Phrases worth owning on day one, mapped to the page built for each. */
 export const STARTER_KEYWORDS: z.input<typeof keywordInputSchema>[] = [
-  { phrase: "seo company in india", intent: "commercial", targetPath: "/services", priority: 1 },
-  { phrase: "seo services india", intent: "commercial", targetPath: "/services", priority: 1 },
-  { phrase: "aeo geo seo agency", intent: "commercial", targetPath: "/services", priority: 1, pillar: "geo" },
+  { phrase: "seo company in india", intent: "commercial", targetPath: "/done-for-you", priority: 1 },
+  { phrase: "seo services india", intent: "commercial", targetPath: "/done-for-you", priority: 1 },
+  { phrase: "aeo geo seo agency", intent: "commercial", targetPath: "/done-for-you", priority: 1, pillar: "geo" },
   { phrase: "website seo checker", intent: "transactional", targetPath: "/free-check", priority: 1 },
   { phrase: "free seo report", intent: "transactional", targetPath: "/free-check", priority: 1 },
   { phrase: "website seo audit checklist", targetPath: "/learn/website-seo-audit-checklist", priority: 2 },
@@ -34,9 +34,9 @@ export const STARTER_KEYWORDS: z.input<typeof keywordInputSchema>[] = [
   { phrase: "what is geo", targetPath: "/learn/what-is-geo", priority: 1, pillar: "geo" },
   { phrase: "seo vs aeo vs geo", targetPath: "/learn/seo-vs-aeo-vs-geo", priority: 2 },
   { phrase: "how to rank in chatgpt", targetPath: "/learn/how-to-get-mentioned-by-chatgpt", priority: 1, pillar: "geo" },
-  { phrase: "ai visibility checker", intent: "transactional", targetPath: "/tools/ai-mention-checker", priority: 2, pillar: "geo" },
-  { phrase: "llms.txt generator", intent: "transactional", targetPath: "/tools/ai-guide-file-maker", priority: 2, pillar: "geo" },
-  { phrase: "faq schema generator", intent: "transactional", targetPath: "/tools/faq-markup-maker", priority: 2, pillar: "aeo" },
+  { phrase: "ai visibility checker", intent: "transactional", targetPath: "/free-check", priority: 2, pillar: "geo" },
+  { phrase: "llms.txt generator", intent: "transactional", targetPath: "/tools/llms-txt-generator", priority: 2, pillar: "geo" },
+  { phrase: "faq schema generator", intent: "transactional", targetPath: "/tools/faq-schema-generator", priority: 2, pillar: "aeo" },
   { phrase: "how to choose an seo company", targetPath: "/learn/how-to-choose-an-seo-company", priority: 2 },
   { phrase: "best seo tool for small business india", intent: "commercial", targetPath: null, priority: 2 },
   { phrase: "seo audit cost in india", intent: "commercial", targetPath: null, priority: 2 },

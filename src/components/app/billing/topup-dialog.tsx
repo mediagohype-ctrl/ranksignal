@@ -1,7 +1,9 @@
 "use client";
 // "Buy more answers": one-time AI-answer top-up packs (not autopay; the plan doesn't change). The dialog lists the
-// packs with price + GST + total and validity, opens Razorpay Checkout for an ORDER, then waits until the signed
-// webhook has added the answers (the browser callback alone never adds them).
+// packs — named in whole AI checks first, answers second — with price + GST + total and validity, says how many full
+// checks the answers left cover, asks for the business name and state before the first payment (GST invoice), opens
+// Razorpay Checkout for an ORDER, then waits until the signed webhook has added the answers (the browser callback
+// alone never adds them) and confirms: "Payment received: 75 answers added".
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -10,17 +12,29 @@ import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate } from "@/lib/dashboard/format";
 import { formatInr } from "@/lib/billing/gst";
 import { BRAND } from "@/lib/brand";
-import { Badge, Button, Card, CardBody, CardHeader, Dialog, Notice, Skeleton, type ButtonSize, type ButtonVariant } from "@/components/ui";
+import { INDIAN_STATES } from "@/lib/billing/indian-states";
+import { fullChecksIn } from "@/lib/billing/topups";
+import { ApiClientError } from "@/lib/dashboard/client";
+import { BILLING_DETAILS_REQUIRED_CODE, BillingDetailsForm } from "./billing-details-form";
+import type { CheckoutPrefillValue } from "./razorpay-checkout";
+import { Badge, Button, Card, CardBody, CardHeader, Dialog, Notice, Skeleton, useToast, type ButtonSize, type ButtonVariant } from "@/components/ui";
 import { openRazorpayOrder, type CheckoutSuccess } from "./topup-checkout";
 
 /** Mirrors TopUpOverview in src/lib/billing/topup-service.ts (JSON dates as strings). */
 export interface TopUpOverviewJson {
-  offers: { id: string; name: string; answers: number; basePaise: number; gstPaise: number; totalPaise: number; ratePercent: number; priceLabel: string; validityMonths: number }[];
+  offers: { id: string; name: string; label?: string; checks?: number; answers: number; basePaise: number; gstPaise: number; totalPaise: number; ratePercent: number; priceLabel: string; validityMonths: number }[];
   checkoutAvailable: boolean;
   trial: boolean;
   accessActive: boolean;
   extraLeft: number;
   extraExpiresAt: string | null;
+  /** AI answers one full check uses on this plan; answers usable now and the full checks they cover. */
+  answersPerCheck?: number;
+  answersLeft?: number;
+  checksLeft?: number;
+  /** True until the business name and state are saved (asked for before the first payment). */
+  needsBillingDetails?: boolean;
+  businessName?: string;
   packs: { id: string; name: string; answers: number; left: number; purchasedAt: string; expiresAt: string; status: "active" | "used" | "expired" | "refunded" }[];
   orders: { id: string; razorpayOrderId: string; name: string; answers: number; totalPaise: number; status: "pending" | "paid" | "failed" | "refunded"; createdAt: string; paidAt: string | null }[];
 }
@@ -41,12 +55,39 @@ type Phase =
   | { kind: "failed"; message: string };
 
 const n = (x: number) => x.toLocaleString("en-IN");
+const checksWord = (c: number) => `${n(c)} full AI ${c === 1 ? "check" : "checks"}`;
+
+/**
+ * "You have 40 AI answers left. That is not enough for a full AI check (one full check uses 75 answers)." /
+ * "You have 225 AI answers left: enough for 3 full AI checks (one full check uses 75 answers)." Pure (tested).
+ */
+export function answersCoverLine(answersLeft: number, perCheck: number): string {
+  const left = Math.max(0, Math.floor(answersLeft));
+  if (!(perCheck > 0)) return `You have ${n(left)} AI answers left.`;
+  const checks = fullChecksIn(left, perCheck);
+  const one = `(one full check uses ${n(perCheck)} answers)`;
+  if (checks === 0) return `You have ${n(left)} AI ${left === 1 ? "answer" : "answers"} left. That is not enough for a full AI check ${one}.`;
+  return `You have ${n(left)} AI answers left: enough for ${checksWord(checks)} ${one}.`;
+}
+
+/** "With this pack you'll have 115 answers: enough for 1 full AI check." Pure (tested). */
+export function afterPackLine(answersLeft: number, packAnswers: number, perCheck: number): string {
+  const total = Math.max(0, Math.floor(answersLeft)) + Math.max(0, Math.floor(packAnswers));
+  if (!(perCheck > 0)) return `With this pack you'll have ${n(total)} answers.`;
+  const checks = fullChecksIn(total, perCheck);
+  return checks === 0
+    ? `With this pack you'll have ${n(total)} answers. A full AI check uses ${n(perCheck)}, so pick a bigger pack to run one.`
+    : `With this pack you'll have ${n(total)} answers: enough for ${checksWord(checks)}.`;
+}
 
 export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded?: () => void }) {
   const router = useRouter();
+  const toast = useToast();
   const [data, setData] = useState<TopUpOverviewJson | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  /** Business name + state saved just now in the short form (the server says so on the next load). */
+  const [detailsSaved, setDetailsSaved] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "choose" });
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,11 +115,13 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
   const finished = useCallback(
     (answers: number) => {
       setPhase({ kind: "done", answers });
+      // Also as a toast: it stays visible if the dialog is closed or the page behind it reloads.
+      toast(`Payment received: ${n(answers)} answers added`, "success");
       window.dispatchEvent(new Event(ALLOWANCE_CHANGED_EVENT));
       onAdded?.();
       router.refresh();
     },
-    [onAdded, router],
+    [onAdded, router, toast],
   );
 
   /** Wait for the signed webhook to add the answers (order → paid). */
@@ -101,14 +144,15 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
     if (!offer) return;
     setPhase({ kind: "starting" });
     try {
-      const r = await api<{ item: { orderId: string; keyId: string; amount: number } }>("/api/billing/topups", { body: { packId: offer.id } });
+      const r = await api<{ item: { orderId: string; keyId: string; amount: number; prefill?: CheckoutPrefillValue } }>("/api/billing/topups", { body: { packId: offer.id } });
       setPhase({ kind: "paying" });
       await openRazorpayOrder({
         keyId: r.item.keyId,
         orderId: r.item.orderId,
         amount: r.item.amount,
         name: BRAND.name,
-        description: `${offer.name} — one-time payment`,
+        description: `${offer.label ?? offer.name} — one-time payment`,
+        prefill: r.item.prefill,
         onSuccess: (resp: CheckoutSuccess | null) => {
           setPhase({ kind: "confirming", orderId: r.item.orderId });
           // Signature check only speeds up the message; the webhook adds the answers.
@@ -122,11 +166,18 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
         onFailure: (message) => setPhase({ kind: "failed", message }),
       });
     } catch (e) {
-      setPhase({ kind: "failed", message: errorMessage(e) });
+      // The server refuses to start a payment without a business name and state: show the short form.
+      if (e instanceof ApiClientError && e.code === BILLING_DETAILS_REQUIRED_CODE) {
+        setDetailsSaved(false);
+        setData((d) => (d ? { ...d, needsBillingDetails: true } : d));
+        setPhase({ kind: "choose" });
+      } else setPhase({ kind: "failed", message: errorMessage(e) });
     }
   }
 
   const offer = data?.offers.find((o) => o.id === selected) ?? null;
+  const needsDetails = !!data?.needsBillingDetails && !detailsSaved;
+  const perCheck = data?.answersPerCheck ?? 0;
   const busy = phase.kind === "starting" || phase.kind === "paying" || phase.kind === "confirming";
   const close = () => {
     if (phase.kind === "starting" || phase.kind === "paying") return;
@@ -150,8 +201,9 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
     );
   } else if (phase.kind === "done") {
     body = (
-      <Notice tone="success" title={`${n(phase.answers)} extra AI answers added`} icon={<CheckCircle2 />}>
-        They&apos;re used after your plan&apos;s monthly answers run out. Thank you!
+      <Notice tone="success" title={`Payment received: ${n(phase.answers)} answers added`} icon={<CheckCircle2 />}>
+        Thank you! Your extra answers are used after your plan&apos;s monthly answers run out. Your invoice is in Settings, under
+        Billing &amp; usage, and we email it to you.
       </Notice>
     );
   } else if (!data) {
@@ -177,6 +229,7 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
             to 12 months from purchase) until you choose a plan.
           </Notice>
         )}
+        {data.answersLeft !== undefined && perCheck > 0 && <p className="text-small text-fg-soft">{answersCoverLine(data.answersLeft, perCheck)}</p>}
         <div role="radiogroup" aria-label="Choose a pack" className="space-y-2">
           {data.offers.map((o) => (
             <button
@@ -192,7 +245,7 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
               )}
             >
               <span className="min-w-0">
-                <span className="block font-medium text-fg">{n(o.answers)} AI answers</span>
+                <span className="block font-medium text-fg">{o.label ?? `${n(o.answers)} AI answers`}</span>
                 <span className="block text-xs text-muted">
                   {o.gstPaise > 0 ? `${formatInr(o.basePaise)} + ${formatInr(o.gstPaise)} GST (${o.ratePercent}%) · ` : ""}Valid {o.validityMonths} months
                 </span>
@@ -204,6 +257,30 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
             </button>
           ))}
         </div>
+        {offer && data.answersLeft !== undefined && perCheck > 0 && (
+          <p className="text-small text-fg-soft" role="status">
+            {afterPackLine(data.answersLeft, offer.answers, perCheck)}
+          </p>
+        )}
+        {needsDetails && (
+          <div className="space-y-3 rounded-xl border border-border bg-surface-2 p-3">
+            <p className="text-small font-medium text-fg">First, who is the invoice for?</p>
+            <p className="text-xs text-muted">We need your business name and state before you pay, so your GST invoice is correct.</p>
+            <BillingDetailsForm
+              compact
+              idPrefix="topup-bd"
+              initial={null}
+              states={INDIAN_STATES}
+              defaultName={data.businessName ?? ""}
+              canManage
+              submitLabel="Save and continue"
+              onSaved={() => {
+                setDetailsSaved(true);
+                void load();
+              }}
+            />
+          </div>
+        )}
         <p className="text-xs text-muted">
           One-time payment — not autopay, and your plan doesn&apos;t change. Extra answers are used only after your plan&apos;s
           monthly answers run out, oldest pack first, and expire 12 months after purchase. Your invoice is added to Settings &amp; billing.
@@ -225,7 +302,7 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
           onClick={pay}
           loading={busy}
           loadingText={phase.kind === "confirming" ? "Adding answers…" : "Opening payment…"}
-          disabled={!offer || !data?.checkoutAvailable || !data?.accessActive}
+          disabled={!offer || !data?.checkoutAvailable || !data?.accessActive || needsDetails}
         >
           {offer ? `Pay ${formatInr(offer.totalPaise)}` : "Pay"}
         </Button>
@@ -237,7 +314,7 @@ export function TopUpDialog({ open, onClose, onAdded }: { open: boolean; onClose
       open={open}
       onClose={close}
       title="Buy more AI answers"
-      description="Pick a pack. Pay once — nothing renews."
+      description="Pick a pack of extra AI checks. Pay once — nothing renews."
       icon={<PackagePlus />}
       footer={footer}
     >
@@ -296,7 +373,10 @@ export function ExtraAnswersCard({ canManage }: { canManage: boolean }) {
   }, []);
   useEffect(() => load(), [load]);
 
-  const fromPaise = data?.offers.length ? Math.min(...data.offers.map((o) => o.basePaise)) : null;
+  // The real packs only (the owner's ₹10 test pack is never the "from" price).
+  const realOffers = data?.offers.filter((o) => o.id !== "answers_test") ?? [];
+  const fromPaise = realOffers.length ? Math.min(...realOffers.map((o) => o.basePaise)) : null;
+  const perCheck = data?.answersPerCheck ?? 0;
   const gst = data?.offers.some((o) => o.gstPaise > 0);
   const live = data?.packs.filter((p) => p.status === "active") ?? [];
   const old = data?.packs.filter((p) => p.status !== "active") ?? [];
@@ -306,7 +386,7 @@ export function ExtraAnswersCard({ canManage }: { canManage: boolean }) {
       <CardHeader
         icon={<PackagePlus />}
         title="Extra AI answers"
-        description={`Ran out before the month ends? Buy a one-time pack${fromPaise !== null ? ` from ${formatInr(fromPaise)}${gst ? " + GST" : ""}` : ""}. Not autopay — your plan doesn't change.`}
+        description={`Ran out before the month ends? Buy extra AI checks once${fromPaise !== null ? `, from ${formatInr(fromPaise)}${gst ? " + GST" : ""}` : ""}. Not autopay — your plan doesn't change.`}
         actions={
           canManage ? (
             <Button size="sm" icon={<Plus />} onClick={() => setOpen(true)}>
@@ -325,7 +405,10 @@ export function ExtraAnswersCard({ canManage }: { canManage: boolean }) {
                 <span className="font-semibold tabular-nums">{n(data.extraLeft)}</span> extra AI answers left
                 {data.extraExpiresAt && data.extraLeft > 0 ? ` · the oldest expire on ${fmtDate(data.extraExpiresAt)}` : ""}
               </p>
-              <p className="text-xs text-muted">Used only after your plan&apos;s monthly answers run out, oldest pack first.</p>
+              <p className="text-xs text-muted">
+                Used only after your plan&apos;s monthly answers run out, oldest pack first.
+                {perCheck > 0 ? ` One full AI check uses ${n(perCheck)} answers.` : ""}
+              </p>
             </div>
             {live.length + old.length > 0 && (
               <ul className="divide-y divide-border rounded-xl border border-border">

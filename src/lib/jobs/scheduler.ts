@@ -1,12 +1,13 @@
 // Recurring scans + housekeeping. Started from bootWorker(); every 5 minutes one instance (Postgres advisory
 // lock) recovers interrupted runs, enqueues due scheduled scans and sends run-completion notifications.
-// Schedules live in Project.settings.schedule (absent → crawl weekly, visibility monthly).
+// Schedules live in Project.settings.schedule (absent → crawl weekly; AI checks weekly when the plan's monthly AI
+// answers cover four checks, else monthly — see defaultAiFrequency in src/lib/dashboard/project-schema.ts).
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { enqueue } from "@/lib/jobs/queue";
 import { getPlan } from "@/lib/billing/plans";
 import { getOrgAccess } from "@/lib/billing/access";
-import { getVisibilityRunAllowance } from "@/lib/billing/ai-limits";
+import { getAiCheckEstimate } from "@/lib/billing/ai-limits";
 import { currentPromptSetVersion } from "@/lib/prompts/service";
 import { frequencyDays, readSchedule, type ScheduleFrequency } from "@/lib/dashboard/project-schema";
 import { recoverInterruptedRuns } from "@/lib/jobs/recovery";
@@ -56,6 +57,11 @@ export function scheduleIdempotencyKey(kind: ScanKind, projectId: string, now: D
   return `sched:${kind}:${projectId}:${now.toISOString().slice(0, 10)}`;
 }
 
+/** Pure: may an automatic AI check start? Only when answers are left AND a full check (`needed` answers) fits. */
+export function canStartScheduledAiCheck(remaining: number, needed: number): boolean {
+  return remaining > 0 && remaining >= needed;
+}
+
 async function enqueueScheduled(kind: ScanKind, project: { id: string; organizationId: string }, now: Date) {
   const idempotencyKey = scheduleIdempotencyKey(kind, project.id, now);
   if (await db.workflowRun.findUnique({ where: { idempotencyKey }, select: { id: true } })) return false;
@@ -79,7 +85,12 @@ async function enqueueScheduled(kind: ScanKind, project: { id: string; organizat
   const promptCount = await db.trackedPrompt.count({ where: { organizationId, projectId: project.id, active: true } });
   if (promptCount === 0) return false; // nothing to measure; the project page already prompts the user to add questions
   // Re-checked per run (it counts runs created this month, including ones enqueued earlier in this tick).
-  if ((await getVisibilityRunAllowance(organizationId, now)).remaining <= 0) return false;
+  // An automatic check only starts when a FULL check fits in the AI answers left: when the weekly schedule runs out
+  // of answers before the month ends it skips quietly (no run row, no failed check, no email) until they reset.
+  // The estimate sizes the check exactly like the job will: the plan's questions per check × the AI tools the plan
+  // includes — an automatic check asks what a manual one asks.
+  const estimate = await getAiCheckEstimate(organizationId, project.id, now);
+  if (!canStartScheduledAiCheck(estimate.left, estimate.fullAnswers)) return false;
   const run = await db.visibilityRun.create({
     data: {
       organizationId, projectId: project.id, status: "queued",
@@ -121,7 +132,7 @@ async function latestByProject(kind: ScanKind, projectIds: string[]) {
 /** Enqueue every scheduled scan that is due. Returns the number of runs enqueued. */
 export async function scheduleDueScans(now = new Date()): Promise<number> {
   const projects = await db.project.findMany({
-    select: { id: true, organizationId: true, settings: true, organization: { select: { planId: true } } },
+    select: { id: true, organizationId: true, settings: true, organization: { select: { planId: true, serviceTier: true } } },
   });
   if (projects.length === 0) return 0;
   const ids = projects.map((p) => p.id);
@@ -130,7 +141,8 @@ export async function scheduleDueScans(now = new Date()): Promise<number> {
   let enqueued = 0;
 
   for (const p of projects) {
-    const schedule = readSchedule(p.settings);
+    // AI checks default to weekly when the plan's monthly AI answers cover it (owner never chose); see project-schema.
+    const schedule = readSchedule(p.settings, p.organization);
     const plan = getPlan(p.organization.planId);
     for (const kind of ["crawl", "visibility"] as const) {
       const due = isScanDue({

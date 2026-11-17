@@ -6,6 +6,7 @@ import { encryptSecret } from "@/lib/crypto";
 import { writeAuditLog } from "@/lib/audit-log";
 import { WordPressConnector, WORDPRESS_CAPABILITIES } from "@/lib/connectors/wordpress";
 import { publicIntegration } from "@/lib/connectors/serialize";
+import { assertCanConnectWebsite } from "@/lib/connectors/offer-guard";
 
 const schema = z.object({
   projectId: z.string().min(1).max(64),
@@ -16,6 +17,8 @@ const schema = z.object({
 
 export const POST = handler(async (req: Request) => {
   const s = await requireSession("admin");
+  // Do it myself has no website connections (owner decision 1): refuse before anything is validated or stored.
+  await assertCanConnectWebsite(s.organizationId);
   const body = await parseBody(req, schema);
   const project = await requireProject(s, body.projectId);
   const siteUrl = body.siteUrl.trim().replace(/\/+$/, "");

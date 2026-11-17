@@ -45,6 +45,44 @@ export const STATUS_HINT: Record<TaskStatus, string> = {
   dismissed: "You said this isn't for you",
 };
 
+/**
+ * Do it myself (no managed service, not staff support mode): the board is the owner's own list, so columns use the
+ * owner's words and there is no "our team" / "waiting on you" hand-off. Pure.
+ */
+export const SELF_STATUS_LABEL: Partial<Record<TaskStatus, string>> = {
+  backlog: "To do",
+  in_progress: "Doing",
+  client_review: "Waiting for someone",
+  blocked: "Stuck",
+  done: "Done",
+};
+export const SELF_STATUS_HINT: Partial<Record<TaskStatus, string>> = {
+  backlog: "Not started yet",
+  in_progress: "You're on it",
+  client_review: "Waiting for a reply or a person",
+  blocked: "Can't go on until something changes",
+  done: "Finished",
+};
+
+export function statusLabel(s: TaskStatus, selfMode: boolean): string {
+  return (selfMode ? SELF_STATUS_LABEL[s] : undefined) ?? STATUS_LABEL[s];
+}
+export function statusHint(s: TaskStatus, selfMode: boolean): string {
+  return (selfMode ? SELF_STATUS_HINT[s] : undefined) ?? STATUS_HINT[s];
+}
+
+/** Board columns: Do it myself drops "Waiting on you" (no hand-off) unless a task is already there. */
+export function boardColumns(selfMode: boolean, tasks: Pick<TaskView, "status">[]): TaskStatus[] {
+  const all: TaskStatus[] = ["backlog", "in_progress", "client_review", "blocked", "done"];
+  if (!selfMode) return all;
+  return all.filter((s) => s !== "client_review" || tasks.some((t) => t.status === "client_review"));
+}
+
+/** Who does a new task by default: "You" on Do it myself, "Our team" where our team does the work. */
+export function defaultPerformer(selfMode: boolean): TaskPerformer {
+  return selfMode ? "client" : "agency";
+}
+
 /** Who did the work, in client-facing words. */
 export const PERFORMER_LABEL: Record<TaskPerformer, string> = {
   agency: "Our team",
@@ -59,6 +97,8 @@ export interface TaskRecheck {
   url: string;
   at: string;
   fixed: boolean | null;
+  /** What we looked for, in plain words ("We looked for your AI guide file at https://x.in/llms.txt."). */
+  looked?: string;
 }
 
 export interface TaskEvidence {
@@ -169,7 +209,12 @@ export function readEvidence(v: unknown): TaskEvidence {
   if (typeof o.todoKey === "string" && o.todoKey) out.todoKey = o.todoKey.slice(0, 200);
   const r = o.recheck && typeof o.recheck === "object" ? (o.recheck as Record<string, unknown>) : null;
   if (r && typeof r.url === "string" && typeof r.at === "string") {
-    out.recheck = { url: r.url, at: r.at, fixed: typeof r.fixed === "boolean" ? r.fixed : null };
+    out.recheck = {
+      url: r.url,
+      at: r.at,
+      fixed: typeof r.fixed === "boolean" ? r.fixed : null,
+      ...(typeof r.looked === "string" && r.looked ? { looked: r.looked.slice(0, 300) } : {}),
+    };
   }
   return out;
 }

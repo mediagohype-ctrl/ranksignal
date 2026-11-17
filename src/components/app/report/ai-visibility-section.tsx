@@ -4,6 +4,7 @@ import { productNames } from "@/lib/report/checks/geo";
 import { fmtDate, pct } from "@/lib/dashboard/format";
 import { ShareBarChart } from "@/components/app/charts";
 import { RunButtons } from "@/components/app/run-buttons";
+import { CompetitorSuggestions } from "@/components/app/ai-answers/competitor-suggestions";
 import {
   Badge, Card, CardBody, CardHeader, EmptyState, LinkButton, SimulatedDataBanner, Stat,
 } from "@/components/ui";
@@ -18,6 +19,7 @@ export function AiVisibilitySection({
   projectId,
   canRun = false,
   visibilityActive = false,
+  aiStatus = null,
   readOnly = false,
   measuredWith,
 }: {
@@ -26,6 +28,8 @@ export function AiVisibilitySection({
   projectId?: string;
   canRun?: boolean;
   visibilityActive?: boolean;
+  /** What to say about an AI check in flight (src/lib/visibility/run-state.ts aiCheckCopy). */
+  aiStatus?: { title: string; detail: string } | null;
   readOnly?: boolean;
   /** Shown above the numbers, e.g. <MeasuredWith labels={ai.providers} />. */
   measuredWith?: React.ReactNode;
@@ -44,10 +48,10 @@ export function AiVisibilitySection({
     return (
       <EmptyState
         icon={<Radar />}
-        title={visibilityActive ? "Asking AI assistants about you…" : "We haven't asked AI assistants about you yet"}
+        title={visibilityActive ? (aiStatus?.title ?? "Your AI check is running") : "We haven't asked AI assistants about you yet"}
         description={
           visibilityActive
-            ? "We're asking AI assistants your customer questions. This section fills in by itself when the answers are in."
+            ? (aiStatus?.detail ?? "We're asking AI assistants your customer questions. This section fills in by itself when the answers are in.")
             : "Run an AI check to see whether assistants like ChatGPT and Gemini name your business, link to your site and recommend you."
         }
         action={
@@ -130,6 +134,13 @@ export function AiVisibilitySection({
           icon={<Radar />}
         />
       </div>
+
+      {/* No competitors to compare with yet: suggest the businesses AI already names (hidden when none are found). */}
+      {!readOnly && projectId && !ai.simulated && ai.topCompetitors.length === 0 && (
+        <div className="no-print">
+          <CompetitorSuggestions projectId={projectId} canEdit={canRun} onlyWhenNoneSaved />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="break-inside-avoid">

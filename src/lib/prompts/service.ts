@@ -17,6 +17,9 @@ export async function bumpPromptSetVersion(organizationId: string, projectId: st
 
 export function researchProfileFromProject(p: Project): ResearchProfile {
   const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  // The city or area confirmed in setup (Project.facts.city), so suggestions can include local questions.
+  const facts = p.facts && typeof p.facts === "object" && !Array.isArray(p.facts) ? (p.facts as { city?: unknown }) : null;
+  const city = typeof facts?.city === "string" && facts.city.trim() ? facts.city.trim().slice(0, 120) : null;
   return {
     brandNames: arr(p.brandNames).length ? arr(p.brandNames) : [p.name],
     categories: arr(p.categories),
@@ -25,6 +28,7 @@ export function researchProfileFromProject(p: Project): ResearchProfile {
     languages: arr(p.languages).length ? arr(p.languages) : ["en"],
     competitors: ((p.competitors as { name: string }[] | null) ?? []).filter((c) => c && typeof c.name === "string"),
     keywords: arr(p.keywords),
+    city,
   };
 }
 

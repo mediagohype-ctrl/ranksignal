@@ -1,6 +1,9 @@
 // On-page guides: Google summaries, main headings, main version of the page, image descriptions, share previews.
 import type { FixGuide } from "../../types";
 import { clip, isHome, pageName, suggestTitle, topicOf } from "../../helpers";
+import { suggestSummaries } from "../../suggest-titles";
+import { shareTagsCode } from "../../ready-code";
+import { titleContext } from "../titles";
 import { DESCRIPTION_MAX } from "@/lib/audit/rules";
 import { affected, count, fileName, imagesWithoutDescription, ownAddress } from "./shared";
 
@@ -17,7 +20,9 @@ export const metaDescriptionGuide: FixGuide = {
       const d = p.extracted?.description?.trim().toLowerCase();
       if (d) seen.set(d, (seen.get(d) ?? 0) + 1);
     }
-    return ctx.pages.map((p) => {
+    // A ready-to-paste summary for every page, all different, built from each page's own words.
+    const suggested = suggestSummaries(ctx.pages, titleContext(ctx));
+    return ctx.pages.map((p, i) => {
       const d = p.extracted?.description?.trim();
       const now = !d
         ? "(no Google summary)"
@@ -26,10 +31,7 @@ export const metaDescriptionGuide: FixGuide = {
           : (seen.get(d.toLowerCase()) ?? 0) > 1
             ? `Same as another page: “${clip(d, 70)}”`
             : `“${clip(d, 70)}”`;
-      const change = isHome(p.url)
-        ? `Write 1–2 sentences (120–155 characters): what ${ctx.brand} does, for whom and where, plus one reason to choose you.`
-        : `Write 1–2 sentences (120–155 characters) about ${topicOf(p, ctx.brand)}: what you offer, who it's for, and one reason to choose ${ctx.brand}.`;
-      return { page: pageName(p.url), now, change };
+      return { page: pageName(p.url), now, change: suggested[i] };
     });
   },
   steps: {
@@ -424,6 +426,11 @@ export const imageAltGuide: FixGuide = {
 // ---------------------------------------------------------------- Share previews (Open Graph)
 
 export const openGraphGuide: FixGuide = {
+  ready: (ctx) => {
+    if (!ctx.site) return null;
+    const page = ctx.pages.find((p) => isHome(p.url)) ?? ctx.pages[0] ?? { url: ctx.websiteUrl, note: null, extracted: null };
+    return shareTagsCode(ctx.site, page, page.extracted?.title?.trim() || suggestTitle(page, ctx.brand));
+  },
   effect: (ctx) =>
     `When someone shares ${affected(ctx) === 1 ? "this page" : `these ${affected(ctx)} pages`} on WhatsApp, Facebook or LinkedIn, the link shows without a proper title or picture, so it gets noticed and clicked less.`,
   changes: (ctx) =>

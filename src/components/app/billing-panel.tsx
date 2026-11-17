@@ -2,30 +2,60 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
-import { Check, Mail, Sparkles } from "lucide-react";
+import { ArrowUpRight, Check, CheckCircle2, Mail, Sparkles } from "lucide-react";
 import { api, ApiClientError, errorMessage } from "@/lib/dashboard/client";
 import { BRAND } from "@/lib/brand";
 import { TRIAL_DAYS } from "@/lib/billing/plans";
+import { SELF_FIX_LINE, canConnectWebsite } from "@/lib/billing/offer";
+import { BILLING_DETAILS_REQUIRED_CODE } from "./billing/billing-details-form";
+import { BillingDetailsForm } from "./billing/billing-details-form";
 import type { PlanLimits } from "@/lib/types";
 import { formatInr, type GstBreakdown } from "@/lib/billing/gst";
 import { Badge, Button, LinkButton, Notice, Spinner, useToast } from "@/components/ui";
-import { openRazorpaySubscription } from "./billing/razorpay-checkout";
+import { openRazorpaySubscription, type CheckoutPrefillValue } from "./billing/razorpay-checkout";
 import { SubscriptionSummary, type UsageResponse } from "./billing/subscription-card";
 
 const POLL_MS = 3_000;
 const POLL_MAX = 40; // ~2 minutes
 
-type Phase = { kind: "idle" } | { kind: "activating"; planId: string } | { kind: "slow" } | { kind: "coming_soon" };
+type Phase =
+  | { kind: "idle" }
+  | { kind: "activating"; planId: string }
+  | { kind: "activated"; planName: string; answers: number }
+  | { kind: "slow" }
+  | { kind: "coming_soon" };
+
+/**
+ * "Do it for me" and "Custom": shown next to the plans you can pay for online. Information only — the button books a
+ * call or opens WhatsApp; there is no online checkout for them. Built on the server from the same definitions the
+ * pricing page uses (DFY_PLAN / CUSTOM_PLAN), so names and prices always match.
+ */
+export interface BillingOfferCard {
+  id: "dfy" | "custom";
+  name: string;
+  /** "₹19,999" or "Let's talk". */
+  price: string;
+  /** "+ GST / month" (empty for Custom). */
+  priceSuffix?: string;
+  blurb: string;
+  includes: readonly string[];
+  cta: string;
+  href: string;
+  /** Leaves the app (calendar, WhatsApp): opens in a new tab. */
+  external: boolean;
+  /** This workspace is already on this offer. */
+  current?: boolean;
+}
 
 /** AI fields that @/lib/billing/plans adds to each plan (optional so plain PlanLimits still type-check). */
 type PlanWithAi = PlanLimits & { aiAnswersPerMonth?: number; maxPromptsPerRun?: number; enginesPerCheck?: number };
 
-/** "300 AI answers a month (25 questions × 3 AI assistants per check)"; trial: "1 AI check: 10 questions × 3 AI assistants". */
+/** "300 AI answers a month (25 questions × 3 AI tools per check)"; trial: "1 AI check: 10 questions × 3 AI tools". */
 function aiLine(p: PlanWithAi): string {
   const answers = p.aiAnswersPerMonth ?? 0;
   const q = Math.min(p.maxPromptsPerRun ?? 0, p.maxTrackedPrompts);
   const e = p.enginesPerCheck ?? 0;
-  const per = q > 0 && e > 0 ? `${q} questions × ${e} AI assistant${e === 1 ? "" : "s"}` : "";
+  const per = q > 0 && e > 0 ? `${q} questions × ${e} AI tool${e === 1 ? "" : "s"}` : "";
   if (p.id === "trial") {
     const checks = q > 0 && e > 0 ? Math.floor(answers / (q * e)) : 0;
     return per ? `${checks} AI check${checks === 1 ? "" : "s"}: ${per}` : `${answers} AI answers`;
@@ -62,14 +92,23 @@ export function BillingPlans({
   canManage,
   prices = {},
   hasBillingDetails = true,
+  offers = [],
+  states = [],
+  businessName = "",
 }: {
   plans: PlanLimits[];
   currentPlanId: string;
   canManage: boolean;
   /** Per plan id: price + GST for this customer (computed on the server; null for the free trial). */
   prices?: Record<string, GstBreakdown | null>;
-  /** False when the organization hasn't entered billing details for GST invoices yet. */
+  /** False until the business name and state are saved: asked for before the first payment (GST invoice). */
   hasBillingDetails?: boolean;
+  /** "Do it for me" and "Custom" cards (no online checkout). */
+  offers?: BillingOfferCard[];
+  /** Indian states for the short billing-details form shown before the first payment. */
+  states?: readonly { code: string; name: string }[];
+  /** Suggested business name for that form. */
+  businessName?: string;
 }) {
   const toast = useToast();
   const router = useRouter();
@@ -79,6 +118,11 @@ export function BillingPlans({
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [planId, setPlanId] = useState(currentPlanId);
+  /** Business name + state saved (on the server, or just now in the short form). */
+  const [detailsOk, setDetailsOk] = useState(hasBillingDetails);
+  useEffect(() => {
+    if (hasBillingDetails) setDetailsOk(true);
+  }, [hasBillingDetails]);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const params = useSearchParams();
   const autoPlan = params.get("plan");
@@ -123,8 +167,10 @@ export function BillingPlans({
       if (attempt % 2 === 1) await syncWithRazorpay(subscriptionId);
       const u = await loadUsage();
       if (u && u.plan.id === target && u.access.active) {
-        setPhase({ kind: "idle" });
-        toast(`You're on ${u.plan.name}. Thanks!`, "success");
+        // Say clearly that the money arrived and what it bought (the window used to close without a word).
+        setPhase({ kind: "activated", planName: u.plan.name, answers: u.aiChecks.limit });
+        setConfirmId(null);
+        toast(`Payment received. You're on ${u.plan.name}.`, "success");
         router.refresh();
         return;
       }
@@ -144,7 +190,7 @@ export function BillingPlans({
     setBusy(p.id);
     setPhase({ kind: "idle" });
     try {
-      const r = await api<{ item: { subscriptionId: string; keyId?: string; shortUrl?: string | null } }>("/api/billing/checkout", {
+      const r = await api<{ item: { subscriptionId: string; keyId?: string; shortUrl?: string | null; prefill?: CheckoutPrefillValue } }>("/api/billing/checkout", {
         body: { planId: p.id },
       });
       if (!r.item.keyId) {
@@ -157,6 +203,7 @@ export function BillingPlans({
           subscriptionId: r.item.subscriptionId,
           name: BRAND.name,
           description: `${p.name} plan — monthly`,
+          prefill: r.item.prefill,
           onSuccess: () => {
             setBusy(null);
             waitForActivation(p.id, 0, r.item.subscriptionId);
@@ -178,7 +225,11 @@ export function BillingPlans({
     } catch (e) {
       setBusy(null);
       if (e instanceof ApiClientError && e.code === "billing_not_configured") setPhase({ kind: "coming_soon" });
-      else toast(errorMessage(e), "error");
+      // The server refuses to start a payment without a business name and state: show the short form again.
+      else if (e instanceof ApiClientError && e.code === BILLING_DETAILS_REQUIRED_CODE) {
+        setDetailsOk(false);
+        setConfirmId(p.id);
+      } else toast(errorMessage(e), "error");
     }
   }
 
@@ -208,6 +259,14 @@ export function BillingPlans({
       {activating && (
         <Notice tone="success" title="Payment received — activating" icon={<Spinner />}>
           <span role="status">We&apos;re waiting for the payment provider to confirm. This usually takes a few seconds — you can stay on this page.</span>
+        </Notice>
+      )}
+      {phase.kind === "activated" && (
+        <Notice tone="success" title={`Payment received: you're on ${phase.planName}`} icon={<CheckCircle2 />}>
+          <span role="status">
+            Thank you. {phase.answers > 0 ? `Your ${phase.answers.toLocaleString("en-IN")} AI answers a month are ready. ` : ""}Your invoice is under
+            Invoices below, and we email it to you.
+          </span>
         </Notice>
       )}
       {phase.kind === "slow" && (
@@ -243,7 +302,9 @@ export function BillingPlans({
             `${p.seats} team seat${p.seats === 1 ? "" : "s"}`,
             `Check your website again every ${p.minScanIntervalDays === 1 ? "day" : `${p.minScanIntervalDays} days`}`,
             ...(p.competitorTracking ? ["Compare with competitors"] : []),
-            ...(p.approvalPublishing ? ["Approved fixes go live on your site for you"] : []),
+            // Do it myself (and the trial): the owner makes every change by hand. Only Custom plans have our team
+            // make the changes on the website.
+            canConnectWebsite({ planId: p.id }) ? "Our team makes the changes on your website for you" : SELF_FIX_LINE,
           ];
           return (
             <li
@@ -280,11 +341,23 @@ export function BillingPlans({
               {p.id !== "trial" && !current && canManage && confirmId === p.id && (
                 <div className="mt-5 space-y-3">
                   {prices[p.id] && <PriceBreakdown price={prices[p.id]!} />}
-                  {!hasBillingDetails && (prices[p.id]?.gstPaise ?? 0) > 0 && (
-                    <p className="text-xs text-muted">
-                      Want your business name or GSTIN on the invoice? Add them under Billing details below before you pay.
-                    </p>
+                  {!detailsOk && (
+                    <div className="space-y-3 rounded-xl border border-border bg-surface-2 p-3">
+                      <p className="text-small font-medium text-fg">First, who is the invoice for?</p>
+                      <p className="text-xs text-muted">We need your business name and state before you pay, so your GST invoice is correct.</p>
+                      <BillingDetailsForm
+                        compact
+                        idPrefix={`pay-${p.id}`}
+                        initial={null}
+                        states={states}
+                        defaultName={businessName}
+                        canManage={canManage}
+                        submitLabel="Save and continue"
+                        onSaved={() => setDetailsOk(true)}
+                      />
+                    </div>
                   )}
+                  {detailsOk && (
                   <Button
                     fullWidth
                     icon={<Sparkles />}
@@ -295,6 +368,7 @@ export function BillingPlans({
                   >
                     {prices[p.id] ? `Pay ${formatInr(prices[p.id]!.totalPaise)} a month` : "Continue to payment"}
                   </Button>
+                  )}
                   <Button fullWidth variant="ghost" disabled={busy === p.id} onClick={() => setConfirmId(null)}>
                     Cancel
                   </Button>
@@ -317,6 +391,39 @@ export function BillingPlans({
             </li>
           );
         })}
+        {offers.map((o) => (
+          <li
+            key={o.id}
+            className={clsx(
+              "relative flex flex-col rounded-2xl border bg-surface p-5 shadow-card transition-shadow",
+              o.current ? "border-primary ring-2 ring-primary/30" : "border-border hover:shadow-card-hover",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-h4 text-fg">{o.name}</h3>
+              {o.current && (
+                <Badge tone="primary" variant="solid" size="sm">
+                  Current plan
+                </Badge>
+              )}
+            </div>
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-h2 tabular-nums text-fg">{o.price}</span>
+              {o.priceSuffix && <span className="text-small text-muted">{o.priceSuffix}</span>}
+            </div>
+            <p className="mt-1 text-xs text-muted">{o.blurb}</p>
+            <ul className="mt-4 flex-1 space-y-2 border-t border-border pt-4 text-small text-fg-soft">
+              {o.includes.map((f) => (
+                <li key={f} className="flex items-start gap-2">
+                  <Check size={15} className="mt-0.5 shrink-0 text-success" aria-hidden /> {f}
+                </li>
+              ))}
+            </ul>
+            <LinkButton className="mt-5" fullWidth variant="secondary" href={o.href} external={o.external} iconRight={o.external ? <ArrowUpRight /> : undefined}>
+              {o.cta}
+            </LinkButton>
+          </li>
+        ))}
       </ul>
       <p className="text-xs text-muted">
         AI answers reset on the 1st of each month (the free trial&apos;s answers cover the whole trial). Payments are processed securely by

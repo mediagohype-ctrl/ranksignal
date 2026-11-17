@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Radar, ScanSearch } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { fmtDate } from "@/lib/dashboard/format";
-import { Button, useToast, type ButtonSize, type ButtonVariant } from "@/components/ui";
+import { Button, Dialog, useToast, type ButtonSize, type ButtonVariant } from "@/components/ui";
 import { useTimeZone } from "@/components/app/time-zone";
 
 type Kind = "audit" | "visibility";
@@ -13,6 +13,9 @@ const DEFAULT_LABELS: Record<Kind, { idle: string; running: string; queued: stri
   audit: { idle: "Check website", running: "Checking website…", queued: "Website check started. This usually takes a minute or two." },
   visibility: { idle: "Check AI", running: "Checking AI…", queued: "AI check started. Results appear in a few minutes." },
 };
+
+/** Shown when the real numbers can't be loaded: we still ask before spending AI answers. */
+export const AI_CONFIRM_FALLBACK = "An AI check uses AI answers from your plan — one for every question asked to each AI tool. Continue?";
 
 /** Plan limits as returned by GET /api/billing/allowance (pass in to skip the fetch). */
 export interface RunAllowance {
@@ -64,6 +67,8 @@ export function RunButtons({
   const timeZone = useTimeZone();
   const [busy, setBusy] = useState<Kind | null>(null);
   const [fetched, setFetched] = useState<RunAllowance | null>(null);
+  /** The sentence to confirm before an AI check starts (null = no dialog open). */
+  const [confirm, setConfirm] = useState<string | null>(null);
   const allowance = allowanceProp ?? fetched;
 
   useEffect(() => {
@@ -77,7 +82,27 @@ export function RunButtons({
     };
   }, [allowanceProp, canRun, visibilityActive, crawlActive]);
 
+  /**
+   * "Check AI" spends AI answers, so it never starts on one click: we first show the real numbers
+   * ("This uses 75 of your 225 AI answers left this month. Continue?") and start only on Continue.
+   * Free sample answers (no real AI tool switched on) start at once — nothing is spent.
+   */
+  async function askFirst() {
+    setBusy("visibility");
+    let text: string | null = AI_CONFIRM_FALLBACK;
+    try {
+      const r = await api<{ item: { confirm: string | null; answers: number } }>(`/api/projects/${projectId}/visibility-runs/estimate`);
+      text = r.item.answers > 0 ? (r.item.confirm ?? AI_CONFIRM_FALLBACK) : null;
+    } catch {
+      // Numbers unknown: still ask before spending.
+    }
+    setBusy(null);
+    if (text === null) return start("visibility");
+    setConfirm(text);
+  }
+
   async function start(kind: Kind) {
+    setConfirm(null);
     setBusy(kind);
     try {
       await api(`/api/projects/${projectId}/${kind === "audit" ? "crawl-runs" : "visibility-runs"}`, { body: {} });
@@ -100,9 +125,9 @@ export function RunButtons({
         variant={variant(kind)}
         size={size}
         icon={icon}
-        onClick={() => start(kind)}
+        onClick={() => (kind === "visibility" ? askFirst() : start(kind))}
         loading={busy === kind}
-        loadingText="Starting…"
+        loadingText={kind === "visibility" && !confirm ? "One moment…" : "Starting…"}
         disabled={!canRun || active || !!limit}
         title={roleTitle ?? limit?.title}
       >
@@ -114,6 +139,24 @@ export function RunButtons({
     <>
       {show.includes("audit") && button("audit", crawlActive, <ScanSearch />)}
       {show.includes("visibility") && button("visibility", visibilityActive, <Radar />)}
+      <Dialog
+        open={confirm !== null}
+        onClose={() => setConfirm(null)}
+        title="Start an AI check?"
+        size="sm"
+        icon={<Radar />}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirm(null)}>
+              Not now
+            </Button>
+            <Button onClick={() => start("visibility")}>Continue</Button>
+          </>
+        }
+      >
+        <p className="text-body text-fg-soft">{confirm}</p>
+        <p className="mt-2 text-small text-muted">The check takes about 8 minutes. You can leave the page — it keeps going.</p>
+      </Dialog>
     </>
   );
 }

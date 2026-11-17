@@ -49,11 +49,14 @@ export default function TermsPage() {
       <ul>
         <li>Only add websites and connect services that you own or are allowed to manage.</li>
         <li>
-          Changes to your website happen only after you (or someone on your team with permission) approve the exact
-          draft, or if you turn on automatic small fixes. You are responsible for checking a draft before you approve
-          it.
+          On the &ldquo;Do it myself&rdquo; plan we never change your website: we show you what to change and you make
+          each change yourself.
         </li>
-        <li>We save the old version before a change so you can undo it, but please keep your own backups too.</li>
+        <li>
+          On &ldquo;Do it for me&rdquo; and Custom plans, changes to your website happen only after you (or someone on
+          your team with permission) approve them. You are responsible for checking a change before you approve it.
+        </li>
+        <li>Where we make a change, we save the old version so it can be undone, but please keep your own backups too.</li>
         <li>You can disconnect your website, or ask us to pause all changes, at any time.</li>
       </ul>
 

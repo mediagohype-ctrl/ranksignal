@@ -4,6 +4,9 @@ import { hasRole, requireAppSession } from "@/lib/dashboard/server";
 import { setupQuestionCount } from "@/lib/setup/facts";
 import { assistantNamesForPlan } from "@/lib/setup/assistants";
 import { OnboardingWizard } from "@/components/app/onboarding-wizard";
+import { dfsConfigured } from "@/lib/dataforseo/status";
+import { canConnectWebsite } from "@/lib/billing/offer";
+import { bookCallHref } from "@/lib/brand";
 
 export const metadata = { title: "Set up your website" };
 
@@ -39,6 +42,10 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       firstWebsite={projects.length === 0}
       questionCount={setupQuestionCount(plan.maxPromptsPerRun)}
       assistants={assistantNamesForPlan(org?.planId ?? "trial", org?.serviceTier)}
+      // SEO keywords feed Google rank tracking: ask for them only while that is switched on.
+      showKeywords={dfsConfigured()}
+      // Do it myself has no website connection: setup never talks about approving or publishing changes.
+      canConnect={canConnectWebsite(org)}
       limit={
         limitReached
           ? {
@@ -46,6 +53,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
               maxProjects: plan.maxProjects,
               projects,
               canManage: hasRole(s, "admin"),
+              // "Book a free call" in the "Your plan is full" card (the calendar link is a server env value).
+              bookCallHref: bookCallHref(),
             }
           : null
       }

@@ -2,6 +2,7 @@
 // WhatsApp updates opt-in card (brief §9). Self-contained: reads and saves /api/growth/whatsapp.
 // Drop into Settings: <WhatsAppOptIn canManage={role is Owner or Admin} />
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, Field, Input, Notice, Spinner, useToast } from "@/components/ui";
 
@@ -23,8 +24,10 @@ async function call(body?: { number?: string | null; optIn?: boolean }): Promise
   return data.item;
 }
 
-export function WhatsAppOptIn({ canManage }: { canManage: boolean }) {
+export function WhatsAppOptIn({ canManage, description }: { canManage: boolean; description?: string }) {
   const toast = useToast();
+  // Other parts of the page (e.g. the Alerts WhatsApp switch) read the saved number from the server: refresh them.
+  const router = useRouter();
   const [state, setState] = useState<WhatsAppState | null>(null);
   const [number, setNumber] = useState("");
   const [optIn, setOptIn] = useState(false);
@@ -51,6 +54,7 @@ export function WhatsAppOptIn({ canManage }: { canManage: boolean }) {
       setNumber(s.display ?? "");
       setOptIn(s.optIn);
       toast(s.optIn ? "WhatsApp updates are on" : "WhatsApp updates are off", "success");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -63,11 +67,11 @@ export function WhatsAppOptIn({ canManage }: { canManage: boolean }) {
       <CardHeader
         icon={<MessageCircle />}
         title="WhatsApp updates"
-        description="Get a short message when your score goes up, and a weekly reminder of fixes waiting."
+        description={description ?? "Get a short message when your score goes up, and a weekly reminder of fixes waiting."}
         actions={
           state && (
-            <Badge tone={state.optIn ? "success" : "neutral"} variant="dot">
-              {state.optIn ? "On" : "Off"}
+            <Badge tone={state.optIn && state.number ? "success" : "neutral"} variant="dot">
+              {state.optIn && state.number ? "On" : state.number ? "Off" : "Off — add your number"}
             </Badge>
           )
         }
@@ -81,7 +85,7 @@ export function WhatsAppOptIn({ canManage }: { canManage: boolean }) {
         )}
         {state && !canManage && (
           <p className="text-small text-muted">
-            {state.optIn ? `Updates go to ${state.display}.` : "WhatsApp updates are off."} Only the Owner or an Admin can change this.
+            {state.optIn && state.number ? `Updates go to ${state.display}.` : "WhatsApp updates are off."} Only the Owner or an Admin can change this.
           </p>
         )}
         {state && canManage && (

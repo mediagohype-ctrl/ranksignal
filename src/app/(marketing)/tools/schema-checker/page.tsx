@@ -57,7 +57,6 @@ export default function SchemaCheckerPage() {
       <section aria-label="Check a page's schema markup" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <SchemaChecker />
-          <LeadBox tool="schema-checker" />
         </div>
       </section>
 
@@ -130,7 +129,7 @@ export default function SchemaCheckerPage() {
             </li>
             <li>
               <strong>No markup at all:</strong> start with Organization or LocalBusiness on your home page. Our{" "}
-              <Link href="/tools/faq-markup-maker">FAQ schema generator</Link> writes FAQ code for you.
+              <Link href="/tools/faq-schema-generator">FAQ schema generator</Link> writes FAQ code for you.
             </li>
             <li>
               <strong>Facts that differ from the page:</strong> keep prices, ratings and hours identical to the visible text.
@@ -143,6 +142,14 @@ export default function SchemaCheckerPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="schema-checker" />
+          </div>
+        </div>
+      </section>
       <QaSection id="sc-faq" tone="surface" title="Schema markup questions, answered" items={FAQ}>
         <SourcesList
           links={[

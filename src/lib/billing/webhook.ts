@@ -5,6 +5,7 @@
 //   - AI-answer top-ups (one-time Razorpay ORDERS): `order.paid` (or `payment.captured` with an order_id) grants the
 //     pack — idempotent, and only when the paid amount equals the stored order total; `payment.failed` with an
 //     order_id marks the order failed; `refund.processed` takes back the pack's unused answers (never negative).
+//   - A "payment received" email with the invoice link, once per invoice (src/lib/billing/invoice-email.ts).
 //   - GST invoices (src/lib/billing/invoice.ts, idempotent per payment) for `subscription.charged` (base derived from
 //     the charged amount and the GST rate) and for paid top-ups. Created after the event commits; a redelivered
 //     (duplicate) event retries a missing invoice.
@@ -18,6 +19,7 @@ import { applyReferralReward } from "@/lib/growth/referral";
 import { getAiAllowance } from "./allowance";
 import { formatInr, gstFromTotal } from "./gst";
 import { createInvoiceForPayment } from "./invoice";
+import { emailInvoice } from "./invoice-email";
 import { getTopUpPack } from "./topups";
 import { grantTopUp, markTopUpFailed, refundTopUp, type GrantResult } from "./topup-service";
 
@@ -295,6 +297,12 @@ async function safeAlert(a: Parameters<typeof sendStaffAlert>[0]): Promise<void>
   }
 }
 
+/** Pack name on the invoice: "1 extra AI check (75 AI answers)"; old packs and unknown ids fall back to the answers. */
+function topUpInvoiceName(packId: string, answers: number): string {
+  const name = getTopUpPack(packId)?.name ?? `${answers.toLocaleString("en-IN")} extra AI answers`;
+  return name.replace(/\((\S+) answers\)$/, "($1 AI answers)");
+}
+
 /** Invoice for a paid top-up. An invoice failure never fails the webhook: staff are told, a redelivery retries. */
 async function invoiceTopUp(
   organizationId: string,
@@ -303,16 +311,18 @@ async function invoiceTopUp(
   paidAt: Date,
 ): Promise<void> {
   try {
-    await createInvoiceForPayment({
+    const inv = await createInvoiceForPayment({
       organizationId,
       kind: "topup",
       razorpayPaymentId: paymentId,
-      description: `${getTopUpPack(o.packId)?.name ?? `${o.answers} extra AI answers`} (one-time top-up)`,
+      description: `${topUpInvoiceName(o.packId, o.answers)} (one-time top-up)`,
       basePaise: o.basePaise,
       gstPaise: o.gstPaise,
       totalPaise: o.totalPaise,
       paidAt,
     });
+    // "Payment received" email with the invoice link — once per invoice, skipped when email isn't set up.
+    await emailInvoice(inv);
   } catch (err) {
     console.error("[billing] top-up invoice failed", (err as Error)?.name);
     await safeAlert({
@@ -332,7 +342,7 @@ async function invoiceSubscriptionCharge(organizationId: string, payment: Razorp
     const subId = sub?.id ?? payment.subscription_id ?? null;
     const row = subId ? await lookup(() => db.subscription.findUnique({ where: { providerSubscriptionId: subId }, select: { planId: true } })) : null;
     const b = gstFromTotal(payment.amount);
-    await createInvoiceForPayment({
+    const inv = await createInvoiceForPayment({
       organizationId,
       kind: "subscription",
       razorpayPaymentId: payment.id,
@@ -342,6 +352,7 @@ async function invoiceSubscriptionCharge(organizationId: string, payment: Razorp
       totalPaise: b.totalPaise,
       paidAt: paidAtOf(payment),
     });
+    await emailInvoice(inv);
   } catch (err) {
     console.error("[billing] subscription invoice failed", (err as Error)?.name);
     await safeAlert({

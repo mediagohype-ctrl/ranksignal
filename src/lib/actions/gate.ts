@@ -4,6 +4,7 @@ import type { Action, Integration, Project } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isEnabled } from "@/lib/flags";
 import { isPaused } from "@/lib/dashboard/project-schema";
+import { canConnectWebsite } from "@/lib/billing/offer";
 import { classifyAction, pageSignalsFor, type PolicyResult } from "@/lib/policy/engine";
 import { draftHash } from "@/lib/actions/hash";
 import type { ActionTarget, ConnectorCapabilities, ProposedChange } from "@/lib/types";
@@ -74,6 +75,11 @@ export async function checkExecutionGate(
       : Promise.resolve(null),
   ]);
   if (!project || !org) return { ok: false, code: "not_found", message: "Project or organization not found." };
+  // Owner decision 1 (15 Nov 2026): nothing changes a Do-it-myself website for the owner — no connection is used,
+  // approved or not, automatic or not. Connections made before the decision are kept but never written through.
+  if (!canConnectWebsite(org)) {
+    return { ok: false, code: "not_on_plan", message: "On Do it myself you make each change yourself. Follow the copy-and-paste steps instead." };
+  }
 
   const caps = opts.capabilities !== undefined ? opts.capabilities : capabilitiesOf(integration);
   if (action.integrationId && !integration) return { ok: false, code: "integration_missing", message: "The integration for this action was disconnected." };

@@ -5,7 +5,8 @@ import { RiskBadge } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { JsonLd, PageHero, Prose } from "@/components/marketing/ui";
 import { RISK_CLASSES } from "@/components/marketing/content";
-import { CUSTOM_PLAN, DFY_PLAN, SELF_PLAN, TRIAL_AI, TRIAL_DAYS, num } from "@/components/marketing/plans";
+import { CUSTOM_PLAN, DFY_PLAN, SELF_PLAN, TRIAL_AI, TRIAL_DAYS, engineNamesLine, freq, num } from "@/components/marketing/plans";
+import { SELF_FIX_LINE } from "@/lib/billing/offer";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { breadcrumbLd, webPageLd } from "@/lib/seo/schema";
 
@@ -13,10 +14,13 @@ export const metadata: Metadata = staticPageMetadata("/docs");
 
 const TOC = [
   { id: "onboarding", label: "Getting started" },
+  { id: "fixes", label: "How fixes work" },
+  { id: "schedules", label: "Checks that run on their own" },
+  { id: "method", label: "How we measure" },
+  { id: "reading-metrics", label: "Reading your numbers" },
   { id: "wordpress", label: "Connect WordPress" },
   { id: "git", label: "GitHub and other platforms" },
   { id: "approval-policy", label: "What needs your OK" },
-  { id: "reading-metrics", label: "Reading your numbers" },
   { id: "offsite", label: "Outside your website" },
   { id: "branding", label: "White-label branding" },
   { id: "limitations", label: "Known limits" },
@@ -29,7 +33,7 @@ export default function DocsPage() {
       <PageHero
         eyebrow="Docs"
         title="Getting started guide"
-        intro={<p>Everything you need to go from sign-up to your first approved fix.</p>}
+        intro={<p>Everything you need to go from sign-up to your first fix.</p>}
       />
       <div className="bg-bg py-12 sm:py-16">
         <div className="container-marketing grid gap-8 lg:grid-cols-[240px_1fr] lg:gap-12">
@@ -90,8 +94,8 @@ export default function DocsPage() {
                 </li>
               </ol>
               <p>
-                Until you connect your website, {BRAND.name} only reads: it reads your public pages and asks AI
-                assistants your questions. You can copy every fix and make the change by hand.
+                {BRAND.name} only reads: it reads your public pages and asks AI assistants your questions. On{" "}
+                {SELF_PLAN.name} it never changes your website. You copy each fix and make the change yourself.
               </p>
               <p>
                 The free trial lasts {TRIAL_DAYS} days and includes {TRIAL_AI.summary} ({TRIAL_AI.answers} AI answers) plus
@@ -100,8 +104,90 @@ export default function DocsPage() {
               </p>
             </section>
 
+            <section id="fixes" aria-labelledby="fixes-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
+              <h2 id="fixes-h">How fixes work</h2>
+              <ul>
+                <li>
+                  <strong>{SELF_PLAN.name}:</strong> we show exactly what to change, and you make the change.{" "}
+                  {SELF_FIX_LINE}. Nothing on your website changes automatically, and there is nothing to connect.
+                  When a fix is done, mark it done; the next website check confirms it.
+                </li>
+                <li>
+                  <strong>{DFY_PLAN.name}:</strong> our team makes the changes on your website, and asks for your OK
+                  first.
+                </li>
+                <li>
+                  <strong>{CUSTOM_PLAN.name}:</strong> works like {DFY_PLAN.name}, for many websites or brands.
+                </li>
+              </ul>
+              <p>
+                The sections on connecting a website and on what needs your OK, further down, apply to {DFY_PLAN.name}{" "}
+                and {CUSTOM_PLAN.name} only.
+              </p>
+            </section>
+
+            <section id="schedules" aria-labelledby="schedules-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
+              <h2 id="schedules-h">Checks that run on their own</h2>
+              <ul>
+                <li>
+                  <strong>Website check:</strong> on {SELF_PLAN.name} we read your website again{" "}
+                  {freq(SELF_PLAN.limits.minScanIntervalDays).toLowerCase()}, up to{" "}
+                  {num(SELF_PLAN.limits.maxPagesPerCrawl)} pages each time, so new problems show up and fixed ones drop off.
+                </li>
+                <li>
+                  <strong>AI check:</strong> {SELF_PLAN.name} includes {SELF_PLAN.ai.checksPerMonth} AI checks a month.
+                  Each one asks {engineNamesLine(SELF_PLAN.id)} up to {SELF_PLAN.ai.questionsPerCheck} of your customer
+                  questions ({num(SELF_PLAN.ai.answersPerMonth)} AI answers a month in all).
+                </li>
+                <li>
+                  <strong>Emails:</strong> when a website check or AI check is done, Owners and Admins get an email with the
+                  main result and a link. You can turn these off for each website.
+                </li>
+                <li>
+                  <strong>Monthly report:</strong> early each month, last month&apos;s report is emailed to you and opens
+                  as a page you can save as a PDF.
+                </li>
+                <li>
+                  <strong>Score history:</strong> every result is kept. &ldquo;Since last time&rdquo; compares only the
+                  questions asked both times, and shows when the question list or our method changed.
+                </li>
+              </ul>
+            </section>
+
+            <section id="method" aria-labelledby="method-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
+              <h2 id="method-h">How we measure</h2>
+              <h3>How the website check reads your pages</h3>
+              <p>
+                Like a search engine. We start at your homepage and sitemap, follow your internal links and obey your
+                robots.txt rules, as set out in the{" "}
+                <a href="https://datatracker.ietf.org/doc/html/rfc9309" rel="noopener">
+                  Robots Exclusion Protocol
+                </a>
+                . We read gently and never overload your website.
+              </p>
+              <h3>How the scores are worked out</h3>
+              <p>
+                Every check belongs to one of four areas: SEO, AEO, GEO or Brand. Each area gets a score from 0 to 100,
+                based on how many of your pages pass each check and how much that check matters. A check we could not
+                measure is marked as not measured, never guessed.
+              </p>
+              <h3>How we measure what AI assistants say about you</h3>
+              <p>
+                We ask each AI assistant on your plan your customers&apos; real questions and record whether the answer
+                names you, links to you or names a competitor instead. Every number shows how many answers it is based
+                on. We report what changed after a fix, never proof that the fix caused it.
+              </p>
+            </section>
+
             <section id="wordpress" aria-labelledby="wordpress-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
               <h2 id="wordpress-h">Connect WordPress (application password)</h2>
+              <p>
+                <strong>
+                  {DFY_PLAN.name} and {CUSTOM_PLAN.name} only.
+                </strong>{" "}
+                Connecting a website lets our team make the changes you have agreed. {SELF_PLAN.name} has no website
+                connections.
+              </p>
               <p>
                 WordPress application passwords let {BRAND.name} use the REST API without ever knowing your real login
                 password, and you can revoke them at any time.
@@ -134,6 +220,11 @@ export default function DocsPage() {
             <section id="git" aria-labelledby="git-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
               <h2 id="git-h">Connect GitHub and other platforms</h2>
               <p>
+                <strong>
+                  {DFY_PLAN.name} and {CUSTOM_PLAN.name} only.
+                </strong>
+              </p>
+              <p>
                 <strong>GitHub:</strong> for static or framework-based sites, connect a repository and {BRAND.name} will
                 propose approved changes as <strong>pull requests</strong>. Your existing code review and CI decide
                 whether they merge. Use a token scoped to the single repository with the minimum permissions needed to
@@ -146,13 +237,18 @@ export default function DocsPage() {
                 do is shown before you connect it.
               </p>
               <p>
-                <strong>Everything else:</strong> export any approved fix as copy-ready instructions and apply it by hand.
+                <strong>Everything else:</strong> our team works from copy-ready instructions and makes the change by hand,
+                or sends it to the person who looks after your website.
               </p>
             </section>
 
             <section id="approval-policy" aria-labelledby="policy-h" className="scroll-mt-24 border-t border-border pt-10 first:border-0 first:pt-0 [&:not(:first-child)]:mt-10">
               <h2 id="policy-h">What needs your OK</h2>
-              <p>Every suggested change gets one of four types:</p>
+              <p>
+                This applies to {DFY_PLAN.name} and {CUSTOM_PLAN.name}, where our team makes changes on your website.
+                On {SELF_PLAN.name} nothing changes your website automatically, so there is nothing to approve.
+              </p>
+              <p>Every change our team prepares gets one of four types:</p>
               <ul className="!list-none space-y-3 !pl-0">
                 {RISK_CLASSES.map((r) => (
                   <li key={r.cls} className="flex flex-col items-start gap-2 rounded-xl bg-surface-2 p-4 !pl-4 sm:flex-row sm:gap-3">
@@ -177,8 +273,8 @@ export default function DocsPage() {
               </p>
               <h3>Undo and the stop switch</h3>
               <p>
-                We save the page before each change we make on your connected website; undo it from the change list.
-                Fixes you make by hand can&apos;t be undone for you. The stop switch pauses all changes for your account
+                We save the page before each change our team makes on your connected website, so it can be undone from
+                the change list. Fixes you make by hand can&apos;t be undone for you. The stop switch pauses all changes for your account
                 at once (email support and we&apos;ll switch it on); waiting changes stay paused until it is turned off.
                 Every OK, change, undo and password change is recorded in your history.
               </p>
@@ -270,8 +366,9 @@ export default function DocsPage() {
                   .
                 </li>
                 <li>
-                  We can publish to WordPress, GitHub, Shopify, Webflow, Contentful, Sanity and Wix, each limited to
-                  what that platform allows. For other websites, copy the fix and make the change by hand.
+                  On {DFY_PLAN.name} and {CUSTOM_PLAN.name}, our team can publish to WordPress, GitHub, Shopify, Webflow,
+                  Contentful, Sanity and Wix, each limited to what that platform allows. On {SELF_PLAN.name}, and for
+                  other websites, you copy the fix and make the change by hand.
                 </li>
                 <li>
                   Each website is checked for one country and language. To check another country, add it as a separate

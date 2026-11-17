@@ -30,6 +30,75 @@ export interface TodoItem {
 }
 
 export const EFFORT_MINUTES: Record<IssueEffort, number> = { quick: 15, moderate: 60, involved: 240 };
+
+/**
+ * How long ONE kind of fix takes a non-technical owner. `each` = minutes per affected page (the job grows with the
+ * number of pages); `once` = minutes for a one-off job (one file, one setting, one new page) however many pages
+ * the report lists. Problems not listed here fall back to the report's rough effort (EFFORT_MINUTES).
+ */
+const FIX_TIME: Record<string, { once?: number; each?: number }> = {
+  // One file.
+  "geo.llms_txt": { once: 5 },
+  "seo.sitemap": { once: 10 },
+  "geo.ai_search_access": { once: 10 },
+  // One setting, usually for the whole site.
+  "seo.https": { once: 15 },
+  "seo.mobile_viewport": { once: 10 },
+  "seo.canonical": { once: 15 },
+  "seo.open_graph": { once: 15 },
+  "brand.organization_schema": { once: 15 },
+  "geo.entity_clarity": { once: 15 },
+  "brand.social_profiles": { once: 10 },
+  "brand.contact_info": { once: 20 },
+  "geo.author_signals": { once: 20 },
+  // One new page to write.
+  "brand.privacy_policy": { once: 30 },
+  "brand.about_page": { once: 45 },
+  // A little text on every listed page.
+  "seo.titles": { each: 2 },
+  "brand.name_consistency": { each: 2 },
+  "seo.meta_description": { each: 3 },
+  "seo.h1": { each: 2 },
+  "seo.image_alt": { each: 3 },
+  "seo.broken_links": { each: 3 },
+  "seo.internal_links": { each: 3 },
+  "seo.redirects": { each: 3 },
+  "seo.indexability": { each: 5 },
+  "geo.freshness": { each: 2 },
+  "aeo.question_headings": { each: 5 },
+  "aeo.lists_tables": { each: 5 },
+  "geo.quotable_facts": { each: 5 },
+  "geo.cited_sources": { each: 5 },
+  "aeo.faq_schema": { each: 10 },
+  "aeo.direct_answers": { each: 10 },
+  "aeo.readability": { each: 10 },
+  "aeo.structured_data": { once: 20 },
+  // Real writing on every listed page.
+  "seo.thin_content": { each: 20 },
+  "aeo.content_depth": { each: 20 },
+  "seo.duplicate_content": { each: 15 },
+};
+const MAX_FIX_MINUTES = 480;
+
+/** "seo-meta_description" → "seo.meta_description" (same rule as checkIdOfIssue in report/page-notes.ts; kept here so this file stays client-safe). */
+function checkKey(issueId: string): string | null {
+  const m = /^(seo|aeo|geo|brand)-(.+)$/.exec(issueId);
+  return m ? `${m[1]}.${m[2]}` : null;
+}
+
+/**
+ * Realistic time for one problem, from the kind of fix and how many pages it touches: one file ≈ 5 min, one
+ * setting ≈ 10–15 min, 23 Google headlines ≈ 2 min a page ≈ 45 min. The ONE place Home, To-do, the fix screen and
+ * the step-by-step help read their "About N min" from. Pure.
+ */
+export function fixMinutes(issue: { id: string; effort: IssueEffort; affectedCount?: number | null }): number {
+  const key = checkKey(issue.id);
+  const t = key ? FIX_TIME[key] : undefined;
+  if (!t) return EFFORT_MINUTES[issue.effort];
+  if (t.once) return t.once;
+  const pages = Math.max(1, Math.floor(issue.affectedCount ?? 1));
+  return Math.min(MAX_FIX_MINUTES, Math.max(5, (t.each ?? 5) * pages));
+}
 const OFFSITE_MINUTES = 30;
 const TASK_MINUTES = 60;
 /** Keep done items that are no longer in the report on the list this long (so progress doesn't reset). */
@@ -37,10 +106,15 @@ export const DONE_KEEP_DAYS = 90;
 
 /** "About 15 min" / "About 1 hour" / "Half a day or more". */
 export function timeLabel(minutes: number): string {
-  if (minutes <= 20) return "About 15 min";
-  if (minutes <= 40) return "About 30 min";
+  if (minutes <= 7) return "About 5 min";
+  if (minutes <= 12) return "About 10 min";
+  if (minutes <= 17) return "About 15 min";
+  if (minutes <= 24) return "About 20 min";
+  if (minutes <= 37) return "About 30 min";
+  if (minutes <= 52) return "About 45 min";
   if (minutes <= 90) return "About 1 hour";
-  if (minutes <= 180) return "About 2 hours";
+  if (minutes <= 150) return "About 2 hours";
+  if (minutes <= 210) return "About 3 hours";
   return "Half a day or more";
 }
 
@@ -92,7 +166,7 @@ export interface PlainTaskInput {
   completedAt: string | null;
 }
 export interface TodoInput {
-  issues: Pick<ReportIssue, "id" | "title" | "impact" | "effort">[];
+  issues: (Pick<ReportIssue, "id" | "title" | "impact" | "effort"> & { affectedCount?: number })[];
   points: Record<string, number>;
   /** Tasks that record a To-do item's state (evidence.todoKey). */
   stateTasks: StateTaskInput[];
@@ -140,7 +214,7 @@ export function buildTodo(input: TodoInput): TodoItem[] {
       side: OUTSIDE_ISSUE_IDS.has(i.id) ? "outside" : "website",
       title: i.title,
       impact: i.impact,
-      minutes: EFFORT_MINUTES[i.effort],
+      minutes: fixMinutes(i),
       points: input.points[i.id] ?? 0,
       state: st ? stateOfTaskStatus(st.status) : "open",
       doneAt: st?.status === "done" ? st.completedAt : null,
@@ -252,11 +326,18 @@ export function nextTodo(items: TodoItem[], currentId: string): TodoItem | null 
 }
 
 /** What we saw when we looked at the page again, in one line. */
-export function recheckLine(r: TaskRecheck | null): { tone: "success" | "info"; text: string } | null {
+export function recheckLine(r: TaskRecheck | null, points = 0): { tone: "success" | "info"; text: string } | null {
   if (!r) return null;
-  if (r.fixed === true) return { tone: "success", text: "Fixed — we can see it." };
-  if (r.fixed === false) return { tone: "info", text: "We can't see this change yet. It can take a few minutes to show — check again soon." };
-  return { tone: "info", text: "We'll confirm this on your next website check." };
+  // The points shown are the fix's real estimate from the report (never a made-up number).
+  if (r.fixed === true) return { tone: "success", text: `Confirmed live.${points > 0 ? ` +${points} ${points === 1 ? "point" : "points"}` : ""}` };
+  if (r.fixed === false) return { tone: "info", text: "We couldn't see the change yet." };
+  return { tone: "info", text: "Marked done — we'll confirm at your next website check." };
+}
+
+/** Shown under "We couldn't see the change yet": what we looked for, and why it may not show yet. */
+export function notSeenDetail(r: TaskRecheck | null): string {
+  const looked = r?.looked?.trim();
+  return `${looked ? `${looked} ` : ""}A change can take a few minutes to show after you save or publish it.`;
 }
 
 // ---------------------------------------------------------------------------------------------

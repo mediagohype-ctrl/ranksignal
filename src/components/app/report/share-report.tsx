@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Copy, Link2, Link2Off, RefreshCw, Share2 } from "lucide-react";
 import { Badge, Button, Dialog, Field, Input, Notice, Spinner, useToast } from "@/components/ui";
+import { BadgeEmbed } from "@/components/app/badge-embed";
 
 interface ShareState {
   enabled: boolean;
@@ -21,7 +22,10 @@ async function call(projectId: string, body?: { enabled?: boolean; rotate?: true
   return data.item;
 }
 
-/** "Share" button + dialog: create / copy / rotate / turn off a read-only client link. Admins manage; others see a hint. */
+/**
+ * "Share" button + dialog: create / copy / rotate / turn off a read-only link to the report, plus the score badge for
+ * the owner's own website ("Show your score on your website"). Admins manage; others see a hint.
+ */
 export function ShareReportButton({ projectId, canManage, label = "Share" }: { projectId: string; canManage: boolean; label?: string }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -79,8 +83,8 @@ export function ShareReportButton({ projectId, canManage, label = "Share" }: { p
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Share this full report"
-        description="Anyone with the link can view a read-only copy of this report — no sign-in needed. It always shows your latest results."
+        title="Share your score"
+        description="Anyone with the link can see a read-only copy of this report — no sign-in needed. It always shows your latest results."
         icon={<Share2 />}
         footer={
           <Button variant="secondary" onClick={() => setOpen(false)}>
@@ -126,7 +130,7 @@ export function ShareReportButton({ projectId, canManage, label = "Share" }: { p
 
               {state.enabled && state.url && (
                 <>
-                  <Field label="Share link" htmlFor="share-url" hint="Send this to your client. The page is hidden from Google.">
+                  <Field label="Share link" htmlFor="share-url" hint="Send it to anyone you like — your team, a partner or your web developer. The page is hidden from Google.">
                     <div className="flex gap-2">
                       <Input id="share-url" readOnly value={state.url} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
                       <Button icon={<Copy />} onClick={copy} disabled={busy !== null}>
@@ -163,6 +167,9 @@ export function ShareReportButton({ projectId, canManage, label = "Share" }: { p
                 Shared reports show scores, problems and fixes, and AI mentions. They never show your team, settings, full AI answers
                 or Fixes to approve. Turning sharing off and on again re-activates the same link; replace it to cut off old copies for good.
               </p>
+              <div className="border-t border-border pt-5">
+                <BadgeEmbed projectId={projectId} bare />
+              </div>
             </>
           )}
         </div>

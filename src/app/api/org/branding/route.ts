@@ -40,11 +40,11 @@ export const PUT = handler(async (req: Request) => {
   const s = await requireSession("admin");
   const org = await loadOrg(s.organizationId);
   if (!isBrandingEligible(org)) {
-    throw new HttpError(402, "plan_required", "White-label branding is included on the Agency plan and done-for-you services.");
+    throw new HttpError(402, "plan_required", "Your own branding on reports is available on Custom plans and Do it for me. Talk to us to turn it on.");
   }
   const input = await parseBody(req, brandingInputSchema);
   if (input.hidePoweredBy && !canHidePoweredBy(org)) {
-    throw new HttpError(403, "plan_required", "Hiding “Powered by” is available on the Agency plan.");
+    throw new HttpError(403, "plan_required", "Hiding “Powered by” is available on Custom plans. Talk to us to turn it on.");
   }
   const before = readStoredBranding(org.branding);
   const stored = toStoredBranding(input, org);

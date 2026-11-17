@@ -53,16 +53,18 @@ export const descriptor: ConnectorDescriptor<ShopifyConfig, ShopifySecrets> = {
       label: "Admin API access token",
       type: "password",
       placeholder: "shpat_…",
-      help: "Shown once when you install the custom app. Stored encrypted; we never display it again.",
+      help: "From a custom app created before January 2026. Stored encrypted; we never display it again.",
     },
   ],
+  // Shopify stopped letting NEW custom apps be created in the Shopify admin on 1 January 2026 (apps are now made in
+  // the Dev Dashboard), so the old "Develop apps → Create an app" steps are gone. A token from a custom app made
+  // before that date still works. A one-click Shopify app (OAuth) is a later project.
   setupSteps: [
-    "In Shopify admin open Settings → Apps and sales channels → Develop apps. If asked, click \"Allow custom app development\" (store owner only).",
-    "Click \"Create an app\" and name it (for example \"SEO assistant\").",
-    "Open Configuration → Admin API integration → Configure, and tick exactly these scopes: read_products, write_products, read_content, write_content, read_online_store_pages, write_online_store_pages. Do not grant orders, customers, inventory, checkout or payment scopes — they are not needed.",
-    "Save, then open API credentials and click \"Install app\".",
-    "Click \"Reveal token once\" under Admin API access token and copy it (it starts with shpat_).",
+    "This works with the token of a custom app that was created in your Shopify admin before January 2026. Shopify no longer lets new custom apps be created there.",
+    "Have one already? Use its Admin API access token (it starts with shpat_). Shopify showed it only once, when the app was installed.",
+    "The app needs exactly these permissions: read_products, write_products, read_content, write_content, read_online_store_pages, write_online_store_pages. Orders, customers, inventory, checkout and payment permissions are not needed.",
     "Paste the token here together with your .myshopify.com domain, then click Connect. We run a read-only check of your shop name first.",
+    "No such app or token? Shopify connection is being rebuilt as a one-click app. Until then our team makes the changes for you.",
     "To disconnect later, uninstall the custom app in Shopify — that revokes the token immediately.",
   ],
   create(config, secrets, context) {

@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   membershipRole: "owner" as string,
   access: { active: true, planId: "starter" } as { active: boolean; planId: string; reason?: string },
   orders: [] as Record<string, unknown>[],
+  details: null as Record<string, unknown> | null,
   rzpCalls: [] as Record<string, unknown>[],
 }));
 
@@ -41,7 +42,9 @@ vi.mock("@/lib/billing/razorpay-orders", async (importOriginal) => ({
 }));
 vi.mock("@/lib/db", () => ({
   db: {
-    billingDetails: { findUnique: vi.fn(async () => null) },
+    billingDetails: { findUnique: vi.fn(async () => state.details) },
+    user: { findUnique: vi.fn(async () => ({ email: "owner@sharma.in", name: "Asha Sharma" })) },
+    organization: { findUnique: vi.fn(async () => ({ name: "Sharma Traders", whatsappNumber: "+919800000000" })) },
     topUpOrder: {
       count: vi.fn(async () => 0),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
@@ -68,6 +71,7 @@ beforeEach(() => {
   state.access = { active: true, planId: "starter" };
   state.orders = [];
   state.rzpCalls = [];
+  state.details = { legalName: "Sharma Traders", stateCode: "27", gstin: null, addressLine: null, invoiceEmail: null, updatedAt: new Date() };
   vi.stubEnv("RAZORPAY_KEY_ID", "rzp_test_key");
   vi.stubEnv("RAZORPAY_KEY_SECRET", "key_secret");
   vi.stubEnv("GSTIN", "07AAACB1234C1Z5");
@@ -75,13 +79,28 @@ beforeEach(() => {
 });
 
 describe("POST /api/billing/topups", () => {
-  it("owner: creates a Razorpay order for price + GST and a pending order row", async () => {
-    const res = await buy(req({ packId: "answers_35" }));
+  it("owner: creates a Razorpay order for price + GST (amount from the pack definition) and a pending order row", async () => {
+    const res = await buy(req({ packId: "checks_1" }));
     expect(res.status).toBe(200);
     const { item } = await res.json();
-    expect(item).toMatchObject({ orderId: "order_new", keyId: "rzp_test_key", amount: 29_500, breakdown: { basePaise: 25_000, gstPaise: 4_500, totalPaise: 29_500 } });
-    expect(state.rzpCalls[0]).toMatchObject({ amountPaise: 29_500, notes: { organizationId: "org_1", packId: "answers_35" } });
-    expect(state.orders[0]).toMatchObject({ organizationId: "org_1", razorpayOrderId: "order_new", totalPaise: 29_500, status: "pending" });
+    // ₹499 + 18% GST = ₹588.82
+    expect(item).toMatchObject({ orderId: "order_new", keyId: "rzp_test_key", amount: 58_882, breakdown: { basePaise: 49_900, gstPaise: 8_982, totalPaise: 58_882, answers: 75, label: "1 extra AI check (75 answers)", checks: 1 } });
+    expect(item.prefill).toEqual({ email: "owner@sharma.in", name: "Asha Sharma", contact: "+919800000000" });
+    expect(state.rzpCalls[0]).toMatchObject({ amountPaise: 58_882, notes: { organizationId: "org_1", packId: "checks_1" } });
+    expect(state.orders[0]).toMatchObject({ organizationId: "org_1", razorpayOrderId: "order_new", answers: 75, totalPaise: 58_882, status: "pending" });
+  });
+  it("refuses to start a payment until the business name and state are saved", async () => {
+    state.details = null;
+    const res = await buy(req({ packId: "checks_1" }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("billing_details_required");
+    expect(state.rzpCalls).toHaveLength(0);
+    expect(state.orders).toHaveLength(0);
+  });
+  it("old packs are no longer sold (customers who bought one keep it)", async () => {
+    const res = await buy(req({ packId: "answers_35" }));
+    expect(res.status).toBe(400);
+    expect(state.rzpCalls).toHaveLength(0);
   });
   it("members and viewers can't buy", async () => {
     state.role = "member";

@@ -244,15 +244,19 @@ export async function runSuggestions(a: Actor, own: string, saved: string[], m: 
 
 export type AddCompetitorResult = { added: true } | { added: false; reason: "exists" | "full" | "own" };
 
-/** Append {name: domain, domain, aliases: []} to Project.competitors when it isn't there yet (max 20). */
-export async function addSavedCompetitor(organizationId: string, projectId: string, domain: string): Promise<AddCompetitorResult> {
+/**
+ * Append {name, domain, aliases: []} to Project.competitors when it isn't there yet (max 20). `name` is the
+ * business's name as AI answers write it ("Social Beat"), so the next AI check can spot it; defaults to the domain.
+ */
+export async function addSavedCompetitor(organizationId: string, projectId: string, domain: string, name?: string | null): Promise<AddCompetitorResult> {
   const p = await db.project.findFirst({ where: { id: projectId, organizationId }, select: { competitors: true, websiteUrl: true } });
   if (!p) return { added: false, reason: "exists" };
   if (ownDomainOf(p.websiteUrl) === domain) return { added: false, reason: "own" };
   const list = Array.isArray(p.competitors) ? (p.competitors as unknown[]) : [];
   if (savedCompetitorDomains(list).includes(domain)) return { added: false, reason: "exists" };
   if (list.length >= MAX_SAVED_COMPETITORS) return { added: false, reason: "full" };
-  const next = [...list, { name: domain, domain, aliases: [] }] as Prisma.InputJsonValue;
+  const label = name?.trim().slice(0, 120);
+  const next = [...list, { name: label || domain, domain, aliases: [] }] as Prisma.InputJsonValue;
   await db.project.updateMany({ where: { id: projectId, organizationId }, data: { competitors: next } });
   return { added: true };
 }

@@ -6,7 +6,9 @@ import { api, errorMessage } from "@/lib/dashboard/client";
 import {
   linkTaskDescription,
   linkTaskTitle,
+  isLikelyTestPage,
   suggestionsToCsv,
+  TEST_PAGE_NOTE,
   type LinkStrength,
   type LinkSuggestion,
 } from "@/lib/links/suggest";
@@ -29,20 +31,23 @@ function pathOf(u: string): string {
   }
 }
 
+/** Address first, title second: many pages can share one title ("Creative Digital Marketing Agency in Delhi"). */
 function PageRef({ label, url }: { label: string; url: string }) {
+  const path = pathOf(url);
   return (
     <span className="block min-w-0">
-      <span className="block font-medium text-fg">{label}</span>
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex max-w-full items-center gap-1 text-xs text-muted hover:text-fg hover:underline"
+        className="inline-flex max-w-full items-center gap-1 font-medium text-fg hover:underline"
       >
-        <span className="truncate">{pathOf(url)}</span>
-        <ExternalLink size={11} aria-hidden className="shrink-0" />
+        <span className="truncate">{path}</span>
+        <ExternalLink size={11} aria-hidden className="shrink-0 text-muted" />
         <span className="sr-only">(opens in new tab)</span>
       </a>
+      {label && label !== path && <span className="block truncate text-xs text-muted">{label}</span>}
+      {isLikelyTestPage(url, label) && <span className="mt-0.5 block text-xs font-medium text-warning">{TEST_PAGE_NOTE}</span>}
     </span>
   );
 }
@@ -181,7 +186,7 @@ export function LinkSuggestions({
             <option value="">Any page</option>
             {targets.map(([url, label]) => (
               <option key={url} value={url}>
-                {label}
+                {pathOf(url)} — {label}
               </option>
             ))}
           </Select>

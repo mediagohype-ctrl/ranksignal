@@ -8,7 +8,9 @@ import { Menu, MessageCircle, X } from "lucide-react";
 import { Logo } from "./logo";
 import { brightPill } from "./ui";
 import { LanguageSwitch } from "./hi/language-switch";
-import { newTabProps, whatsappHref } from "./plans";
+import { newTabProps } from "./plans";
+import { useSignedIn } from "./signed-in";
+import { WHATSAPP_HELP_MESSAGE, brandWhatsappHref } from "@/lib/brand";
 
 // Website Blueprint: five menu items + one bright button. Features, Done-for-you, Blog, Contact and Docs live in the footer.
 const NAV = [
@@ -20,7 +22,8 @@ const NAV = [
 ];
 
 const CTA = { href: "/free-check", label: "Check my website free", short: "Check free" };
-const WHATSAPP = whatsappHref("Hi MyWebRank, I have a question about my website.");
+// Opens WhatsApp with a ready-typed message, never an empty chat.
+const WHATSAPP = brandWhatsappHref(WHATSAPP_HELP_MESSAGE);
 
 function WhatsAppLink({ className }: { className?: string }) {
   return (
@@ -39,8 +42,9 @@ function WhatsAppLink({ className }: { className?: string }) {
   );
 }
 
-/** `signedIn` is read from the session cookie on the server (marketing layout). */
-export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
+/** Signed-in visitors get "Open app": checked in the browser, so marketing pages stay cacheable (see signed-in.tsx). */
+export function SiteHeader() {
+  const signedIn = useSignedIn();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 

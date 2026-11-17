@@ -6,7 +6,9 @@ import { useEffect, useRef } from "react";
 import clsx from "clsx";
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+/** Exported so a page that opens straight into a check can preload the script (free-check pages). */
+export const TURNSTILE_SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+const SCRIPT_SRC = TURNSTILE_SCRIPT_SRC;
 
 interface TurnstileApi {
   render: (el: HTMLElement, opts: Record<string, unknown>) => string;

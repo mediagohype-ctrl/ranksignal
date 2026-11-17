@@ -93,7 +93,7 @@ export async function createProjectTemplate(o: { organizationId: string; project
 /** Create or replace the organization's default template (admin + plan checked by the caller / here). */
 export async function saveOrgDefault(o: { organizationId: string; userId: string; input: TemplateInput }): Promise<TemplateView> {
   const limits = await planLimitsForOrg(o.organizationId);
-  if (!limits.orgDefault) throw new HttpError(403, "plan_required", "An organization-wide default template needs the Growth or Agency plan.");
+  if (!limits.orgDefault) throw new HttpError(403, "plan_required", "One default report template for every website is available on Custom plans. Talk to us to turn it on.");
   const existing = await db.reportTemplate.findFirst({ where: { organizationId: o.organizationId, projectId: null, isOrgDefault: true }, select: { id: true } });
   const data = { ...toData(o.input), name: o.input.name, sections: normalizeSections(o.input.sections) as unknown as Prisma.InputJsonValue };
   const row = existing

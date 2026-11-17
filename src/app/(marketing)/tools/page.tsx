@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlignLeft, ArrowRight, Bot, Braces, FileText, Heading, Link2Off, Map, Puzzle, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
+import { AlignLeft, ArrowRight, Braces, FileText, Heading, Link2Off, Map, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
 import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
 import { ToolPreview, type ToolPreviewKind } from "@/components/marketing/showcase/tool-preview";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
@@ -33,7 +33,6 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
       { href: "/tools/heading-checker", preview: "headings", icon: <Heading />, title: "Heading checker", body: "See a page's H1 to H6 outline and spot missing, repeated or skipped headings." },
       { href: "/tools/schema-checker", preview: "schema", icon: <Braces />, title: "Schema markup checker", body: "Find the structured data on a page and the fields Google expects for each type." },
       { href: "/tools/broken-link-checker", preview: "links", icon: <Link2Off />, title: "Broken link checker", body: "Test every link on a page and find the ones that fail, redirect or time out." },
-      { href: "/tools/seo-extension", preview: "extension", icon: <Puzzle />, title: "SEO browser extension", body: "Check the title, headings, schema and AI readiness of any page you visit." },
     ],
   },
   {
@@ -41,11 +40,10 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
     title: "Google and AI crawlers",
     intro: "Make sure Google, ChatGPT, Gemini and Perplexity can read and list your pages.",
     tools: [
-      { href: "/tools/ai-mention-checker", preview: "ai", icon: <Bot />, title: "AI visibility checker", body: "Can ChatGPT and other AI tools read your website well enough to name you?" },
       { href: "/tools/ai-crawler-checker", preview: "crawlers", icon: <ShieldCheck />, title: "Is my site blocked from AI?", body: "See which AI crawlers your robots.txt and pages allow or block." },
       { href: "/tools/robots-txt-tester", preview: "robots", icon: <FileText />, title: "Robots.txt tester", body: "Test any address against your robots.txt for Googlebot and AI crawlers." },
       { href: "/tools/sitemap-checker", preview: "sitemap", icon: <Map />, title: "XML sitemap checker & generator", body: "Check your sitemap for errors and broken entries, or make a new one." },
-      { href: "/tools/ai-guide-file-maker", preview: "llms", icon: <FileText />, title: "llms.txt generator", body: "Tell AI tools who you are and which pages matter most." },
+      { href: "/tools/llms-txt-generator", preview: "llms", icon: <FileText />, title: "llms.txt generator", body: "Tell AI tools who you are and which pages matter most." },
     ],
   },
   {
@@ -56,7 +54,7 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
       { href: "/tools/seo-title-generator", preview: "titles", icon: <Type />, title: "SEO title generator", body: "5 AI-written title ideas that fit Google's limit, keyword first." },
       { href: "/tools/meta-description-generator", preview: "descriptions", icon: <AlignLeft />, title: "Meta description generator", body: "5 AI-written Google summaries in the right length, with a reason to click." },
       { href: "/tools/faq-generator", preview: "faq", icon: <Sparkles />, title: "AI FAQ generator", body: "Turn a page into real customer questions and short answers, plus FAQ code." },
-      { href: "/tools/faq-markup-maker", preview: "faq-code", icon: <MessageCircleQuestion />, title: "FAQ schema generator", body: "Type your own questions and answers and get FAQPage code to paste." },
+      { href: "/tools/faq-schema-generator", preview: "faq-code", icon: <MessageCircleQuestion />, title: "FAQ schema generator", body: "Type your own questions and answers and get FAQPage code to paste." },
     ],
   },
 ];

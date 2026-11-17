@@ -2,6 +2,7 @@
 // Every recommendation cites its evidence. Text drafted here is a starting point for human review;
 // page text is untrusted data and is only quoted/truncated, never interpreted as instructions.
 import type { ActionTarget, ProposedChange, RiskClass, VisibilityMetrics } from "@/lib/types";
+import { suggestTitles } from "@/lib/fix-guides/suggest-titles";
 
 export type Effort = "low" | "medium" | "high";
 
@@ -248,7 +249,35 @@ export function buildRecommendations(input: RecInput): RecDraft[] {
       });
     }
   }
-  return out;
+  return uniqueTitleDrafts(out, input.brand);
+}
+
+/**
+ * Suggested Google headlines must all be different (audit fix 31: "Shop | Pubesto" for 15 pages). When two drafted
+ * headline changes would say the same thing, rebuild those with the batch rules (src/lib/fix-guides/suggest-titles.ts),
+ * which use each page's own heading or address. Pure.
+ */
+export function uniqueTitleDrafts(drafts: RecDraft[], brand: string): RecDraft[] {
+  const titles = drafts.filter((d) => d.type === "update_title" && d.proposedChange && typeof d.proposedChange.after === "string");
+  const count = new Map<string, number>();
+  for (const d of titles) {
+    const k = String(d.proposedChange!.after).toLowerCase();
+    count.set(k, (count.get(k) ?? 0) + 1);
+  }
+  const dup = titles.filter((d) => (count.get(String(d.proposedChange!.after).toLowerCase()) ?? 0) > 1 && d.target.url);
+  if (!dup.length) return drafts;
+  const fresh = suggestTitles(
+    dup.map((d) => ({ url: d.target.url!, extracted: { title: d.proposedChange!.before ?? null, h1: [], schemaTypes: [], description: null, textSample: "" } })),
+    { brand },
+  );
+  const taken = new Set(titles.filter((d) => !dup.includes(d)).map((d) => String(d.proposedChange!.after).toLowerCase()));
+  dup.forEach((d, i) => {
+    let t = fresh[i];
+    if (taken.has(t.toLowerCase())) t = `${t} (${i + 1})`;
+    taken.add(t.toLowerCase());
+    d.proposedChange = { ...d.proposedChange!, after: t };
+  });
+  return drafts;
 }
 
 /** Stable dedupe key for "same type + same target". */

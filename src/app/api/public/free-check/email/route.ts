@@ -18,7 +18,7 @@ export const POST = handler(async (req: Request) => {
 
   const limit = checkFreeCheckEmailLimit(clientIp(req));
   if (!limit.allowed) {
-    throw new HttpError(429, "rate_limited", "Too many tries from this connection. Please try again later.", { retryAfterSec: limit.retryAfterSec });
+    throw new HttpError(429, "rate_limited", "Too many tries from this connection. Try again in an hour, or start the free trial to see every fix now.", { retryAfterSec: limit.retryAfterSec });
   }
 
   const lead = await db.lead.findUnique({ where: { id: body.leadId }, select: { id: true, source: true, email: true, createdAt: true } });

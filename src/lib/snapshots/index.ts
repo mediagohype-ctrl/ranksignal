@@ -42,6 +42,8 @@ function parseIssues(v: unknown): SnapshotIssueCounts | null {
   if (!o) return null;
   const counts = Object.fromEntries(SNAPSHOT_SEVERITIES.map((s) => [s, num(o[s]) ?? 0])) as SnapshotIssueCounts;
   counts.total = num(o.total) ?? SNAPSHOT_SEVERITIES.reduce((a, s) => a + counts[s], 0);
+  const places = num(o.places);
+  if (places !== null) counts.places = places;
   return counts;
 }
 

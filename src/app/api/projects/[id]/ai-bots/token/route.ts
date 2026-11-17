@@ -13,7 +13,7 @@ export const POST = handler(async (_req: Request, { params }: Ctx) => {
   const { id } = await params;
   const project = await requireProject(s, id);
   if (!aiBotLimitsFor(await planIdForOrg(s.organizationId)).ingest) {
-    throw new HttpError(402, "plan_required", "Live crawler logging is included from the Starter plan. Log uploads work on every plan.");
+    throw new HttpError(402, "plan_required", "Live crawler logging is included on paid plans (Do it myself and above). Log uploads work on every plan, including the free trial.");
   }
   const { token, hash, prefix } = generateIngestToken();
   const existing = await db.aiBotIngestKey.findFirst({ where: { organizationId: s.organizationId, projectId: project.id } });

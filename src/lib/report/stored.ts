@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildSiteReport } from "@/lib/report/build";
 import type { SiteReport } from "@/lib/report/types";
+import { presentReport } from "@/lib/report/present";
 
 const VIS_DONE = ["succeeded", "succeeded_with_warnings"];
 
@@ -42,7 +43,8 @@ export async function getStoredReport(projectId: string, organizationId: string)
   if (isSiteReport(stored)) {
     const crawlCurrent = (stored.crawl.crawlRunId ?? null) === (latestCrawl?.id ?? null);
     const visCurrent = !latestVis?.finishedAt || latestVis.finishedAt.getTime() <= snap!.createdAt.getTime();
-    if (crawlCurrent && visCurrent) return stored;
+    // presentReport: headline ("Biggest fix"), automatic summary and the speed caveat follow today's rules.
+    if (crawlCurrent && visCurrent) return presentReport(stored);
   }
   return buildSiteReport(projectId, organizationId); // template summary only — never an LLM call on a read
 }

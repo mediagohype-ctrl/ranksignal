@@ -55,7 +55,6 @@ export default function MetaTagCheckerPage() {
       <section aria-label="Check a page's meta tags" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <MetaTagChecker />
-          <LeadBox tool="meta-tag-checker" />
         </div>
       </section>
 
@@ -141,6 +140,14 @@ export default function MetaTagCheckerPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="meta-tag-checker" />
+          </div>
+        </div>
+      </section>
       <QaSection id="mtc-faq" tone="surface" title="Meta tag questions, answered" items={FAQ}>
         <SourcesList
           links={[

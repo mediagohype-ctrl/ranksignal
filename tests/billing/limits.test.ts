@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   org: { planId: "trial", status: "active", createdAt: new Date() } as { planId: string; status: string; createdAt: Date },
   answersThisMonth: 0,
+  ledgerAnswers: 0,
   inFlight: [] as { sampleSize: number; collected: number; failed: number }[],
   observationCountWhere: null as unknown,
   packs: [] as Record<string, unknown>[],
@@ -39,7 +40,7 @@ vi.mock("@/lib/db", () => {
       update: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: "cr_1", ...data })),
     },
     trackedPrompt: { count: vi.fn(async () => state.promptCount) },
-    usageLedger: { groupBy: vi.fn(async () => []), create: vi.fn() },
+    usageLedger: { groupBy: vi.fn(async () => []), create: vi.fn(), aggregate: vi.fn(async () => ({ _sum: { credits: state.ledgerAnswers } })) },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(db)),
   };
   return { db };

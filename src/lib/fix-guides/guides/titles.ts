@@ -1,17 +1,27 @@
 // Google headlines (<title>): missing, too long/short, or the same on many pages.
 // This is the reference guide: other guides follow its shape and level of detail.
-import type { FixGuide } from "../types";
-import { clip, pageName, suggestTitle } from "../helpers";
+import type { FixContext, FixGuide } from "../types";
+import type { TitleContext } from "../suggest-titles";
+
+/** Business details the headline and summary suggestions use (what you sell, where, online store). */
+export function titleContext(ctx: FixContext): TitleContext {
+  return { brand: ctx.brand, sells: ctx.site?.sells ?? null, city: ctx.site?.city ?? null, country: ctx.site?.country ?? null, isStore: ctx.site?.isStore ?? false };
+}
+import { clip, pageName } from "../helpers";
+import { suggestTitles } from "../suggest-titles";
 
 export const titlesGuide: FixGuide = {
   effect: (ctx) =>
     `Google shows ${ctx.issue.affectedCount} of your pages with a headline that doesn't describe them, so people can't tell them apart in search results, and Google and AI tools may pick the wrong page — or skip them.`,
-  changes: (ctx) =>
-    ctx.pages.map((p) => ({
+  changes: (ctx) => {
+    // One batch, so every suggestion is different and the home page speaks for the whole business.
+    const titles = suggestTitles(ctx.pages, titleContext(ctx));
+    return ctx.pages.map((p, i) => ({
       page: pageName(p.url),
       now: p.extracted?.title ? clip(p.extracted.title, 70) : "(no headline)",
-      change: suggestTitle(p, ctx.brand),
-    })),
+      change: titles[i],
+    }));
+  },
   steps: {
     nextjs: [
       "Open your project's code (or ask your developer). Find the `app` folder — each page has its own folder, e.g. `app/about/page.tsx` is the /about page.",

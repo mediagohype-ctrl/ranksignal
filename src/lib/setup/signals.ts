@@ -3,6 +3,7 @@
 // to the LLM inside the untrusted-input wrapper.
 import * as cheerio from "cheerio";
 import { countryCode, countryFromLang, languageCode, nameFromHost, type BusinessFacts } from "./facts";
+import { nameFromTitle } from "./brand-names";
 
 export interface SiteSignals {
   url: string;
@@ -124,21 +125,8 @@ export function tldCountry(host: string): string | null {
   return t === "UK" ? "GB" : t;
 }
 
-const TITLE_SEP = /\s+[|–—•·:-]\s+|\s+-\s+/;
-const GENERIC_PART = /^(home|homepage|welcome|official (web)?site|index|main page)$/i;
-
-/** The title segment most like the domain ("Home | Sharma Sweets – Best mithai" → "Sharma Sweets"). */
-export function nameFromTitle(title: string, host: string): string {
-  const parts = title
-    .split(TITLE_SEP)
-    .map((p) => p.trim())
-    .filter((p) => p && !GENERIC_PART.test(p) && p.length <= 60);
-  if (!parts.length) return "";
-  const hostKey = (host.split(".")[0] ?? "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const key = (s: string) => s.replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const match = hostKey ? parts.find((p) => key(p).includes(hostKey) || (key(p).length >= 4 && hostKey.includes(key(p)))) : undefined;
-  return match ?? (parts.length > 1 ? parts.reduce((a, b) => (b.length < a.length ? b : a)) : parts[0]);
-}
+// nameFromTitle lives in ./brand-names (client-safe, no HTML parser); re-exported here for existing imports.
+export { nameFromTitle };
 
 /** Major Indian cities (and a few others) we can spot in a title/description when there is no structured address. */
 const CITIES = [

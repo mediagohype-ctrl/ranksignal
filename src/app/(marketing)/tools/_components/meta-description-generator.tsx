@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { AI_INPUT_LIMITS as L, type DraftCheck } from "@/lib/tools/ai-writing-checks";
 import { AiDraftNotice, CheckBadge, CopyButton, GooglePreview, useAiTool } from "./ai-tool-form";
+import { WholeSiteCta } from "./whole-site-cta";
 
 export function MetaDescriptionGenerator() {
   const [topic, setTopic] = useState("");
@@ -107,6 +108,7 @@ export function MetaDescriptionGenerator() {
                 description={chosen.text}
               />
             )}
+            <WholeSiteCta lead="These descriptions are for one page." />
           </>
         )}
       </div>

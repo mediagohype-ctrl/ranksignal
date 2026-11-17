@@ -1,4 +1,4 @@
-// POST /api/growth/prospect { url } — Agency plan: one-page prospect report for a client's website.
+// POST /api/growth/prospect { url } — Custom plans (staff-set plan "agency"): one-page prospect report for a client's website.
 // Runs the free-check engine (website only, SSRF-safe, no LLM), rate-limited per organization, usage recorded.
 import { z } from "zod";
 import { handler, HttpError, json, parseBody, requireSession } from "@/lib/api";
@@ -20,7 +20,7 @@ export const POST = handler(async (req: Request) => {
   const body = await parseBody(req, bodySchema);
   const org = await db.organization.findUniqueOrThrow({ where: { id: s.organizationId }, select: { planId: true } });
   if (org.planId !== "agency") {
-    throw new HttpError(402, "plan_limit", "Prospect reports are part of the Agency plan. Upgrade to use them.");
+    throw new HttpError(402, "plan_limit", "Prospect reports are available on Custom plans. Talk to us to turn them on.");
   }
   if (!(await getOrgAccess(s.organizationId)).active) {
     throw new HttpError(402, "plan_inactive", "Your plan isn't active. Update your billing to make prospect reports.");

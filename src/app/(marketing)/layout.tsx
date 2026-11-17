@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { BRAND } from "@/lib/brand";
-import { getSession } from "@/lib/auth/session";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { JsonLd } from "@/components/marketing/ui";
@@ -15,17 +14,14 @@ export const metadata: Metadata = {
   openGraph: { siteName: BRAND.name, locale: "en_IN", type: "website", images: [OG_IMAGE] },
 };
 
-/** Signed-in visitors see "Open app" instead of "Log in" / "Start free". Never fails the page. */
-async function isSignedIn(): Promise<boolean> {
-  try {
-    return (await getSession()) !== null;
-  } catch {
-    return false;
-  }
-}
+// SPEED: this layout must not read cookies or headers. It used to call getSession() (cookies + a database query for
+// signed-in visitors) to pick "Open app" / "Log in", which made EVERY marketing page render on the server for every
+// visit. The header and footer now ask the browser (src/components/marketing/signed-in.tsx), so pages that do not
+// read the query string are built once and served from cache, and rebuilt at most once an hour (so prices, the
+// address and "switching on soon" labels follow the live settings).
+export const revalidate = 3600;
 
-export default async function MarketingLayout({ children }: { children: ReactNode }) {
-  const signedIn = await isSignedIn();
+export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-fg">
       {/* Sitewide entity graph: every marketing page tells Google and AI assistants who we are. */}
@@ -36,7 +32,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
       >
         Skip to content
       </a>
-      <SiteHeader signedIn={signedIn} />
+      <SiteHeader />
       <main id="main" className="flex-1">
         {children}
       </main>

@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Copy, Search } from "lucide-react";
 import { Badge, Button, Field, Input, Notice } from "@/components/ui";
 import type { AiCrawlerReport, AiCrawlerRow } from "@/lib/tools/ai-crawlers";
+import { WholeSiteCta } from "./whole-site-cta";
 
 type Result = AiCrawlerReport & { site: string; homeUrl: string };
 
@@ -193,6 +194,7 @@ export function AiCrawlerChecker() {
               code={r.snippets.allowAll}
             />
           </div>
+          <WholeSiteCta lead="This checked which AI robots can read your site." />
         </div>
       )}
     </div>

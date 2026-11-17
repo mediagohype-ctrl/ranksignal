@@ -45,7 +45,6 @@ export default function BrokenLinkCheckerPage() {
       <section aria-label="Check the links on a page" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <BrokenLinkChecker />
-          <LeadBox tool="broken-link-checker" />
         </div>
       </section>
 
@@ -147,6 +146,14 @@ export default function BrokenLinkCheckerPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="broken-link-checker" />
+          </div>
+        </div>
+      </section>
       <QaSection id="blc-faq" title="Broken link questions" items={FAQ}>
         <SourcesList
           links={[

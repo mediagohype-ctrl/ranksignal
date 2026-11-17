@@ -132,6 +132,16 @@ describe("checkout", () => {
     expect(j.item.price).toMatchObject({ basePaise: 199_900, gstPaise: 35_982, totalPaise: 235_882, split: "igst" });
   });
 
+  it("refuses to start a payment until the business name and state are saved (GST invoice), with a next step", async () => {
+    as("owner");
+    h.details.delete("o1");
+    const r = await checkout(new Request("https://app.test/api/billing/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: "starter" }) }));
+    expect(r.status).toBe(409);
+    const j = await r.json();
+    expect(j.error).toMatchObject({ code: "billing_details_required", details: { next: "/app/settings?tab=billing#billing-details" } });
+    expect(j.error.message).toMatch(/business name and state/);
+  });
+
   it("is refused for members", async () => {
     as("member");
     const r = await checkout(new Request("https://app.test/api/billing/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: "starter" }) }));

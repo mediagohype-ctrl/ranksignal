@@ -23,7 +23,7 @@ const admin: SessionContext = { ...member, userId: "u2", role: "admin" };
 const reviewer: SessionContext = { ...member, userId: "u3", email: "r@x.io" };
 
 function seed(over: Record<string, unknown> = {}) {
-  h.db.organization.rows.push({ id: "o1", publishingEnabled: true });
+  h.db.organization.rows.push({ id: "o1", publishingEnabled: true, planId: "growth", serviceTier: null });
   h.db.project.rows.push({ id: "p1", organizationId: "o1", websiteUrl: "https://acme.example", settings: null });
   h.db.integration.rows.push({ id: "i1", organizationId: "o1", projectId: "p1", provider: "wordpress", credentialEncrypted: "v1:x", capabilities: WORDPRESS_CAPABILITIES });
   const base = {
@@ -157,6 +157,17 @@ describe("requestExecution", () => {
     h.db.organization.rows[0].publishingEnabled = true;
     h.db.featureFlag.rows.push({ id: "g", key: "action.update_meta_description", enabled: false });
     await expect(requestExecution(a.id, admin)).rejects.toMatchObject({ code: "action_type_disabled" });
+  });
+
+  it("never publishes for Do it myself, even an approved fix through an old connection (owner decision 1)", async () => {
+    const a = seed();
+    await requestApproval(a.id, member);
+    await approve(a.id, { draftHash: a.draftHash }, reviewer);
+    h.db.organization.rows[0].planId = "starter";
+    await expect(requestExecution(a.id, admin)).rejects.toMatchObject({ code: "not_on_plan" });
+    expect(h.enqueued).toHaveLength(0);
+    h.db.organization.rows[0].serviceTier = "grow"; // Do it for me
+    await expect(requestExecution(a.id, admin)).resolves.toBeTruthy();
   });
 
   it("returns manual instructions when no integration exists", async () => {

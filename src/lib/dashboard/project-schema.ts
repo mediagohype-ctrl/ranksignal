@@ -2,6 +2,7 @@
 // Pure (zod only) so client components and the job scheduler can import it too.
 import { z } from "zod";
 import { projectInputSchema } from "@/lib/types";
+import { getEngineLimit, getPlanWithAiLimits, questionsPerCheck } from "@/lib/billing/plans";
 
 export const SCHEDULE_FREQUENCIES = ["off", "weekly", "monthly"] as const;
 export type ScheduleFrequency = (typeof SCHEDULE_FREQUENCIES)[number];
@@ -9,8 +10,33 @@ export interface ProjectSchedule {
   crawl: ScheduleFrequency;
   visibility: ScheduleFrequency;
 }
-/** Applied whenever settings.schedule (or one of its keys) is absent — e.g. every new project. */
+/**
+ * Applied whenever settings.schedule (or one of its keys) is absent — e.g. every new project. For AI checks this
+ * is only the fallback when the plan isn't known: with a plan, see defaultAiFrequency (weekly when it fits).
+ */
 export const DEFAULT_SCHEDULE: ProjectSchedule = { crawl: "weekly", visibility: "monthly" };
+
+/**
+ * Set (true) on Project.settings once someone picks the AI schedule in Settings. New projects are created with
+ * schedule.visibility = "monthly" stored, so a stored "monthly" WITHOUT this marker is "never chose" and follows
+ * the default. A stored "weekly" or "off" is always a choice (they were never a stored default).
+ */
+export const AI_SCHEDULE_CHOSEN_KEY = "aiScheduleChosen";
+
+/** Automatic AI checks a month the weekly schedule needs the plan to cover. */
+export const WEEKLY_CHECKS_PER_MONTH = 4;
+
+/**
+ * Default AI schedule when the owner never chose: every week when the plan's monthly AI answers cover four full
+ * checks (Do it myself: 300 = 4 × 75), otherwise every month. The free trial (one check) stays monthly, and so
+ * does a workspace whose checks ask more AI tools than the plan's answers cover weekly. Pure.
+ */
+export function defaultAiFrequency(org?: { planId: string; serviceTier?: string | null } | null): ScheduleFrequency {
+  if (!org || org.planId === "trial") return DEFAULT_SCHEDULE.visibility;
+  const perCheck = questionsPerCheck(org.planId) * getEngineLimit(org.planId, org.serviceTier);
+  const monthly = getPlanWithAiLimits(org.planId).aiAnswersPerMonth;
+  return perCheck > 0 && monthly >= WEEKLY_CHECKS_PER_MONTH * perCheck ? "weekly" : DEFAULT_SCHEDULE.visibility;
+}
 
 /** Days between automatic runs for a frequency; null when off. */
 export function frequencyDays(f: ScheduleFrequency): number | null {
@@ -53,6 +79,11 @@ export const projectFactsSchema = z
     city: factText(120).optional(),
     country: factText(80).optional(),
     language: factText(40).optional(),
+    // "Confirm your facts" (all optional): used to fill ready-to-paste code and to spot wrong facts in AI answers.
+    founder: factText(120).optional(),
+    address: factText(300).optional(),
+    phone: factText(40).optional(),
+    services: factText(300).optional(),
   })
   .strict();
 export type ProjectFacts = z.infer<typeof projectFactsSchema>;
@@ -60,7 +91,7 @@ export type ProjectFacts = z.infer<typeof projectFactsSchema>;
 export function readFacts(v: unknown): ProjectFacts {
   if (!v || typeof v !== "object" || Array.isArray(v)) return {};
   const out: ProjectFacts = {};
-  for (const k of ["name", "sells", "customers", "city", "country", "language"] as const) {
+  for (const k of ["name", "sells", "customers", "city", "country", "language", "founder", "address", "phone", "services"] as const) {
     const x = (v as Record<string, unknown>)[k];
     if (typeof x === "string") out[k] = x;
   }
@@ -158,13 +189,25 @@ export function readSettings(v: unknown): ProjectSettings {
 
 const isFrequency = (v: unknown): v is ScheduleFrequency => typeof v === "string" && (SCHEDULE_FREQUENCIES as readonly string[]).includes(v);
 
-/** Effective schedule: absent/invalid keys fall back to DEFAULT_SCHEDULE. */
-export function readSchedule(settings: unknown): ProjectSchedule {
+/** True when the owner picked the AI schedule themselves (see AI_SCHEDULE_CHOSEN_KEY). */
+export function aiScheduleChosen(settings: unknown): boolean {
+  const st = readSettings(settings);
+  const raw = st.schedule;
+  const v = raw && typeof raw === "object" ? (raw as Record<string, unknown>).visibility : undefined;
+  return isFrequency(v) && (v !== DEFAULT_SCHEDULE.visibility || st[AI_SCHEDULE_CHOSEN_KEY] === true);
+}
+
+/**
+ * Effective schedule: absent/invalid keys fall back to the defaults. Pass the workspace's plan (`org`) wherever
+ * the AI schedule matters (scheduler, settings page): a website whose owner never chose then gets the plan's
+ * default (defaultAiFrequency — weekly when the plan covers it). Without `org` the AI default is "monthly".
+ */
+export function readSchedule(settings: unknown, org?: { planId: string; serviceTier?: string | null } | null): ProjectSchedule {
   const raw = readSettings(settings).schedule;
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return {
     crawl: isFrequency(s.crawl) ? s.crawl : DEFAULT_SCHEDULE.crawl,
-    visibility: isFrequency(s.visibility) ? s.visibility : DEFAULT_SCHEDULE.visibility,
+    visibility: isFrequency(s.visibility) && aiScheduleChosen(settings) ? s.visibility : defaultAiFrequency(org),
   };
 }
 
@@ -251,6 +294,8 @@ export function mergeSettingsPatch(
       }
     }
     next.schedule = schedule;
+    // Someone picked the AI schedule: from now on it is their choice, not the plan default.
+    if (inc.schedule.visibility !== undefined) next[AI_SCHEDULE_CHOSEN_KEY] = true;
     scheduleChanged = JSON.stringify(readSchedule(before)) !== JSON.stringify(schedule);
   }
   if (inc.notifications) {

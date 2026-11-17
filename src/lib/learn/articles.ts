@@ -114,7 +114,7 @@ export const ARTICLES: Article[] = [
           "Give each important question its own heading, written the way people ask it (“How much does a website audit cost?”).",
           "Put a direct 40–60 word answer immediately under the heading, then add detail, examples and numbers below it.",
           "Use lists and tables for steps, comparisons and prices — engines lift these formats readily.",
-          "Add FAQPage structured data for question-and-answer blocks that are visible on the page (our free [FAQ schema generator](/tools/faq-markup-maker) writes it for you).",
+          "Add FAQPage structured data for question-and-answer blocks that are visible on the page (our free [FAQ schema generator](/tools/faq-schema-generator) writes it for you).",
           "Make sure the page is indexable, fast and has a clear title and meta description — AEO sits on top of good [technical SEO](/learn/website-seo-audit-checklist).",
           "Show who is answering: author or company name, date updated, contact details. Engines favour sources they can trust.",
           "Re-check every month which questions you are quoted for, and rewrite answers that are being skipped.",
@@ -199,7 +199,7 @@ export const ARTICLES: Article[] = [
         heading: "How do you measure GEO?",
         paragraphs: [
           "Pick 20–100 questions your buyers ask, ask each AI assistant those questions repeatedly, and record how often you are named, linked and recommended — and how often competitors are. Report rates with the sample size, because single answers vary.",
-          "MyWebRank runs exactly this measurement across ChatGPT, Gemini, Perplexity, Claude and Grok and turns the gaps into a fix list. Try the [free AI mention checker](/tools/ai-mention-checker) to see where you stand.",
+          "MyWebRank runs exactly this measurement across ChatGPT, Gemini, Perplexity, Claude and Grok and turns the gaps into a fix list. Try the [free website check](/free-check) to see where you stand.",
         ],
       },
     ],
@@ -210,7 +210,7 @@ export const ARTICLES: Article[] = [
       { q: "Does blocking GPTBot stop my site appearing in ChatGPT?", a: "Blocking GPTBot stops OpenAI using your pages for model training. Appearing in ChatGPT search results depends on OAI-SearchBot, which is a separate user agent. Most businesses that want visibility allow both." },
     ],
     related: ["how-to-get-mentioned-by-chatgpt", "what-is-aeo", "llms-txt-guide"],
-    cta: { label: "See if AI mentions you", href: "/tools/ai-mention-checker" },
+    cta: { label: "See if AI mentions you", href: "/free-check" },
     sources: [SRC.geoPaper, SRC.aiFeatures, SRC.rfc9309, SRC.schemaOrg],
   },
   {
@@ -306,7 +306,7 @@ export const ARTICLES: Article[] = [
         heading: "Step 1: Can AI crawlers read your website?",
         paragraphs: [
           "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and the Google-Extended token are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default. The rules in robots.txt follow an internet standard, [RFC 9309](https://datatracker.ietf.org/doc/html/rfc9309), published by the IETF in 2022.",
-          "Also make sure your important content is in the HTML, not only rendered by JavaScript. Many AI crawlers don’t run JavaScript. Our [free AI mention checker](/tools/ai-mention-checker) tests all of this in about 30 seconds.",
+          "Also make sure your important content is in the HTML, not only rendered by JavaScript. Many AI crawlers don’t run JavaScript. Our [free website check](/free-check) tests all of this in about 30 seconds.",
         ],
       },
       {
@@ -360,7 +360,7 @@ export const ARTICLES: Article[] = [
       { q: "Does Google AI Overviews use the same signals?", a: "AI Overviews are generated from Google’s own search index, so normal Google SEO — indexing, helpful content, authority — is what gets you included. Google says there are no extra requirements or special files needed to appear in them." },
     ],
     related: ["what-is-geo", "llms-txt-guide", "seo-vs-aeo-vs-geo"],
-    cta: { label: "Check if AI can find you", href: "/tools/ai-mention-checker" },
+    cta: { label: "Check if AI can find you", href: "/free-check" },
     sources: [SRC.geoPaper, SRC.rfc9309, SRC.aiFeatures, SRC.schemaOrg, SRC.schemaLocal],
   },
   {
@@ -424,7 +424,7 @@ export const ARTICLES: Article[] = [
         ],
         bullets: [
           "Organization or LocalBusiness on the home page, with logo, contact and sameAs links.",
-          "FAQPage for visible question-and-answer sections ([free FAQ schema generator](/tools/faq-markup-maker)).",
+          "FAQPage for visible question-and-answer sections ([free FAQ schema generator](/tools/faq-schema-generator)).",
           "Product, Service, Article or BreadcrumbList where they fit.",
         ],
       },
@@ -447,7 +447,7 @@ export const ARTICLES: Article[] = [
           "GPTBot, OAI-SearchBot, PerplexityBot and ClaudeBot are allowed in robots.txt and not blocked by the firewall; Google-Extended (a robots.txt token, not a crawler) is not disallowed.",
           "Main content is in the HTML, not only rendered by JavaScript.",
           "Business name, address, phone and description are identical across your site and listings.",
-          "An llms.txt file summarises the business ([free llms.txt generator](/tools/ai-guide-file-maker)).",
+          "An llms.txt file summarises the business ([free llms.txt generator](/tools/llms-txt-generator)).",
           "You are listed on the third-party sites AI cites for your category.",
         ],
       },
@@ -512,7 +512,7 @@ export const ARTICLES: Article[] = [
           "Write one sentence that says what your business does, for whom and where.",
           "List your 5–15 most important pages: services, pricing, about, contact, top guides.",
           "Give each page a one-line description in plain language.",
-          "Generate the file with the [free llms.txt generator](/tools/ai-guide-file-maker), or write it by hand in Markdown.",
+          "Generate the file with the [free llms.txt generator](/tools/llms-txt-generator), or write it by hand in Markdown.",
           "Upload it to the root of your website so it opens at yoursite.com/llms.txt, and update it when key pages change.",
         ],
       },
@@ -523,7 +523,7 @@ export const ARTICLES: Article[] = [
       { q: "Where do I upload llms.txt in WordPress?", a: "Upload it to your site’s root folder (the same folder as wp-config.php) using your host’s file manager or FTP, or use an SEO plugin that supports llms.txt." },
     ],
     related: ["what-is-geo", "how-to-get-mentioned-by-chatgpt", "website-seo-audit-checklist"],
-    cta: { label: "Make your llms.txt free", href: "/tools/ai-guide-file-maker" },
+    cta: { label: "Make your llms.txt free", href: "/tools/llms-txt-generator" },
     sources: [SRC.llmsTxt, SRC.aiFeatures, SRC.rfc9309, SRC.robotsIntro],
   },
   {
@@ -591,7 +591,7 @@ export const ARTICLES: Article[] = [
         heading: "How much does SEO cost in India?",
         paragraphs: [
           "Prices vary widely. Freelancers may charge a few thousand rupees a month; established agencies typically charge from about ₹15,000 to well over ₹1,00,000 a month depending on scope, competition and the number of pages. Compare on deliverables, not price alone.",
-          "MyWebRank offers both routes: self-serve software with a free trial if you want to do it yourself, and a [done-for-you SEO, AEO and GEO service](/services) where our team ships agreed fixes every month and reports the impact. See [pricing](/pricing).",
+          "MyWebRank offers both routes: self-serve software with a free trial if you want to do it yourself, and a [done-for-you SEO, AEO and GEO service](/done-for-you) where our team ships agreed fixes every month and reports the impact. See [pricing](/pricing).",
         ],
       },
     ],
@@ -602,7 +602,7 @@ export const ARTICLES: Article[] = [
       { q: "Should I hire an agency or use an SEO tool?", a: "If you have time and some skills, a tool that tells you exactly what to fix is cheaper. If you don’t, a done-for-you service saves time. MyWebRank offers both, so you can start with the tool and switch later." },
     ],
     related: ["website-seo-audit-checklist", "seo-vs-aeo-vs-geo", "what-is-geo"],
-    cta: { label: "See done-for-you plans", href: "/services" },
+    cta: { label: "See done-for-you plans", href: "/done-for-you" },
     sources: [SRC.doINeedSeo, SRC.spamPolicies, SRC.helpfulContent, SRC.seoStarter],
   },
 ];

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Bot, MessageSquareQuote, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { CheckLanes, type Lane } from "@/components/marketing/showcase/check-lanes";
-import { BRAND } from "@/lib/brand";
+import { BRAND, bookCallHref } from "@/lib/brand";
 import { IconTile, JsonLd, PageHero, Section } from "@/components/marketing/ui";
-import { FreeCheckTool } from "@/components/marketing/free-check-tool";
+import { FreeCheckTool, HideWhenFreeCheckResult } from "@/components/marketing/free-check-tool";
 import { SectionHeading } from "@/components/ui";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import { PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
@@ -16,7 +16,16 @@ import { faqLdFromQa, webPageLd } from "@/lib/seo/schema";
 
 const DESCRIPTION = PAGE_SEO["/free-check"].description;
 
-export const metadata: Metadata = staticPageMetadata("/free-check");
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/**
+ * /free-check?url=… shows one visitor's result: never indexed, and its main version (canonical) is /free-check.
+ * Results are not stored, so there is no page per checked website for Google to find.
+ */
+export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const sp = await searchParams;
+  return staticPageMetadata("/free-check", sp.url !== undefined ? { robots: { index: false, follow: true } } : {});
+}
 
 const WHAT: { icon: ReactNode; title: string; body: string }[] = [
   { icon: <Search />, title: "SEO basics", body: "Your Google headlines and summaries, main headings, secure address (the padlock), and whether your pages can appear on Google." },
@@ -52,7 +61,7 @@ const LANES: Lane[] = [
   },
 ];
 
-export default async function FreeCheckPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function FreeCheckPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const initialUrl = typeof sp.url === "string" ? sp.url.slice(0, 2048) : "";
   const jsonLd = {
@@ -82,9 +91,11 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
       />
       <section aria-label="Run the free check" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing">
-          <FreeCheckTool initialUrl={initialUrl} />
+          <FreeCheckTool initialUrl={initialUrl} bookHref={bookCallHref()} />
         </div>
       </section>
+      {/* Reading matter: in the HTML for everyone, folded away once a result is on screen. */}
+      <HideWhenFreeCheckResult>
       <Section labelledBy="fc-lanes">
         <SectionHeading
           id="fc-lanes"
@@ -133,6 +144,7 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Pr
           ]}
         />
       </QaSection>
+      </HideWhenFreeCheckResult>
     </>
   );
 }

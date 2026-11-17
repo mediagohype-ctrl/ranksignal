@@ -36,11 +36,11 @@ export function HiCheckLauncher({ id = "hi-check-url", className }: { id?: strin
           type="submit"
           className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-fg px-6 text-[1rem] font-medium text-bg hover:bg-fg-soft focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px sm:h-14 sm:px-7 [&_svg]:size-[18px]"
         >
-          मेरी वेबसाइट चेक करें
+          मेरी वेबसाइट फ्री में चेक करें
           <ArrowRight aria-hidden />
         </button>
       </div>
-      <p className="mt-3 pl-1 text-small text-muted">फ्री · साइन-अप की ज़रूरत नहीं · करीब 30 सेकंड</p>
+      <p className="mt-3 text-center text-small text-muted">फ्री · साइन-अप की ज़रूरत नहीं · करीब 30 सेकंड</p>
     </form>
   );
 }
@@ -65,8 +65,8 @@ export function HiPlanCards({ plans, limit }: { plans: HindiPlan[]; limit?: numb
           </div>
           <p className="mt-4 text-[2.25rem] font-semibold leading-none tracking-[-0.03em] tabular-nums text-fg">
             {inr(p.price)}
-            {p.suffix}
-            <span className="ml-1 text-small font-normal tracking-normal text-muted">{gstOn() ? "+ GST / महीना" : "/ महीना"}</span>
+            {p.suffix}{" "}
+            <span className="text-small font-normal tracking-normal text-muted">{gstOn() ? "+ GST / महीना" : "/ महीना"}</span>
           </p>
           <p className="mt-4 text-small text-fg-soft">{p.blurb}</p>
           <ul className="mt-6 flex-1 space-y-3">
@@ -121,7 +121,7 @@ export function HiTierCards({ tiers }: { tiers: HindiServiceTier[] }) {
               </div>
             </dl>
             <Link href="/hi/contact?topic=services" className={inkPill("lg", ink, "mt-8 w-full")}>
-              फ्री स्ट्रैटेजी कॉल बुक करें
+              फ्री कॉल बुक करें
               <ArrowRight aria-hidden />
             </Link>
             <div className={clsx("mt-9 flex-1 border-t pt-7", ink ? "border-bg/20" : "border-border")}>

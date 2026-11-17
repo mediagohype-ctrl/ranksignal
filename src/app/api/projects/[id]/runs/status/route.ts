@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { handler, json, requireProject, requireSession } from "@/lib/api";
 import { runStatusPayload } from "@/lib/dashboard/run-status";
+import { getAiCheckState } from "@/lib/visibility/run-state-server";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -12,9 +13,11 @@ export const GET = handler(async (_req: Request, { params }: Ctx) => {
   const project = await requireProject(s, id);
   const where = { organizationId: s.organizationId, projectId: project.id };
 
-  const [crawl, vis] = await Promise.all([
+  const [crawl, vis, ai] = await Promise.all([
     db.crawlRun.findFirst({ where, orderBy: { createdAt: "desc" }, select: { id: true, status: true, finishedAt: true } }),
     db.visibilityRun.findFirst({ where, orderBy: { createdAt: "desc" }, select: { id: true, status: true, finishedAt: true, collected: true, metrics: true } }),
+    // { state: none | running | waiting_tomorrow | done | failed, collected, expected, resumeAt, reason }.
+    getAiCheckState(project.id, s.organizationId),
   ]);
   // The score comes from the snapshot written when the run finished (the same number Home, Report and History show).
   const snap = crawl
@@ -24,5 +27,5 @@ export const GET = handler(async (_req: Request, { params }: Ctx) => {
         select: { overallScore: true },
       })
     : null;
-  return json(runStatusPayload(crawl, snap, vis), { headers: { "Cache-Control": "no-store" } });
+  return json({ ...runStatusPayload(crawl, snap, vis), ai }, { headers: { "Cache-Control": "no-store" } });
 });

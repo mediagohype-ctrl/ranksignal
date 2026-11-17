@@ -42,28 +42,29 @@ export const PAGE_SEO = {
   "/features": {
     title: "SEO Audit & AI Visibility Tracking Features",
     description:
-      "MyWebRank features: SEO audit, AI mention tracking in ChatGPT and Gemini, competitor share of voice, a plain to-do list and fixes you approve first.",
+      "MyWebRank features: a weekly website check, AI answers from ChatGPT, Gemini and Perplexity, ready-to-paste fixes and a simple monthly report.",
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-15",
   },
   "/how-it-works": {
-    title: "How It Works: Check, Fix, Grow Every Month",
+    title: "How It Works: Three Steps to Get Found",
     description:
-      "We check your site, you approve each fix, and we report what changed every month. Every change can be undone in one click. Start free.",
+      "Three steps: we check your website and AI answers, show you exactly what to fix (or fix it for you), and report what changed. Start free.",
     published: "2026-10-28",
-    updated: "2026-11-13",
+    updated: "2026-11-15",
   },
-  "/services": {
+  // Done-for-you service (was /services until 15 Nov 2026; the old address redirects here, see next.config.ts).
+  "/done-for-you": {
     title: "SEO, AEO & GEO Services in India",
     description: `Our team fixes your website, Google profile and AI visibility every month. You approve every change. From ${inrGst(DFY_PLAN.price)}/month.`,
     published: "2026-10-28",
-    updated: "2026-11-13",
+    updated: "2026-11-15",
   },
   "/pricing": {
     title: `SEO Software Pricing in India from ${inr(SELF_PLAN.price)}`,
     description: `Simple plans in rupees. Software from ${inr(SELF_PLAN.price)}/month or done-for-you SEO from ${inr(DFY_PLAN.price)}/month. ${TRIAL_DAYS}-day free trial, no setup fee.`,
     published: "2026-10-28",
-    updated: "2026-11-13",
+    updated: "2026-11-15",
   },
   "/free-check": {
     title: "Free Website SEO Checker: Google + AI Report",
@@ -77,28 +78,23 @@ export const PAGE_SEO = {
     description:
       "Free SEO tools, no sign-up: check titles, headings, schema, broken links, robots.txt and AI crawler access in seconds, then fix what you find.",
     published: "2026-11-04",
-    updated: "2026-11-13",
+    updated: "2026-11-15",
   },
-  "/tools/ai-mention-checker": {
-    title: "Free AI Visibility Checker: Can ChatGPT See You?",
-    description:
-      "Free check: can ChatGPT, Gemini and Perplexity read your website well enough to name your business? Get a score and plain-word fixes. No sign-up.",
-    published: "2026-11-04",
-    updated: TODAY,
-  },
-  "/tools/faq-markup-maker": {
+  // /tools/ai-mention-checker was the same check as /free-check and now redirects there (next.config.ts).
+  // The two makers below moved to the names people search for; the old addresses redirect.
+  "/tools/faq-schema-generator": {
     title: "Free FAQ Schema Generator (FAQPage JSON-LD)",
     description:
       "Type your customers' questions and answers and get ready-to-paste FAQ schema (JSON-LD) that helps Google and AI tools quote you. Free, no sign-up.",
     published: "2026-11-04",
-    updated: TODAY,
+    updated: "2026-11-15",
   },
-  "/tools/ai-guide-file-maker": {
+  "/tools/llms-txt-generator": {
     title: "Free llms.txt Generator for Your Website",
     description:
       "Make an llms.txt file in 2 minutes. Tell ChatGPT and other AI tools who you are and which pages matter most. Free, and no sign-up needed.",
     published: "2026-11-04",
-    updated: "2026-11-13",
+    updated: "2026-11-15",
   },
   "/tools/meta-tag-checker": {
     title: "Free Meta Title & Description Checker",
@@ -205,12 +201,15 @@ export const PAGE_SEO = {
     published: TODAY,
     updated: TODAY,
   },
+  // The extension is not in the browser stores yet: the page stays reachable (the extension's own homepage link)
+  // but is hidden from Google, the sitemap and the tools list. Remove `noindex` and re-list it when it is live.
   "/tools/seo-extension": {
     title: "Free SEO Browser Extension for Chrome and Edge",
     description:
       "Check any page's SEO and AI readiness in one click: titles, headings, schema, share tags and AI robot rules. Runs in your browser. Free, no sign-up.",
     published: "2026-11-10",
     updated: "2026-11-10",
+    noindex: true,
   },
   "/docs/api": {
     title: "API, MCP server and Looker Studio guide",
@@ -242,11 +241,11 @@ export const PAGE_SEO = {
     updated: "2026-11-13",
   },
   "/docs": {
-    title: "Getting Started Docs: Setup, WordPress & GitHub",
+    title: "Getting Started Docs: Setup, Fixes and Scores",
     description:
-      "Set up MyWebRank: add your website, connect WordPress or GitHub, learn how approvals work, read your SEO and AI scores, and white-label reports.",
+      "Set up MyWebRank: add your website, see how fixes work on each plan, when checks run, how scores are measured and what needs your OK.",
     published: "2026-10-28",
-    updated: TODAY,
+    updated: "2026-11-15",
   },
   "/contact": {
     title: "Contact MyWebRank: Talk to a Real Person",
@@ -328,7 +327,7 @@ export const PAGE_SEO = {
   },
   "/signup": {
     title: "Start Your Free SEO & AI Visibility Trial",
-    description: `Create your MyWebRank account and start a ${TRIAL_DAYS}-day free trial: a full website SEO report, AI visibility tracking in ChatGPT and Gemini, and safe fixes.`,
+    description: `Create your MyWebRank account and start a ${TRIAL_DAYS}-day free trial: a full website SEO report, AI checks in ChatGPT and Gemini, and ready-to-paste fixes.`,
     updated: TODAY,
     noindex: true,
   },

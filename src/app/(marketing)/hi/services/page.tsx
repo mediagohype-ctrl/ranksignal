@@ -71,7 +71,7 @@ export default function HindiServicesPage() {
           </p>
           <div className="mk-rise mk-delay-2 mt-9 flex flex-col gap-3 sm:flex-row">
             <Link href="/hi/contact?topic=services" className={inkPill("lg")}>
-              फ्री स्ट्रैटेजी कॉल बुक करें
+              फ्री कॉल बुक करें
               <ArrowRight aria-hidden />
             </Link>
             <Link
@@ -122,11 +122,11 @@ export default function HindiServicesPage() {
               <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
                 <span className="text-[clamp(2.25rem,1.9rem+1.2vw,2.875rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums text-bg">
                   {inr(DFY_PLAN.price)}
-                </span>
+                </span>{" "}
                 <span className="text-small text-bg/75">{gstOn() ? "+ GST / महीना" : "/ महीना"}</span>
               </p>
               <p className="mt-3 text-small text-bg/80">{HI_DFY.terms}</p>
-              <Link href={HI_DFY.href} className={inkPill("lg", true, "mt-8 w-full sm:w-auto")}>
+              <Link href={HI_DFY.href} {...newTabProps(HI_DFY.href)} className={inkPill("lg", true, "mt-8 w-full sm:w-auto")}>
                 {HI_DFY.cta}
                 <ArrowRight aria-hidden />
               </Link>

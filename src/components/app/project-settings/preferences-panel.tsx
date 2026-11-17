@@ -7,6 +7,7 @@ import { api, errorMessage } from "@/lib/dashboard/client";
 import { DEFAULT_TIME_ZONE, timeZoneOptions } from "@/lib/user-prefs";
 import { Card, CardBody, CardHeader, Field, Select, useToast } from "@/components/ui";
 import { SwitchRow } from "./switch";
+import { expertModeHelp } from "@/components/app/nav";
 
 export function browserTimeZone(): string | null {
   try {
@@ -16,7 +17,16 @@ export function browserTimeZone(): string | null {
   }
 }
 
-export function PreferencesPanel({ expertMode, timeZone }: { expertMode: boolean; timeZone: string | null }) {
+export function PreferencesPanel({
+  expertMode,
+  timeZone,
+  expertHelp = expertModeHelp(false),
+}: {
+  expertMode: boolean;
+  timeZone: string | null;
+  /** Exactly what Expert mode shows for this account (expertModeHelp in src/components/app/nav.ts). */
+  expertHelp?: string;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [expert, setExpert] = useState(expertMode);
@@ -49,7 +59,7 @@ export function PreferencesPanel({ expertMode, timeZone }: { expertMode: boolean
         <SwitchRow
           id="pref-expert"
           label="Expert mode"
-          help="Show the technical names (SEO, AEO, GEO), every score part and the detailed tables."
+          help={expertHelp}
           checked={expert}
           busy={busy === "expert"}
           onChange={async (next) => {

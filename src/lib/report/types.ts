@@ -68,7 +68,17 @@ export interface SiteReport {
   brand: string;
   websiteUrl: string;
   generatedAt: string;
-  crawl: { crawlRunId: string | null; pagesCrawled: number; finishedAt: string | null };
+  crawl: {
+    crawlRunId: string | null;
+    pagesCrawled: number;
+    finishedAt: string | null;
+    /** Addresses found (links + page list). Absent on reports stored before this was kept. */
+    pagesFound?: number;
+    /** Pages the plan allows per check, as used for this check. */
+    pageLimit?: number;
+    /** Links the check did not read as pages of their own (filter / sort links, account screens, duplicates). */
+    skipped?: { filter: number; account: number; duplicate: number };
+  };
   /** partial = website checked but AI answers not in yet; show "Waiting for AI results". Optional for stored legacy reports. */
   overall: { score: number | null; grade: Grade | null; headline: string; partial?: boolean };
   pillars: PillarScore[]; // always in order seo, aeo, geo, brand

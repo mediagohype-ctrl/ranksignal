@@ -7,6 +7,8 @@ import clsx from "clsx";
 import { Check } from "lucide-react";
 import { SampleTag } from "@/components/marketing/home-ui";
 import { BRAND } from "@/lib/brand";
+import { SELF_ENGINE_LIST, engineNamesFor, listWords } from "@/components/marketing/engine-names";
+import { PUBLIC_PLAN_IDS } from "@/lib/billing/plans";
 import { backlinksEnabled, dfsConfigured } from "@/lib/dataforseo/status";
 
 type HeadingTag = "h3" | "h4" | "p";
@@ -78,17 +80,17 @@ function BarRows({ rows, unit = "%", max = 100 }: { rows: { label: string; v: nu
   );
 }
 
+// Only the AI tools Do it myself really checks (from the plan limits), so the sample never shows more than the plan.
+const ANSWER_ROWS = [
+  { v: 42, tone: "fill-chart-1" },
+  { v: 31, tone: "fill-chart-2" },
+  { v: 38, tone: "fill-chart-5" },
+  { v: 18, tone: "fill-chart-4" },
+];
+
 function AnswersMock() {
-  return (
-    <BarRows
-      rows={[
-        { label: "ChatGPT", v: 42, tone: "fill-chart-1" },
-        { label: "Gemini", v: 31, tone: "fill-chart-2" },
-        { label: "Perplexity", v: 38, tone: "fill-chart-5" },
-        { label: "Claude", v: 18, tone: "fill-chart-4" },
-      ]}
-    />
-  );
+  const names = engineNamesFor(PUBLIC_PLAN_IDS[0]).slice(0, ANSWER_ROWS.length);
+  return <BarRows rows={names.map((label, i) => ({ label, ...ANSWER_ROWS[i]! }))} />;
 }
 
 function FixesMock() {
@@ -121,9 +123,9 @@ function FixesMock() {
       <div className="flex items-center gap-2">
         <span className="inline-flex h-7 items-center gap-1 rounded-full bg-fg px-3 text-[11px] font-medium text-bg">
           <Check aria-hidden size={12} strokeWidth={2.5} />
-          Approve
+          Copy the fix
         </span>
-        <span className="text-[11px] text-muted">You can undo it later</span>
+        <span className="text-[11px] text-muted">Steps included</span>
       </div>
     </div>
   );
@@ -252,29 +254,47 @@ function BacklinksMock() {
 
 /* ------------------------------------------------------------------ tour */
 
-type Tile = { key: string; title: string; line: string; mock: () => ReactNode; soon?: boolean };
+/** `noun` is how the tile is named inside a sentence ("Your website score, AI answers… in one place"). */
+type Tile = { key: string; title: string; noun: string; line: string; mock: () => ReactNode; soon?: boolean };
 
 function tiles(): Tile[] {
   const dfs = dfsConfigured();
   return [
-    { key: "check", title: "Website check", line: "One score out of 100 for SEO, AEO and GEO, with your top fixes.", mock: ScoreMock },
-    { key: "answers", title: "AI answers", line: "How often ChatGPT, Gemini, Perplexity and Claude name you.", mock: AnswersMock },
-    { key: "fixes", title: "Fixes you approve", line: "A to-do list, most useful first. Nothing changes until you say yes.", mock: FixesMock },
-    { key: "speed", title: "Page speed", line: "Core Web Vitals for phone and desktop, explained in plain words.", mock: SpeedMock },
-    { key: "rankings", title: "Rank tracker", line: "Your Google position for each keyword, checked every week.", mock: RankMock, soon: !dfs },
-    { key: "keywords", title: "Keyword research", line: "What people search, how often, and how hard it is to rank.", mock: KeywordMock, soon: !dfs },
-    { key: "competitors", title: "Competitors", line: "Who shows up above you, and which searches they win.", mock: CompetitorsMock, soon: !dfs },
-    { key: "backlinks", title: "Backlinks", line: "Sites that link to you, with new and lost links each month.", mock: BacklinksMock, soon: !backlinksEnabled() },
+    { key: "check", title: "Website check", noun: "website score", line: "One score out of 100 for SEO, AEO and GEO, with your top fixes.", mock: ScoreMock },
+    { key: "answers", title: "AI answers", noun: "AI answers", line: `How often AI tools like ${SELF_ENGINE_LIST} name you.`, mock: AnswersMock },
+    { key: "fixes", title: "Fixes, ready to paste", noun: "fixes", line: "A to-do list, most useful first, with step-by-step help.", mock: FixesMock },
+    { key: "speed", title: "Page speed", noun: "page speed", line: "Core Web Vitals for phone and desktop, explained in plain words.", mock: SpeedMock },
+    { key: "rankings", title: "Rank tracker", noun: "rankings", line: "Your Google position for each keyword, checked every week.", mock: RankMock, soon: !dfs },
+    { key: "keywords", title: "Keyword research", noun: "keyword ideas", line: "What people search, how often, and how hard it is to rank.", mock: KeywordMock, soon: !dfs },
+    { key: "competitors", title: "Competitors", noun: "competitors", line: "Who shows up above you, and which searches they win.", mock: CompetitorsMock, soon: !dfs },
+    { key: "backlinks", title: "Backlinks", noun: "backlinks", line: "Sites that link to you, with new and lost links each month.", mock: BacklinksMock, soon: !backlinksEnabled() },
   ];
 }
 
 /**
- * Grid of mini product screens with a title and one line each. `headingAs` sets the tag for tile titles
- * (default h3, for use under a section's h2).
+ * "website score, AI answers, fixes and page speed" — the parts of the app in one phrase. With `liveOnly` it lists
+ * only what is switched on today (same env checks as the tiles), so a sentence built from it stays truthful.
  */
-export function ProductTour({ headingAs = "h3", className }: { headingAs?: HeadingTag; className?: string }) {
+export function tourSummary({ liveOnly = false }: { liveOnly?: boolean } = {}): string {
+  return listWords(tiles().filter((t) => !liveOnly || !t.soon).map((t) => t.noun));
+}
+
+/**
+ * Grid of mini product screens with a title and one line each. `headingAs` sets the tag for tile titles
+ * (default h3, for use under a section's h2). `liveOnly` leaves out the tiles that are not switched on yet
+ * (the homepage shows only what works today; /features keeps them, labelled "Switching on soon").
+ */
+export function ProductTour({
+  headingAs = "h3",
+  className,
+  liveOnly = false,
+}: {
+  headingAs?: HeadingTag;
+  className?: string;
+  liveOnly?: boolean;
+}) {
   const Heading = headingAs;
-  const list = tiles();
+  const list = tiles().filter((t) => !liveOnly || !t.soon);
   return (
     <figure className={clsx("relative", className)}>
       <div className="mb-4 flex justify-end">
@@ -302,7 +322,7 @@ export function ProductTour({ headingAs = "h3", className }: { headingAs?: Headi
         })}
       </ul>
       <figcaption className="mt-6 text-center text-small text-muted">
-        Sample screens from the {BRAND.name} app: website score, AI answers, fixes, page speed, rankings, keyword ideas, competitors and backlinks.
+        Sample screens from the {BRAND.name} app: {tourSummary({ liveOnly })}.
       </figcaption>
     </figure>
   );

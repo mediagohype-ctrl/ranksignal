@@ -2,7 +2,8 @@
 import type { CheckResult, PillarScore, SiteReport } from "@/lib/report/types";
 import { runAllChecks } from "@/lib/report/checks";
 import { buildIssues, quickWins, strengths } from "@/lib/report/issues";
-import { AI_PILLARS, gradeFor, METHODOLOGY_VERSION, overallScore, PILLAR_LABELS, PILLAR_ORDER, pillarScore, pillarSummary, scoreLabel } from "@/lib/report/score";
+import { AI_PILLARS, gradeFor, METHODOLOGY_VERSION, overallScore, PILLAR_LABELS, PILLAR_ORDER, pillarScore, pillarSummary } from "@/lib/report/score";
+import { pagesReadNote, reportHeadline, reportLimitations } from "@/lib/report/present";
 import { v2Pages, okPages, pct, type CheckContext, type EvaluatedCheck } from "@/lib/report/inputs";
 import { templateSummary } from "@/lib/report/summary";
 import { summarizeVitals } from "@/lib/pagespeed/vitals";
@@ -65,19 +66,21 @@ export function composeReport(input: ComposeInput): SiteReport {
   const overall = overallScore(Object.fromEntries(pillars.map((p) => [p.pillar, p.score])));
   const issues = buildIssues(allChecks, jsFilteredFindings(ctx.findings, !!jsCheck));
   if (jsCheck) issues.unshift(jsSiteIssue(jsCheck)); // always the top problem
-  const top = issues[0];
-  const headline =
-    overall === null
-      ? "We couldn't score your site from the last check — the pages may not have loaded. Try checking your website again."
-      : `${overall} / 100 · ${scoreLabel(overall)}. ${top ? `Biggest fix: ${top.title.replace(/\.$/, "")}.` : "No big problems found on the pages we checked."}`;
 
   const report: SiteReport = {
     projectId: input.projectId,
     brand: input.brand,
     websiteUrl: input.websiteUrl,
     generatedAt: input.generatedAt.toISOString(),
-    crawl: { crawlRunId: input.crawl.crawlRunId, pagesCrawled: input.crawl.pagesCrawled, finishedAt: input.crawl.finishedAt?.toISOString() ?? null },
-    overall: { score: overall, grade: gradeFor(overall), headline, ...(overall !== null && !aiIn ? { partial: true } : {}) },
+    crawl: {
+      crawlRunId: input.crawl.crawlRunId,
+      pagesCrawled: input.crawl.pagesCrawled,
+      finishedAt: input.crawl.finishedAt?.toISOString() ?? null,
+      pagesFound: pagesFoundOf(input),
+      ...(ctx.site?.maxPages ? { pageLimit: ctx.site.maxPages } : {}),
+      ...(ctx.site?.skipped ? { skipped: ctx.site.skipped } : {}),
+    },
+    overall: { score: overall, grade: gradeFor(overall), headline: "", ...(overall !== null && !aiIn ? { partial: true } : {}) },
     pillars,
     issues,
     quickWins: quickWins(issues),
@@ -90,17 +93,25 @@ export function composeReport(input: ComposeInput): SiteReport {
   };
   const vitals = summarizeVitals(ctx.depth);
   if (vitals) report.coreWebVitals = vitals;
+  // One rule for the "Biggest fix" (most points first; shared with Home) and a speed caveat that matches the data used.
+  report.overall.headline = reportHeadline(report);
+  report.limitations = reportLimitations(report);
   report.executiveSummary = templateSummary(report);
   return report;
+}
+
+/** Addresses the check found: the crawler's own count (links + page list it queued), never less than the pages read. */
+function pagesFoundOf(input: ComposeInput): number {
+  return Math.max(input.crawl!.pagesFound, input.ctx.site?.pagesDiscovered ?? 0, input.crawl!.pagesCrawled);
 }
 
 function limitations(input: ComposeInput): string[] {
   const { ctx, crawl } = input;
   const out: string[] = [];
-  const found = Math.max(crawl!.pagesFound, ctx.site?.pagesDiscovered ?? 0, ctx.site?.sitemapUrlCount ?? 0);
   const crawled = crawl!.pagesCrawled;
-  if (found > crawled) out.push(`We checked ${crawled} of at least ${found} pages we found (scan limit ${ctx.site?.maxPages ?? crawled}). Key pages were checked first, but results are based on this sample.`);
-  else out.push(`We checked ${crawled} page${crawled === 1 ? "" : "s"} — every page we could find.`);
+  // Says WHY some addresses were not read (plan limit, duplicates, robot rules) instead of a bare "X of Y".
+  const note = pagesReadNote({ crawled, found: pagesFoundOf(input), limit: ctx.site?.maxPages ?? null, skipped: ctx.site?.skipped ?? null });
+  out.push(note ?? `We checked ${crawled} page${crawled === 1 ? "" : "s"} — every page we could find.`);
   const failed = ctx.pages.length - okPages(ctx.pages).length;
   if (failed > 0) out.push(`${failed} page${failed === 1 ? "" : "s"} could not be read (errors or non-HTML), so content checks skip them.`);
   if (ctx.pages.length && v2Pages(ctx.pages).length === 0) out.push("Your last scan was made before some newer checks existed; run a new scan to measure them.");

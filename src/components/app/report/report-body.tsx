@@ -8,6 +8,8 @@ import { IssueList } from "@/components/app/report/issue-list";
 import { issueHref } from "@/components/app/nav";
 import { PILLAR_EXPLAINER, PILLAR_ICON, visiblePillars } from "@/components/app/report/pillars";
 import { PILLAR_PLAIN } from "@/lib/report/score";
+import { placesLine, problemCounts, problemsLine } from "@/lib/report/counts";
+import { reportHeadline, reportLimitations } from "@/lib/report/present";
 import { QuickWins } from "@/components/app/report/quick-wins";
 import { CoreWebVitalsCard } from "@/components/app/report/core-web-vitals";
 import { Badge, Card, CheckList, Notice, PillarCard, ScoreRing, SectionHeading } from "@/components/ui";
@@ -17,6 +19,7 @@ export function ReportBody({
   projectId,
   canRun = false,
   visibilityActive = false,
+  aiStatus = null,
   readOnly = false,
   measuredWith,
   expert = false,
@@ -26,6 +29,8 @@ export function ReportBody({
   projectId?: string;
   canRun?: boolean;
   visibilityActive?: boolean;
+  /** What to say about an AI check in flight (running with progress, or waiting until tomorrow). */
+  aiStatus?: { title: string; detail: string } | null;
   readOnly?: boolean;
   measuredWith?: React.ReactNode;
   /** Expert mode: technical pillar names (SEO/AEO/GEO), every pillar incl. AEO, grades and version info. */
@@ -33,6 +38,12 @@ export function ReportBody({
 }) {
   const issuesById = new Map(r.issues.map((i) => [i.id, i]));
   const quickWins = r.quickWins.map((qid) => issuesById.get(qid)).filter((i): i is NonNullable<typeof i> => !!i);
+  // Worked out when shown (not read from the stored report), so the count, the "Biggest fix" and the speed caveat
+  // follow the same rules as Home, Progress and notifications even for reports stored before those rules existed.
+  const counts = problemCounts(r);
+  const places = placesLine(counts);
+  const headline = reportHeadline(r);
+  const limitations = reportLimitations(r);
 
   return (
     <>
@@ -44,7 +55,7 @@ export function ReportBody({
           </div>
           <div className="min-w-0 flex-1">
             <h2 id="report-hero" className="text-h2 text-balance text-fg">
-              {r.overall.headline}
+              {headline}
             </h2>
             <div className="mt-4 flex items-center gap-2">
               {r.executiveSummarySource === "llm" ? (
@@ -117,6 +128,12 @@ export function ReportBody({
           title="What's wrong & how to fix it"
           description="Every problem we found, explained simply, with why it matters and the steps to fix it. Most important first."
         />
+        {counts.problems > 0 && (
+          <p className="text-small font-medium text-fg" data-testid="problem-summary">
+            {problemsLine(counts)}
+            {places && <span className="font-normal text-muted"> · {places} on your website</span>}
+          </p>
+        )}
         <IssueList issues={r.issues} quickWins={r.quickWins} projectId={readOnly ? undefined : projectId} />
       </section>
 
@@ -137,6 +154,7 @@ export function ReportBody({
           projectId={readOnly ? undefined : projectId}
           canRun={canRun}
           visibilityActive={visibilityActive}
+          aiStatus={aiStatus}
           readOnly={readOnly}
           measuredWith={r.aiVisibility.measured ? measuredWith : undefined}
         />
@@ -154,10 +172,10 @@ export function ReportBody({
 
       {/* Limitations + methodology */}
       <footer className="space-y-3 break-inside-avoid">
-        {r.limitations.length > 0 && (
+        {limitations.length > 0 && (
           <Notice tone="neutral" title="Limitations of this report">
             <ul className="mt-1 list-disc space-y-1 pl-4">
-              {r.limitations.map((l, i) => (
+              {limitations.map((l, i) => (
                 <li key={i}>{l}</li>
               ))}
             </ul>

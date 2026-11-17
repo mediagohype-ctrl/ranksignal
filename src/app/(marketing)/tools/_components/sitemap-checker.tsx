@@ -7,6 +7,7 @@ import { Copy, Download, ListChecks, Search, Wand2 } from "lucide-react";
 import { Badge, Button, CheckStatusIcon, Field, Input, Notice, Tabs, TabPanel, Textarea } from "@/components/ui";
 import type { IssueLevel, SampleVerdict, SitemapCheckReport } from "@/lib/tools/sitemap-check";
 import { generateSitemap, GENERATOR_MAX_URLS } from "@/lib/tools/sitemap-generate";
+import { WholeSiteCta } from "./whole-site-cta";
 
 const LEVEL: Record<IssueLevel, { label: string; tone: "danger" | "warning" | "info" | "success"; icon: string }> = {
   fail: { label: "Fix", tone: "danger", icon: "fail" },
@@ -212,6 +213,7 @@ function Checker() {
               </ul>
             </div>
           )}
+          <WholeSiteCta lead="This checked your sitemap." />
         </div>
       )}
     </div>

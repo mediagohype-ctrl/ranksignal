@@ -5,13 +5,15 @@
 // Removed from setup on purpose: automatic-fix ticks (off), pages per check (plan maximum), project name and
 // other names (from the business name). Schedules stay on (website weekly, AI monthly).
 import { useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Globe, Plus, Search, Sparkles, Users } from "lucide-react";
 import { api, errorMessage } from "@/lib/dashboard/client";
 import { BRAND } from "@/lib/brand";
 import { joinNames } from "@/lib/setup/names";
-import { COUNTRIES, LANGUAGES, countryLabel, emptyFacts, nameFromHost, projectFieldsFromFacts, type BusinessFacts } from "@/lib/setup/facts";
+import { COUNTRIES, EXTRA_FACT_FIELDS, LANGUAGES, countryLabel, emptyFacts, nameFromHost, projectFieldsFromFacts, type BusinessFacts } from "@/lib/setup/facts";
+import { parseAliases } from "@/lib/setup/brand-names";
 import { normalizeWebsite, preferredWebsite, websiteError, websiteHost } from "@/lib/setup/website";
-import { Button, Card, CardBody, Field, Input, Notice, Select, Spinner } from "@/components/ui";
+import { Button, Card, CardBody, Field, Input, Notice, Select, Spinner, fieldDescribedBy } from "@/components/ui";
 import { LimitCard, type LimitInfo } from "./limit-card";
 import { SetupProgress } from "./setup-progress";
 
@@ -45,6 +47,10 @@ export interface SetupWizardProps {
   limit: LimitInfo | null;
   /** AI assistants this plan's checks ask, e.g. ["ChatGPT", "Gemini", "Claude"]. */
   assistants?: string[];
+  /** False while Google rank tracking isn't switched on: setup then doesn't ask for SEO keywords it can't use yet. */
+  showKeywords?: boolean;
+  /** False on Do it myself: we never change the website, so setup doesn't talk about approving changes. */
+  canConnect?: boolean;
 }
 
 function ContactLink() {
@@ -85,8 +91,19 @@ const tickBox =
 const MAX_KEYWORDS = 40;
 const DEFAULT_ASSISTANTS = ["ChatGPT", "Gemini", "Claude", "Perplexity", "Grok"];
 
-export function SetupWizard({ initialWebsite = "", firstWebsite = true, questionCount, limit, assistants = DEFAULT_ASSISTANTS }: SetupWizardProps) {
+export function SetupWizard({
+  initialWebsite = "",
+  firstWebsite = true,
+  questionCount,
+  limit,
+  assistants = DEFAULT_ASSISTANTS,
+  showKeywords = true,
+  canConnect = true,
+}: SetupWizardProps) {
   const [screen, setScreen] = useState<Screen>(limit ? "limit" : "website");
+  // After a website is replaced, reload the server data so the menu's website switcher drops the deleted website
+  // at once and step 1 says "Your website" when it is now the only one (firstWebsite comes from the server).
+  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
   // Screen 1
@@ -97,6 +114,8 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
   const [facts, setFacts] = useState<BusinessFacts>(emptyFacts());
   const [factsNote, setFactsNote] = useState<string | null>(null);
   const [nameErr, setNameErr] = useState<string | null>(null);
+  /** "Other names people use", comma separated ("Go Hype Media, GoHype"). */
+  const [aliases, setAliases] = useState("");
   // Screen 3
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [competitorsNote, setCompetitorsNote] = useState<string | null>(null);
@@ -162,14 +181,17 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
     }
     setNameErr(null);
     const id = ++reqId.current;
-    setLoading("Finding your competitors and SEO keywords…");
+    setLoading(showKeywords ? "Finding your competitors and SEO keywords…" : "Finding your competitors…");
     setScreen("competitors");
     let items: Competitor[] = [];
     let note: string | null = null;
     const body = { facts, website: siteUrl || normalizeWebsite(website) };
     const [compRes, kwRes] = await Promise.allSettled([
       api<{ items: { name: string; domain?: string }[]; source: string }>("/api/setup/competitors", { body }),
-      api<{ item: { picked: string[]; more: string[] } }>("/api/setup/keywords", { body }),
+      // Keywords feed Google rank tracking; while that is switched off we don't ask for them (or spend AI on them).
+      showKeywords
+        ? api<{ item: { picked: string[]; more: string[] } }>("/api/setup/keywords", { body })
+        : Promise.resolve({ item: { picked: [] as string[], more: [] as string[] } }),
     ]);
     if (compRes.status === "fulfilled") {
       items = compRes.value.items.map((c) => ({ ...c, checked: true }));
@@ -243,7 +265,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
         body: {
           facts,
           competitors: competitors.filter((c) => c.checked).map(({ name, domain }) => ({ name, ...(domain ? { domain } : {}) })),
-          keywords: keywords.filter((k) => k.checked).map((k) => k.text),
+          keywords: showKeywords ? keywords.filter((k) => k.checked).map((k) => k.text) : [],
         },
       });
       if (id !== reqId.current) return;
@@ -275,15 +297,20 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
 
   if (screen === "running") {
     const url = siteUrl || normalizeWebsite(website);
+    const fields = projectFieldsFromFacts(facts);
+    // Only the facts the owner filled in are saved (empty optional ones are left out).
+    const savedFacts = Object.fromEntries(Object.entries(facts).filter(([, v]) => typeof v === "string" && v.trim())) as unknown as BusinessFacts;
     return (
       <SetupProgress
         host={host}
         project={{
-          ...projectFieldsFromFacts(facts),
+          ...fields,
+          // The business name first, then the other names people use — every one is looked for on the site and in AI answers.
+          brandNames: [...fields.brandNames, ...parseAliases(aliases, fields.name)].slice(0, 20),
           websiteUrl: url,
           competitors: chosenCompetitors.map((c) => ({ name: c.name, ...(c.domain ? { domain: c.domain } : {}), aliases: [] })),
-          keywords: chosenKeywords.map((k) => k.text),
-          facts,
+          keywords: showKeywords ? chosenKeywords.map((k) => k.text) : [],
+          facts: { ...savedFacts, name: facts.name.trim(), country: facts.country, language: facts.language },
         }}
         questions={chosenQuestions.map(({ text, intent, topic, locale }) => ({ text, ...(intent ? { intent } : {}), ...(topic ? { topic } : {}), ...(locale ? { locale } : {}) }))}
         onEdit={() => setScreen("questions")}
@@ -293,7 +320,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
 
   return (
     <div className="mx-auto w-full max-w-xl">
-      {screen === "limit" && limit && <LimitCard limit={limit} onReplaced={() => setScreen("website")} />}
+      {screen === "limit" && limit && <LimitCard limit={limit} onReplaced={() => { setScreen("website"); router.refresh(); }} />}
 
       {screen === "website" && (
         <Card variant="elevated">
@@ -377,6 +404,21 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
                     }}
                   />
                 </Field>
+                <Field
+                  label="Other names people use"
+                  htmlFor="setup-aliases"
+                  optional
+                  hint="Short forms or other spellings, separated by commas. We look for all of them on your site and in AI answers."
+                >
+                  <Input
+                    id="setup-aliases"
+                    value={aliases}
+                    maxLength={400}
+                    placeholder="Sharma Sweets Pune, SharmaSweets"
+                    aria-describedby={fieldDescribedBy("setup-aliases", { hint: true })}
+                    onChange={(e) => setAliases(e.target.value)}
+                  />
+                </Field>
                 <Field label="What you sell" htmlFor="setup-sells">
                   <Input
                     id="setup-sells"
@@ -418,6 +460,27 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
                     </Select>
                   </Field>
                 </div>
+                <details className="rounded-xl border border-border px-4 py-3">
+                  <summary className="cursor-pointer text-small font-medium text-fg">Confirm your facts (optional)</summary>
+                  <p className="mt-2 text-small text-muted">
+                    Add what you want AI tools to get right about you. We use these to fill in your ready-to-paste fixes and to spot
+                    wrong facts in AI answers. Leave any of them empty.
+                  </p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    {EXTRA_FACT_FIELDS.map((f) => (
+                      <Field key={f.key} label={f.label} htmlFor={`setup-fact-${f.key}`} optional className={f.key === "address" || f.key === "services" ? "sm:col-span-2" : undefined}>
+                        <Input
+                          id={`setup-fact-${f.key}`}
+                          value={facts[f.key] ?? ""}
+                          maxLength={f.max}
+                          placeholder={f.placeholder}
+                          autoComplete={f.key === "phone" ? "tel" : f.key === "address" ? "street-address" : "off"}
+                          onChange={(e) => setFacts((x) => ({ ...x, [f.key]: e.target.value }))}
+                        />
+                      </Field>
+                    ))}
+                  </div>
+                </details>
                 <Button type="submit" size="lg" fullWidth icon={<Check />}>
                   Yes, correct
                 </Button>
@@ -440,9 +503,11 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
               <div className="space-y-5">
                 <div>
                   <h1 id="setup-heading" tabIndex={-1} className="text-h3 text-fg outline-none">
-                    Competitors and SEO keywords
+                    {showKeywords ? "Competitors and SEO keywords" : "Your competitors"}
                   </h1>
-                  <p className="mt-1 text-body text-muted">Who you compete with, and what people search for to find you.</p>
+                  <p className="mt-1 text-body text-muted">
+                    {showKeywords ? "Who you compete with, and what people search for to find you." : "The businesses customers might choose instead of you."}
+                  </p>
                 </div>
                 <section aria-labelledby="setup-comp-title" className="space-y-3">
                 <div>
@@ -524,6 +589,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
                 )}
                 </section>
 
+                {showKeywords && (
                 <section aria-labelledby="setup-kw-title" className="space-y-3 border-t border-border pt-5">
                   <div>
                     <h2 id="setup-kw-title" className="flex items-center gap-2 text-body font-semibold text-fg">
@@ -588,6 +654,7 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
                     </Button>
                   </div>
                 </section>
+                )}
 
                 <Button size="lg" fullWidth iconRight={<ArrowRight />} onClick={loadQuestions}>
                   Next
@@ -686,7 +753,9 @@ export function SetupWizard({ initialWebsite = "", firstWebsite = true, question
       {screen !== "limit" && (
         <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted">
           <Globe size={13} aria-hidden />
-          We only read public pages. Nothing changes on your site without your OK.
+          {canConnect
+            ? "We only read public pages. Nothing changes on your site without your OK."
+            : "We only read public pages. We never change your website — you make every change yourself."}
         </p>
       )}
     </div>

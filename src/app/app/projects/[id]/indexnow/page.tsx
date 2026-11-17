@@ -5,6 +5,7 @@ import { fmtDate } from "@/lib/dashboard/format";
 import { keyFileUrl, MAX_URLS_PER_HOST_PER_DAY, siteOf } from "@/lib/indexnow-customer/core";
 import { getOrCreateIndexNowSite } from "@/lib/indexnow-customer/service";
 import { Badge, Card, CardBody, CardHeader, EmptyState, Notice, PageHeader, Table, TD, TH, THead, TR, type Tone } from "@/components/ui";
+import { sessionCanConnect } from "@/lib/dashboard/menu";
 import { CopyBlock } from "../ai-bots/ingest-token";
 import { ManualSubmit, TriggerToggles, VerifyButton } from "./indexnow-controls";
 
@@ -26,6 +27,25 @@ export default async function IndexNowPage({ params }: { params: Promise<{ id: s
   const canManage = hasRole(session, "admin") && !session.readOnly;
   const canSend = hasRole(session, "member") && !session.readOnly;
   const origin = siteOf(project.websiteUrl)?.origin ?? null;
+
+  // IndexNow needs a key file uploaded to the website, which is our team's job: Do it for me and Custom only.
+  // Opened directly on Do it myself, explain instead of creating a key (nothing is written).
+  const org = await db.organization.findUnique({ where: { id: session.organizationId }, select: { planId: true, serviceTier: true } });
+  if (!sessionCanConnect(org, session)) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow="Indexing" title="IndexNow" icon={<Zap />} description="Telling search engines straight away when a page changes." />
+        <EmptyState
+          bordered
+          icon={<Zap />}
+          title="This isn't part of Do it myself."
+          description="IndexNow needs a file added to your website. On Do it for me our team sets it up for you."
+          actionLabel="Open my To-do list"
+          actionHref={`/app/projects/${project.id}/todo`}
+        />
+      </div>
+    );
+  }
 
   // The key is created the first time an admin opens this page (read-only viewers never write).
   const site = canManage && origin ? await getOrCreateIndexNowSite(project) : await db.indexNowSite.findFirst({ where: scope });

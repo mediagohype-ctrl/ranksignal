@@ -7,9 +7,21 @@ import { TabPanel, Tabs } from "@/components/ui";
 const IDS = ["workspace", "members", "billing", "branding", "account"] as const;
 type TabId = (typeof IDS)[number];
 
+/** ?tab= values people type or old links use → the real tab key ("Team" is the tab's label; its key is "members"). */
+const TAB_ALIASES: Record<string, TabId> = { team: "members", usage: "billing", plans: "billing", profile: "account" };
+
+/** The tab for a ?tab= value (null when unknown). */
+export function tabFromQuery(q: string | null | undefined): TabId | null {
+  if (!q) return null;
+  const v = q.trim().toLowerCase();
+  if (IDS.includes(v as TabId)) return v as TabId;
+  return TAB_ALIASES[v] ?? null;
+}
+
 function fromHash(hash: string): TabId | null {
   const h = hash.replace("#", "");
-  if (h === "billing" || h === "usage") return "billing";
+  // "#plans" is the anchor of the plan cards on the Billing tab (every "Upgrade" button links to it).
+  if (h === "billing" || h === "usage" || h === "plans") return "billing";
   if (h === "members") return "members";
   if (h === "workspace") return "workspace";
   if (h === "branding" || h === "white-label") return "branding";
@@ -36,7 +48,7 @@ export function SettingsTabs({
   const router = useRouter();
   const pathname = usePathname();
   const q = params.get("tab");
-  const initial: TabId = IDS.includes(q as TabId) ? (q as TabId) : "workspace";
+  const initial: TabId = tabFromQuery(q) ?? "workspace";
   const [tab, setTab] = useState<TabId>(initial);
 
   useEffect(() => {
@@ -44,8 +56,16 @@ export function SettingsTabs({
     if (h) setTab(h);
   }, []);
   useEffect(() => {
-    if (IDS.includes(q as TabId)) setTab(q as TabId);
+    const t = tabFromQuery(q);
+    if (t) setTab(t);
   }, [q]);
+  // Links like /app/settings?tab=billing#plans ("Upgrade" buttons): once that tab is on screen, scroll to the section.
+  useEffect(() => {
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    const timer = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 50);
+    return () => clearTimeout(timer);
+  }, [tab, q]);
 
   function change(id: string) {
     const t = id as TabId;

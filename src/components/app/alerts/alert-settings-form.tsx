@@ -22,6 +22,7 @@ export function AlertSettingsForm({
   limits,
   canManage,
   delivery,
+  whatsappSetup,
 }: {
   projectId: string;
   initial: AlertConfig;
@@ -30,6 +31,8 @@ export function AlertSettingsForm({
   limits: AlertPlanLimits;
   canManage: boolean;
   delivery: { emailConfigured: boolean; whatsappConfigured: boolean; whatsappOptIn: boolean };
+  /** Shown under "How to tell you" while no WhatsApp number is saved (the WhatsApp number form). */
+  whatsappSetup?: React.ReactNode;
 }) {
   const toast = useToast();
   const [config, setConfig] = useState<AlertConfig>(initial);
@@ -67,6 +70,18 @@ export function AlertSettingsForm({
   }
 
   const tooMany = config.recipients.length > limits.maxRecipients;
+  // WhatsApp sends nothing until a number is saved and switched on, so it never shows "On" before that.
+  const whatsappReady = limits.whatsapp && delivery.whatsappOptIn;
+  // "Who gets alerts" only matters once there is a second person on the team.
+  const showRecipients = members.length >= 2;
+  const saveButton = canManage && (
+    <>
+      {dirty && <span className="mr-auto text-small text-muted">You have unsaved changes.</span>}
+      <Button icon={<Save />} loading={saving} disabled={!dirty || tooMany} onClick={save}>
+        Save alert settings
+      </Button>
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -134,7 +149,7 @@ export function AlertSettingsForm({
           <SwitchRow
             id="ch-email"
             label="Email"
-            help={delivery.emailConfigured ? "Sent to the people chosen below." : "Email sending isn't set up on this server yet, so emails are skipped for now."}
+            help={delivery.emailConfigured ? "Sent to the people chosen below." : "Email alerts aren't switched on yet, so emails are skipped for now."}
             checked={config.channels.email}
             disabled={disabled}
             onChange={(v) => update((c) => ({ ...c, channels: { ...c.channels, email: v } }))}
@@ -145,12 +160,12 @@ export function AlertSettingsForm({
             help={
               !limits.whatsapp
                 ? "WhatsApp alerts aren't included in your plan."
-                : delivery.whatsappOptIn
+                : whatsappReady
                   ? "Sent to your workspace's WhatsApp number."
-                  : "Turn on WhatsApp updates in your workspace settings first; until then nothing is sent on WhatsApp."
+                  : "Off — add your number below to get alerts on WhatsApp."
             }
-            checked={config.channels.whatsapp && limits.whatsapp}
-            disabled={disabled || !limits.whatsapp}
+            checked={config.channels.whatsapp && whatsappReady}
+            disabled={disabled || !whatsappReady}
             onChange={(v) => update((c) => ({ ...c, channels: { ...c.channels, whatsapp: v } }))}
           />
           <div className="py-3">
@@ -188,6 +203,9 @@ export function AlertSettingsForm({
         </CardBody>
       </Card>
 
+      {whatsappSetup}
+
+      {showRecipients ? (
       <Card>
         <CardHeader
           icon={<MessageCircle />}
@@ -222,15 +240,11 @@ export function AlertSettingsForm({
           )}
           {tooMany && <p className="mt-2 text-small text-danger">Pick at most {limits.maxRecipients} people.</p>}
         </CardBody>
-        {canManage && (
-          <CardFooter>
-            {dirty && <span className="mr-auto text-small text-muted">You have unsaved changes.</span>}
-            <Button icon={<Save />} loading={saving} disabled={!dirty || tooMany} onClick={save}>
-              Save alert settings
-            </Button>
-          </CardFooter>
-        )}
+        {canManage && <CardFooter>{saveButton}</CardFooter>}
       </Card>
+      ) : (
+        canManage && <div className="flex items-center justify-end gap-3">{saveButton}</div>
+      )}
     </div>
   );
 }

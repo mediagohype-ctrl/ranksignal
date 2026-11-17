@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Copy, ExternalLink, FileDown, Save, Trash2 } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardFooter, CardHeader, Field, Input, LinkButton, Notice, Select, Textarea, useToast } from "@/components/ui";
 import { SwitchRow } from "@/components/app/project-settings/switch";
+import { CUSTOM_CONTACT_HREF } from "@/components/marketing/plans";
 import {
   INTRO_MAX, NOTES_MAX, RANGE_LABEL, RANGE_PRESETS, SECTION_META, type RangePreset, type ReportBuilderLimits, type SectionChoice, type TemplateView,
 } from "@/lib/report-builder/sections";
@@ -298,8 +299,20 @@ export function ReportBuilder({
               <p className="text-muted">Save the template first, then open the printable version to save it as a PDF.</p>
             )}
             <p className="text-muted">
-              {whiteLabel ? "Your agency's logo, name and colours are used on the report." : "The report uses our standard branding. White-label branding comes with the Agency plan (Settings → Branding)."}
+              {whiteLabel
+                ? "Your own logo, name and colours are used on the report."
+                : "The report uses our standard branding. Your own logo and name on reports is available on Custom plans and Do it for me."}
             </p>
+            {!whiteLabel && (
+              <p className="flex flex-wrap gap-x-4 gap-y-1">
+                <a className="font-medium text-primary hover:underline" href={CUSTOM_CONTACT_HREF} target="_blank" rel="noopener noreferrer">
+                  Talk to us
+                </a>
+                <a className="font-medium text-primary hover:underline" href="/app/settings?tab=billing#plans">
+                  See Do it for me
+                </a>
+              </p>
+            )}
           </CardBody>
         </Card>
 

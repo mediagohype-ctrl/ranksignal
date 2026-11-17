@@ -7,6 +7,7 @@ import { hasRole, requireAppProject } from "@/lib/dashboard/server";
 import { asArray, asRecord, fmtDate } from "@/lib/dashboard/format";
 import { getUserTimeZone } from "@/lib/dashboard/tz";
 import {
+  classifySources,
   groupByQuestion,
   joinNames,
   rivalsForQuestion,
@@ -14,6 +15,9 @@ import {
   stepsToGetNamed,
   type AnswerObservation,
 } from "@/lib/dashboard/ai-answers";
+import { questionHistory } from "@/lib/dashboard/question-history";
+import { savedCompetitors } from "@/lib/offsite/evidence";
+import { tradeWordsOf } from "@/lib/offsite/classify";
 import { OPEN_STATUSES } from "@/lib/tasks/types";
 import { questionHref } from "@/components/app/nav";
 import { engineName } from "@/components/app/providers-status";
@@ -95,17 +99,28 @@ export default async function QuestionPage({
 
   const answers = q?.answers ?? [];
   const rivals = rivalsForQuestion(answers, ownNames);
-  const sources = sourcesForQuestion(answers);
-  const outside = sources.filter((s) => !s.owned);
+  // Listing sites, competitors and other websites get different advice — a competitor is never a place to be listed.
+  const sources = classifySources(
+    sourcesForQuestion(answers),
+    {
+      ownedDomains: [project.websiteUrl],
+      competitors: savedCompetitors(project.competitors),
+      namedBrands: rivals.map((r) => r.name),
+      answerTexts: answers.map((a) => a.rawResponse),
+      tradeWords: tradeWordsOf([...strings(project.categories), ...strings(project.keywords)]),
+    },
+    answers,
+  );
+  const outside = sources.filter((s) => s.kind !== "own" && s.kind !== "ignore");
+  const SOURCE_KIND: Record<string, string> = { listing: "Listing site", competitor: "A business like yours", website: "Website" };
   const steps = stepsToGetNamed({ question: prompt.text, brand, named: !!q?.named, rivals, sources });
 
-  const history = recentRuns
-    .map((r) => {
-      const xs = historyObs.filter((o) => o.visibilityRunId === r.id && !o.simulated);
-      return { id: r.id, at: r.finishedAt ?? r.createdAt, named: xs.filter((o) => o.brandMentioned).length, total: xs.length };
-    })
-    .filter((h) => h.total > 0)
-    .reverse();
+  // One row per check; two checks on the same day would read as the same row twice, so the latest of the day wins.
+  const history = questionHistory(
+    recentRuns.map((r) => ({ id: r.id, at: r.finishedAt ?? r.createdAt })),
+    historyObs,
+    (d) => fmtDate(d, { timeZone }),
+  );
 
   const taskTitle = `Get named by AI for: ${prompt.text}`.slice(0, 200);
   const existing = await db.task.findFirst({
@@ -195,7 +210,10 @@ export default async function QuestionPage({
           <h2 id="sources" className="flex items-center gap-2 text-h4 text-fg">
             <Globe size={18} aria-hidden className="text-muted" /> Where AI got its information
           </h2>
-          <p className="mt-0.5 text-small text-muted">The websites the AI tools read to answer this question. Being on these sites helps AI name you.</p>
+          <p className="mt-0.5 text-small text-muted">
+            The websites the AI tools read to answer this question. Listing sites are places you can add your business. Businesses like
+            yours are competitors, not places to be listed.
+          </p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {outside.slice(0, 12).map((s) => (
               <li key={s.domain}>
@@ -205,7 +223,8 @@ export default async function QuestionPage({
                   rel="noopener noreferrer nofollow"
                   className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-small font-medium text-fg-soft hover:border-border-strong"
                 >
-                  {s.domain}
+                  {s.kind === "listing" ? s.name : s.domain}
+                  <span className="text-xs font-normal text-muted">{SOURCE_KIND[s.kind] ?? "Website"}</span>
                   <span className="text-xs text-muted">×{s.count}</span>
                   <ExternalLink size={12} aria-hidden className="text-muted" />
                   <span className="sr-only">(opens in new tab)</span>
@@ -252,7 +271,7 @@ export default async function QuestionPage({
       {history.length > 1 && (
         <Card as="section" padding="md" aria-labelledby="over-time">
           <h2 id="over-time" className="text-h4 text-fg">Over time</h2>
-          <p className="mt-0.5 text-small text-muted">How often AI named you for this question in each check.</p>
+          <p className="mt-0.5 text-small text-muted">How many AI tools named you for this question in each check.</p>
           <ul className="mt-3 space-y-2">
             {history.map((h) => (
               <li key={h.id} className="flex items-center gap-3 text-small">
@@ -297,7 +316,7 @@ export default async function QuestionPage({
           projectId={project.id}
           canEdit={hasRole(session, "member")}
           existing={!!existing}
-          task={{ title: taskTitle, description: taskText, category: "offsite", priority: q?.named ? "low" : "high", links: outside.slice(0, 10).map((s) => s.url) }}
+          task={{ title: taskTitle, description: taskText, category: "offsite", priority: q?.named ? "low" : "high", links: outside.filter((s) => s.kind !== "competitor").slice(0, 10).map((s) => s.url) }}
         />
       </div>
 

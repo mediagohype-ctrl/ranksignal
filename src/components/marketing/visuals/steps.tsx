@@ -1,6 +1,7 @@
 // Small decorative illustrations for the Check → Fix → Grow steps. Shapes only (no words), aria-hidden: the step's
 // title and text beside each one already say what it shows.
 import clsx from "clsx";
+import { Check, Quote, Search, Sparkles } from "lucide-react";
 
 const FRAME = "block h-24 w-full rounded-xl border border-border bg-surface shadow-card";
 
@@ -64,8 +65,100 @@ function GrowArt() {
 
 const ART = { Check: CheckArt, Fix: FixArt, Grow: GrowArt } as const;
 
+
 export function StepArt({ step, className }: { step: string; className?: string }) {
   const Art = ART[step as keyof typeof ART];
+  if (!Art) return null;
+  return (
+    <div aria-hidden className={clsx(className)}>
+      <Art />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ the three places customers look (SEO/AEO/GEO) */
+// Tiny, realistic mock-ups with real words, so anyone gets it at a glance: "Your business" on Google, quoted in
+// Google's answer box, and named by ChatGPT. Decorative (aria-hidden): the card's own words say the same thing.
+
+const TILE = "flex h-36 flex-col gap-2 overflow-hidden rounded-xl bg-surface-2/80 p-3 text-[11px] leading-tight";
+
+function SearchBar({ query }: { query: string }) {
+  return (
+    <div className="flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-fg-soft">
+      <Search size={11} className="shrink-0 text-muted" />
+      <span className="truncate">{query}</span>
+    </div>
+  );
+}
+
+/** SEO: Google results — your business is result #1. */
+function SeoMock() {
+  return (
+    <div className={TILE}>
+      <SearchBar query="cake shop near me" />
+      <div className="flex items-center gap-2 rounded-lg bg-primary-soft px-2 py-1.5 ring-1 ring-primary/30">
+        <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-fg">1</span>
+        <span className="min-w-0">
+          <span className="block truncate font-semibold text-primary-soft-fg">Your business</span>
+          <span className="block truncate text-[10px] text-primary-soft-fg/80">Fresh cakes, same-day delivery</span>
+        </span>
+      </div>
+      {["Other bakery", "Another shop"].map((n, i) => (
+        <div key={n} className="flex items-center gap-2 px-2 text-muted">
+          <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[9px] font-semibold">{i + 2}</span>
+          <span className="truncate">{n}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** AEO: Google answers the question itself, at the top, quoting your page. */
+function AeoMock() {
+  return (
+    <div className={TILE}>
+      <SearchBar query="do they deliver on Sunday?" />
+      <div className="rounded-lg border-l-4 border-primary bg-surface px-2.5 py-2 shadow-xs">
+        <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-primary">
+          <Quote size={10} /> Answer
+        </p>
+        <p className="mt-1 text-fg">“Yes, open 9 am – 9 pm, all 7 days.”</p>
+        <p className="mt-1 truncate text-[10px] font-semibold text-primary">— from Your business</p>
+      </div>
+      <div className="px-1 text-muted">
+        <span className="block h-1.5 w-3/4 rounded-full bg-surface-3" />
+      </div>
+    </div>
+  );
+}
+
+/** GEO: the customer asks ChatGPT, it names 3 businesses — and yours is one of them. */
+function GeoMock() {
+  return (
+    <div className={TILE}>
+      <p className="ml-auto max-w-[85%] truncate rounded-2xl rounded-br-sm bg-fg px-2.5 py-1 text-bg">Which cake shop should I pick?</p>
+      <div className="flex gap-1.5">
+        <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <Sparkles size={11} />
+        </span>
+        <ol className="min-w-0 flex-1 space-y-1 rounded-2xl rounded-tl-sm border border-border bg-surface px-2.5 py-1.5 text-fg-soft">
+          <li className="truncate">1. Other bakery</li>
+          <li className="flex items-center gap-1 rounded-md bg-primary-soft px-1 font-semibold text-primary-soft-fg">
+            <span className="truncate">2. Your business</span>
+            <Check size={11} className="ml-auto shrink-0 text-score-good" />
+          </li>
+          <li className="truncate">3. Another shop</li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+const PLACE_ART = { SEO: SeoMock, AEO: AeoMock, GEO: GeoMock } as const;
+
+/** The picture at the top of each "where customers look" card. */
+export function PlaceArt({ place, className }: { place: string; className?: string }) {
+  const Art = PLACE_ART[place as keyof typeof PLACE_ART];
   if (!Art) return null;
   return (
     <div aria-hidden className={clsx(className)}>

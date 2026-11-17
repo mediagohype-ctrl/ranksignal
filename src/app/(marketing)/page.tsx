@@ -1,31 +1,40 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, ListChecks, Search, TrendingUp } from "lucide-react";
-import { BRAND } from "@/lib/brand";
+import { BRAND, bookCallHref } from "@/lib/brand";
+import { SELF_FIX_LINE } from "@/lib/billing/offer";
 import { JsonLd, inkPill } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
 import { SampleResult } from "@/components/marketing/home-sample";
+import { BusinessKinds } from "@/components/marketing/business-kinds";
+import { DFY_ENGINE_COUNT, SELF_ENGINE_LIST } from "@/components/marketing/engine-names";
 import { FAQS } from "@/components/marketing/content";
+import { isFeatureLive } from "@/components/marketing/features/categories";
 import {
   CUSTOM_CONTACT_HREF,
   CUSTOM_PLAN,
   DFY_PLAN,
   SELF_PLAN,
   TRIAL_DAYS,
+  freq,
   gstOn,
   inr,
   planSignupHref,
-  servicesContactHref, newTabProps,
+  newTabProps,
 } from "@/components/marketing/plans";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 import { backlinksEnabled, dfsConfigured } from "@/lib/dataforseo/status";
-import { ReachVisual } from "@/components/marketing/visuals/reach";
-import { ProductTour } from "@/components/marketing/visuals/tour";
-import { StepArt } from "@/components/marketing/visuals/steps";
+import { ProductTour, tourSummary } from "@/components/marketing/visuals/tour";
+import { PlaceArt, StepArt } from "@/components/marketing/visuals/steps";
+import { AiFoundSection } from "@/components/marketing/visuals/ai-found";
+import { AiPositionsSection } from "@/components/marketing/visuals/ai-positions";
 
-// Home page, made more visual on the CEO's request (still server-rendered HTML + inline SVG, every word crawlable):
-// hero, sample result, where customers find you (SEO/AEO/GEO), three steps, everything in one app, three plans, questions.
+// Home page (Full Site Audit, 15 Nov 2026). Server-rendered HTML + inline SVG, every word crawlable. Nothing here
+// reads cookies or headers, so the page is built once and served from cache (see the marketing layout).
+// Order: hero (tagline + "Customers are searching…" + website box) → the problem in 3 cards (SEO / AEO / GEO) →
+// sample result → three steps → kinds of business → everything in one app (live features only) → plans →
+// questions → dark closing band with the website box again.
 
 // Title leads with the phrases buyers search ("SEO", "AEO", "GEO", "AI visibility") — the brand comes last.
 // Title and description live in src/lib/seo/pages.ts (length- and uniqueness-tested).
@@ -35,12 +44,27 @@ export const metadata: Metadata = staticPageMetadata("/", {
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
 
-// The three names the report scores you on, each with what it means in plain words.
-const TERMS = [
-  { term: "SEO", name: "Google Score", line: "Can Google and Bing find, read and trust your pages?" },
-  { term: "AEO", name: "Answer Score", line: "Do your pages give short, direct answers worth quoting?" },
-  { term: "GEO", name: "AI Score", line: "Do ChatGPT, Gemini and others name you and link to you?" },
+// The tagline stays the big line in the hero (team decision, 15 Nov 2026); its last word carries the brand colour.
+const SLOGAN_WORDS = BRAND.slogan.split(" ");
+const SLOGAN_LEAD = SLOGAN_WORDS.slice(0, -1).join(" ");
+const SLOGAN_LAST = SLOGAN_WORDS[SLOGAN_WORDS.length - 1];
+
+// True on both offers: Do it myself never changes a website (the owner pastes each fix); on Do it for me our team
+// asks for an OK first. No "undo" here — that only exists where we publish.
+const TICKS = ["Plain words", "Nothing changes without your OK", "Help on WhatsApp", "No card needed to start"];
+
+// One search, three places to be found. Replaces the long SEO / AEO / GEO explainer.
+const PLACES = [
+  { term: "SEO", title: "Google page 1", body: "People still search on Google. Is your business on the first page?" },
+  { term: "AEO", title: "Google’s answer box", body: "Google now answers many questions itself, at the top. Does it quote you?" },
+  { term: "GEO", title: "ChatGPT names 2–3 businesses", body: "Ask an AI assistant who to choose and it names only a few. Are you one?" },
 ];
+
+/** "every week" / "every day" / "every month", from the plan's real limits. */
+const EVERY: Record<string, string> = { Daily: "every day", Weekly: "every week", Monthly: "every month" };
+const WEBSITE_CHECK_EVERY = EVERY[freq(SELF_PLAN.limits.minScanIntervalDays)] ?? "every month";
+/** How often the plan's monthly AI answers let us ask the AI tools (4 or more full checks a month = every week). */
+const AI_CHECK_EVERY = SELF_PLAN.ai.checksPerMonth >= 4 ? "every week" : "every month";
 
 /** "₹1,999/month + GST" — one GST mention per price, none when we are not GST-registered. */
 const monthly = (n: number) => `${inr(n)}/month${gstOn() ? " + GST" : ""}`;
@@ -58,10 +82,10 @@ const HOME_PLANS = [
     dark: false,
     points: [
       "Your SEO, AEO, GEO and Brand scores",
-      `A website check every week, up to ${SELF_PLAN.limits.maxPagesPerCrawl.toLocaleString("en-IN")} pages`,
-      `What ChatGPT, Gemini and Perplexity say about you (${SELF_PLAN.ai.answersPerMonth.toLocaleString("en-IN")} AI answers a month)`,
+      `A website check ${WEBSITE_CHECK_EVERY}, up to ${SELF_PLAN.limits.maxPagesPerCrawl.toLocaleString("en-IN")} pages`,
+      `We ask ${SELF_ENGINE_LIST} about you ${AI_CHECK_EVERY}`,
       "A to-do list in plain words, most important first",
-      "One-click fixes with undo on WordPress",
+      SELF_FIX_LINE,
       "A monthly report you can read in 2 minutes",
     ],
     whoDoes: "You make the fixes, with our step-by-step help.",
@@ -73,7 +97,8 @@ const HOME_PLANS = [
     line: "Our team does all the work.",
     start: `Free 30-minute call.${DFY_PLAN.setup === 0 ? " No setup fee." : ""}`,
     cta: "Book a free call",
-    href: servicesContactHref("fix"),
+    // The calendar when BRAND_BOOKING_URL is set (opens in a new tab), otherwise the contact page.
+    href: bookCallHref(),
     dark: true,
     points: [
       "Everything in I'll do it myself",
@@ -100,10 +125,16 @@ const HOME_PLANS = [
 ];
 
 const STEPS = [
-  { title: "Check", icon: Search, body: "Type your website. We read it and ask ChatGPT, Gemini and others the questions your customers ask." },
+  { title: "Check", icon: Search, body: `Type your website. We read it and ask ${SELF_ENGINE_LIST} what your customers ask.` },
   { title: "Fix", icon: ListChecks, body: "You get a short to-do list, most useful first. Each fix says what to change, in plain words." },
-  { title: "Grow", icon: TrendingUp, body: "Approve the fixes you want. We check again every month so you can see what changed." },
+  {
+    title: "Grow",
+    icon: TrendingUp,
+    body: `You make the fixes with our steps, or our team does them for you. We check ${WEBSITE_CHECK_EVERY}.`,
+  },
 ];
+
+const linkCls = "font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg";
 
 export default function HomePage() {
   // Organization + WebSite come from the marketing layout (sitewide); this page adds the product itself.
@@ -118,24 +149,27 @@ export default function HomePage() {
       applicationCategory: "BusinessApplication",
       applicationSubCategory: "SEO software",
       operatingSystem: "Web",
-      description:
-        "Website SEO audit and report tool that scores SEO, answer-engine (AEO) and generative-AI (GEO) readiness and measures how often ChatGPT, Gemini, Perplexity and Claude mention and cite a brand.",
+      description: `Website SEO audit and report tool that scores SEO, answer-engine (AEO) and generative-AI (GEO) readiness and measures how often AI tools such as ${SELF_ENGINE_LIST} mention and cite a brand.`,
+      // Only what every customer really gets, worded per offer: Do it myself has ready-to-paste fixes (no
+      // publishing, so no "approval-gated fixes with rollback"); on Do it for me our team makes the changes.
       featureList: [
         "Website SEO audit and report",
         "AEO (answer engine optimization) score",
         "GEO (generative engine optimization) score",
-        "AI visibility tracking in ChatGPT, Gemini, Perplexity, Claude and Grok",
+        `AI visibility tracking in ${SELF_ENGINE_LIST} (up to ${DFY_ENGINE_COUNT} AI tools on ${DFY_PLAN.name})`,
         "Competitor share of voice in AI answers",
-        "Approval-gated fixes with rollback",
+        "Ready-to-paste fixes with step-by-step help",
+        "Done-for-you fixes by our team",
         "Core Web Vitals page speed checks",
         "Alerts when scores, pages or AI answers change",
         "Client report builder",
         "Portfolio view for many websites",
         "Public API and MCP server",
-        "IndexNow submission to Bing and other search engines",
-        "Google Business Profile monitor",
+        `IndexNow submission to Bing and other search engines (${DFY_PLAN.name} and ${CUSTOM_PLAN.name})`,
         "AI crawler visit tracking",
         "Internal link suggestions",
+        // Needs Google's Places data: listed only once it is switched on (same check as /features).
+        ...(isFeatureLive("maps-data") ? ["Google Business Profile monitor"] : []),
         // Paid Google-data features: listed only once our data partner is switched on.
         ...(dfsConfigured() ? ["Google rank tracking", "Keyword research", "Competitor analysis"] : []),
         ...(backlinksEnabled() ? ["Backlink checker"] : []),
@@ -158,54 +192,81 @@ export default function HomePage() {
     <>
       <JsonLd data={jsonLd} />
 
-      {/* ------------------------------------------------------------ 1. Hero: one website box */}
+      {/* ------------------------------------------------------------ 1. Hero: tagline, the question, one website box */}
       <section aria-labelledby="hero-title" className="relative overflow-hidden">
-        <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-24 lg:pt-24">
+        <div className="container-marketing pb-14 pt-10 sm:pb-16 sm:pt-14 lg:pb-20 lg:pt-16">
           <div className="mx-auto max-w-3xl text-center">
-            {/* The H1 carries the searched phrase; the big slogan stays as the visual headline. */}
+            {/* The one H1 carries the searched phrase; the tagline stays as the big visual line. */}
             <h1 id="hero-title" className="mk-label mk-rise text-primary">
               Free SEO, AEO &amp; GEO website checker
             </h1>
-            <p className="mk-hero mk-rise mt-5 text-fg">
-              Check. Fix. <span className="text-primary">Grow.</span>
+            <p className="mk-hero mk-rise mt-4 text-fg">
+              {SLOGAN_LEAD} <span className="text-primary">{SLOGAN_LAST}</span>
             </p>
-            <p className="mk-lead mk-rise mk-delay-1 mx-auto mt-8 max-w-[36rem] text-fg-soft">
-              See how Google and AI assistants like ChatGPT see your business. Get your top fixes in plain words, so
-              customers can find you more easily.
+            <h2 className="mk-title mk-rise mk-delay-1 mx-auto mt-6 max-w-[22ch] text-balance text-fg sm:mt-8">
+              Customers are searching. Are they finding you?
+            </h2>
+            <p className="mk-lead mk-rise mk-delay-1 mx-auto mt-4 max-w-[36rem] text-fg-soft">
+              Free SEO and AI checker. See how Google and ChatGPT see your business, in 30 seconds.
             </p>
             <FreeCheckLauncher
               id="hero-url"
-              className="mk-rise mk-delay-2 mx-auto mt-9 max-w-[36rem] text-left"
+              className="mk-rise mk-delay-2 mx-auto mt-7 max-w-[36rem] text-left"
               hint={`Free · No sign-up · ${BRAND.proof}`}
             />
+            {/* One row on laptops; on phones a tidy 2 × 2 grid instead of an orphaned last tick. */}
+            <ul className="mk-rise mk-delay-2 mx-auto mt-6 grid max-w-md grid-cols-2 justify-items-start gap-x-4 gap-y-2 text-left text-small text-fg-soft sm:flex sm:max-w-none sm:flex-nowrap sm:justify-center sm:gap-x-5">
+              {TICKS.map((t) => (
+                <li key={t} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <Check aria-hidden size={15} className="shrink-0 text-success" />
+                  {t}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 2. Sample result */}
-      <section id="sample" aria-labelledby="sample-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
-        <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:items-center lg:gap-10">
+      {/* ------------------------------------------------------------ 2. The problem: three places customers look */}
+      <section id="where-found" aria-labelledby="where-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
+        <div className="container-marketing">
+          <div className="mk-reveal max-w-2xl">
+            <h2 id="where-title" className="mk-title text-fg">
+              Your customers changed how they search.
+            </h2>
+            <p className="mk-body mt-4 text-fg-soft">
+              One search, three places to be found. {BRAND.name} checks all three and shows you what to fix first.
+            </p>
+          </div>
+          <ol className="mt-10 grid gap-5 sm:grid-cols-3">
+            {PLACES.map((p) => (
+              <li key={p.term} className="mk-reveal rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
+                <PlaceArt place={p.term} className="mb-5" />
+                <p className="inline-flex h-7 items-center rounded-full bg-primary-soft px-3 text-xs font-semibold text-primary-soft-fg">{p.term}</p>
+                <h3 className="mt-4 text-[1.25rem] font-semibold tracking-[-0.015em] text-fg">{p.title}</h3>
+                <p className="mt-2 text-[1rem] leading-relaxed text-fg-soft">{p.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ 2b. Where each AI puts you */}
+      <AiPositionsSection />
+
+      {/* ------------------------------------------------------------ 2c. Our difference: found inside AI assistants */}
+      <AiFoundSection />
+
+      {/* ------------------------------------------------------------ 3. Sample result */}
+      <section id="sample" aria-labelledby="sample-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
+        <div className="container-marketing grid gap-10 lg:grid-cols-12 lg:items-center">
           <div className="mk-reveal lg:col-span-5">
             <p className="mk-label">What you get</p>
             <h2 id="sample-title" className="mk-title mt-4 max-w-[16ch] text-fg">
               One score. Your top fixes.
             </h2>
             <p className="mk-body mt-5 max-w-md text-fg-soft">
-              In about 30 seconds you see one score out of 100 and the three fixes that help most — each with how many
-              points it can add.
-            </p>
-            <dl className="mt-8 space-y-4">
-              {TERMS.map((t) => (
-                <div key={t.term} className="flex gap-4">
-                  <dt className="w-14 shrink-0 font-semibold text-primary">{t.term}</dt>
-                  <dd className="text-fg-soft">
-                    <span className="font-medium text-fg">{t.name}.</span> {t.line}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mk-body mt-6 max-w-md text-small text-muted">
-              SEO, AEO and GEO are three names for one goal: when someone looks for what you sell, they find you.
+              One score out of 100, and the three fixes that help most — each with how many points it can add.
             </p>
           </div>
           <div className="mk-reveal min-w-0 lg:col-span-7 lg:col-start-6 xl:col-span-6 xl:col-start-7">
@@ -214,31 +275,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 3. Where your customers find you */}
-      <section id="where-found" aria-labelledby="where-title" className="scroll-mt-20 border-t border-border py-20 sm:py-28">
-        <div className="container-marketing">
-          <div className="mk-reveal mx-auto max-w-3xl text-center">
-            <p className="mk-label">SEO, AEO and GEO</p>
-            <h2 id="where-title" className="mk-title mx-auto mt-4 max-w-[18ch] text-fg">
-              Where your customers find you
-            </h2>
-            <h3 className="mt-8 text-[1.25rem] font-semibold tracking-[-0.015em] text-fg">
-              What do SEO, AEO and GEO mean for my business?
-            </h3>
-            {/* Kept to ~40 words: short enough for Google's answer box to quote; the visual below shows each step. */}
-            <p className="mk-lead mx-auto mt-4 max-w-[38rem] text-fg-soft">
-              They are the three places one customer can find you: <span className="font-medium text-fg">Google&apos;s results</span>,
-              the <span className="font-medium text-fg">answer box at the top</span>, and{" "}
-              <span className="font-medium text-fg">AI assistants like ChatGPT</span>. {BRAND.name} checks all three and
-              shows you what to fix first.
-            </p>
-          </div>
-          <ReachVisual className="mk-reveal mt-12 lg:mt-16" />
-        </div>
-      </section>
-
       {/* ------------------------------------------------------------ 4. Check → Fix → Grow */}
-      <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
+      <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
         <div className="container-marketing">
           <div className="mk-reveal flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <h2 id="how-title" className="mk-title max-w-[16ch] text-fg">
@@ -252,12 +290,12 @@ export default function HomePage() {
               <ArrowRight aria-hidden size={17} />
             </Link>
           </div>
-          <ol className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8 lg:mt-16">
+          <ol className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8">
             {STEPS.map((s, i) => {
               const Icon = s.icon;
               const last = i === STEPS.length - 1;
               return (
-                <li key={s.title} className="mk-reveal relative">
+                <li key={s.title} className="mk-reveal relative sm:flex sm:flex-col">
                   {/* Connecting line to the next step: down on phones, across on wider screens. */}
                   {!last && (
                     <>
@@ -271,12 +309,13 @@ export default function HomePage() {
                       {String(i + 1).padStart(2, "0")}
                     </span>
                   </span>
-                  <div className="-mt-12 pl-[4.25rem] sm:mt-0 sm:pl-0">
+                  {/* On wider screens every step is the same height and the text grows, so all three pictures line up. */}
+                  <div className="-mt-12 pl-[4.25rem] sm:mt-0 sm:flex sm:flex-1 sm:flex-col sm:pl-0">
                     <h3 className="mt-2 text-[1.5rem] font-semibold tracking-[-0.02em] text-fg sm:mt-5">
                       <span className="sr-only">Step {i + 1}: </span>
                       {s.title}
                     </h3>
-                    <p className="mk-body mt-3 max-w-[22rem] text-fg-soft">{s.body}</p>
+                    <p className="mk-body mt-3 max-w-[22rem] text-fg-soft sm:flex-1">{s.body}</p>
                     <StepArt step={s.title} className="mt-5 max-w-[22rem]" />
                   </div>
                 </li>
@@ -286,18 +325,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 5. Everything in one app */}
-      <section id="product" aria-labelledby="product-title" className="scroll-mt-20 border-t border-border py-20 sm:py-28">
+      {/* ------------------------------------------------------------ 5. Kinds of business (tabs without JavaScript) */}
+      <section id="who-its-for" aria-labelledby="kinds-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
+        <div className="container-marketing">
+          <h2 id="kinds-title" className="mk-reveal mk-title max-w-[20ch] text-fg">
+            Whatever you sell, people ask before they buy.
+          </h2>
+          <BusinessKinds className="mk-reveal mt-8" />
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ 6. Everything in one app (live features only) */}
+      <section id="product" aria-labelledby="product-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
         <div className="container-marketing">
           <div className="mk-reveal flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <h2 id="product-title" className="mk-title text-fg">
                 Everything in one app.
               </h2>
-              <p className="mk-body mt-4 text-fg-soft">
-                Your website score, AI answers, fixes, page speed, rankings, keywords, competitors and backlinks, in one
-                place and in plain words.
-              </p>
+              {/* Built from the same on/off checks as the tiles below, so it never lists a part that is not live. */}
+              <p className="mk-body mt-4 text-fg-soft">Your {tourSummary({ liveOnly: true })}, in one place and in plain words.</p>
             </div>
             <Link
               href="/features"
@@ -307,12 +354,12 @@ export default function HomePage() {
               <ArrowRight aria-hidden size={17} />
             </Link>
           </div>
-          <ProductTour className="mt-10 lg:mt-12" />
+          <ProductTour liveOnly className="mt-10" />
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 6. Three plans */}
-      <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
+      {/* ------------------------------------------------------------ 7. Three plans */}
+      <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
         <div className="container-marketing">
           <div className="mk-reveal max-w-2xl">
             <h2 id="pricing-title" className="mk-title text-fg">
@@ -370,15 +417,15 @@ export default function HomePage() {
             ))}
           </ul>
           <p className="mt-8 text-center text-small text-muted">
-            <Link href="/pricing" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
+            <Link href="/pricing" className={linkCls}>
               See what each plan includes
             </Link>
           </p>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 7. Questions */}
-      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border py-20 sm:py-28">
+      {/* ------------------------------------------------------------ 8. Questions */}
+      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
         <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-28">
@@ -386,41 +433,29 @@ export default function HomePage() {
                 Questions, answered plainly.
               </h2>
               <p className="mk-body mt-5 max-w-sm text-fg-soft">
-                Something else on your mind?{" "}
-                <Link href="/contact" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
+                Something else?{" "}
+                <Link href="/contact" className={linkCls}>
                   Write to us
+                </Link>{" "}
+                or read{" "}
+                <Link href="/about" className={linkCls}>
+                  about us
                 </Link>
                 .
               </p>
-              <p className="mk-body mt-5 max-w-sm text-fg-soft">
-                Our checks follow public standards, such as Google&apos;s{" "}
-                <a
-                  href="https://developers.google.com/search/docs/fundamentals/seo-starter-guide"
-                  rel="noopener"
-                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
-                >
+              <p className="mt-5 max-w-sm text-small text-muted">
+                Our checks follow public standards: Google&apos;s{" "}
+                <a href="https://developers.google.com/search/docs/fundamentals/seo-starter-guide" rel="noopener" className={linkCls}>
                   SEO Starter Guide
                 </a>
-                , the{" "}
-                <a
-                  href="https://schema.org/docs/gs.html"
-                  rel="noopener"
-                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
-                >
+                ,{" "}
+                <a href="https://schema.org/docs/gs.html" rel="noopener" className={linkCls}>
                   schema.org
                 </a>{" "}
-                vocabulary and the{" "}
-                <a
-                  href="https://datatracker.ietf.org/doc/html/rfc9309"
-                  rel="noopener"
-                  className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
-                >
+                and the{" "}
+                <a href="https://datatracker.ietf.org/doc/html/rfc9309" rel="noopener" className={linkCls}>
                   robots.txt standard
                 </a>
-                . Read more{" "}
-                <Link href="/about" className="font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg">
-                  about us
-                </Link>
                 .
               </p>
             </div>
@@ -441,6 +476,18 @@ export default function HomePage() {
                 <p className="mk-body max-w-2xl pb-7 text-fg-soft">{f.a}</p>
               </details>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ 9. Closing band: the website box again */}
+      <section aria-labelledby="final-title" className="bg-fg text-bg">
+        <div className="container-marketing py-16 sm:py-24">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 id="final-title" className="mk-statement text-balance text-bg">
+              Every day you wait, customers find someone else.
+            </h2>
+            <FreeCheckLauncher id="final-url" onDark className="mx-auto mt-9 max-w-[36rem] text-left" hint="Free · No sign-up · Takes about 30 seconds" />
           </div>
         </div>
       </section>

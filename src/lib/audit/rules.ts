@@ -36,6 +36,8 @@ export interface SiteContext {
   httpRedirectsToHttps?: boolean | null;
   maxPages?: number;
   pagesDiscovered?: number;
+  /** Links not read as pages of their own: shop filter / sort links, account & cart screens, duplicates (crawler/normalize.ts). */
+  skipped?: { filter: number; account: number; duplicate: number };
   checkedAt?: string;
 }
 

@@ -95,7 +95,7 @@ const ROWS: Row[] = [
     ],
   },
   {
-    label: "Fixes published with your approval",
+    label: "Ready-to-paste fixes, or a team that makes them",
     cells: [{ s: "unknown" }, { s: "unknown" }, { s: "unknown" }, { s: "unknown" }, OUR_CELLS.publish],
   },
   {
@@ -133,7 +133,7 @@ const OPTIONS: { name: string; from: string; best: string; body: string }[] = [
     name: "MyWebRank",
     from: `From ${OUR.fromPrice}/month (INR)`,
     best: "Best for Indian small businesses that want problems fixed, and to know what AI assistants say about them.",
-    body: `A weekly website check, AI answer tracking and fixes after your OK (one-click with undo on WordPress). ${OUR.dfy.name} from ${OUR.serviceFrom} a month if our team should do the work. No backlink, keyword or rank data.`,
+    body: `A weekly website check, AI answer tracking and ready-to-paste fixes with step-by-step help. ${OUR.dfy.name} from ${OUR.serviceFrom} a month if our team should do the work. No backlink, keyword or rank data.`,
   },
 ];
 
@@ -250,8 +250,7 @@ export default function AhrefsAlternativesPage() {
             It also has a free plan and a $29 Starter plan.
           </p>
           <p className="mt-4">
-            Where MyWebRank is better: a plain-English to-do list, AI answer tracking, fixes only after your OK
-            (one-click with undo on WordPress), {OUR.dfy.name} at {OUR.serviceFrom} a month with no setup fee, rupee pricing with GST invoices and support
+            Where MyWebRank is better: a plain-English to-do list, AI answer tracking, ready-to-paste fixes with step-by-step help, {OUR.dfy.name} at {OUR.serviceFrom} a month with no setup fee, rupee pricing with GST invoices and support
             from India. See{" "}
             <Link href="/compare/ahrefs" className="font-medium text-primary underline-offset-4 hover:underline">
               MyWebRank vs Ahrefs
@@ -271,7 +270,7 @@ export default function AhrefsAlternativesPage() {
           {
             situation: "You want your site fixed, not more reports",
             pick: "MyWebRank",
-            why: "Plain-English to-dos, and fixes after your OK: one-click with undo on WordPress, drafts or copy-paste steps elsewhere.",
+            why: "Plain-English to-dos, and ready-to-paste fixes for any website, with step-by-step help.",
           },
           {
             situation: "You want to know whether ChatGPT recommends you",

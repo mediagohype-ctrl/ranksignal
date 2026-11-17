@@ -121,7 +121,11 @@ export function WorkClient({
       {!empty && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Open tasks" value={stats.open} hint={`${stats.inProgress} in progress`} icon={<ClipboardList />} />
-          <Stat label="Waiting on you" value={stats.waiting} hint="Needs your review or input" icon={<Columns3 />} />
+          {perms.selfMode ? (
+            <Stat label="Doing" value={stats.inProgress} hint="Started, not finished" icon={<Columns3 />} />
+          ) : (
+            <Stat label="Waiting on you" value={stats.waiting} hint="Needs your review or input" icon={<Columns3 />} />
+          )}
           <Stat label="Overdue" value={stats.overdue} hint="Past their due date" />
           <Stat label="Done this month" value={stats.shipped} hint="Tasks finished and fixes made" icon={<CheckCircle2 />} />
         </div>
@@ -178,6 +182,7 @@ export function WorkClient({
               onOpen={(t) => setDetailId(t.id)}
               onMove={(t, s) => void move(t, s)}
               onCreate={(s) => openCreate(s)}
+              selfMode={!!perms.selfMode}
             />
           ) : (
             <ListView tasks={tasks} assignees={assignees} currentUserId={currentUserId} onOpen={(t) => setDetailId(t.id)} />
@@ -215,6 +220,7 @@ export function WorkClient({
           defaultStatus={form.status}
           assignees={assignees}
           canSeeInternal={perms.canSeeInternal}
+          selfMode={!!perms.selfMode}
           onSaved={(t, created) => {
             upsert(t);
             setForm({ open: false, task: null, draft: null });

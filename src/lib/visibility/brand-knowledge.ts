@@ -6,9 +6,12 @@ import { db } from "@/lib/db";
 import { generateStructured, isLlmConfigured } from "@/lib/providers/llm";
 import type { ProviderAnswer, VisibilityProvider, VisibilityQuery } from "@/lib/types";
 import { termRegex, toCitations } from "./parse";
+import { readFactReviews, sameFact } from "./fact-review";
 
 export const BRAND_PROBE_TASK_TYPE = "brand_probe";
-export const BRAND_PROBE_VERSION = "bk-2";
+// bk-3: results also carry `claims` (what the AI said, each "conflict" or "not_confirmed") for "Check these facts",
+// and the assessment is given the statements the owner already confirmed / corrected.
+export const BRAND_PROBE_VERSION = "bk-3";
 
 /** Business facts the owner CONFIRMED in setup (Project.facts). Only these can make an AI answer "wrong". */
 export interface ConfirmedFacts {
@@ -18,8 +21,13 @@ export interface ConfirmedFacts {
   city?: string;
   country?: string;
   language?: string;
+  // "Confirm your facts" in setup / Settings (all optional, plain strings; services is comma separated).
+  founder?: string;
+  address?: string;
+  phone?: string;
+  services?: string;
 }
-export const CONFIRMED_FACT_KEYS = ["name", "sells", "customers", "city", "country", "language"] as const;
+export const CONFIRMED_FACT_KEYS = ["name", "sells", "customers", "city", "country", "language", "founder", "address", "phone", "services"] as const;
 
 /** Parse Project.facts; null when nothing was confirmed. */
 export function parseConfirmedFacts(v: unknown): ConfirmedFacts | null {
@@ -43,6 +51,17 @@ export interface BrandFacts {
   homeDescription?: string | null;
   /** Facts the owner confirmed in setup; without them we don't call anything an AI says "wrong" (except name/website). */
   confirmed?: ConfirmedFacts | null;
+  /** Statements the owner marked "✓ Correct" under "Check these facts" (Project.settings.confirmedFacts): never flagged again. */
+  ownerConfirmed?: string[];
+  /** Statements the owner marked "✗ Wrong", with what is right when they said (Project.settings.rejectedFacts). */
+  ownerCorrections?: { statement: string; correction?: string }[];
+}
+
+/** One thing an AI tool said about the business, for the owner to check. */
+export interface CheckedClaim {
+  claim: string;
+  /** conflict = doesn't match what the owner told us; not_confirmed = we can't tell (never shown as "wrong"). */
+  status: "conflict" | "not_confirmed";
 }
 
 export interface BrandKnowledgeResult {
@@ -54,6 +73,8 @@ export interface BrandKnowledgeResult {
   summary: string;
   /** Claims that CONTRADICT a fact the owner confirmed (or the business name / website). Unsupported ≠ wrong. */
   inaccuracies: string[];
+  /** Statements for "Check these facts" (bk-3+): conflicts plus statements we can't confirm. Owner-confirmed ones are left out. */
+  claims?: CheckedClaim[];
   confidence: number;
   ownSiteCited: boolean;
   method: "llm" | "heuristic";
@@ -68,11 +89,15 @@ export function brandProbePrompts(brand: string, opts: { includeReviews?: boolea
 
 /** Facts from the project profile plus the home page title/description from the latest crawl. */
 export async function loadBrandFacts(
-  project: { id: string; organizationId: string; brandNames: unknown; categories: unknown; audience: string | null; countries: unknown; name: string; facts?: unknown },
+  project: { id: string; organizationId: string; brandNames: unknown; categories: unknown; audience: string | null; countries: unknown; name: string; facts?: unknown; settings?: unknown },
   websiteDomain: string,
 ): Promise<BrandFacts> {
   const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()) : []);
+  // What the owner already told us under "Check these facts" on the AI answers page.
+  const reviews = readFactReviews(project.settings);
   const facts: BrandFacts = {
+    ownerConfirmed: reviews.confirmed,
+    ownerCorrections: reviews.rejected.map((r) => ({ statement: r.statement, ...(r.correction ? { correction: r.correction } : {}) })),
     brandNames: strs(project.brandNames).length ? strs(project.brandNames) : [project.name],
     websiteDomain,
     categories: strs(project.categories),
@@ -165,25 +190,51 @@ export type AssessedClaim = z.infer<typeof claimSchema>;
  * not supported by the facts are not inaccuracies. With no confirmed facts, only contradictions of the business name
  * or website count.
  */
-export function wrongFacts(claims: AssessedClaim[], confirmed: ConfirmedFacts | null | undefined): string[] {
-  const allowed = new Set<string>(["name", "website"]);
+export function wrongFacts(claims: AssessedClaim[], confirmed: ConfirmedFacts | null | undefined, ownerConfirmed: string[] = []): string[] {
+  return checkedClaims(claims, confirmed, ownerConfirmed)
+    .filter((c) => c.status === "conflict")
+    .map((c) => c.claim)
+    .slice(0, 8);
+}
+
+/** Fact keys a claim can CONFLICT with: name, website, every confirmed business detail, and the owner's own corrections. */
+const OWNER_FACT_KEY = "owner";
+
+/**
+ * Everything the AI said that the owner should look at ("Check these facts"):
+ *   - "conflict": the claim contradicts the business name / website, a detail the owner confirmed in setup, or
+ *     repeats something the owner already marked wrong (fact "owner");
+ *   - "not_confirmed": anything else — we simply can't tell, so it is NEVER called wrong.
+ * Claims the owner already marked "✓ Correct" are dropped (they are known to be right). Pure.
+ */
+export function checkedClaims(
+  claims: AssessedClaim[],
+  confirmed: ConfirmedFacts | null | undefined,
+  ownerConfirmed: string[] = [],
+  max = 12,
+): CheckedClaim[] {
+  const allowed = new Set<string>(["name", "website", OWNER_FACT_KEY]);
   if (confirmed) for (const k of CONFIRMED_FACT_KEYS) if (confirmed[k]) allowed.add(k);
-  const seen = new Set<string>();
-  const out: string[] = [];
+  const out: CheckedClaim[] = [];
   for (const c of claims) {
     const claim = c.claim.trim();
-    const key = c.fact.trim().toLowerCase();
-    if (c.verdict !== "contradicts" || !claim || !allowed.has(key) || seen.has(claim.toLowerCase())) continue;
-    seen.add(claim.toLowerCase());
-    out.push(claim);
+    if (!claim || ownerConfirmed.some((s) => sameFact(s, claim))) continue;
+    const status: CheckedClaim["status"] = c.verdict === "contradicts" && allowed.has(c.fact.trim().toLowerCase()) ? "conflict" : "not_confirmed";
+    const dup = out.find((x) => x.claim.toLowerCase() === claim.toLowerCase());
+    if (dup) {
+      if (status === "conflict") dup.status = "conflict";
+      continue;
+    }
+    out.push({ claim, status });
   }
-  return out.slice(0, 8);
+  // Conflicts first, so the cap never cuts them off.
+  return [...out.filter((c) => c.status === "conflict"), ...out.filter((c) => c.status !== "conflict")].slice(0, max);
 }
 
 export async function assessBrandKnowledge(
   answers: Pick<ProviderAnswer, "answerText" | "citations">[],
   facts: BrandFacts,
-): Promise<{ knowsBrand: boolean; summary: string; inaccuracies: string[]; confidence: number; ownSiteCited: boolean; method: "llm" | "heuristic"; costMicros: number }> {
+): Promise<{ knowsBrand: boolean; summary: string; inaccuracies: string[]; claims?: CheckedClaim[]; confidence: number; ownSiteCited: boolean; method: "llm" | "heuristic"; costMicros: number }> {
   const h = heuristicBrandKnowledge(answers, facts);
   if (!isLlmConfigured()) return { ...h, method: "heuristic", costMicros: 0 };
   const res = await generateStructured({
@@ -194,9 +245,14 @@ export async function assessBrandKnowledge(
       "business (matching name AND what it does or its website), not a different company with a similar name, and do not say they " +
       "lack information. summary: 1–2 plain-English sentences on what the AI says about the brand. claims: factual claims in the " +
       "answers about the business, each with `fact` = the confirmedFacts key it relates to (name, sells, customers, city, country, " +
-      "language) or \"website\", and verdict \"contradicts\" ONLY when the claim clearly conflicts with that confirmed fact (e.g. a " +
+      "language, founder, address, phone, services) or \"website\", and verdict \"contradicts\" ONLY when the claim clearly conflicts with that confirmed fact (e.g. a " +
       "different city, a different product line, a different company). If the facts simply don't mention it, the verdict is " +
-      "\"not_supported\" — that is NOT an error. confidence: 0–1 in your judgement. Do not invent facts beyond the inputs.",
+      "\"not_supported\" — that is NOT an error. List the specific, checkable things the answers say about the business (founder or " +
+      "owner, address, city, year started, services, prices, contact details, reviews), one short sentence each, and ALWAYS include " +
+      "anything the answers say about complaints, payment disputes, scams, fraud or legal action. ownerConfirmedStatements are " +
+      "statements the owner has told us are TRUE: leave out any claim that says the same thing. ownerCorrections are statements the " +
+      "owner has told us are WRONG (with the right fact when given): a claim that repeats one of them gets fact \"owner\" and " +
+      "verdict \"contradicts\". confidence: 0–1 in your judgement. Do not invent facts beyond the inputs.",
     user: JSON.stringify({
       businessFacts: {
         brandNames: facts.brandNames,
@@ -208,19 +264,22 @@ export async function assessBrandKnowledge(
         homePageDescription: facts.homeDescription ?? null,
       },
       confirmedFacts: { ...(facts.confirmed ?? {}), name: facts.confirmed?.name ?? facts.brandNames[0] ?? null, website: facts.websiteDomain },
+      ownerConfirmedStatements: (facts.ownerConfirmed ?? []).slice(-40),
+      ownerCorrections: (facts.ownerCorrections ?? []).slice(-40),
       ownWebsiteCitedByAI: h.ownSiteCited,
       aiAnswers: answers.map((a) => ({
         text: (a.answerText ?? "").slice(0, 6000),
         citedUrls: (a.citations ?? []).slice(0, 15).map((c) => c.title ?? c.url),
       })),
     }),
-    maxTokens: 800,
+    maxTokens: 1200,
   });
   if (!res) return { ...h, method: "heuristic", costMicros: 0 };
   return {
     knowsBrand: res.data.knowsBrand,
     summary: firstSentences(res.data.summary, 2, 400),
-    inaccuracies: wrongFacts(res.data.claims, facts.confirmed),
+    inaccuracies: wrongFacts(res.data.claims, facts.confirmed, facts.ownerConfirmed),
+    claims: checkedClaims(res.data.claims, facts.confirmed, facts.ownerConfirmed),
     confidence: Math.round(res.data.confidence * 100) / 100,
     ownSiteCited: h.ownSiteCited,
     method: "llm",
@@ -277,6 +336,7 @@ export async function runBrandKnowledgeProbe(o: {
         knowsBrand: a.knowsBrand,
         summary: a.summary,
         inaccuracies: a.inaccuracies,
+        ...(a.claims ? { claims: a.claims } : {}),
         confidence: a.confidence,
         ownSiteCited: a.ownSiteCited,
         method: a.method,

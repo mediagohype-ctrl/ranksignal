@@ -6,6 +6,7 @@ import { Badge, Notice } from "@/components/ui";
 import { DESCRIPTION_MAX, TITLE_MAX } from "@/lib/audit/rules";
 import type { MetaTagReport } from "@/lib/tools/meta-tags";
 import { CheckResults, PageUrlForm, ResultCard, usePageCheck } from "./page-check-ui";
+import { WholeSiteCta } from "./whole-site-cta";
 
 type Result = MetaTagReport & { url: string; finalUrl: string };
 
@@ -130,6 +131,7 @@ export function MetaTagChecker() {
               <TagRow name="twitter:image" value={r.twitter.image} />
             </dl>
           </ResultCard>
+          <WholeSiteCta />
         </div>
       )}
     </div>

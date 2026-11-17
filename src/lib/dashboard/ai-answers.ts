@@ -1,5 +1,6 @@
 // AI Answers tab (brief 5.6): turns one AI check's stored answers into the question list the owner sees.
 // Pure (no I/O) so it is unit-tested and safe for server and client components.
+import { adviceFor, canGetListed, classifyCitedSite, type CitedPage, type CitedSite, type ClassifyContext } from "@/lib/offsite/classify";
 
 export interface AnswerObservation {
   id: string;
@@ -193,30 +194,99 @@ function hostOfUrl(url: string): string {
   }
 }
 
+/** A source website with what kind of site it is (listing site, competitor, or just a website AI links to). */
+export interface ClassifiedSource extends SourceTally {
+  kind: CitedSite["kind"];
+  /** Listing site's name, the business's name, or the domain. */
+  name: string;
+  /** A directory / marketplace / review / social site where a business can simply create a profile. */
+  canList: boolean;
+  /** The linked page looks like a list or an article. */
+  listLike: boolean;
+  /** One honest line on what to do with this website. */
+  advice: string;
+}
+
+/**
+ * Sorts the websites AI read for a question into listing sites, competitors and other websites. A competitor —
+ * saved on the project, named by the AI, or simply another business in the same trade — is never a place to
+ * "get listed on".
+ */
+export function classifySources(
+  sources: SourceTally[],
+  ctx: ClassifyContext = {},
+  answers: Pick<AnswerObservation, "citations">[] = [],
+): ClassifiedSource[] {
+  const pages = new Map<string, CitedPage[]>();
+  for (const a of answers) {
+    for (const c of a.citations ?? []) {
+      const d = (c.domain || hostOfUrl(c.url)).replace(/^www\./, "").toLowerCase();
+      if (!d) continue;
+      const list = pages.get(d) ?? [];
+      if (list.length < 5) list.push({ url: c.url, title: c.title });
+      pages.set(d, list);
+    }
+  }
+  return sources.map((s) => {
+    if (s.owned) return { ...s, kind: "own", name: s.domain, canList: false, listLike: false, advice: "" };
+    const site = classifyCitedSite(s.domain, ctx, pages.get(s.domain) ?? [{ url: s.url }]);
+    return { ...s, kind: site.kind, name: site.name, canList: canGetListed(site), listLike: site.listLike, advice: adviceFor(site) };
+  });
+}
+
+const isClassified = (s: SourceTally | ClassifiedSource): s is ClassifiedSource => "kind" in s;
+
 const COMPARISON_RE = /\b(vs\.?|versus|alternatives?|compared?|better|which is)\b/i;
 
 /**
- * Plain, specific steps to get named for one question: answer it on the website, get onto the sites AI reads,
- * and (for "X vs Y" / "alternatives" questions) publish a fair comparison. Uses this question's own data.
+ * Plain, specific steps to get named for one question: answer it on the website, get onto the listing sites AI
+ * reads, ask to be included in the lists it reads, learn from the businesses it names, and (for "X vs Y" /
+ * "alternatives" questions) publish a fair comparison. Uses this question's own data. Never tells the owner to
+ * "get listed on" a competitor's website.
  */
 export function stepsToGetNamed(o: {
   question: string;
   brand: string;
   named: boolean;
   rivals: RivalTally[];
-  sources: SourceTally[];
+  sources: (SourceTally | ClassifiedSource)[];
 }): { title: string; detail: string }[] {
   const steps: { title: string; detail: string }[] = [];
-  const outside = o.sources.filter((s) => !s.owned).slice(0, 3).map((s) => s.domain);
+  const outside = (o.sources.every(isClassified) ? (o.sources as ClassifiedSource[]) : classifySources(o.sources)).filter(
+    (s) => s.kind !== "own" && s.kind !== "ignore",
+  );
+  const listable = outside.filter((s) => s.canList).slice(0, 3);
+  const lists = outside.filter((s) => s.kind === "website" && s.listLike).slice(0, 3);
+  const others = outside.filter((s) => (s.kind === "website" && !s.listLike) || (s.kind === "listing" && !s.canList)).slice(0, 3);
   const top = o.rivals.slice(0, 2).map((r) => r.name);
+  // Businesses AI named or linked: the saved competitors it named, then the competitor websites it read.
+  const businesses = [...new Map([...top, ...outside.filter((s) => s.kind === "competitor").map((s) => s.name)].map((n) => [n.toLowerCase(), n])).values()].slice(0, 3);
+
   steps.push({
     title: "Answer this question on your website",
     detail: `Add a section (or a page) that answers "${o.question}" in the first two sentences, and says plainly that ${o.brand} does this — what you offer, for whom, where and the price range. AI tools quote pages that answer the question directly.`,
   });
-  if (outside.length) {
+  if (listable.length) {
     steps.push({
-      title: `Get listed on ${joinNames(outside)}`,
-      detail: `These are the websites the AI tools read for this question. Being listed or mentioned there is the fastest way to be named: create or update your profile, or ask to be added to their lists.`,
+      title: `Get listed on ${joinNames(listable.map((s) => s.name))}`,
+      detail: "These are listing and review sites the AI tools read for this question. Create or update your profile there, with the same business name, address and phone number as on your website.",
+    });
+  }
+  if (lists.length) {
+    steps.push({
+      title: `Ask to be included on ${joinNames(lists.map((s) => s.domain))}`,
+      detail: "The AI tools read list or article pages on these websites for this question. Open each page to see why AI links to it. If it lists businesses like yours, ask the author to include you.",
+    });
+  } else if (others.length && !listable.length) {
+    steps.push({
+      title: `See why AI links to ${joinNames(others.map((s) => (s.kind === "listing" ? s.name : s.domain)))}`,
+      detail: "The AI tools read these websites for this question. Open the pages to see what they cover that your website doesn't, then cover it clearly on your own pages.",
+    });
+  }
+  if (businesses.length) {
+    steps.push({
+      title: `Learn from ${joinNames(businesses)}`,
+      detail: `AI points people to ${businesses.length === 1 ? "this business" : "these businesses"} for this question. They are businesses like yours, not places to be listed. Look at what their pages say — services, prices, places they serve, reviews — and make sure your own pages say it as clearly.`,
     });
   }
   if (COMPARISON_RE.test(o.question) && top.length) {
@@ -227,7 +297,7 @@ export function stepsToGetNamed(o: {
   }
   steps.push({
     title: "Collect reviews where AI tools look",
-    detail: `Ask happy customers for a review on Google and on the sites above. AI tools favour businesses that others talk about${top.length ? ` — that's a big part of why ${joinNames(top)} get named` : ""}.`,
+    detail: `Ask happy customers for a review on Google${listable.length ? ` and on ${joinNames(listable.map((s) => s.name))}` : ""}. AI tools favour businesses that others talk about${businesses.length ? ` — that's a big part of why ${joinNames(businesses)} ${businesses.length === 1 ? "gets" : "get"} named` : ""}.`,
   });
   if (o.named) {
     steps.unshift({

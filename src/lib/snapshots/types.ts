@@ -8,7 +8,8 @@ export const SNAPSHOT_SEVERITIES = ["critical", "high", "medium", "low", "info"]
 export type SnapshotSeverity = (typeof SNAPSHOT_SEVERITIES)[number];
 
 export type SnapshotPillarScores = Record<SnapshotPillar, number | null>;
-export type SnapshotIssueCounts = Record<SnapshotSeverity, number> & { total: number };
+/** total = problem TYPES (rows of the report's problem list); places = spots they touch ("across N places"), newer rows only. */
+export type SnapshotIssueCounts = Record<SnapshotSeverity, number> & { total: number; places?: number };
 
 /** Subset of VisibilityMetrics kept per snapshot. Rates are 0-1. */
 export interface SnapshotVisibility {

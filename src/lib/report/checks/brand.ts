@@ -1,6 +1,7 @@
 // Brand checks: does your website present one clear, trustworthy business — and do AI tools know it?
 import { mentionsBrand } from "@/lib/crawler/extract";
 import { productNames } from "@/lib/report/checks/geo";
+import { namesForBrandChecks } from "@/lib/setup/brand-names";
 import {
   findHome, hostOf, makeCheck, notMeasured, okPages, pct, plural, qualityPages, urlOf, v2Pages, NEEDS_RESCAN,
   type CheckContext, type EvaluatedCheck,
@@ -15,7 +16,9 @@ export function brandChecks(ctx: CheckContext): EvaluatedCheck[] {
   const v2 = v2Pages(ctx.pages);
   const home = findHome(ctx);
   const homeUrl = home ? urlOf(home) : ctx.websiteUrl;
-  const names = ctx.brandNames;
+  // Every saved name counts (in any spacing). While the name is only our guess from the web address, the names the
+  // site uses for itself count too, so a wrong guess can't read as "name missing from every page" (setup/brand-names.ts).
+  const names = namesForBrandChecks(ctx.brandNames, ctx.websiteUrl, home?.extracted);
 
   if (ok.length > 0) {
     // Brand name consistency.

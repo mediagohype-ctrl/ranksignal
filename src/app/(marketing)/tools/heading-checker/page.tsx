@@ -55,7 +55,6 @@ export default function HeadingCheckerPage() {
       <section aria-label="Check a page's headings" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <HeadingChecker />
-          <LeadBox tool="heading-checker" />
         </div>
       </section>
 
@@ -142,6 +141,14 @@ export default function HeadingCheckerPage() {
         </div>
       </Section>
 
+      {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
+      <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">
+        <div className="container-marketing">
+          <div className="mx-auto max-w-3xl">
+            <LeadBox tool="heading-checker" />
+          </div>
+        </div>
+      </section>
       <QaSection id="hc-faq" tone="surface" title="Heading questions, answered" items={FAQ}>
         <SourcesList
           links={[

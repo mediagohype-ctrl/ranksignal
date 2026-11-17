@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Copy, Download, Plus, Trash2 } from "lucide-react";
 import { Button, Field, Input, Textarea } from "@/components/ui";
 import { buildAiGuideFile, type GuideLink } from "@/lib/growth/tools";
+import { WholeSiteCta } from "./whole-site-cta";
 
 export function GuideMaker() {
   const [name, setName] = useState("");
@@ -89,6 +90,11 @@ export function GuideMaker() {
             </Button>
           </div>
         </div>
+        {name.trim() !== "" && (
+          <div className="mt-4">
+            <WholeSiteCta lead="This file is one small step." />
+          </div>
+        )}
       </div>
     </div>
   );
