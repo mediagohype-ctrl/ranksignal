@@ -1,12 +1,26 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, ListChecks, Search, TrendingUp } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  Check,
+  Clock,
+  Lock,
+  MessageSquare,
+  Search,
+  ShoppingCart,
+  Sparkles,
+  Store,
+  TrendingUp,
+  Users,
+  Wrench,
+} from "lucide-react";
 import { BRAND, bookCallHref } from "@/lib/brand";
 import { SELF_FIX_LINE } from "@/lib/billing/offer";
-import { JsonLd, inkPill } from "@/components/marketing/ui";
+import { JsonLd } from "@/components/marketing/ui";
 import { FreeCheckLauncher } from "@/components/marketing/free-check-launcher";
-import { SampleResult } from "@/components/marketing/home-sample";
-import { BusinessKinds } from "@/components/marketing/business-kinds";
+import { SAMPLE_FIXES, SAMPLE_SCORE } from "@/components/marketing/home-sample";
 import { DFY_ENGINE_COUNT, SELF_ENGINE_LIST } from "@/components/marketing/engine-names";
 import { FAQS } from "@/components/marketing/content";
 import { isFeatureLive } from "@/components/marketing/features/categories";
@@ -25,16 +39,14 @@ import {
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { webPageLd } from "@/lib/seo/schema";
 import { backlinksEnabled, dfsConfigured } from "@/lib/dataforseo/status";
-import { ProductTour, tourSummary } from "@/components/marketing/visuals/tour";
-import { PlaceArt, StepArt } from "@/components/marketing/visuals/steps";
-import { AiFoundSection } from "@/components/marketing/visuals/ai-found";
-import { AiPositionsSection } from "@/components/marketing/visuals/ai-positions";
+import { EngineDot, FoundBadge, SampleNote, ScoreRing, type EngineKey } from "@/components/marketing/visuals/home-parts";
 
-// Home page (Full Site Audit, 15 Nov 2026). Server-rendered HTML + inline SVG, every word crawlable. Nothing here
+// Home page (redesign, 18 Nov 2026). Server-rendered HTML + inline SVG, every word crawlable. Nothing here
 // reads cookies or headers, so the page is built once and served from cache (see the marketing layout).
-// Order: hero (tagline + "Customers are searching…" + website box) → the problem in 3 cards (SEO / AEO / GEO) →
-// sample result → three steps → kinds of business → everything in one app (live features only) → plans →
-// questions → dark closing band with the website box again.
+// Order: hero (Check → Fix → Grow, the question, website box, sample report) → how search changed (3 cards) →
+// where each AI puts you (dark band) → know exactly what to fix → Check. Fix. Grow. → whatever you sell →
+// plans → questions → dark closing card with the website box again.
+// Mobile first: every grid is one column on phones, the side gutter is 16px, nothing scrolls sideways.
 
 // Title leads with the phrases buyers search ("SEO", "AEO", "GEO", "AI visibility") — the brand comes last.
 // Title and description live in src/lib/seo/pages.ts (length- and uniqueness-tested).
@@ -44,21 +56,8 @@ export const metadata: Metadata = staticPageMetadata("/", {
 
 const SITE = BRAND.appUrl.replace(/\/$/, "");
 
-// The tagline stays the big line in the hero (team decision, 15 Nov 2026); its last word carries the brand colour.
-const SLOGAN_WORDS = BRAND.slogan.split(" ");
-const SLOGAN_LEAD = SLOGAN_WORDS.slice(0, -1).join(" ");
-const SLOGAN_LAST = SLOGAN_WORDS[SLOGAN_WORDS.length - 1];
-
-// True on both offers: Do it myself never changes a website (the owner pastes each fix); on Do it for me our team
-// asks for an OK first. No "undo" here — that only exists where we publish.
-const TICKS = ["Plain words", "Nothing changes without your OK", "Help on WhatsApp", "No card needed to start"];
-
-// One search, three places to be found. Replaces the long SEO / AEO / GEO explainer.
-const PLACES = [
-  { term: "SEO", title: "Google page 1", body: "People still search on Google. Is your business on the first page?" },
-  { term: "AEO", title: "Google’s answer box", body: "Google now answers many questions itself, at the top. Does it quote you?" },
-  { term: "GEO", title: "ChatGPT names 2–3 businesses", body: "Ask an AI assistant who to choose and it names only a few. Are you one?" },
-];
+// Headings font for this page only (the rest of the site keeps Google Sans Flex). React hoists it into <head>.
+const DISPLAY_FONT_HREF = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap";
 
 /** "every week" / "every day" / "every month", from the plan's real limits. */
 const EVERY: Record<string, string> = { Daily: "every day", Weekly: "every week", Monthly: "every month" };
@@ -66,18 +65,19 @@ const WEBSITE_CHECK_EVERY = EVERY[freq(SELF_PLAN.limits.minScanIntervalDays)] ??
 /** How often the plan's monthly AI answers let us ask the AI tools (4 or more full checks a month = every week). */
 const AI_CHECK_EVERY = SELF_PLAN.ai.checksPerMonth >= 4 ? "every week" : "every month";
 
-/** "₹1,999/month + GST" — one GST mention per price, none when we are not GST-registered. */
-const monthly = (n: number) => `${inr(n)}/month${gstOn() ? " + GST" : ""}`;
+/** "/month + GST" — one GST mention per price, none when we are not GST-registered. */
+const PER_MONTH = gstOn() ? "/month + GST" : "/month";
 
 // Website Blueprint: two priced plans + Custom. The middle (done-for-you) card is dark and shows first on phones.
 const HOME_PLANS = [
   {
     key: "self",
     name: "I'll do it myself",
-    price: monthly(SELF_PLAN.price),
+    price: inr(SELF_PLAN.price),
+    per: PER_MONTH,
     line: SELF_PLAN.blurb,
-    start: `${TRIAL_DAYS} days free. No card needed. Cancel any time.`,
     cta: SELF_PLAN.cta,
+    note: `${TRIAL_DAYS} days free · No card needed · Cancel any time`,
     href: planSignupHref(SELF_PLAN.id),
     dark: false,
     points: [
@@ -88,15 +88,15 @@ const HOME_PLANS = [
       SELF_FIX_LINE,
       "A monthly report you can read in 2 minutes",
     ],
-    whoDoes: "You make the fixes, with our step-by-step help.",
   },
   {
     key: "dfy",
     name: DFY_PLAN.name,
-    price: monthly(DFY_PLAN.price),
+    price: inr(DFY_PLAN.price),
+    per: PER_MONTH,
     line: "Our team does all the work.",
-    start: `Free 30-minute call.${DFY_PLAN.setup === 0 ? " No setup fee." : ""}`,
     cta: "Book a free call",
+    note: `Free 30-minute call${DFY_PLAN.setup === 0 ? " · No setup fee" : ""}`,
     // The calendar when BRAND_BOOKING_URL is set (opens in a new tab), otherwise the contact page.
     href: bookCallHref(),
     dark: true,
@@ -108,33 +108,73 @@ const HOME_PLANS = [
       "Wrong facts about you in AI answers corrected",
       "Your own expert on WhatsApp, plus a monthly call",
     ],
-    whoDoes: "Our team does the work. You just reply OK.",
   },
   {
     key: "custom",
     name: CUSTOM_PLAN.name,
     price: CUSTOM_PLAN.priceLabel,
+    per: "",
     line: CUSTOM_PLAN.blurb,
-    start: CUSTOM_PLAN.start,
     cta: CUSTOM_PLAN.cta,
+    note: CUSTOM_PLAN.start,
     href: CUSTOM_CONTACT_HREF,
     dark: false,
     points: [...CUSTOM_PLAN.includes],
-    whoDoes: "A dedicated team, with one point of contact.",
   },
+];
+
+// Sample report: the same sample business, score and points as home-sample.tsx (and the Hindi page).
+const SAMPLE_GAIN = SAMPLE_FIXES.reduce((n, f) => n + f.points, 0);
+const SAMPLE_AFTER = SAMPLE_SCORE + SAMPLE_GAIN;
+/** Short names for the three sample fixes (the hero card is small) and how long each takes. */
+const FIX_SHORT = ["What you sell & where", "Google summaries", "Customer questions"];
+const FIX_TIME = ["10 min", "15 min", "20 min"];
+const SHOW_UP: { engine: EngineKey; found: boolean }[] = [
+  { engine: "Google", found: true },
+  { engine: "ChatGPT", found: false },
+  { engine: "Gemini", found: false },
+  { engine: "Perplexity", found: true },
+];
+
+// "See where each AI puts you": the three AI tools Do it myself checks, as a podium. Sample data, labelled.
+const PODIUM: { engine: EngineKey; rank: number; label: string; tall: string; hot?: boolean }[] = [
+  { engine: "ChatGPT", rank: 3, label: "Recommended", tall: "h-28 sm:h-[150px]" },
+  { engine: "Gemini", rank: 2, label: "Recommended", tall: "h-36 sm:h-[200px]", hot: true },
+  { engine: "Perplexity", rank: 4, label: "Named", tall: "h-24 sm:h-[110px]" },
 ];
 
 const STEPS = [
-  { title: "Check", icon: Search, body: `Type your website. We read it and ask ${SELF_ENGINE_LIST} what your customers ask.` },
-  { title: "Fix", icon: ListChecks, body: "You get a short to-do list, most useful first. Each fix says what to change, in plain words." },
-  {
-    title: "Grow",
-    icon: TrendingUp,
-    body: `You make the fixes with our steps, or our team does them for you. We check ${WEBSITE_CHECK_EVERY}.`,
-  },
+  { title: "Check", icon: Search, body: "Enter your website.", hot: false },
+  { title: "Fix", icon: Wrench, body: "You do it, or we do it.", hot: false },
+  { title: "Grow", icon: TrendingUp, body: "More customers find you.", hot: true },
 ];
 
-const linkCls = "font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg";
+const KINDS = [
+  { title: "Local business", ask: "best dentist near me", icon: Store, tile: "bg-mk-orange-soft text-sev-high" },
+  { title: "Online store", ask: "best gift for mom online", icon: ShoppingCart, tile: "bg-mk-accent-soft text-mk-accent" },
+  { title: "B2B / service company", ask: "top CA firm in Delhi", icon: Briefcase, tile: "bg-mk-good-soft text-mk-good" },
+  { title: "Agency", ask: "best SEO agency in Delhi", icon: Users, tile: "bg-chart-4/10 text-chart-4" },
+];
+
+// Shared class strings.
+const WRAP = "mx-auto w-full px-4 sm:px-8";
+const H2 = "font-display text-[clamp(1.875rem,1.2rem+2.6vw,2.875rem)] font-bold leading-[1.1] tracking-[-0.015em] text-mk-ink text-balance";
+const LEAD = "text-base text-mk-text-soft sm:text-lg";
+const CARD_LABEL = "text-[13px] font-bold uppercase tracking-[0.04em] text-mk-text-soft";
+
+function Pill({ children, accent }: { children: ReactNode; accent?: boolean }) {
+  return (
+    <span className={"rounded-full px-4 py-2 text-white sm:px-[18px] " + (accent ? "bg-mk-accent" : "bg-mk-ink")}>{children}</span>
+  );
+}
+
+function Arrow() {
+  return (
+    <svg width="22" height="12" viewBox="0 0 22 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden className="text-[#9AA5BF]">
+      <path d="M1 6h19M15 1l5 5-5 5" />
+    </svg>
+  );
+}
 
 export default function HomePage() {
   // Organization + WebSite come from the marketing layout (sitewide); this page adds the product itself.
@@ -189,235 +229,484 @@ export default function HomePage() {
   ];
 
   return (
-    <>
+    <div className="overflow-x-clip text-mk-ink">
+      {/* React 19 hoists a stylesheet link with `precedence` into <head>. */}
+      <link rel="stylesheet" href={DISPLAY_FONT_HREF} precedence="default" />
       <JsonLd data={jsonLd} />
 
-      {/* ------------------------------------------------------------ 1. Hero: tagline, the question, one website box */}
-      <section aria-labelledby="hero-title" className="relative overflow-hidden">
-        <div className="container-marketing pb-14 pt-10 sm:pb-16 sm:pt-14 lg:pb-20 lg:pt-16">
-          <div className="mx-auto max-w-3xl text-center">
-            {/* The one H1 carries the searched phrase; the tagline stays as the big visual line. */}
-            <h1 id="hero-title" className="mk-label text-primary">
-              Free SEO, AEO &amp; GEO website checker
-            </h1>
-            <p className="mk-hero mt-4 text-fg">
-              {SLOGAN_LEAD} <span className="text-primary">{SLOGAN_LAST}</span>
+      {/* ------------------------------------------------------------ 1. Hero + sample report */}
+      <section id="check" aria-labelledby="hero-title" className="scroll-mt-20 bg-gradient-to-b from-mk-hero-top to-white">
+        <div className={WRAP + " flex max-w-[1000px] flex-col items-center gap-5 pb-12 pt-12 text-center sm:gap-6 sm:pb-14 sm:pt-20"}>
+          {/* The one H1 carries the searched phrase; the question below is the big visual line. */}
+          <h1
+            id="hero-title"
+            className="inline-flex items-center gap-2 rounded-full border border-[#DCE3F5] bg-white px-4 py-2 text-[13px] font-semibold text-mk-accent sm:text-sm"
+          >
+            <Sparkles aria-hidden size={16} strokeWidth={2.4} />
+            Free SEO, AEO &amp; GEO website checker
+          </h1>
+          <p
+            aria-label={BRAND.slogan}
+            className="flex flex-wrap items-center justify-center gap-2 font-display text-base font-semibold sm:gap-2.5 sm:text-lg"
+          >
+            <Pill>Check</Pill>
+            <Arrow />
+            <Pill>Fix</Pill>
+            <Arrow />
+            <Pill accent>Grow</Pill>
+          </p>
+          <h2 className="font-display text-[clamp(2.375rem,1.4rem+4.6vw,4.5rem)] font-bold leading-[1.04] tracking-[-0.025em] text-balance">
+            Customers are searching. <span className="text-mk-accent">Are they finding you?</span>
+          </h2>
+          <p className="max-w-[36rem] text-[1.0625rem] leading-relaxed text-mk-text sm:text-xl">
+            See how Google and ChatGPT see your business. In 30 seconds.
+          </p>
+          <FreeCheckLauncher id="hero-url" variant="hero" buttonLabel="Get my free report" hint={null} className="max-w-[620px] text-left" />
+
+          {/* Phones: three compact tiles in a row (icon over text). Wider: icon beside text. */}
+          <ul className="grid w-full max-w-[620px] grid-cols-3 gap-2 sm:gap-2.5">
+            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-2 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
+              <span aria-hidden className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-mk-good-soft text-[15px] font-bold text-mk-good">
+                ₹0
+              </span>
+              <span className="text-[13px] font-semibold sm:text-[15px]">Free check</span>
+            </li>
+            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-2 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
+              <span aria-hidden className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-mk-accent-soft text-mk-accent">
+                <Clock size={18} strokeWidth={2.4} />
+              </span>
+              <span className="text-[13px] font-semibold sm:text-[15px]">Instant report</span>
+            </li>
+            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-2 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
+              <span aria-hidden className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-mk-orange-soft text-sev-high">
+                <Lock size={18} strokeWidth={2.4} />
+              </span>
+              <span className="text-[13px] font-semibold sm:text-[15px]">No sign-up</span>
+            </li>
+          </ul>
+
+          <div className="flex flex-wrap items-center justify-center gap-3.5">
+            <div aria-hidden className="flex">
+              <span className="size-[34px] rounded-full border-[3px] border-white bg-[#FFD7B8]" />
+              <span className="-ml-2.5 size-[34px] rounded-full border-[3px] border-white bg-[#BFD3FF]" />
+              <span className="-ml-2.5 size-[34px] rounded-full border-[3px] border-white bg-[#C6F0DD]" />
+              <span className="-ml-2.5 size-[34px] rounded-full border-[3px] border-white bg-[#E4D7FF]" />
+            </div>
+            <p className="text-[15px] text-mk-text sm:text-base">
+              <b className="text-lg text-mk-ink">{BRAND.proof.split(" ")[0]}</b> {BRAND.proof.split(" ").slice(1).join(" ")}
             </p>
-            <h2 className="mk-title mx-auto mt-6 max-w-[22ch] text-balance text-fg sm:mt-8">
-              Customers are searching. Are they finding you?
-            </h2>
-            <p className="mk-lead mx-auto mt-4 max-w-[36rem] text-fg-soft">
-              Free SEO and AI checker. See how Google and ChatGPT see your business, in 30 seconds.
-            </p>
-            <FreeCheckLauncher
-              id="hero-url"
-              className="mx-auto mt-7 max-w-[36rem] text-left"
-              hint={`Free · No sign-up · ${BRAND.proof}`}
-            />
-            {/* One row on laptops; on phones a tidy 2 × 2 grid instead of an orphaned last tick. */}
-            <ul className="mx-auto mt-6 grid max-w-md grid-cols-2 justify-items-start gap-x-4 gap-y-2 text-left text-small text-fg-soft sm:flex sm:max-w-none sm:flex-nowrap sm:justify-center sm:gap-x-5">
-              {TICKS.map((t) => (
-                <li key={t} className="inline-flex items-start gap-1.5 sm:items-center sm:whitespace-nowrap">
-                  <Check aria-hidden size={15} className="mt-[3px] shrink-0 text-success sm:mt-0" />
-                  {t}
-                </li>
-              ))}
-            </ul>
+          </div>
+        </div>
+
+        {/* Your free report (sample) */}
+        <div className={WRAP + " max-w-[1040px] pb-16 sm:pb-24"}>
+          <figure
+            aria-label="Sample free report"
+            className="overflow-hidden rounded-3xl border border-[#E6EAF2] bg-white shadow-[0_30px_70px_rgba(11,27,63,0.12)]"
+          >
+            <div className="flex items-center gap-4 border-b border-mk-line bg-[#F6F8FB] px-4 py-3.5 sm:px-5">
+              <div aria-hidden className="hidden gap-1.5 sm:flex">
+                <span className="size-[11px] rounded-full bg-[#F0B3A8]" />
+                <span className="size-[11px] rounded-full bg-[#F4D58D]" />
+                <span className="size-[11px] rounded-full bg-[#A8DDB5]" />
+              </div>
+              <div className="flex min-w-0 flex-1 justify-center">
+                <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-[#E6EAF2] bg-white px-4 py-1.5 text-[13px] text-mk-text-soft">
+                  <Lock aria-hidden size={12} strokeWidth={2.4} className="shrink-0" />
+                  <span className="truncate">Your free report · yourwebsite.com</span>
+                </span>
+              </div>
+              <span aria-hidden className="hidden w-[45px] sm:block" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 bg-[#FAFBFD] p-3 sm:gap-4 sm:p-5 md:grid-cols-3">
+              {/* 1 · score */}
+              <div className="flex flex-col items-center gap-3.5 rounded-[18px] border border-[#EEF1F6] bg-white p-5 text-center sm:p-6">
+                <span className={CARD_LABEL + " self-start"}>Your score</span>
+                <ScoreRing score={SAMPLE_SCORE} caption="out of 100" label={`Score ${SAMPLE_SCORE} out of 100`} className="w-[120px] sm:w-[136px]" />
+                <span className="rounded-full bg-mk-orange-soft px-3.5 py-1.5 text-sm font-semibold text-mk-orange-fg">Customers miss you</span>
+              </div>
+
+              {/* 2 · where you show up */}
+              <div className="flex flex-col gap-3.5 rounded-[18px] border border-[#EEF1F6] bg-white p-5 sm:p-6">
+                <span className={CARD_LABEL}>Where you show up</span>
+                <ul className="flex flex-1 flex-col justify-center">
+                  {SHOW_UP.map((s, i) => (
+                    <li
+                      key={s.engine}
+                      className={"flex items-center justify-between py-2.5 " + (i < SHOW_UP.length - 1 ? "border-b border-mk-line" : "")}
+                    >
+                      <span className="flex items-center gap-2.5 text-[15px] font-semibold">
+                        <EngineDot engine={s.engine} />
+                        {s.engine}
+                      </span>
+                      <FoundBadge found={s.found} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* 3 · fix these first */}
+              <div className="flex flex-col gap-3.5 rounded-[18px] border border-[#EEF1F6] bg-white p-5 sm:p-6">
+                <span className={CARD_LABEL}>Fix these first</span>
+                <ol className="flex flex-1 flex-col gap-2.5">
+                  {SAMPLE_FIXES.map((f, i) => (
+                    <li key={f.title} className="flex items-center gap-3 rounded-xl bg-mk-tint px-3.5 py-3">
+                      <span aria-hidden className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-lg bg-mk-accent text-[13px] font-bold text-white">
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 text-sm font-semibold">{FIX_SHORT[i]}</span>
+                      <span className="text-[13px] font-bold text-mk-good">+{f.points}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="flex items-center justify-between border-t border-mk-line pt-3">
+                  <span className="text-sm text-mk-text-soft">Score after fixes</span>
+                  <span className="font-display text-xl font-bold text-mk-good">{SAMPLE_AFTER}</span>
+                </div>
+              </div>
+            </div>
+          </figure>
+          <div className="mt-4">
+            <SampleNote>Sample report. Yours shows your real score and fixes.</SampleNote>
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 2. The problem: three places customers look */}
-      <section id="where-found" aria-labelledby="where-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
-        <div className="container-marketing">
-          <div className="mk-reveal max-w-2xl">
-            <h2 id="where-title" className="mk-title text-fg">
+      {/* ------------------------------------------------------------ 2. How search changed */}
+      <section id="where-found" aria-labelledby="where-title" className="scroll-mt-20 bg-white">
+        <div className={WRAP + " flex max-w-[1200px] flex-col gap-10 py-16 sm:gap-[52px] sm:py-[104px]"}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <h2 id="where-title" className={H2}>
               Your customers changed how they search.
             </h2>
-            <p className="mk-body mt-4 text-fg-soft">
-              One search, three places to be found. {BRAND.name} checks all three and shows you what to fix first.
-            </p>
+            <p className={LEAD}>Before they buy, they check 3 places.</p>
           </div>
-          <ol className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {PLACES.map((p) => (
-              <li key={p.term} className="mk-reveal rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
-                <PlaceArt place={p.term} className="mb-5" />
-                <p className="inline-flex h-7 items-center rounded-full bg-primary-soft px-3 text-xs font-semibold text-primary-soft-fg">{p.term}</p>
-                <h3 className="mt-4 text-[1.25rem] font-semibold tracking-[-0.015em] text-fg">{p.title}</h3>
-                <p className="mt-2 text-[1rem] leading-relaxed text-fg-soft">{p.body}</p>
+
+          <ul className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
+            {/* They search — Google page 1 (SEO) */}
+            <li className="flex flex-col gap-5 rounded-3xl bg-mk-tint p-5 sm:p-7">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-display text-[22px] font-bold">They search</h3>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold">
+                  <EngineDot engine="Google" className="size-2" />
+                  Google
+                </span>
+              </div>
+              <div className="flex flex-1 flex-col gap-3 rounded-2xl bg-white p-[18px] shadow-[0_6px_18px_rgba(11,27,63,0.06)]">
+                <div className="flex items-center gap-2.5 rounded-full border-[1.5px] border-border px-3.5 py-2.5 text-[15px]">
+                  <Search aria-hidden size={16} strokeWidth={2.4} className="shrink-0 text-mk-text-soft" />
+                  cake shop near me
+                </div>
+                <div className="flex items-center gap-2.5 rounded-xl border-2 border-dashed border-mk-accent bg-mk-accent-tint p-3">
+                  <span className="font-bold text-mk-accent">#1</span>
+                  <span className="font-semibold">Your shop?</span>
+                </div>
+                <div aria-hidden className="flex flex-col gap-2">
+                  <div className="h-2.5 w-4/5 rounded-md bg-[#EEF1F7]" />
+                  <div className="h-2.5 w-3/5 rounded-md bg-[#EEF1F7]" />
+                  <div className="h-2.5 w-[70%] rounded-md bg-[#EEF1F7]" />
+                </div>
+              </div>
+              <p className="text-sm text-mk-text-soft">
+                <b className="text-mk-ink">SEO</b> · Is your business on Google page 1?
+              </p>
+            </li>
+
+            {/* They ask — Google's answer box (AEO) */}
+            <li className="flex flex-col gap-5 rounded-3xl bg-mk-tint p-5 sm:p-7">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-display text-[22px] font-bold">They ask</h3>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold">
+                  <EngineDot engine="Google" className="size-2" />
+                  Google
+                </span>
+              </div>
+              <div className="flex flex-1 flex-col gap-3 rounded-2xl bg-white p-[18px] shadow-[0_6px_18px_rgba(11,27,63,0.06)]">
+                <div className="flex items-center gap-2.5 rounded-full border-[1.5px] border-border px-3.5 py-2.5 text-[15px]">
+                  <Search aria-hidden size={16} strokeWidth={2.4} className="shrink-0 text-mk-text-soft" />
+                  open on Sunday?
+                </div>
+                <div className="flex flex-col gap-1.5 rounded-xl bg-mk-accent-tint p-3.5">
+                  <span className="text-base font-semibold">Yes, 9 am to 9 pm.</span>
+                  <span className="text-[13px] text-mk-text-soft">
+                    Answer from: <b className="text-mk-accent">your website?</b>
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-mk-text-soft">
+                <b className="text-mk-ink">AEO</b> · Does Google’s answer box quote you?
+              </p>
+            </li>
+
+            {/* AI picks — ChatGPT names 2–3 (GEO) */}
+            <li className="flex flex-col gap-5 rounded-3xl bg-mk-tint p-5 sm:p-7">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-display text-[22px] font-bold">AI picks</h3>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold">
+                  <EngineDot engine="ChatGPT" className="size-2" />
+                  ChatGPT
+                </span>
+              </div>
+              <div className="flex flex-1 flex-col gap-3 rounded-2xl bg-white p-[18px] shadow-[0_6px_18px_rgba(11,27,63,0.06)]">
+                <div className="self-end rounded-[16px_16px_4px_16px] bg-mk-ink px-3.5 py-2.5 text-[15px] text-white">Which cake shop is best?</div>
+                <div className="flex flex-wrap gap-2 self-start rounded-[16px_16px_16px_4px] bg-[#F1F3F8] px-3.5 py-3">
+                  <span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold">Shop A</span>
+                  <span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold">Shop B</span>
+                  <span className="rounded-full border-2 border-dashed border-mk-accent px-3 py-1 text-sm font-bold text-mk-accent">You?</span>
+                </div>
+              </div>
+              <p className="text-sm text-mk-text-soft">
+                <b className="text-mk-ink">GEO</b> · Does AI name you among the few?
+              </p>
+            </li>
+          </ul>
+
+          <p className="text-center font-display text-xl font-semibold sm:text-2xl">
+            Not there? <span className="text-sev-high">They buy from someone else.</span>
+          </p>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ 3. Where each AI puts you (dark band) */}
+      <section id="ai-positions" aria-labelledby="ai-positions-title" className="scroll-mt-20 bg-mk-ink text-white">
+        <div className={WRAP + " flex max-w-[1100px] flex-col items-center gap-9 py-16 sm:gap-11 sm:py-[104px]"}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <h2 id="ai-positions-title" className={H2 + " !text-white"}>
+              See where each AI puts you.
+            </h2>
+            <p className="text-base text-mk-on-ink sm:text-lg">We ask AI what your customers ask.</p>
+          </div>
+
+          <p className="flex max-w-full items-center gap-3 rounded-full bg-white px-5 py-3 text-base font-semibold text-mk-ink shadow-[0_12px_30px_rgba(0,0,0,0.25)] sm:px-6 sm:py-3.5 sm:text-lg">
+            <MessageSquare aria-hidden size={20} strokeWidth={2.4} className="shrink-0 text-mk-accent" />
+            “Best cake shop in Indiranagar?”
+          </p>
+
+          {/* Always three columns (also on phones), shorter bars on small screens. */}
+          <ol className="grid w-full max-w-[820px] grid-cols-3 items-end gap-2.5 sm:gap-5">
+            {PODIUM.map((p) => (
+              <li key={p.engine} className="flex flex-col items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold sm:gap-2 sm:text-base">
+                  <EngineDot engine={p.engine} />
+                  {p.engine}
+                </span>
+                <div
+                  className={
+                    "flex w-full flex-col items-center justify-center gap-1 rounded-t-2xl " + p.tall + " " + (p.hot ? "bg-mk-accent" : "bg-mk-ink-2")
+                  }
+                >
+                  <span className={"font-display font-bold " + (p.hot ? "text-[40px] sm:text-[52px]" : "text-[32px] sm:text-[44px]")}>
+                    #{p.rank}
+                  </span>
+                  <span className={"text-xs sm:text-sm " + (p.hot ? "text-[#E6ECFF]" : "text-mk-on-ink")}>{p.label}</span>
+                </div>
               </li>
             ))}
           </ol>
+
+          <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-2xl bg-mk-ink-2 px-6 py-4 text-center text-base sm:text-lg">
+            <span>Your competitor is on this list.</span>
+            <span className="font-bold text-[#FDBA74]">Are you?</span>
+          </p>
+
+          <a
+            href="#check"
+            className="inline-flex h-14 items-center gap-2 rounded-[14px] bg-white px-7 text-[17px] font-bold text-mk-ink hover:bg-mk-tint"
+          >
+            Find my rank free
+            <ArrowRight aria-hidden size={18} />
+          </a>
+          <SampleNote onInk>
+            Sample answers for a sample bakery. We check {SELF_ENGINE_LIST} on {SELF_PLAN.name}, and up to {DFY_ENGINE_COUNT} AI tools on {DFY_PLAN.name}.
+          </SampleNote>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 2b. Where each AI puts you */}
-      <AiPositionsSection />
-
-      {/* ------------------------------------------------------------ 2c. Our difference: found inside AI assistants */}
-      <AiFoundSection />
-
-      {/* ------------------------------------------------------------ 3. Sample result */}
-      <section id="sample" aria-labelledby="sample-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
-        <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-center">
-          <div className="mk-reveal lg:col-span-5">
-            <p className="mk-label">What you get</p>
-            <h2 id="sample-title" className="mk-title mt-4 max-w-[16ch] text-fg">
-              One score. Your top fixes.
+      {/* ------------------------------------------------------------ 4. Know exactly what to fix */}
+      <section id="sample" aria-labelledby="sample-title" className="scroll-mt-20 bg-white">
+        <div className={WRAP + " flex max-w-[1100px] flex-col gap-10 py-16 sm:gap-[52px] sm:py-[104px]"}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <h2 id="sample-title" className={H2}>
+              Know exactly what to fix.
             </h2>
-            <p className="mk-body mt-5 max-w-md text-fg-soft">
-              One score out of 100, and the three fixes that help most — each with how many points it can add.
-            </p>
+            <p className={LEAD}>Biggest wins first. Done in minutes.</p>
           </div>
-          <div className="mk-reveal min-w-0 lg:col-span-7 lg:col-start-6 xl:col-span-6 xl:col-start-7">
-            <SampleResult />
+
+          <div className="flex flex-col gap-4 rounded-[28px] bg-mk-tint p-3 sm:gap-7 sm:p-8 lg:flex-row lg:items-stretch">
+            {/* score side */}
+            <div className="flex flex-col items-center justify-center gap-[18px] rounded-[20px] bg-white p-5 sm:p-7 lg:flex-1">
+              <div className="flex items-center gap-2 sm:gap-3.5">
+                <div className="flex flex-col items-center gap-1.5">
+                  <ScoreRing score={SAMPLE_SCORE} label={`Score ${SAMPLE_SCORE} now`} className="w-[88px] sm:w-[104px]" />
+                  <span className="text-sm font-semibold text-mk-text-soft">Now</span>
+                </div>
+                <svg width="40" height="20" viewBox="0 0 40 20" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="w-8 shrink-0 stroke-mk-good-ring sm:w-10">
+                  <path d="M2 10h34M28 3l8 7-8 7" />
+                </svg>
+                <div className="flex flex-col items-center gap-1.5">
+                  <ScoreRing score={SAMPLE_AFTER} tone="good" label={`Score ${SAMPLE_AFTER} after fixes`} className="w-[88px] sm:w-[104px]" />
+                  <span className="text-sm font-bold text-mk-good">After 3 fixes</span>
+                </div>
+              </div>
+              <span className="rounded-full bg-mk-good-soft px-4 py-2 font-display text-lg font-bold text-mk-good">+{SAMPLE_GAIN} points</span>
+            </div>
+
+            {/* fixes side */}
+            <div className="flex flex-col gap-3 lg:flex-[1.3]">
+              <ol className="flex flex-col gap-3">
+                {SAMPLE_FIXES.map((f, i) => (
+                  <li key={f.title} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-4 sm:gap-4 sm:px-5 sm:py-[18px]">
+                    <span
+                      aria-hidden
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-mk-accent font-display text-lg font-bold text-white sm:size-10"
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="text-[15px] font-semibold leading-snug sm:text-[17px]">{f.title}</span>
+                      <span className="text-sm text-mk-text-soft">{FIX_TIME[i]}</span>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-mk-good-soft px-3 py-1.5 text-[15px] font-bold text-mk-good">+{f.points}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="flex items-center gap-3 px-1 py-1.5 text-[15px] text-mk-text">
+                <Users aria-hidden size={20} className="shrink-0 text-mk-accent" />
+                <span>
+                  No time? <b className="text-mk-ink">Our team does it for you.</b>
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 4. Check → Fix → Grow */}
-      <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
-        <div className="container-marketing">
-          <div className="mk-reveal flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <h2 id="how-title" className="mk-title max-w-[16ch] text-fg">
-              Three steps. About a minute to start.
-            </h2>
-            <Link
-              href="/how-it-works"
-              className="inline-flex items-center gap-1.5 text-[1rem] font-medium text-fg underline decoration-border-strong underline-offset-[6px] hover:decoration-fg"
-            >
-              How it works
-              <ArrowRight aria-hidden size={17} />
-            </Link>
-          </div>
-          <ol className="mt-12 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8">
+      {/* ------------------------------------------------------------ 5. Check. Fix. Grow. */}
+      <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-20 bg-mk-tint">
+        <div className={WRAP + " flex max-w-[1100px] flex-col gap-10 py-16 sm:gap-[52px] sm:py-24"}>
+          <h2 id="how-title" className={H2 + " text-center"}>
+            {BRAND.slogan}
+          </h2>
+          <ol className="grid grid-cols-1 gap-8 sm:grid-cols-3">
             {STEPS.map((s, i) => {
               const Icon = s.icon;
-              const last = i === STEPS.length - 1;
               return (
-                <li key={s.title} className="mk-reveal relative sm:flex sm:flex-col">
-                  {/* Connecting line to the next step: down on phones, across on wider screens. */}
-                  {!last && (
-                    <>
-                      <span aria-hidden className="absolute -bottom-10 left-6 top-14 border-l-2 border-dashed border-primary/35 sm:hidden" />
-                      <span aria-hidden className="absolute -right-6 left-16 top-6 hidden border-t-2 border-dashed border-primary/35 sm:block" />
-                    </>
-                  )}
-                  <span aria-hidden className="relative inline-flex size-12 items-center justify-center rounded-full bg-primary text-primary-fg shadow-card">
-                    <Icon size={22} />
-                    <span className="absolute -right-1.5 -top-1.5 inline-flex size-6 items-center justify-center rounded-full border border-primary/30 bg-surface text-[11px] font-semibold tabular-nums text-primary">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
+                <li key={s.title} className="flex flex-col items-center gap-3.5 text-center">
+                  <span
+                    aria-hidden
+                    className={
+                      "inline-flex size-20 items-center justify-center rounded-[28px] sm:size-[88px] " +
+                      (s.hot ? "bg-mk-accent text-white shadow-[0_10px_24px_rgba(36,87,245,0.25)]" : "bg-white text-mk-accent shadow-[0_10px_24px_rgba(11,27,63,0.08)]")
+                    }
+                  >
+                    <Icon size={36} strokeWidth={2} />
                   </span>
-                  {/* On wider screens every step is the same height and the text grows, so all three pictures line up. */}
-                  <div className="-mt-12 pl-[4.25rem] sm:mt-0 sm:flex sm:flex-1 sm:flex-col sm:pl-0">
-                    <h3 className="mt-2 text-[1.5rem] font-semibold tracking-[-0.02em] text-fg sm:mt-5">
-                      <span className="sr-only">Step {i + 1}: </span>
-                      {s.title}
-                    </h3>
-                    <p className="mk-body mt-3 max-w-[22rem] text-fg-soft sm:flex-1">{s.body}</p>
-                    <StepArt step={s.title} className="mt-5 max-w-[22rem]" />
-                  </div>
+                  <h3 className="font-display text-2xl font-bold">
+                    <span className="sr-only">Step {i + 1}: </span>
+                    {s.title}
+                  </h3>
+                  <p className="text-base text-mk-text-soft">{s.body}</p>
                 </li>
               );
             })}
           </ol>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ 5. Kinds of business (tabs without JavaScript) */}
-      <section id="who-its-for" aria-labelledby="kinds-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
-        <div className="container-marketing">
-          <h2 id="kinds-title" className="mk-reveal mk-title max-w-[20ch] text-fg">
-            Whatever you sell, people ask before they buy.
-          </h2>
-          <BusinessKinds className="mk-reveal mt-8" />
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ 6. Everything in one app (live features only) */}
-      <section id="product" aria-labelledby="product-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
-        <div className="container-marketing">
-          <div className="mk-reveal flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <h2 id="product-title" className="mk-title text-fg">
-                Everything in one app.
-              </h2>
-              {/* Built from the same on/off checks as the tiles below, so it never lists a part that is not live. */}
-              <p className="mk-body mt-4 text-fg-soft">Your {tourSummary({ liveOnly: true })}, in one place and in plain words.</p>
-            </div>
-            <Link
-              href="/features"
-              className="inline-flex items-center gap-1.5 text-[1rem] font-medium text-fg underline decoration-border-strong underline-offset-[6px] hover:decoration-fg"
-            >
-              See all features
+          <p className="text-center">
+            <Link href="/how-it-works" className="inline-flex items-center gap-1.5 font-semibold text-mk-accent underline-offset-4 hover:underline">
+              How it works
               <ArrowRight aria-hidden size={17} />
             </Link>
-          </div>
-          <ProductTour liveOnly className="mt-10" />
+          </p>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 7. Three plans */}
-      <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
-        <div className="container-marketing">
-          <div className="mk-reveal max-w-2xl">
-            <h2 id="pricing-title" className="mk-title text-fg">
-              Pick your plan
+      {/* ------------------------------------------------------------ 6. Whatever you sell */}
+      <section id="who-its-for" aria-labelledby="kinds-title" className="scroll-mt-20 bg-white">
+        <div className={WRAP + " flex max-w-[1200px] flex-col gap-10 py-16 sm:gap-[52px] sm:py-[104px]"}>
+          <h2 id="kinds-title" className={H2 + " text-center"}>
+            Whatever you sell, people ask first.
+          </h2>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+            {KINDS.map((k) => {
+              const Icon = k.icon;
+              return (
+                <li key={k.title} className="flex flex-col gap-4 rounded-[22px] border-[1.5px] border-[#E8EBF2] p-6 sm:gap-[18px] sm:p-7">
+                  <span aria-hidden className={"inline-flex size-[52px] items-center justify-center rounded-2xl " + k.tile}>
+                    <Icon size={26} strokeWidth={2} />
+                  </span>
+                  <h3 className="font-display text-[21px] font-bold">{k.title}</h3>
+                  <span className="rounded-xl bg-mk-tint px-3.5 py-3 text-[15px] text-mk-text">“{k.ask}”</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ 7. Plans */}
+      <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 bg-mk-tint">
+        <div className={WRAP + " flex max-w-[1200px] flex-col gap-10 py-16 sm:gap-[52px] sm:py-[104px]"}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <h2 id="pricing-title" className={H2}>
+              Do it yourself. Or let us do it.
             </h2>
-            <p className="mk-body mt-4 text-fg-soft">{gstOn() ? "Prices in ₹. GST extra. No hidden costs." : "Prices in ₹. No hidden costs."}</p>
+            <p className={LEAD}>
+              Start free. Upgrade when you’re ready. {gstOn() ? "Prices in ₹, GST extra." : "Prices in ₹."}
+            </p>
           </div>
-          <ul className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
+          {/* Phones and tablets: one column, the done-for-you card first. Laptops: three across. */}
+          <ul className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-3">
             {HOME_PLANS.map((p) => (
               <li
                 key={p.key}
                 className={
-                  "mk-reveal flex flex-col rounded-2xl p-6 sm:p-8 " +
-                  (p.dark ? "order-first bg-fg text-bg shadow-card lg:order-none lg:-my-3 lg:py-11" : "border border-border bg-surface shadow-card")
+                  "relative flex flex-col gap-[22px] rounded-3xl p-6 sm:p-9 " +
+                  (p.dark ? "order-first bg-mk-ink text-white lg:order-none" : "bg-white")
                 }
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className={"text-h4 " + (p.dark ? "text-bg" : "text-fg")}>{p.name}</h3>
-                  {p.dark && <span className="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold text-fg">Most chosen</span>}
+                {p.dark && (
+                  <span className="absolute right-5 top-6 rounded-full bg-mk-accent px-3 py-1.5 text-[13px] font-semibold text-white sm:right-7 sm:top-[30px]">
+                    Most chosen
+                  </span>
+                )}
+                <div className={"flex flex-col gap-1.5 " + (p.dark ? "pr-28" : "")}>
+                  <h3 className="font-display text-[23px] font-bold">{p.name}</h3>
+                  <p className={"text-[15px] " + (p.dark ? "text-mk-on-ink" : "text-mk-text-soft")}>{p.line}</p>
                 </div>
-                <p className={"mt-4 text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] tabular-nums " + (p.dark ? "text-bg" : "text-fg")}>
-                  {p.price}
+                <p className="flex flex-wrap items-baseline gap-1.5">
+                  <span className="font-display text-[clamp(2.25rem,1.9rem+1vw,2.75rem)] font-bold tabular-nums">{p.price}</span>
+                  {p.per && <span className={"text-[15px] " + (p.dark ? "text-mk-on-ink" : "text-mk-text-soft")}>{p.per}</span>}
                 </p>
-                <p className={"mt-3 text-small " + (p.dark ? "text-bg/80" : "text-fg-soft")}>{p.line}</p>
-                <p className={"mt-2 text-small font-medium " + (p.dark ? "text-bg" : "text-fg")}>{p.start}</p>
-
-                <div className={"mt-6 flex-1 border-t pt-6 " + (p.dark ? "border-bg/15" : "border-border")}>
-                  <p className={"text-xs font-semibold uppercase tracking-[0.06em] " + (p.dark ? "text-bg/70" : "text-muted")}>
-                    What you get
-                  </p>
-                  <ul className="mt-3 space-y-2.5">
-                    {p.points.map((pt) => (
-                      <li key={pt} className={"flex gap-2.5 text-small " + (p.dark ? "text-bg/90" : "text-fg-soft")}>
-                        <Check aria-hidden size={16} className={"mt-0.5 shrink-0 " + (p.dark ? "text-bg" : "text-success")} />
-                        {pt}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <p className={"mt-6 text-small italic " + (p.dark ? "text-bg/80" : "text-fg-soft")}>{p.whoDoes}</p>
+                <ul className="flex flex-col gap-3 text-[15px]">
+                  {p.points.map((pt) => (
+                    <li key={pt} className="flex gap-2.5">
+                      <Check aria-hidden size={20} strokeWidth={2.5} className={"shrink-0 " + (p.dark ? "text-[#6EE7B7]" : "text-mk-good-ring")} />
+                      {pt}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-auto flex flex-col gap-2">
+                  <Link
+                    href={p.href}
+                    {...newTabProps(p.href)}
+                    className={
+                      "flex h-[54px] items-center justify-center rounded-xl px-4 text-center text-base font-bold " +
+                      (p.dark
+                        ? "bg-mk-accent text-white hover:brightness-110"
+                        : p.key === "self"
+                          ? "border-[1.5px] border-mk-accent text-mk-accent hover:bg-mk-accent-tint"
+                          : "border-[1.5px] border-mk-ink text-mk-ink hover:bg-mk-tint")
+                    }
+                  >
+                    {p.cta}
+                  </Link>
+                  <span className={"text-center text-[13px] " + (p.dark ? "text-mk-on-ink" : "text-mk-text-soft")}>{p.note}</span>
                 </div>
-
-                <Link
-                  href={p.href}
-                  {...newTabProps(p.href)}
-                  className={
-                    p.dark
-                      ? inkPill("md", true, "mt-8 h-12 w-full")
-                      : "mt-8 inline-flex h-12 w-full items-center justify-center rounded-full border border-border-strong px-5 text-small font-medium text-fg hover:bg-surface-2"
-                  }
-                >
-                  {p.cta}
-                </Link>
               </li>
             ))}
           </ul>
-          <p className="mt-8 text-center text-small text-muted">
-            <Link href="/pricing" className={linkCls}>
+          <p className="text-center text-sm">
+            <Link href="/pricing" className="font-semibold text-mk-accent underline-offset-4 hover:underline">
               See what each plan includes
             </Link>
           </p>
@@ -425,72 +714,53 @@ export default function HomePage() {
       </section>
 
       {/* ------------------------------------------------------------ 8. Questions */}
-      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
-        <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
-          <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-28">
-              <h2 id="faq-title" className="mk-title max-w-[12ch] text-fg">
-                Questions, answered plainly.
-              </h2>
-              <p className="mk-body mt-5 max-w-sm text-fg-soft">
-                Something else?{" "}
-                <Link href="/contact" className={linkCls}>
-                  Write to us
-                </Link>{" "}
-                or read{" "}
-                <Link href="/about" className={linkCls}>
-                  about us
-                </Link>
-                .
-              </p>
-              <p className="mt-5 max-w-sm text-small text-muted">
-                Our checks follow public standards: Google&apos;s{" "}
-                <a href="https://developers.google.com/search/docs/fundamentals/seo-starter-guide" rel="noopener" className={linkCls}>
-                  SEO Starter Guide
-                </a>
-                ,{" "}
-                <a href="https://schema.org/docs/gs.html" rel="noopener" className={linkCls}>
-                  schema.org
-                </a>{" "}
-                and the{" "}
-                <a href="https://datatracker.ietf.org/doc/html/rfc9309" rel="noopener" className={linkCls}>
-                  robots.txt standard
-                </a>
-                .
-              </p>
-            </div>
-          </div>
-          <div className="border-t border-fg lg:col-span-7 lg:col-start-6">
+      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 bg-white">
+        <div className={WRAP + " flex max-w-[820px] flex-col gap-8 py-16 sm:gap-9 sm:py-[104px]"}>
+          <h2 id="faq-title" className={H2 + " text-center"}>
+            Questions?
+          </h2>
+          <div className="flex flex-col gap-3">
             {FAQS.map((f) => (
-              <details key={f.q} className="group border-b border-border">
-                <summary className="flex list-none items-start justify-between gap-6 py-6 [&::-webkit-details-marker]:hidden">
-                  <h3 className="text-[1.125rem] font-medium leading-snug tracking-[-0.015em] text-fg sm:text-[1.25rem]">{f.q}</h3>
+              <details key={f.q} className="group rounded-2xl bg-mk-tint px-5 py-5 sm:px-[26px] sm:py-[22px]">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 [&::-webkit-details-marker]:hidden">
+                  <h3 className="text-base font-semibold leading-snug sm:text-lg">{f.q}</h3>
                   <span
                     aria-hidden
-                    className="relative mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border-strong text-fg transition-transform duration-200 group-open:rotate-45"
+                    className="relative mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-mk-ink transition-transform duration-200 group-open:rotate-45"
                   >
-                    <span className="absolute h-px w-3 bg-current" />
-                    <span className="absolute h-3 w-px bg-current" />
+                    <span className="absolute h-0.5 w-3 rounded bg-current" />
+                    <span className="absolute h-3 w-0.5 rounded bg-current" />
                   </span>
                 </summary>
-                <p className="mk-body max-w-2xl pb-7 text-fg-soft">{f.a}</p>
+                <p className="mt-3 text-[15px] leading-relaxed text-mk-text sm:text-base">{f.a}</p>
               </details>
             ))}
           </div>
+          <p className="text-center text-[15px] text-mk-text-soft">
+            Something else?{" "}
+            <Link href="/contact" className="font-semibold text-mk-accent underline-offset-4 hover:underline">
+              Write to us
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ 9. Closing band: the website box again */}
-      <section aria-labelledby="final-title" className="bg-fg text-bg">
-        <div className="container-marketing py-16 sm:py-24">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 id="final-title" className="mk-statement text-balance text-bg">
-              Every day you wait, customers find someone else.
+      {/* ------------------------------------------------------------ 9. Closing card: the website box again */}
+      <section aria-labelledby="final-title" className="bg-white">
+        <div className={WRAP + " max-w-[1200px] pb-16 sm:pb-24"}>
+          <div className="flex flex-col items-center gap-7 rounded-[28px] bg-mk-ink px-4 py-14 text-center text-white sm:rounded-[32px] sm:px-10 sm:py-20">
+            <h2
+              id="final-title"
+              className="font-display text-[clamp(2rem,1.2rem+3vw,3.375rem)] font-bold leading-[1.08] tracking-[-0.02em] text-balance"
+            >
+              Every day you wait, <span className="text-[#8EA8FF]">customers find someone else.</span>
             </h2>
-            <FreeCheckLauncher id="final-url" onDark className="mx-auto mt-9 max-w-[36rem] text-left" hint="Free · No sign-up · Takes about 30 seconds" />
+            <FreeCheckLauncher id="final-url" variant="hero" buttonLabel="Get my free report" hint={null} className="max-w-[600px] text-left" />
+            <span className="text-[15px] text-mk-on-ink">Free · 30 seconds · No sign-up</span>
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

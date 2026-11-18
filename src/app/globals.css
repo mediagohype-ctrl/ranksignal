@@ -97,6 +97,30 @@
 
   /* Elevation */
   --shadow-color: 222 47% 11%;
+
+  /* Homepage (marketing) palette: bright blue accent on deep ink bands. Homepage only, not the app. */
+  --mk-accent: #2457f5; /* 5.1:1 on white */
+  --mk-accent-soft: #eaf0ff;
+  --mk-accent-tint: #f1f5ff;
+  --mk-ink: #0b1b3f;
+  --mk-ink-2: #1e2f5c;
+  --mk-on-ink: #c3cbe0; /* soft text on ink */
+  --mk-text: #3d4760;
+  --mk-text-soft: #4a5470;
+  --mk-tint: #f7f8fb;
+  --mk-hero-top: #f2f5fe;
+  --mk-line: #eceef3;
+  --mk-orange: #e8833a; /* decorative (rings) */
+  --mk-orange-soft: #fff1e6;
+  --mk-orange-fg: #9a3412;
+  --mk-good: #0e6b4c;
+  --mk-good-ring: #12805c;
+  --mk-good-soft: #e7f7ee;
+  --mk-bad: #b42318;
+  --mk-dot-google: #4285f4;
+  --mk-dot-chatgpt: #10a37f;
+  --mk-dot-gemini: #8e75f0;
+  --mk-dot-perplexity: #20808d;
 }
 
 
@@ -161,6 +185,28 @@
   --color-score-poor-soft: var(--score-poor-soft);
   --color-score-none: var(--score-none);
   --color-score-track: var(--score-track);
+  --color-mk-accent: var(--mk-accent);
+  --color-mk-accent-soft: var(--mk-accent-soft);
+  --color-mk-accent-tint: var(--mk-accent-tint);
+  --color-mk-ink: var(--mk-ink);
+  --color-mk-ink-2: var(--mk-ink-2);
+  --color-mk-on-ink: var(--mk-on-ink);
+  --color-mk-text: var(--mk-text);
+  --color-mk-text-soft: var(--mk-text-soft);
+  --color-mk-tint: var(--mk-tint);
+  --color-mk-hero-top: var(--mk-hero-top);
+  --color-mk-line: var(--mk-line);
+  --color-mk-orange: var(--mk-orange);
+  --color-mk-orange-soft: var(--mk-orange-soft);
+  --color-mk-orange-fg: var(--mk-orange-fg);
+  --color-mk-good: var(--mk-good);
+  --color-mk-good-ring: var(--mk-good-ring);
+  --color-mk-good-soft: var(--mk-good-soft);
+  --color-mk-bad: var(--mk-bad);
+  --color-mk-dot-google: var(--mk-dot-google);
+  --color-mk-dot-chatgpt: var(--mk-dot-chatgpt);
+  --color-mk-dot-gemini: var(--mk-dot-gemini);
+  --color-mk-dot-perplexity: var(--mk-dot-perplexity);
   --color-ring: var(--ring);
   --color-ring-offset: var(--ring-offset);
   --color-chart-1: var(--chart-1);
@@ -175,6 +221,8 @@
 
   /* Fonts — Google Sans Flex everywhere (loaded in src/app/layout.tsx) */
   --font-sans: "Google Sans Flex", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Homepage headings (the homepage loads the font; elsewhere it falls back to the sans font). */
+  --font-display: "Space Grotesk", "Google Sans Flex", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* Radius scale */

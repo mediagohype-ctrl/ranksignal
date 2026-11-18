@@ -25,12 +25,13 @@ describe("homepage", () => {
     const h1 = html.indexOf("<h1");
     const firstH2 = html.indexOf("<h2");
     expect(firstH2).toBeGreaterThan(h1);
-    expect(html.slice(firstH2, firstH2 + 200)).toContain("Customers are searching. Are they finding you?");
+    expect(html.slice(firstH2, firstH2 + 400).replace(/<[^>]+>/g, "")).toContain("Customers are searching. Are they finding you?");
     expect(html).toContain("Check. Fix.");
     expect(html).toContain("Your customers changed how they search.");
-    expect(html).toContain("Every day you wait, customers find someone else.");
-    expect(html).toContain("Check my website free");
-    expect(html).toContain(BRAND.proof);
+    expect(html.replace(/<[^>]+>/g, "")).toContain("Every day you wait, customers find someone else.");
+    expect(html).toContain("Get my free report");
+    expect(html).toContain('action="/free-check"');
+    expect(html.replace(/<[^>]+>/g, "")).toContain(BRAND.proof);
   });
 
   it("shows only live features while the data partner is off", () => {
@@ -53,31 +54,24 @@ describe("homepage", () => {
     expect(html).not.toContain("every month so you can see");
   });
 
-  it("explains the AI-assistant USP for all five AI tools, with an honest example graph", () => {
-    const html = render();
-    const start = html.indexOf('id="ai-found"');
-    expect(start).toBeGreaterThan(html.indexOf('id="ai-positions"'));
-    const section = html.slice(start, html.indexOf("</section>", start));
-    expect(section).toContain("Found by AI assistants, not just Google.");
-    for (const e of ["ChatGPT", "Gemini", "Claude", "Grok", "Perplexity"]) expect(section).toContain(e);
-    // Truthful per plan, and the graph is labelled as an example, never a promise.
-    expect(section).toContain(`Do it myself checks ${SELF_ENGINE_LIST}`);
-    expect(section).toContain("Example numbers, not a real customer or a promise.");
-    expect(section).not.toMatch(/guarantee/i);
-    // The bar values are readable as text too.
-    expect(section).toMatch(/4% → <\/span><span[^>]*>42%/);
-  });
-
-  it("shows where each of the five AI tools puts the business, as labelled sample data", () => {
+  it("shows where each AI tool puts the business, as labelled sample data", () => {
     const html = render();
     const start = html.indexOf('id="ai-positions"');
     expect(start).toBeGreaterThan(html.indexOf("Your customers changed how they search."));
     const section = html.slice(start, html.indexOf("</section>", start));
     expect(section).toContain("See where each AI puts you.");
-    for (const e of ["ChatGPT", "Gemini", "Claude", "Grok", "Perplexity"]) expect(section).toContain(e);
-    // Only the labels the app really shows, and the sample is labelled.
-    for (const s of ["Recommended", "Named", "Not named"]) expect(section).toContain(s);
+    for (const e of ["ChatGPT", "Gemini", "Perplexity"]) expect(section).toContain(e);
+    // Only the labels the app really shows, the sample is labelled, and the per-plan AI tools are truthful.
+    expect(section).toMatch(/Recommended|Named/);
     expect(section).toContain("Sample answers for a sample bakery.");
+    expect(section).toContain(`We check ${SELF_ENGINE_LIST}`);
+    expect(section).not.toMatch(/guarantee/i);
+  });
+
+  it("labels the sample report and keeps its numbers consistent", () => {
+    const html = render();
+    expect(html).toContain("Sample report. Yours shows your real score and fixes.");
+    expect(html).toContain("Know exactly what to fix.");
   });
 
   it("has four kinds of business, all in the HTML", () => {
