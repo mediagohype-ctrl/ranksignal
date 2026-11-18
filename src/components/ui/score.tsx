@@ -31,7 +31,7 @@ export const SCORE_BAND_CLASS: Record<ScoreBand, { text: string; bg: string; sof
 
 const RING = {
   sm: { px: 48, stroke: 5, num: "text-sm", grade: "hidden" },
-  md: { px: 88, stroke: 8, num: "text-2xl", grade: "text-[11px]" },
+  md: { px: 88, stroke: 8, num: "text-2xl", grade: "text-[10px] tracking-[-0.02em]" },
   lg: { px: 140, stroke: 11, num: "text-[2.6rem]", grade: "text-sm" },
 } as const;
 
@@ -74,7 +74,7 @@ export function ScoreRing({
       ? `${label}: not checked yet`
       : `${label}: ${value} out of 100 (${SCORE_BAND_CLASS[band].label.toLowerCase()})${partial ? ", waiting for AI results" : ""}`;
   return (
-    <div className={clsx("inline-flex flex-col items-center gap-2", className)}>
+    <div className={clsx("inline-flex shrink-0 flex-col items-center gap-2", className)}>
       <div role="img" aria-label={aria} className="relative" style={{ width: cfg.px, height: cfg.px }}>
         <svg width={cfg.px} height={cfg.px} viewBox={`0 0 ${cfg.px} ${cfg.px}`} className="-rotate-90" aria-hidden>
           <circle
@@ -105,7 +105,7 @@ export function ScoreRing({
             {band === "none" ? "—" : value}
           </span>
           {band !== "none" && size !== "sm" && (
-            <span className={clsx("mt-1 font-semibold", cfg.grade, SCORE_BAND_CLASS[band].text)}>
+            <span className={clsx("mt-1 whitespace-nowrap font-semibold", cfg.grade, SCORE_BAND_CLASS[band].text)}>
               {showGrade && g ? `Grade ${g}` : SCORE_BAND_CLASS[band].label}
             </span>
           )}

@@ -123,7 +123,7 @@ export default function ComparePage() {
 
       <Section labelledBy="comparisons">
         <SectionHeading id="comparisons" size="lg" eyebrow="Comparisons" title="Pick a comparison" />
-        <ul className="grid gap-4 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {COMPARE_PAGES.map((p) => (
             <li key={p.path} className="min-w-0">
               <Link

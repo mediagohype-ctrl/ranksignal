@@ -219,7 +219,7 @@ export default function AhrefsAlternativesPage() {
 
       <Section labelledBy="options">
         <SectionHeading id="options" size="lg" eyebrow="The options" title="Five alternatives, and who each one suits" />
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {OPTIONS.map((o) => (
             <div key={o.name} className="min-w-0 rounded-2xl border border-border bg-surface p-6">
               <h3 className="text-h4 text-fg">{o.name}</h3>

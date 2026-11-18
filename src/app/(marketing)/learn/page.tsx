@@ -36,7 +36,7 @@ export default function LearnPage() {
         intro={<p>Plain-English guides to getting found on Google, quoted by answer engines and recommended by AI assistants like ChatGPT.</p>}
       />
       <section className="bg-bg py-12 sm:py-16">
-        <ul className="container-marketing grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="container-marketing grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {ARTICLES.map((a) => (
             <li key={a.slug}>
               <Link

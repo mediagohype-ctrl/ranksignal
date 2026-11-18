@@ -86,7 +86,7 @@ export default function HowItWorksPage() {
                 <li
                   key={s.title}
                   id={`step-${i + 1}`}
-                  className="grid scroll-mt-24 gap-12 border-b border-border py-16 last:border-0 sm:py-20 lg:grid-cols-12 lg:gap-10 lg:py-24"
+                  className="grid grid-cols-1 scroll-mt-24 gap-12 border-b border-border py-16 last:border-0 sm:py-20 lg:grid-cols-12 lg:gap-10 lg:py-24"
                 >
                   <div className={"mk-reveal min-w-0 lg:col-span-5 " + (flip ? "lg:order-2 lg:col-start-8" : "")}>
                     <span aria-hidden className="mk-outline-num block text-[clamp(5rem,3.5rem+5vw,9rem)]">
@@ -123,7 +123,7 @@ export default function HowItWorksPage() {
 
       {/* ------------------------------------------------------------ Safety line */}
       <section id="safety" aria-labelledby="safety-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
-        <div className="container-marketing grid gap-8 lg:grid-cols-12 lg:items-start lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-10">
           <h2 id="safety-title" className="mk-reveal mk-statement max-w-[14ch] text-fg lg:col-span-7">
             Nothing on your website changes without you.
           </h2>

@@ -46,7 +46,7 @@ export function CheckLanes({
         <p className="mt-2 text-xs text-muted">{siteNote}</p>
         <ArrowDown aria-hidden size={18} className="mt-3 text-border-strong" />
       </div>
-      <ol className="mt-3 grid gap-5 md:grid-cols-3">
+      <ol className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-3">
         {lanes.map((l) => (
           <li key={l.tag} className="mk-reveal flex flex-col overflow-hidden rounded-2xl border border-border bg-bg">
             <div className="h-36 border-b border-border bg-surface-2/60 p-4">

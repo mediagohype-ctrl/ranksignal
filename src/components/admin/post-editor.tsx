@@ -1,12 +1,13 @@
 "use client";
 // Blog post editor with a live SEO / AEO / GEO score (same rules as the server: src/lib/content/score.ts).
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { CheckCircle2, CircleAlert, CircleX, Eye, ListChecks, Plus, Save, Send, Trash2, Undo2, Upload, X } from "lucide-react";
+import { CheckCircle2, CircleAlert, CircleX, ExternalLink, Eye, Link2, ListChecks, Plus, Save, Search, Send, Trash2, Undo2, Upload, Wand2, X } from "lucide-react";
 import { Badge, Button, Dialog, Field, Input, Notice, Textarea, useToast, type Tone } from "@/components/ui";
 import { Markdown } from "@/components/marketing/markdown";
-import { parseMarkdown, slugify } from "@/lib/content/markdown";
+import { parseMarkdown, relativizeOwnLinks, slugify } from "@/lib/content/markdown";
+import type { LinkTarget } from "@/lib/content/link-targets";
 import { scorePost, type Pillar } from "@/lib/content/score";
 import { adminSend } from "./actions";
 import type { EditorPost } from "@/lib/content/editor-defaults";
@@ -33,8 +34,11 @@ export function PostEditor({
   canPublish,
   canWrite = true,
   siteUrl,
+  linkTargets = [],
 }: {
   initial: EditorPost;
+  /** Our pages for the "Link to our page" picker (src/lib/content/link-targets.ts). */
+  linkTargets?: LinkTarget[];
   canPublish: boolean;
   /** false = read-only view (role has content.view only). */
   canWrite?: boolean;
@@ -49,6 +53,57 @@ export function PostEditor({
   const [error, setError] = useState<string | null>(null);
   const [kwDraft, setKwDraft] = useState("");
   const live = initial.status === "published";
+
+  // ---- links in the article: "Link to our page" picker, outside link, and fixing full mywebrank.tech links
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const selection = useRef({ start: 0, end: 0 });
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkQuery, setLinkQuery] = useState("");
+  const [linkText, setLinkText] = useState("");
+  /** Remember where the cursor / selection is in the article and return the selected words. */
+  const rememberSelection = () => {
+    const el = bodyRef.current;
+    selection.current = el ? { start: el.selectionStart, end: el.selectionEnd } : { start: p.body.length, end: p.body.length };
+    return p.body.slice(selection.current.start, selection.current.end).trim();
+  };
+  /** Replace the remembered selection with `text`, then select `selectFrom..selectTo` (offsets inside `text`). */
+  const insertAtSelection = (text: string, selectFrom = text.length, selectTo = text.length) => {
+    const { start, end } = selection.current;
+    set("body", p.body.slice(0, start) + text + p.body.slice(end));
+    requestAnimationFrame(() => {
+      const el = bodyRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(start + selectFrom, start + selectTo);
+    });
+  };
+  const openLinkPicker = () => {
+    setLinkText(rememberSelection());
+    setLinkQuery("");
+    setLinkOpen(true);
+  };
+  const insertOwnLink = (t: LinkTarget) => {
+    const words = linkText.trim() || t.title;
+    insertAtSelection(`[${words}](${t.path})`);
+    setLinkOpen(false);
+    toast(`Linked to ${t.path}`, "success");
+  };
+  const insertOutsideLink = () => {
+    const words = rememberSelection() || "source name";
+    const md = `[${words}](https://)`;
+    // Select "https://" so the writer can paste the address straight away.
+    insertAtSelection(md, words.length + 3, md.length - 1);
+  };
+  const ownFullLinks = useMemo(() => relativizeOwnLinks(p.body).changed, [p.body]);
+  const fixOwnLinks = () => {
+    const r = relativizeOwnLinks(p.body);
+    set("body", r.body);
+    toast(`${r.changed} link${r.changed === 1 ? "" : "s"} shortened to our own pages`, "success");
+  };
+  const filteredTargets = useMemo(() => {
+    const q = linkQuery.trim().toLowerCase();
+    return q ? linkTargets.filter((t) => t.title.toLowerCase().includes(q) || t.path.toLowerCase().includes(q)) : linkTargets;
+  }, [linkQuery, linkTargets]);
 
   const set = <K extends keyof EditorPost>(k: K, v: EditorPost[K]) => setP((x) => ({ ...x, [k]: v }));
   const blocks = useMemo(() => parseMarkdown(p.body), [p.body]);
@@ -275,7 +330,38 @@ export function PostEditor({
           </div>
           {tab === "write" ? (
             <>
-              <Textarea aria-label="Article (Markdown)" rows={24} className="font-mono text-small" value={p.body} onChange={(e) => set("body", e.target.value)} />
+              {canWrite ? (
+                <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Article tools">
+                  <Button type="button" size="xs" variant="secondary" icon={<Link2 />} onClick={openLinkPicker} title="Select words in the article first, then pick one of our pages">
+                    Link to our page
+                  </Button>
+                  <Button type="button" size="xs" variant="ghost" icon={<ExternalLink />} onClick={insertOutsideLink} title="Link a study, docs or data source">
+                    Outside link
+                  </Button>
+                  <span className="text-xs text-muted">
+                    Links to our pages:{" "}
+                    <strong className={score.stats.internalLinks >= 2 ? "text-success" : "text-danger"}>{score.stats.internalLinks}</strong> (aim for 2+)
+                  </span>
+                </div>
+              ) : null}
+              {canWrite && ownFullLinks > 0 ? (
+                <Notice tone="info" title={`${ownFullLinks} link${ownFullLinks === 1 ? "" : "s"} use the full mywebrank.tech address`}>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span>They already count as links to our pages. Shorten them (/pricing) so they also work in previews.</span>
+                    <Button type="button" size="xs" variant="secondary" icon={<Wand2 />} onClick={fixOwnLinks}>
+                      Shorten them
+                    </Button>
+                  </div>
+                </Notice>
+              ) : null}
+              <Textarea
+                ref={bodyRef}
+                aria-label="Article (Markdown)"
+                rows={24}
+                className="font-mono text-small"
+                value={p.body}
+                onChange={(e) => set("body", e.target.value)}
+              />
               <p className="text-xs text-muted">
                 Markdown: <code>## Heading</code>, <code>### Sub-heading</code>, <code>- list</code>, <code>1. steps</code>, <code>**bold**</code>,{" "}
                 <code>[link text](/free-check)</code>, <code>![image description](https://…)</code>, tables with <code>| a | b |</code>.
@@ -390,6 +476,60 @@ export function PostEditor({
           </Button>
         </div>
       </aside>
+
+      <Dialog
+        open={linkOpen}
+        onClose={() => setLinkOpen(false)}
+        title="Link to our page"
+        description="Pick a page. The link goes where your cursor was in the article; selected words become the link text."
+        size="lg"
+        icon={<Link2 />}
+      >
+        <div className="space-y-3">
+          <Field label="Link text (descriptive words, not “click here”)" htmlFor="link-text">
+            <Input id="link-text" value={linkText} onChange={(e) => setLinkText(e.target.value)} placeholder="e.g. free website check" />
+          </Field>
+          <div className="relative">
+            <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <Input
+              aria-label="Search our pages"
+              className="pl-9"
+              value={linkQuery}
+              onChange={(e) => setLinkQuery(e.target.value)}
+              placeholder="Search pages, tools, guides, posts"
+            />
+          </div>
+          <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-1">
+            {filteredTargets.length === 0 ? (
+              <p className="text-small text-muted">No page matches. You can still type a link like [words](/pricing) in the article.</p>
+            ) : (
+              (["Main pages", "Free tools", "Guides", "Blog posts"] as const).map((g) => {
+                const items = filteredTargets.filter((t) => t.group === g);
+                if (!items.length) return null;
+                return (
+                  <section key={g}>
+                    <h3 className="mb-1 text-caption font-semibold uppercase tracking-[0.06em] text-muted">{g}</h3>
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {items.map((t) => (
+                        <li key={t.path}>
+                          <button
+                            type="button"
+                            onClick={() => insertOwnLink(t)}
+                            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-small hover:bg-surface-2"
+                          >
+                            <span className="truncate font-medium text-fg">{t.title}</span>
+                            <code className="shrink-0 text-xs text-muted">{t.path}</code>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </Dialog>
 
       <Dialog
         open={checksOpen}

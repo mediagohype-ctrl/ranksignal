@@ -106,7 +106,7 @@ export function SiteFooter() {
   const whatsapp = brandWhatsappHref(WHATSAPP_HELP_MESSAGE);
   return (
     <footer className="border-t border-border bg-bg">
-      <div className="container-marketing grid gap-14 pb-14 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-10">
+      <div className="container-marketing grid grid-cols-1 gap-14 pb-14 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-10">
         <div className="lg:col-span-4">
           <Logo />
           <p className="mk-body mt-5 max-w-sm text-fg-soft">
@@ -188,7 +188,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-border">
-        <div className="container-marketing grid gap-4 py-8 text-xs leading-relaxed text-muted lg:grid-cols-12">
+        <div className="container-marketing grid grid-cols-1 gap-4 py-8 text-xs leading-relaxed text-muted lg:grid-cols-12">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 lg:col-span-3 lg:flex-col lg:items-start">
             <p>
               © {new Date().getFullYear()} {BRAND.name}

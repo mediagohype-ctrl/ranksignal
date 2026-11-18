@@ -5,6 +5,7 @@ import { faqsOf } from "@/lib/content/posts";
 import { siteBase } from "@/lib/free-check/site-seo";
 import { PageHeader } from "@/components/ui";
 import { PostEditor } from "@/components/admin/post-editor";
+import { linkTargets } from "@/lib/content/link-targets";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Edit post" };
@@ -19,6 +20,7 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
     <div className="space-y-6">
       <PageHeader title={p.title} breadcrumbs={[{ label: "Blog & content", href: "/admin/content" }, { label: "Edit" }]} />
       <PostEditor
+        linkTargets={await linkTargets(p.id)}
         siteUrl={siteBase()}
         canPublish={staff.can("content.publish")}
         canWrite={staff.can("content.write")}

@@ -32,7 +32,7 @@ export function FaqMaker() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div className="space-y-5">
         {items.map((it, i) => (
           <div key={i} className="space-y-3 rounded-2xl border border-border bg-surface p-5">

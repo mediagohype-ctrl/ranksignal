@@ -50,7 +50,7 @@ export function AiPositionsSection() {
 
         {/* Five answers, side by side */}
         {/* Phones: one column. Tablets: 3 on top, 2 centred below (no lonely last card). Laptops: all 5 in a row. */}
-        <ul className="grid gap-4 sm:grid-cols-6 lg:grid-cols-5">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-6 lg:grid-cols-5">
           {AI_POSITIONS.map((a, idx) => {
             const s = STATUS[a.status];
             return (

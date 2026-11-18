@@ -182,7 +182,7 @@ export function RobotsTxtTester() {
 
         {lint && text !== null && (mode === "paste" ? text.trim() !== "" : true) && (
           <>
-            <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.1fr]">
               <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
                 <h2 className="text-h4 text-fg">Test a crawler and a page</h2>
                 <Field label="Crawler" htmlFor="rtt-bot">

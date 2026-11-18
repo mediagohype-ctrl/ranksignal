@@ -252,7 +252,7 @@ function PillarBreakdown({ pillars, s }: { pillars: FreeCheckPillar[]; s: FreeCh
     <figure className="mt-8 border-t border-border pt-6">
       <h3 className="text-h4 text-fg">{s.fourScores}</h3>
       <figcaption className="mt-1 text-small text-muted">{s.fourScoresCaption}</figcaption>
-      <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+      <ul className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {pillars.map((p) => {
           const band = scoreBand(p.score);
           const name = s.pillarName[p.pillar] ?? p.label;

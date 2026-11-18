@@ -148,7 +148,7 @@ export function JsonLd({ data }: { data: Record<string, unknown> | Record<string
 export function FinalCta({ title, body }: { title: string; body: ReactNode }) {
   return (
     <section aria-labelledby="final-cta" className="bg-fg text-bg">
-      <div className="container-marketing grid gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
+      <div className="container-marketing grid grid-cols-1 gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
         <div className="lg:col-span-8">
           <h2 id="final-cta" className="mk-statement max-w-[16ch] text-balance text-bg">
             {title}

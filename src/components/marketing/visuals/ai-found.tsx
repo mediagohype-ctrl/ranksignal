@@ -24,7 +24,7 @@ const POINTS = [
 export function AiFoundSection() {
   return (
     <section id="ai-found" aria-labelledby="ai-found-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
-      <div className="container-marketing grid gap-10 lg:grid-cols-12 lg:items-center">
+      <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-center">
         <div className="mk-reveal lg:col-span-5">
           <p className="mk-label">What makes us different</p>
           <h2 id="ai-found-title" className="mk-title mt-4 max-w-[18ch] text-fg">

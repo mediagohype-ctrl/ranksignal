@@ -3,6 +3,7 @@ import { requireStaffPage } from "@/lib/admin/guard";
 import { siteBase } from "@/lib/free-check/site-seo";
 import { PageHeader } from "@/components/ui";
 import { PostEditor } from "@/components/admin/post-editor";
+import { linkTargets } from "@/lib/content/link-targets";
 import { emptyPost } from "@/lib/content/editor-defaults";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function NewPost() {
         description="Fill the boxes top to bottom — the score on the right shows what's missing for Google and AI."
         breadcrumbs={[{ label: "Blog & content", href: "/admin/content" }, { label: "New post" }]}
       />
-      <PostEditor initial={emptyPost(staff.user.name?.trim() || staff.user.email.split("@")[0])} canPublish={staff.can("content.publish")} siteUrl={siteBase()} />
+      <PostEditor linkTargets={await linkTargets()} initial={emptyPost(staff.user.name?.trim() || staff.user.email.split("@")[0])} canPublish={staff.can("content.publish")} siteUrl={siteBase()} />
       <p className="text-xs text-muted">
         Tip: check the <Link href="/admin/seo?tab=keywords" className="text-primary hover:underline">keyword list</Link> for phrases that still have no page.
       </p>

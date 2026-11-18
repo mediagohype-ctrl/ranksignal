@@ -154,7 +154,7 @@ export default function PricingPage() {
       <section aria-labelledby="pricing-title">
         <div className="container-marketing pb-12 pt-14 sm:pb-16 sm:pt-20 lg:pt-24">
           <p className="mk-label mk-rise">SEO, AEO &amp; GEO pricing</p>
-          <div className="mt-6 grid gap-10 lg:grid-cols-12 lg:items-end lg:gap-10">
+          <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-end lg:gap-10">
             <h1 id="pricing-title" className="mk-hero mk-rise mk-delay-1 max-w-[14ch] text-fg lg:col-span-8">
               Simple pricing. <span className="text-primary">You choose who does the work.</span>
             </h1>
@@ -174,7 +174,7 @@ export default function PricingPage() {
           <h2 id="plans-title" className="sr-only">
             Plans
           </h2>
-          <ul className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+          <ul className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
             {CARDS.map((c) => (
               <li
                 key={c.key}
@@ -292,7 +292,7 @@ export default function PricingPage() {
 
       {/* ------------------------------------------------------------ FAQ */}
       <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border py-20 sm:py-28">
-        <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <h2 id="faq-title" className="mk-title max-w-[12ch] text-fg">
               Pricing questions.

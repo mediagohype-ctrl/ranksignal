@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { BRAND } from "@/lib/brand";
+import { BRAND, WHATSAPP_HELP_MESSAGE, brandWhatsappHref } from "@/lib/brand";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
+import { WhatsAppFloat } from "@/components/marketing/whatsapp-float";
 import { JsonLd } from "@/components/marketing/ui";
 import { organizationLd, websiteLd } from "@/lib/seo/schema";
 import { OG_IMAGE } from "@/lib/seo/metadata";
@@ -37,6 +38,8 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <SiteFooter />
+      {/* Floating WhatsApp chat button on every public page (number: BRAND.whatsapp, +91 84477 88703). */}
+      <WhatsAppFloat href={brandWhatsappHref(WHATSAPP_HELP_MESSAGE)} />
     </div>
   );
 }

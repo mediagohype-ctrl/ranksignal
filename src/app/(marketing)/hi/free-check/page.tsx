@@ -117,7 +117,7 @@ export default async function HindiFreeCheckPage({ searchParams }: { searchParam
       </Section>
       <Section labelledBy="hi-fc-what" tone="surface">
         <SectionHeading id="hi-fc-what" size="lg" align="center" eyebrow="हम क्या चेक करते हैं" title="फ्री चेक किन चीज़ों को देखता है" />
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {WHAT.map((w) => (
             <li key={w.title} className="rounded-2xl border border-border bg-bg p-6">
               <IconTile>{w.icon}</IconTile>

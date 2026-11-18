@@ -73,7 +73,7 @@ export default function ToolsPage() {
               {g.title}
             </h2>
             <p className="mt-1 text-small text-muted">{g.intro}</p>
-            <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {g.tools.map((t) => (
                 <li key={t.href}>
                   <Link href={t.href} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition hover:border-primary hover:shadow-card">

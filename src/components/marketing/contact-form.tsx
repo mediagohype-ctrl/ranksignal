@@ -122,7 +122,7 @@ export function ContactForm({
           {t.topicCustom}
         </p>
       )}
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Field label={t.name} htmlFor="c-name" error={errors.name} required>
           <Input id="c-name" autoComplete="name" value={form.name} onChange={set("name")} maxLength={100} required invalid={!!errors.name}
             aria-describedby={fieldDescribedBy("c-name", { error: errors.name })} />

@@ -97,7 +97,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         </ol>
       </nav>
       <div className="bg-bg py-10 sm:py-14">
-        <div className="container-marketing grid gap-10 lg:grid-cols-[1fr_260px] lg:gap-14">
+        <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px] lg:gap-14">
           <article className="min-w-0">
             <Prose>
               <div id="answer" className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-6 text-fg">

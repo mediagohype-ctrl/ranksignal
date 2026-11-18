@@ -44,7 +44,7 @@ export function GuideMaker() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div className="space-y-5 rounded-2xl border border-border bg-surface p-5">
         <Field label="Business name" htmlFor="g-name">
           <Input id="g-name" placeholder="Sharma Sweets" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />

@@ -87,7 +87,7 @@ export function BaselineVignette() {
           {CHECK_ANSWERS} AI answers saved
         </span>
       </p>
-      <div className="grid sm:grid-cols-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2">
         <ul className="space-y-3 border-b border-border px-5 py-5 sm:border-b-0 sm:border-r sm:px-6">
           {BASELINE_PILLARS.map((p) => (
             <li key={p.label} className="grid grid-cols-[6.25rem_1fr_1.75rem] items-center gap-2 text-xs">
@@ -190,7 +190,7 @@ export function ImpactReportVignette() {
       }
       className="shadow-xl"
     >
-      <div className="grid md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Measured */}
         <div className="border-b border-border px-5 py-5 sm:px-6 md:border-b-0 md:border-r">
           <p className="text-small font-semibold text-fg">What we measured</p>

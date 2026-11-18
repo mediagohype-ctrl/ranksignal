@@ -89,7 +89,7 @@ export default function HindiServicesPage() {
           <h2 id="hi-how-title" className="mk-title max-w-[18ch] text-fg">
             यह कैसे काम करता है
           </h2>
-          <ol className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          <ol className="mt-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {STEPS.map((s, i) => (
               <li key={s.title} className="border-t border-fg pt-6">
                 <span aria-hidden className="text-small font-medium tabular-nums text-primary">
@@ -109,7 +109,7 @@ export default function HindiServicesPage() {
           <h2 id="hi-plans-title" className="mk-title mt-4 max-w-[20ch] text-fg">
             एक प्लान। सारा काम हमारा।
           </h2>
-          <div className="mk-reveal mt-12 grid gap-10 rounded-[28px] bg-fg p-7 text-bg sm:p-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="mk-reveal mt-12 grid grid-cols-1 gap-10 rounded-[28px] bg-fg p-7 text-bg sm:p-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <div>
               <h3 className="text-[1.75rem] font-semibold leading-tight text-bg">
                 {HI_DFY.name}
@@ -162,7 +162,7 @@ export default function HindiServicesPage() {
           <h2 id="hi-promises-title" className="mk-title max-w-[18ch] text-fg">
             हमारे वादे
           </h2>
-          <ul className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+          <ul className="mt-12 grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
             {PROMISES.map((p) => (
               <li key={p.title} className="border-t border-fg pt-6">
                 <h3 className="text-[1.25rem] font-semibold text-fg">{p.title}</h3>

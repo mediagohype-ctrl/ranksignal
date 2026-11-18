@@ -82,7 +82,7 @@ function ResultVignette() {
   ];
   return (
     <Panel title="Your result" sub={DOMAIN}>
-      <div className="grid sm:grid-cols-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2">
         <div className="flex items-center gap-4 border-b border-border px-5 py-5 sm:border-b-0 sm:border-r sm:px-6">
           <ScoreRing score={61} size="md" label="Sample Found Score" />
           <div>
@@ -157,7 +157,7 @@ export function FreeCheckSteps() {
           {STEPS.map((s, i) => {
             const flip = i % 2 === 1;
             return (
-              <li key={s.title} className="grid gap-12 border-b border-border py-16 last:border-0 sm:py-20 lg:grid-cols-12 lg:gap-10 lg:py-24">
+              <li key={s.title} className="grid grid-cols-1 gap-12 border-b border-border py-16 last:border-0 sm:py-20 lg:grid-cols-12 lg:gap-10 lg:py-24">
                 <div className={"mk-reveal min-w-0 lg:col-span-5 " + (flip ? "lg:order-2 lg:col-start-8" : "")}>
                   <span aria-hidden className="mk-outline-num block text-[clamp(5rem,3.5rem+5vw,9rem)]">
                     {String(i + 1).padStart(2, "0")}
@@ -206,7 +206,7 @@ export function FreeVsFull() {
   const price = `${inr(SELF_PLAN.price)}/month${gstOn() ? " + GST" : ""}`;
   return (
     <section id="fc-vs" aria-labelledby="fc-vs-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
-      <div className="container-marketing grid gap-10 lg:grid-cols-12 lg:items-start">
+      <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-start">
         <div className="mk-reveal lg:col-span-5">
           <h2 id="fc-vs-title" className="mk-statement max-w-[12ch] text-fg">
             A quick look, free. The full check goes deep.

@@ -142,7 +142,7 @@ export function AiCrawlerChecker() {
             </span>
           </Notice>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <CrawlerTable
               title="AI search and answers"
               intro="These fetch pages to answer questions and link to sources. Blocking them keeps you out of those answers."
@@ -180,7 +180,7 @@ export function AiCrawlerChecker() {
             )}
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Snippet
               id="acc-snippet-split"
               title="Allow AI search, block AI training"

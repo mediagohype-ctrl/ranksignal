@@ -61,7 +61,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
         {calendar && <BookCallButton onDark />}
       </PageHero>
       <section aria-label="Contact form" className="bg-bg py-14 sm:py-20">
-        <div className="container-marketing grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
+        <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
           <Card variant="elevated" padding="lg" className="relative">
             <ContactForm
               supportEmail={BRAND.supportEmail}

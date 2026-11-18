@@ -64,8 +64,12 @@ export function SiteHeader() {
   return (
     <>
     <header className="fixed inset-x-0 top-0 z-40 border-b border-border/80 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/85">
-      <div className="container-marketing flex h-16 items-center justify-between gap-6 lg:h-[72px]">
-        <Logo />
+      <div className="container-marketing flex h-16 items-center justify-between gap-3 lg:h-[72px] lg:gap-6">
+        <div className="min-w-0 shrink">
+          {/* Smaller logo on phones so the button and menu always fit beside it. */}
+          <Logo size="sm" className="sm:hidden" />
+          <Logo className="max-sm:hidden" />
+        </div>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
           {NAV.map((n) => (
@@ -98,9 +102,10 @@ export function SiteHeader() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <WhatsAppLink className="max-[359px]:hidden" />
-          <Link href={CTA.href} className={brightPill("md", "h-9 px-4")}>
+        {/* Phones: bright button + menu only (WhatsApp moves into the menu), so the menu button never falls off-screen. */}
+        <div className="-mr-2 flex shrink-0 items-center gap-1.5 lg:hidden">
+          <WhatsAppLink className="max-sm:hidden" />
+          <Link href={CTA.href} className={brightPill("md", "h-9 whitespace-nowrap px-3.5 text-[0.875rem] max-[339px]:hidden")}>
             {CTA.short}
           </Link>
           <button
@@ -138,10 +143,21 @@ export function SiteHeader() {
                 </Link>
               </li>
             ))}
+            <li className="border-b border-border sm:hidden">
+              <a
+                href={WHATSAPP}
+                {...newTabProps(WHATSAPP)}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 py-4 text-[1.375rem] font-medium tracking-[-0.02em] text-fg"
+              >
+                <MessageCircle aria-hidden size={22} className="text-[#128C7E]" />
+                Chat on WhatsApp
+              </a>
+            </li>
             <li className="border-b border-border">
               <LanguageSwitch onClick={() => setOpen(false)} className="w-full py-4 text-[1.375rem] tracking-[-0.02em] text-fg" />
             </li>
-            <li className="mt-8 grid gap-3 sm:grid-cols-2">
+            <li className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link href={CTA.href} onClick={() => setOpen(false)} className={brightPill("lg")}>
                 {CTA.label}
               </Link>

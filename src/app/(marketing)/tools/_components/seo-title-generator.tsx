@@ -44,7 +44,7 @@ export function SeoTitleGenerator() {
           <Field label="What is the page about?" htmlFor="tg-topic" hint="One sentence, e.g. emergency plumbing repairs for homes and offices" required>
             <Input id="tg-topic" value={topic} maxLength={L.topic} onChange={(e) => setTopic(e.target.value)} disabled={busy} required />
           </Field>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Main keyword" htmlFor="tg-keyword" hint="What people type into Google" required>
               <Input id="tg-keyword" placeholder="plumber in Pune" value={keyword} maxLength={L.keyword} onChange={(e) => setKeyword(e.target.value)} disabled={busy} required />
             </Field>

@@ -70,7 +70,7 @@ export function AboutBody({ copy }: { copy: AboutCopy }) {
           <h2 id="about-beliefs" className="text-h2 text-fg">
             {copy.beliefsTitle}
           </h2>
-          <ol className="mt-8 grid gap-5 md:grid-cols-3">
+          <ol className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
             {copy.beliefs.map((b, i) => (
               <li key={b.title} className="rounded-2xl border border-border bg-bg p-6">
                 <span aria-hidden className="text-small font-semibold tabular-nums text-primary">

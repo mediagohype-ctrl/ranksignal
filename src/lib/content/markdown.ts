@@ -27,6 +27,36 @@ export function safeHref(href: string): string {
   return "#";
 }
 
+/** Our own website addresses: a full link to one of these counts (and renders) as a link to our own page. */
+export const OWN_HOSTS = ["mywebrank.tech", "www.mywebrank.tech"];
+
+/**
+ * "/free-check" for "https://mywebrank.tech/free-check" (or "/free-check" itself); null for other websites, mailto and
+ * in-page "#" links. Lets writers paste full addresses of our pages and still get internal links.
+ */
+export function ownSitePath(href: string): string | null {
+  if (/^\/(?![/\\])/.test(href)) return href;
+  if (!/^https?:\/\//i.test(href)) return null;
+  try {
+    const u = new URL(href);
+    return OWN_HOSTS.includes(u.hostname.toLowerCase()) ? `${u.pathname}${u.search}${u.hash}` || "/" : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Turn every full link to our own site into a short internal one: ](https://mywebrank.tech/pricing) → ](/pricing). */
+export function relativizeOwnLinks(markdown: string): { body: string; changed: number } {
+  let changed = 0;
+  const body = markdown.replace(/\]\((https?:\/\/[^\s)]+)\)/gi, (m, href: string) => {
+    const path = ownSitePath(href);
+    if (!path || path === href) return m;
+    changed++;
+    return `](${path})`;
+  });
+  return { body, changed };
+}
+
 export function slugify(s: string): string {
   return s
     .toLowerCase()

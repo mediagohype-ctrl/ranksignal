@@ -182,7 +182,7 @@ export default function ServicesPage() {
       <section aria-labelledby="services-title" className="relative overflow-hidden">
         <div className="container-marketing pb-16 pt-14 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-24">
           <p className="mk-label mk-rise">Done-for-you SEO, AEO &amp; GEO services</p>
-          <div className="mt-6 grid gap-14 lg:grid-cols-12 lg:gap-10">
+          <div className="mt-6 grid grid-cols-1 gap-14 lg:grid-cols-12 lg:gap-10">
             <div className="mk-rise mk-delay-1 min-w-0 lg:col-span-7">
               <h1 id="services-title" className="mk-hero max-w-[15ch] text-fg lg:text-[clamp(3.25rem,1.2rem+3.4vw,5.25rem)]">
                 We get your business found. <br />
@@ -227,7 +227,7 @@ export default function ServicesPage() {
           <h2 id="familiar-title" className="mk-reveal mk-title text-fg">
             Sound familiar?
           </h2>
-          <ul className="mt-10 grid gap-5 md:grid-cols-3">
+          <ul className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
             {FAMILIAR.map((f) => (
               <li key={f.title} className="mk-reveal rounded-[22px] border border-border bg-surface p-6 sm:p-7">
                 <span aria-hidden className="inline-flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary-soft-fg">
@@ -248,7 +248,7 @@ export default function ServicesPage() {
         className="scroll-mt-20 border-y border-border bg-surface-2/50 py-24 sm:py-32"
       >
         <div className="container-marketing">
-          <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
+          <div className="mk-reveal grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
             <h2 id="how-title" className="mk-statement max-w-[13ch] text-fg lg:col-span-7">
               Your first 30 days.
             </h2>
@@ -264,7 +264,7 @@ export default function ServicesPage() {
       {/* ------------------------------------------------------------ Plans */}
       <section id="plans" aria-labelledby="plans-title" className="scroll-mt-20 py-24 sm:py-32">
         <div className="container-marketing">
-          <div className="mk-reveal grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
+          <div className="mk-reveal grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
             <div className="lg:col-span-7">
               <p className="mk-label">Price</p>
               <h2 id="plans-title" className="mk-statement mt-5 max-w-[14ch] text-fg">
@@ -304,7 +304,7 @@ export default function ServicesPage() {
         aria-labelledby="report-title"
         className="scroll-mt-20 border-t border-border bg-surface-2/50 py-24 sm:py-32"
       >
-        <div className="container-marketing grid gap-14 lg:grid-cols-12 lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-14 lg:grid-cols-12 lg:gap-10">
           <div className="mk-reveal lg:col-span-4">
             <div className="lg:sticky lg:top-28">
               <h2 id="report-title" className="mk-title max-w-[14ch] text-fg">
@@ -335,7 +335,7 @@ export default function ServicesPage() {
 
       {/* ------------------------------------------------------------ Promises */}
       <section id="promises" aria-labelledby="promises-title" className="scroll-mt-20 py-24 sm:py-32">
-        <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="mk-reveal lg:col-span-5">
             <div className="lg:sticky lg:top-28">
               <h2 id="promises-title" className="mk-statement max-w-[10ch] text-fg">
@@ -377,7 +377,7 @@ export default function ServicesPage() {
             {PROMISES.map((p, i) => (
               <li
                 key={p.title}
-                className="mk-reveal grid gap-2 border-t border-border py-7 first:border-fg sm:grid-cols-[3rem_1fr] sm:gap-6"
+                className="mk-reveal grid grid-cols-1 gap-2 border-t border-border py-7 first:border-fg sm:grid-cols-[3rem_1fr] sm:gap-6"
               >
                 <span className="text-small font-medium tabular-nums text-muted">{String(i + 1).padStart(2, "0")}</span>
                 <div>
@@ -392,7 +392,7 @@ export default function ServicesPage() {
 
       {/* ------------------------------------------------------------ FAQ */}
       <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border py-24 sm:py-32">
-        <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-28">
               <h2 id="faq-title" className="mk-title max-w-[12ch] text-fg">

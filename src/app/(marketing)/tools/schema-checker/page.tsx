@@ -78,7 +78,7 @@ export default function SchemaCheckerPage() {
             <li>notes Microdata and RDFa markup, two older formats Google also reads;</li>
             <li>checks the fields Google documents as required or recommended for these {LISTED.length} common types:</li>
           </ul>
-          <ul className="mt-3 grid gap-1 pl-5 text-small sm:grid-cols-2">
+          <ul className="mt-3 grid grid-cols-1 gap-1 pl-5 text-small sm:grid-cols-2">
             {LISTED.map((r) => (
               <li key={r.key}>
                 <SourceLink href={r.docUrl}>{r.label}</SourceLink>

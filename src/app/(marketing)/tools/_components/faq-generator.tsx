@@ -68,7 +68,7 @@ export function FaqGenerator() {
               <Textarea id="fg-text" rows={8} value={text} maxLength={L.pageText} onChange={(e) => setText(e.target.value)} disabled={busy} />
             </Field>
           )}
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Who are your customers?" htmlFor="fg-audience" optional>
               <Input id="fg-audience" placeholder="First-time home buyers" value={audience} maxLength={L.audience} onChange={(e) => setAudience(e.target.value)} disabled={busy} />
             </Field>
@@ -99,7 +99,7 @@ export function FaqGenerator() {
                 Answers only use your page text. Where it says &quot;Not stated on the page&quot;, write the real answer or remove the question.
               </AiDraftNotice>
             </div>
-            <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
               <div className="space-y-5">
                 {rows.map((r, i) => {
                   const check = evaluateFaqAnswer(r.answer);

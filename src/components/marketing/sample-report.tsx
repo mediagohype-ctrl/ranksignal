@@ -53,7 +53,7 @@ export function SampleReportPeek() {
 /** Full sample: four pillar rings + one plain-English issue. */
 export function SampleReport() {
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
       <div className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6 lg:col-span-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-h4 text-fg">Your four scores</h3>

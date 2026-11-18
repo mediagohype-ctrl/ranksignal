@@ -1,5 +1,5 @@
 // SEO / AEO / GEO score for a blog post draft (pure — runs live in the editor and on the server).
-import { links, parseMarkdown, plainText, wordCount, type Block } from "./markdown";
+import { links, ownSitePath, parseMarkdown, plainText, wordCount, type Block } from "./markdown";
 
 export interface PostDraft {
   title: string;
@@ -51,8 +51,9 @@ export function scorePost(d: PostDraft, blocks: Block[] = parseMarkdown(d.body))
   const h2 = blocks.filter((b) => b.t === "h2");
   const headings = blocks.filter((b): b is Extract<Block, { t: "h2" | "h3" }> => b.t === "h2" || b.t === "h3");
   const all = links(blocks);
-  const internal = all.filter((h) => h.startsWith("/")).length;
-  const external = all.filter((h) => /^https?:\/\//.test(h)).length;
+  // Full links to our own site (https://mywebrank.tech/…) count as internal, not as outside sources.
+  const internal = all.filter((h) => ownSitePath(h) !== null).length;
+  const external = all.filter((h) => /^https?:\/\//i.test(h) && ownSitePath(h) === null).length;
   const answerWords = wordCount(d.answer);
   const numbers = (text.match(/\b\d[\d,.]*%?/g) ?? []).length;
   const imgs = blocks.filter((b) => b.t === "img");
@@ -75,7 +76,7 @@ export function scorePost(d: PostDraft, blocks: Block[] = parseMarkdown(d.body))
   add("seo", "slug", "Address is short and readable", /^[a-z0-9]+(-[a-z0-9]+)*$/.test(d.slug) && d.slug.length <= 60 ? "pass" : "fail", "Use lowercase words joined by dashes, under 60 characters.");
   add("seo", "length", `Length: ${words} words (aim for 800+)`, words >= 800 ? "pass" : words >= 500 ? "warn" : "fail", "In-depth pages rank better for competitive phrases.", 2);
   add("seo", "headings", `Sections: ${h2.length} H2 headings (aim for 3+)`, h2.length >= 3 ? "pass" : h2.length >= 1 ? "warn" : "fail", "Use ## headings to split the article into sections.");
-  add("seo", "internal-links", `Links to our pages: ${internal} (aim for 2+)`, internal >= 2 ? "pass" : internal === 1 ? "warn" : "fail", "Link to /free-check, /services or related guides with descriptive words.");
+  add("seo", "internal-links", `Links to our pages: ${internal} (aim for 2+)`, internal >= 2 ? "pass" : internal === 1 ? "warn" : "fail", "Use the Link to our page button above the article, or write [descriptive words](/free-check). Full https://mywebrank.tech links count too.");
   add("seo", "image-alt", "Images have descriptions (alt text)", imgs.every((i) => i.alt.trim().length >= 5) ? "pass" : "fail", "Describe each image: ![What the image shows](url).");
 
   // --- AEO

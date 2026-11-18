@@ -208,7 +208,7 @@ export function ReportExample() {
           Example
         </span>
       </div>
-      <dl className="grid gap-px bg-border sm:grid-cols-3">
+      <dl className="grid grid-cols-1 gap-px bg-border sm:grid-cols-3">
         {REPORT_NUMBERS.map((n) => (
           <div key={n.label} className="bg-surface px-6 py-7 sm:px-7">
             <dt className="text-small font-medium text-fg-soft">{n.label}</dt>
@@ -253,7 +253,7 @@ export function ServicesCta({
 }) {
   return (
     <section aria-labelledby="final-cta" className="bg-fg text-bg">
-      <div className="container-marketing grid gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
+      <div className="container-marketing grid grid-cols-1 gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
         <div className="lg:col-span-7">
           <h2 id="final-cta" className="mk-statement max-w-[15ch] text-balance text-bg">
             {title}

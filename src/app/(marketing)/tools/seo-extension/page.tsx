@@ -99,7 +99,7 @@ export default function SeoExtensionPage() {
         <h2 id="ext-what" className="text-center text-h2 text-fg">
           What the extension checks
         </h2>
-        <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {CHECKS.map((c) => (
             <li key={c.title} className="rounded-2xl border border-border bg-bg p-6">
               <IconTile>{c.icon}</IconTile>

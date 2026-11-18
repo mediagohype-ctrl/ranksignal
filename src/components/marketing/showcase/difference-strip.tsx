@@ -19,7 +19,7 @@ export interface DiffItem {
 export function DifferenceStrip({ items, caption, lang }: { items: DiffItem[]; caption: string; lang?: string }) {
   return (
     <figure lang={lang}>
-      <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it) => (
           <li key={it.title} className="mk-reveal flex flex-col rounded-2xl border border-border bg-bg p-5">
             <div className="h-32 overflow-hidden rounded-xl bg-surface-2/70 p-3.5">

@@ -43,7 +43,7 @@ export function MetaDescriptionGenerator() {
           <Field label="What is the page about?" htmlFor="md-topic" hint="A short summary: what you offer, for whom, and where" required>
             <Textarea id="md-topic" rows={3} value={topic} maxLength={L.topic} onChange={(e) => setTopic(e.target.value)} disabled={busy} required />
           </Field>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Main keyword" htmlFor="md-keyword" hint="What people type into Google" required>
               <Input id="md-keyword" placeholder="cake delivery in Jaipur" value={keyword} maxLength={L.keyword} onChange={(e) => setKeyword(e.target.value)} disabled={busy} required />
             </Field>

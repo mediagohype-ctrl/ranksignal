@@ -108,7 +108,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
               </ul>
             </div>
           ) : (
-            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {posts.map((p) => (
                 <li key={p.id}>
                   <Link
@@ -157,7 +157,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
               reads up to {PLANS.starter.maxPagesPerCrawl.toLocaleString("en-IN")} pages, so patterns show up quickly.
             </p>
           </div>
-          <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {TOPIC_HUBS.map((h) => (
               <li key={h.title} className="flex flex-col rounded-2xl border border-border bg-bg p-6">
                 <h3 className="text-h4 text-fg">{h.title}</h3>

@@ -45,7 +45,7 @@ function Lane({ who, children }: { who: "You" | "Our team"; children: React.Reac
 export function ServiceFlow({ steps, className }: { steps: Step[]; className?: string }) {
   return (
     <figure className={clsx("min-w-0", className)}>
-      <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-[auto_1fr_1fr] lg:gap-x-6 lg:gap-y-3">
+      <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-[auto_1fr_1fr] lg:gap-x-6 lg:gap-y-3">
         {steps.map((s, i) => {
           const lane = LANES[i];
           if (!lane) return null;

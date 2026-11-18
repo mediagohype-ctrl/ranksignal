@@ -66,7 +66,7 @@ export default function ApiDocsPage() {
         intro={<p>Pull your numbers into your own scripts, dashboards and AI assistants. Everything here is read-only.</p>}
       />
       <div className="bg-bg py-12 sm:py-16">
-        <div className="container-marketing grid gap-8 lg:grid-cols-[240px_1fr] lg:gap-12">
+        <div className="container-marketing grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr] lg:gap-12">
           <nav aria-label="Guide contents">
             <div className="rounded-2xl border border-border bg-surface p-5 shadow-card lg:sticky lg:top-24 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
               <p className="flex items-center gap-2 text-caption uppercase tracking-[0.06em] text-muted">

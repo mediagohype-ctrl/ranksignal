@@ -82,7 +82,7 @@ export default function HindiHomePage() {
 
       {/* What you get */}
       <section id="sample" aria-labelledby="hi-sample-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-20 sm:py-28">
-        <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:items-center lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center lg:gap-10">
           <div className="mk-reveal lg:col-span-5">
             <p className="mk-label">आपको क्या मिलता है</p>
             <h2 id="hi-sample-title" className="mk-title mt-4 max-w-[16ch] text-fg">
@@ -139,7 +139,7 @@ export default function HindiHomePage() {
               <ArrowRight aria-hidden size={17} />
             </Link>
           </div>
-          <ol className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8 lg:mt-16">
+          <ol className="mt-12 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 lg:mt-16">
             {STEPS.map((s, i) => (
               <li key={s.title} className="mk-reveal border-t border-fg pt-6">
                 <span aria-hidden className="text-small font-medium tabular-nums text-primary">
@@ -167,7 +167,7 @@ export default function HindiHomePage() {
               कीमतें भारतीय रुपये में{gstOn() ? ", GST अलग" : ""}। “मैं ख़ुद करूँगा” पहले {TRIAL_DAYS} दिन फ्री।
             </p>
           </div>
-          <ul className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+          <ul className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
             {HI_OFFER.map((c) => {
               const ink = !!c.featured;
               return (

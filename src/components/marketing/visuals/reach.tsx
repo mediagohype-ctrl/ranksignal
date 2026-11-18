@@ -164,7 +164,7 @@ export function ReachVisual({ headingAs = "h3", className }: { headingAs?: Headi
       </svg>
 
       {/* Beats 1-3 */}
-      <ol className="relative grid gap-3 lg:mt-1 lg:grid-cols-3 lg:gap-8">
+      <ol className="relative grid grid-cols-1 gap-3 lg:mt-1 lg:grid-cols-3 lg:gap-8">
         {/* Desktop connecting line behind the numbered badges */}
         <span aria-hidden className="absolute left-[16.67%] right-[16.67%] top-5 hidden border-t-2 border-dashed border-primary/35 lg:block" />
         {STEPS.map((s, i) => {

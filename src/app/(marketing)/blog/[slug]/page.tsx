@@ -136,7 +136,7 @@ export default async function BlogPostPage({ params, searchParams }: Props) {
         </ol>
       </nav>
       <div className="bg-bg py-10 sm:py-14">
-        <div className="container-marketing grid gap-10 lg:grid-cols-[1fr_260px] lg:gap-14">
+        <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px] lg:gap-14">
           <article className="min-w-0">
             {p.coverImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element

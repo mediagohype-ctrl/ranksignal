@@ -217,8 +217,8 @@ export default function HomePage() {
             {/* One row on laptops; on phones a tidy 2 × 2 grid instead of an orphaned last tick. */}
             <ul className="mk-rise mk-delay-2 mx-auto mt-6 grid max-w-md grid-cols-2 justify-items-start gap-x-4 gap-y-2 text-left text-small text-fg-soft sm:flex sm:max-w-none sm:flex-nowrap sm:justify-center sm:gap-x-5">
               {TICKS.map((t) => (
-                <li key={t} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                  <Check aria-hidden size={15} className="shrink-0 text-success" />
+                <li key={t} className="inline-flex items-start gap-1.5 sm:items-center sm:whitespace-nowrap">
+                  <Check aria-hidden size={15} className="mt-[3px] shrink-0 text-success sm:mt-0" />
                   {t}
                 </li>
               ))}
@@ -238,7 +238,7 @@ export default function HomePage() {
               One search, three places to be found. {BRAND.name} checks all three and shows you what to fix first.
             </p>
           </div>
-          <ol className="mt-10 grid gap-5 sm:grid-cols-3">
+          <ol className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
             {PLACES.map((p) => (
               <li key={p.term} className="mk-reveal rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
                 <PlaceArt place={p.term} className="mb-5" />
@@ -259,7 +259,7 @@ export default function HomePage() {
 
       {/* ------------------------------------------------------------ 3. Sample result */}
       <section id="sample" aria-labelledby="sample-title" className="scroll-mt-20 border-t border-border py-16 sm:py-24">
-        <div className="container-marketing grid gap-10 lg:grid-cols-12 lg:items-center">
+        <div className="container-marketing grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-center">
           <div className="mk-reveal lg:col-span-5">
             <p className="mk-label">What you get</p>
             <h2 id="sample-title" className="mk-title mt-4 max-w-[16ch] text-fg">
@@ -290,7 +290,7 @@ export default function HomePage() {
               <ArrowRight aria-hidden size={17} />
             </Link>
           </div>
-          <ol className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8">
+          <ol className="mt-12 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8">
             {STEPS.map((s, i) => {
               const Icon = s.icon;
               const last = i === STEPS.length - 1;
@@ -367,7 +367,7 @@ export default function HomePage() {
             </h2>
             <p className="mk-body mt-4 text-fg-soft">{gstOn() ? "Prices in ₹. GST extra. No hidden costs." : "Prices in ₹. No hidden costs."}</p>
           </div>
-          <ul className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+          <ul className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
             {HOME_PLANS.map((p) => (
               <li
                 key={p.key}
@@ -426,7 +426,7 @@ export default function HomePage() {
 
       {/* ------------------------------------------------------------ 8. Questions */}
       <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-t border-border bg-surface-2/50 py-16 sm:py-24">
-        <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-28">
               <h2 id="faq-title" className="mk-title max-w-[12ch] text-fg">

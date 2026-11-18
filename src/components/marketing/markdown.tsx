@@ -1,7 +1,7 @@
 // Renders parsed blog Markdown as React elements (never dangerouslySetInnerHTML).
 import Link from "next/link";
 import { Fragment } from "react";
-import { parseMarkdown, type Block, type Inline } from "@/lib/content/markdown";
+import { ownSitePath, parseMarkdown, type Block, type Inline } from "@/lib/content/markdown";
 
 function Inlines({ c }: { c: Inline[] }) {
   return (
@@ -24,9 +24,10 @@ function Inlines({ c }: { c: Inline[] }) {
                 <Inlines c={n.c} />
               </em>
             );
-          case "link":
-            return n.href.startsWith("/") ? (
-              <Link key={i} href={n.href}>
+          case "link": {
+            const own = ownSitePath(n.href);
+            return own ? (
+              <Link key={i} href={own}>
                 <Inlines c={n.c} />
               </Link>
             ) : (
@@ -34,6 +35,7 @@ function Inlines({ c }: { c: Inline[] }) {
                 <Inlines c={n.c} />
               </a>
             );
+          }
         }
       })}
     </>

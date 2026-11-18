@@ -48,7 +48,7 @@ function LengthBar({ length, max, label }: { length: number; max: number; label:
 
 function TagRow({ name, value }: { name: string; value: string | null }) {
   return (
-    <div className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-3">
+    <div className="grid grid-cols-1 gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-3">
       <dt className="font-mono text-xs text-muted">{name}</dt>
       <dd className="break-words text-small text-fg">{value ?? <span className="text-danger">Not set</span>}</dd>
     </div>
@@ -72,7 +72,7 @@ export function MetaTagChecker() {
             </Notice>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ResultCard title="Google search preview">
               <div className="rounded-xl border border-border bg-bg p-4">
                 <p className="truncate text-xs text-fg-soft">{r.preview.search.displayUrl}</p>
@@ -104,7 +104,7 @@ export function MetaTagChecker() {
 
           <CheckResults checks={r.checks} summary={r.summary} pageUrl={r.finalUrl} />
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ResultCard title="Title" aside={<Badge tone={TITLE_LABEL[r.title.verdict].tone}>{TITLE_LABEL[r.title.verdict].text}</Badge>}>
               <p className="break-words text-body text-fg">{r.title.text ?? <span className="text-danger">No title tag</span>}</p>
               {r.title.text && <LengthBar length={r.title.length} max={TITLE_MAX} label="Title length" />}

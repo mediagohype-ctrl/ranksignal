@@ -48,7 +48,7 @@ export function HiCheckLauncher({ id = "hi-check-url", className }: { id?: strin
 /** Software plan cards (prices and limits from the billing constants). */
 export function HiPlanCards({ plans, limit }: { plans: HindiPlan[]; limit?: number }) {
   return (
-    <ul className="grid gap-6 md:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-6 md:grid-cols-3">
       {plans.map((p) => (
         <li
           key={p.id}
@@ -89,7 +89,7 @@ export function HiPlanCards({ plans, limit }: { plans: HindiPlan[]; limit?: numb
 /** Done-for-you tier cards. */
 export function HiTierCards({ tiers }: { tiers: HindiServiceTier[] }) {
   return (
-    <ul className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+    <ul className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
       {tiers.map((t) => {
         const ink = !!t.featured;
         return (
@@ -147,7 +147,7 @@ export function HiTierCards({ tiers }: { tiers: HindiServiceTier[] }) {
 export function HiFaqSection({ id, title, intro, items }: { id: string; title: string; intro?: ReactNode; items: HiFaq[] }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-20 border-t border-border py-20 sm:py-28">
-      <div className="container-marketing grid gap-12 lg:grid-cols-12 lg:gap-10">
+      <div className="container-marketing grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
         <div className="lg:col-span-4">
           <h2 id={`${id}-title`} className="mk-title max-w-[14ch] text-fg">
             {title}
@@ -190,7 +190,7 @@ export function HiFaqSection({ id, title, intro, items }: { id: string; title: s
 export function HiFinalCta({ title, body }: { title: string; body: ReactNode }) {
   return (
     <section aria-labelledby="hi-final-cta" className="bg-fg text-bg">
-      <div className="container-marketing grid gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
+      <div className="container-marketing grid grid-cols-1 gap-10 py-20 sm:py-28 lg:grid-cols-12 lg:items-end">
         <div className="lg:col-span-8">
           <h2 id="hi-final-cta" className="mk-statement max-w-[18ch] text-balance text-bg">
             {title}

@@ -43,7 +43,7 @@ export default function FeaturesPage() {
           <h2 id="features-title" className="sr-only">
             The four parts
           </h2>
-          <ul className="grid gap-6 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {FEATURE_CARDS.map((f) => (
               <li key={f.id} id={f.id} className="mk-reveal scroll-mt-24 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8">
                 <div className="flex items-center gap-4">

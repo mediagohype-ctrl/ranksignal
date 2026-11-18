@@ -300,7 +300,7 @@ export function ProductTour({
       <div className="mb-4 flex justify-end">
         <SampleTag />
       </div>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         {list.map((t) => {
           const Mock = t.mock;
           return (

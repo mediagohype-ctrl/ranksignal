@@ -210,7 +210,7 @@ export function StrengthsSection({
   );
   return (
     <Section labelledBy={`${id}-theirs`} tone="surface">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {col(`Where ${theirName} is better`, theirs, `${id}-theirs`)}
         {col("Where MyWebRank is better", ours, `${id}-ours`)}
       </div>
@@ -264,7 +264,7 @@ export function PricingSection({
   return (
     <Section labelledBy={id}>
       <SectionHeading id={id} size="lg" eyebrow="Pricing" title="What each one costs" />
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-border bg-surface p-6">
           <h3 className="text-h4 text-fg">MyWebRank (INR)</h3>
           <OurPrices />
@@ -304,7 +304,7 @@ export function ChooseSection({ id, title = "Which should you choose?", scenario
   return (
     <Section labelledBy={id} tone="surface">
       <SectionHeading id={id} size="lg" eyebrow="Decide" title={title} />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {scenarios.map((s) => (
           <div key={s.situation} className="min-w-0 rounded-2xl border border-border bg-bg p-6">
             <p className="text-small text-muted">{s.situation}</p>

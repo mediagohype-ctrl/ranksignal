@@ -112,7 +112,7 @@ export default function HindiPricingPage() {
           <p className="mk-body mt-4 max-w-2xl text-fg-soft">
             फ्री ट्रायल में पूरी वेबसाइट रिपोर्ट और {HI_TRIAL_AI} मिलते हैं। कार्ड की ज़रूरत नहीं, और आप खुद प्लान न चुनें, तब तक कोई पैसा नहीं कटता।
           </p>
-          <ul className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+          <ul className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
             {HI_OFFER.map((c) => (
               <OfferCard key={c.key} c={c} />
             ))}
