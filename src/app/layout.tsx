@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 
 // Google Sans Flex is not in next/font's catalogue for this Next version, so it is loaded
 // from Google Fonts directly. The CSS variable --font-sans (globals.css) points at it.
-const FONT_HREF = "https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap";
+const FONT_HREF = "https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap";
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

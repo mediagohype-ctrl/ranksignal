@@ -68,7 +68,7 @@ id -u "$APP_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$APP_USER"
 echo "$APP_USER:$PASSWORD" | chpasswd
 mkdir -p "$APP_DIR"
 # Code from the bundle; the server's .env, node_modules, build output and uploads are left in place.
-rsync -a --delete --exclude '/.env' --exclude '/node_modules' --exclude '/.next' "$BUNDLE/app/" "$APP_DIR/"
+rsync -a --delete --exclude '/.env' --exclude '/node_modules' --exclude '/.next' --exclude '/.next-build' --exclude '/.next-old'   --exclude '/.deps-hash' "$BUNDLE/app/" "$APP_DIR/"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 ok "code copied to $APP_DIR"
 
@@ -148,13 +148,32 @@ else
   ok "skipped (database already has data; deploy with IMPORT_DB=1 to copy from Neon again and replace it)"
 fi
 
-step "8/11 Install, migrate and build (takes a few minutes; the site is offline while it builds)"
-as_app "npm ci --no-audit --no-fund || npm install --no-audit --no-fund"
+step "8/11 Install, migrate and build (the live site keeps running while it builds)"
+# Packages: reinstall only when package-lock.json changed (faster deploys, and the running site keeps its modules).
+LOCK_HASH="$(sha256sum "$APP_DIR/package-lock.json" 2>/dev/null | cut -d' ' -f1)"
+if [ -d "$APP_DIR/node_modules" ] && [ -n "$LOCK_HASH" ] && [ "$(cat "$APP_DIR/.deps-hash" 2>/dev/null)" = "$LOCK_HASH" ]; then
+  ok "packages unchanged, install skipped"
+else
+  as_app "npm ci --no-audit --no-fund || npm install --no-audit --no-fund"
+  echo "$LOCK_HASH" > "$APP_DIR/.deps-hash" && chown "$APP_USER:$APP_USER" "$APP_DIR/.deps-hash"
+fi
 as_app "npx prisma generate"
 as_app "npx prisma migrate deploy"
-systemctl stop ranksignal 2>/dev/null || true
-as_app "NODE_OPTIONS=--max-old-space-size=3072 npm run build"
-ok "built"
+# Build into .next-build NEXT TO the running site (next.config.ts reads NEXT_DIST_DIR), so visitors keep getting the
+# old version for the whole build. Step 9 swaps it in with a few seconds of downtime. If there is not enough memory
+# to build while the site runs, fall back to the old way: stop the site, then build in place.
+rm -rf "$APP_DIR/.next-build"
+if as_app "NEXT_DIST_DIR=.next-build NODE_OPTIONS=--max-old-space-size=3072 npm run build"; then
+  BUILT=side
+  ok "built (site stayed online)"
+else
+  warn "building next to the live site failed (low memory?): stopping the site and building in place"
+  rm -rf "$APP_DIR/.next-build"
+  systemctl stop ranksignal 2>/dev/null || true
+  as_app "NODE_OPTIONS=--max-old-space-size=3072 npm run build"
+  BUILT=inplace
+  ok "built"
+fi
 
 step "9/11 App service (website + background jobs)"
 NODE_BIN="$(command -v node)"
@@ -181,10 +200,26 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable ranksignal >/dev/null 2>&1
+if [ "${BUILT:-}" = side ]; then
+  # Swap the new build in (a few seconds). Keep the previous builds' CSS/JS files: visitors on an open page and
+  # Microsoft Clarity recordings still ask for the old file names; without them the page / replay shows unstyled
+  # (Clarity "black screen"). Files older than 30 days are removed.
+  systemctl stop ranksignal 2>/dev/null || true
+  rm -rf "$APP_DIR/.next-old"
+  [ -d "$APP_DIR/.next" ] && mv "$APP_DIR/.next" "$APP_DIR/.next-old"
+  mv "$APP_DIR/.next-build" "$APP_DIR/.next"
+  [ -d "$APP_DIR/.next-old/static" ] && cp -rnp "$APP_DIR/.next-old/static/." "$APP_DIR/.next/static/" 2>/dev/null || true
+  find "$APP_DIR/.next/static" -type f -mtime +30 -delete 2>/dev/null || true
+  chown -R "$APP_USER:$APP_USER" "$APP_DIR/.next"
+  rm -rf "$APP_DIR/.next-old"
+fi
 systemctl restart ranksignal
 ok "service ranksignal started"
 
 step "10/11 Nginx, SSL and firewall"
+mkdir -p /var/www/mywebrank-maintenance
+cp "$APP_DIR/deploy/maintenance.html" /var/www/mywebrank-maintenance/maintenance.html
+chmod -R a+rX /var/www/mywebrank-maintenance
 cat > /etc/nginx/conf.d/ranksignal-upgrade.conf <<'EOF'
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
 EOF
@@ -196,6 +231,10 @@ server {
     client_max_body_size 20m;
 
     location /.well-known/acme-challenge/ { root /var/www/html; }
+
+    # While the app restarts (a few seconds per deploy), show a friendly page that reloads itself, not "502 Bad Gateway".
+    error_page 502 503 504 /maintenance.html;
+    location = /maintenance.html { root /var/www/mywebrank-maintenance; internal; add_header Cache-Control "no-store" always; }
 
     location / {
         proxy_pass http://127.0.0.1:$PORT;

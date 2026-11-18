@@ -197,25 +197,25 @@ export default function HomePage() {
         <div className="container-marketing pb-14 pt-10 sm:pb-16 sm:pt-14 lg:pb-20 lg:pt-16">
           <div className="mx-auto max-w-3xl text-center">
             {/* The one H1 carries the searched phrase; the tagline stays as the big visual line. */}
-            <h1 id="hero-title" className="mk-label mk-rise text-primary">
+            <h1 id="hero-title" className="mk-label text-primary">
               Free SEO, AEO &amp; GEO website checker
             </h1>
-            <p className="mk-hero mk-rise mt-4 text-fg">
+            <p className="mk-hero mt-4 text-fg">
               {SLOGAN_LEAD} <span className="text-primary">{SLOGAN_LAST}</span>
             </p>
-            <h2 className="mk-title mk-rise mk-delay-1 mx-auto mt-6 max-w-[22ch] text-balance text-fg sm:mt-8">
+            <h2 className="mk-title mx-auto mt-6 max-w-[22ch] text-balance text-fg sm:mt-8">
               Customers are searching. Are they finding you?
             </h2>
-            <p className="mk-lead mk-rise mk-delay-1 mx-auto mt-4 max-w-[36rem] text-fg-soft">
+            <p className="mk-lead mx-auto mt-4 max-w-[36rem] text-fg-soft">
               Free SEO and AI checker. See how Google and ChatGPT see your business, in 30 seconds.
             </p>
             <FreeCheckLauncher
               id="hero-url"
-              className="mk-rise mk-delay-2 mx-auto mt-7 max-w-[36rem] text-left"
+              className="mx-auto mt-7 max-w-[36rem] text-left"
               hint={`Free · No sign-up · ${BRAND.proof}`}
             />
             {/* One row on laptops; on phones a tidy 2 × 2 grid instead of an orphaned last tick. */}
-            <ul className="mk-rise mk-delay-2 mx-auto mt-6 grid max-w-md grid-cols-2 justify-items-start gap-x-4 gap-y-2 text-left text-small text-fg-soft sm:flex sm:max-w-none sm:flex-nowrap sm:justify-center sm:gap-x-5">
+            <ul className="mx-auto mt-6 grid max-w-md grid-cols-2 justify-items-start gap-x-4 gap-y-2 text-left text-small text-fg-soft sm:flex sm:max-w-none sm:flex-nowrap sm:justify-center sm:gap-x-5">
               {TICKS.map((t) => (
                 <li key={t} className="inline-flex items-start gap-1.5 sm:items-center sm:whitespace-nowrap">
                   <Check aria-hidden size={15} className="mt-[3px] shrink-0 text-success sm:mt-0" />

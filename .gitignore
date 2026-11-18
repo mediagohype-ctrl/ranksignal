@@ -44,3 +44,5 @@ next-env.d.ts
 /prisma/*.db-journal
 /.next-verify/
 !.env.example
+/.next-build/
+/.next-old/
