@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -80,12 +79,13 @@ const HOME_PLANS = [
     note: `${TRIAL_DAYS} days free · No card needed · Cancel any time`,
     href: planSignupHref(SELF_PLAN.id),
     dark: false,
+    // The first three are what the homepage card shows (HOME_PLAN_POINTS): the most persuasive first.
     points: [
-      "Your SEO, AEO, GEO and Brand scores",
-      `A website check ${WEBSITE_CHECK_EVERY}, up to ${SELF_PLAN.limits.maxPagesPerCrawl.toLocaleString("en-IN")} pages`,
       `We ask ${SELF_ENGINE_LIST} about you ${AI_CHECK_EVERY}`,
-      "A to-do list in plain words, most important first",
       SELF_FIX_LINE,
+      `A website check ${WEBSITE_CHECK_EVERY}, up to ${SELF_PLAN.limits.maxPagesPerCrawl.toLocaleString("en-IN")} pages`,
+      "Your SEO, AEO, GEO and Brand scores",
+      "A to-do list in plain words, most important first",
       "A monthly report you can read in 2 minutes",
     ],
   },
@@ -101,12 +101,12 @@ const HOME_PLANS = [
     href: bookCallHref(),
     dark: true,
     points: [
-      "Everything in I'll do it myself",
       "Our team fixes your website, most important first",
+      "Your own expert on WhatsApp, plus a monthly call",
       "Your Google Business Profile looked after",
       "New pages that answer what your customers ask",
       "Wrong facts about you in AI answers corrected",
-      "Your own expert on WhatsApp, plus a monthly call",
+      "Everything in I'll do it myself",
     ],
   },
   {
@@ -160,21 +160,9 @@ const KINDS = [
 const WRAP = "mx-auto w-full px-4 sm:px-8";
 const H2 = "font-display text-[clamp(1.875rem,1.2rem+2.6vw,2.875rem)] font-bold leading-[1.1] tracking-[-0.015em] text-mk-ink text-balance";
 const LEAD = "text-base text-mk-text-soft sm:text-lg";
+/** Homepage plan cards show this many points; the full list is on /pricing. */
+const HOME_PLAN_POINTS = 3;
 const CARD_LABEL = "text-[13px] font-bold uppercase tracking-[0.04em] text-mk-text-soft";
-
-function Pill({ children, accent }: { children: ReactNode; accent?: boolean }) {
-  return (
-    <span className={"rounded-full px-4 py-2 text-white sm:px-[18px] " + (accent ? "bg-mk-accent" : "bg-mk-ink")}>{children}</span>
-  );
-}
-
-function Arrow() {
-  return (
-    <svg width="22" height="12" viewBox="0 0 22 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden className="text-[#9AA5BF]">
-      <path d="M1 6h19M15 1l5 5-5 5" />
-    </svg>
-  );
-}
 
 export default function HomePage() {
   // Organization + WebSite come from the marketing layout (sitewide); this page adds the product itself.
@@ -245,16 +233,6 @@ export default function HomePage() {
             <Sparkles aria-hidden size={16} strokeWidth={2.4} />
             Free SEO, AEO &amp; GEO website checker
           </h1>
-          <p
-            aria-label={BRAND.slogan}
-            className="flex flex-wrap items-center justify-center gap-2 font-display text-base font-semibold sm:gap-2.5 sm:text-lg"
-          >
-            <Pill>Check</Pill>
-            <Arrow />
-            <Pill>Fix</Pill>
-            <Arrow />
-            <Pill accent>Grow</Pill>
-          </p>
           {/* Two clean lines: "Are they finding you?" never breaks (sized by screen width so it fits on any phone). */}
           <h2 className="font-display text-[clamp(1.5rem,7.6vw,4.5rem)] font-bold leading-[1.08] tracking-[-0.03em]">
             <span className="block">Customers are searching</span>
@@ -589,25 +567,30 @@ export default function HomePage() {
           <h2 id="how-title" className={H2 + " text-center"}>
             {BRAND.slogan}
           </h2>
-          <ol className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+          {/* One connected row on every screen (phones too): icon, step number, one short line each. */}
+          <ol className="relative grid grid-cols-3 gap-2 sm:gap-8">
+            <span aria-hidden className="absolute left-[16.6%] right-[16.6%] top-7 h-0.5 bg-gradient-to-r from-mk-accent/15 via-mk-accent/40 to-mk-accent sm:top-11" />
             {STEPS.map((s, i) => {
               const Icon = s.icon;
               return (
-                <li key={s.title} className="flex flex-col items-center gap-3.5 text-center">
+                <li key={s.title} className="relative flex flex-col items-center gap-2 text-center sm:gap-3.5">
                   <span
                     aria-hidden
                     className={
-                      "inline-flex size-20 items-center justify-center rounded-[28px] sm:size-[88px] " +
+                      "relative inline-flex size-14 items-center justify-center rounded-[20px] sm:size-[88px] sm:rounded-[28px] " +
                       (s.hot ? "bg-mk-accent text-white shadow-[0_10px_24px_rgba(36,87,245,0.25)]" : "bg-white text-mk-accent shadow-[0_10px_24px_rgba(11,27,63,0.08)]")
                     }
                   >
-                    <Icon size={36} strokeWidth={2} />
+                    <Icon className="size-6 sm:size-9" strokeWidth={2} />
+                    <span className="absolute -right-1.5 -top-1.5 inline-flex size-5 items-center justify-center rounded-full bg-mk-ink text-[11px] font-bold text-white sm:size-6 sm:text-xs">
+                      {i + 1}
+                    </span>
                   </span>
-                  <h3 className="font-display text-2xl font-bold">
+                  <h3 className="font-display text-lg font-bold sm:text-2xl">
                     <span className="sr-only">Step {i + 1}: </span>
                     {s.title}
                   </h3>
-                  <p className="text-base text-mk-text-soft">{s.body}</p>
+                  <p className="text-[13px] leading-snug text-mk-text-soft sm:text-base">{s.body}</p>
                 </li>
               );
             })}
@@ -627,16 +610,20 @@ export default function HomePage() {
           <h2 id="kinds-title" className={H2 + " text-center"}>
             Whatever you sell, people ask first.
           </h2>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+          {/* Phones: a tidy 2 x 2 grid. Laptops: four across. */}
+          <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {KINDS.map((k) => {
               const Icon = k.icon;
               return (
-                <li key={k.title} className="flex flex-col gap-4 rounded-[22px] border-[1.5px] border-[#E8EBF2] p-6 sm:gap-[18px] sm:p-7">
-                  <span aria-hidden className={"inline-flex size-[52px] items-center justify-center rounded-2xl " + k.tile}>
-                    <Icon size={26} strokeWidth={2} />
+                <li key={k.title} className="flex flex-col gap-3 rounded-[20px] border-[1.5px] border-[#E8EBF2] p-4 sm:gap-[18px] sm:rounded-[22px] sm:p-7">
+                  <span aria-hidden className={"inline-flex size-10 items-center justify-center rounded-xl sm:size-[52px] sm:rounded-2xl " + k.tile}>
+                    <Icon className="size-5 sm:size-[26px]" strokeWidth={2} />
                   </span>
-                  <h3 className="font-display text-[21px] font-bold">{k.title}</h3>
-                  <span className="rounded-xl bg-mk-tint px-3.5 py-3 text-[15px] text-mk-text">“{k.ask}”</span>
+                  <h3 className="font-display text-[16px] font-bold leading-tight sm:text-[21px]">{k.title}</h3>
+                  <span className="mt-auto inline-flex items-start gap-1.5 rounded-xl bg-mk-tint px-2.5 py-2 text-[13px] leading-snug text-mk-text sm:px-3.5 sm:py-3 sm:text-[15px]">
+                    <Search aria-hidden size={13} strokeWidth={2.4} className="mt-[3px] shrink-0 text-mk-text-soft" />
+                    {k.ask}
+                  </span>
                 </li>
               );
             })}
@@ -661,7 +648,7 @@ export default function HomePage() {
               <li
                 key={p.key}
                 className={
-                  "relative flex flex-col gap-[22px] rounded-3xl p-6 sm:p-9 " +
+                  "relative flex flex-col gap-5 rounded-3xl p-6 sm:gap-[22px] sm:p-9 " +
                   (p.dark ? "order-first bg-mk-ink text-white lg:order-none" : "bg-white")
                 }
               >
@@ -679,12 +666,23 @@ export default function HomePage() {
                   {p.per && <span className={"text-[15px] " + (p.dark ? "text-mk-on-ink" : "text-mk-text-soft")}>{p.per}</span>}
                 </p>
                 <ul className="flex flex-col gap-3 text-[15px]">
-                  {p.points.map((pt) => (
+                  {p.points.slice(0, HOME_PLAN_POINTS).map((pt) => (
                     <li key={pt} className="flex gap-2.5">
                       <Check aria-hidden size={20} strokeWidth={2.5} className={"shrink-0 " + (p.dark ? "text-[#6EE7B7]" : "text-mk-good-ring")} />
                       {pt}
                     </li>
                   ))}
+                  {p.points.length > HOME_PLAN_POINTS && (
+                    <li>
+                      <Link
+                        href="/pricing"
+                        className={"inline-flex items-center gap-1 pl-[30px] text-sm font-semibold underline-offset-4 hover:underline " + (p.dark ? "text-[#9DB6FF]" : "text-mk-accent")}
+                      >
+                        + {p.points.length - HOME_PLAN_POINTS} more
+                        <ArrowRight aria-hidden size={14} />
+                      </Link>
+                    </li>
+                  )}
                 </ul>
                 <div className="mt-auto flex flex-col gap-2">
                   <Link
