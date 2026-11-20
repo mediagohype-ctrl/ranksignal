@@ -255,8 +255,12 @@ export default function HomePage() {
             <Arrow />
             <Pill accent>Grow</Pill>
           </p>
-          <h2 className="font-display text-[clamp(2.375rem,1.4rem+4.6vw,4.5rem)] font-bold leading-[1.04] tracking-[-0.025em] text-balance">
-            Customers are searching. <span className="text-mk-accent">Are they finding you?</span>
+          {/* Two clean lines: "Are they finding you?" never breaks (sized by screen width so it fits on any phone). */}
+          <h2 className="font-display text-[clamp(1.5rem,7.6vw,4.5rem)] font-bold leading-[1.08] tracking-[-0.03em]">
+            <span className="block">Customers are searching</span>
+            {/* Hidden full stop + space: Google and screen readers read one sentence, not "searchingAre". */}
+            <span className="sr-only">. </span>
+            <span className="block whitespace-nowrap text-mk-accent">Are they finding you?</span>
           </h2>
           <p className="max-w-[36rem] text-[1.0625rem] leading-relaxed text-mk-text sm:text-xl">
             See how Google and ChatGPT see your business. In 30 seconds.
@@ -265,37 +269,34 @@ export default function HomePage() {
 
           {/* Phones: three compact tiles in a row (icon over text). Wider: icon beside text. */}
           <ul className="grid w-full max-w-[620px] grid-cols-3 gap-2 sm:gap-2.5">
-            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-2 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
+            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-1.5 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
               <span aria-hidden className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-mk-good-soft text-[15px] font-bold text-mk-good">
                 ₹0
               </span>
-              <span className="text-[13px] font-semibold sm:text-[15px]">Free check</span>
+              <span className="whitespace-nowrap text-[12.5px] font-semibold sm:text-[15px]">Free check</span>
             </li>
-            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-2 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
+            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-1.5 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
               <span aria-hidden className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-mk-accent-soft text-mk-accent">
                 <Clock size={18} strokeWidth={2.4} />
               </span>
-              <span className="text-[13px] font-semibold sm:text-[15px]">Instant report</span>
+              <span className="whitespace-nowrap text-[12.5px] font-semibold sm:text-[15px]">Instant report</span>
             </li>
-            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-2 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
+            <li className="flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-border bg-white px-1.5 py-3 sm:flex-row sm:gap-2.5 sm:p-3">
               <span aria-hidden className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-mk-orange-soft text-sev-high">
                 <Lock size={18} strokeWidth={2.4} />
               </span>
-              <span className="text-[13px] font-semibold sm:text-[15px]">No sign-up</span>
+              <span className="whitespace-nowrap text-[12.5px] font-semibold sm:text-[15px]">No sign-up</span>
             </li>
           </ul>
 
-          <div className="flex flex-wrap items-center justify-center gap-3.5">
-            <div aria-hidden className="flex">
-              <span className="size-[34px] rounded-full border-[3px] border-white bg-[#FFD7B8]" />
-              <span className="-ml-2.5 size-[34px] rounded-full border-[3px] border-white bg-[#BFD3FF]" />
-              <span className="-ml-2.5 size-[34px] rounded-full border-[3px] border-white bg-[#C6F0DD]" />
-              <span className="-ml-2.5 size-[34px] rounded-full border-[3px] border-white bg-[#E4D7FF]" />
-            </div>
-            <p className="text-[15px] text-mk-text sm:text-base">
-              <b className="text-lg text-mk-ink">{BRAND.proof.split(" ")[0]}</b> {BRAND.proof.split(" ").slice(1).join(" ")}
-            </p>
-          </div>
+          <p className="inline-flex items-center gap-2.5 text-[15px] text-mk-text sm:text-base">
+            <span aria-hidden className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-mk-accent-soft text-mk-accent">
+              <Users size={16} strokeWidth={2.4} />
+            </span>
+            <span>
+              <b className="text-mk-ink">{BRAND.proof.split(" ")[0]}</b> {BRAND.proof.split(" ").slice(1).join(" ")}
+            </span>
+          </p>
         </div>
 
         {/* Your free report (sample) */}
