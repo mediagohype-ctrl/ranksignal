@@ -10,7 +10,11 @@ describe("Meta Conversions API", () => {
     expect(metaPixelId({})).toBe("4537219149865300");
     expect(metaConfigured({})).toBe(false);
     expect(metaConfigured({ META_CAPI_TOKEN: "x" })).toBe(true);
-    expect(metaConfigured({ META_PIXEL_ID: "", META_CAPI_TOKEN: "x" })).toBe(false); // "" switches Meta off
+    expect(metaConfigured({ META_PIXEL_ID: "off", META_CAPI_TOKEN: "x" })).toBe(false); // "off" switches Meta off
+    // A blank or mistyped value (e.g. a copied placeholder) must not silently switch Meta off.
+    expect(metaPixelId({ META_PIXEL_ID: "" })).toBe("4537219149865300");
+    expect(metaPixelId({ META_PIXEL_ID: "YOUR_PIXEL_ID" })).toBe("4537219149865300");
+    expect(metaPixelId({ META_PIXEL_ID: " 1234567890 " })).toBe("1234567890");
   });
 
   it("hashes email, phone and our ids; never sends them in plain text", () => {

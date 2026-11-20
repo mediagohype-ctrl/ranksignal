@@ -1,4 +1,5 @@
 import Script from "next/script";
+import { metaPixelId } from "@/lib/meta/capi";
 
 /**
  * Google Analytics 4, Google Tag Manager and Microsoft Clarity. Loaded only in production builds, so local
@@ -9,7 +10,7 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-MG3JMYCV8M";
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-5999MZPL";
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID ?? "z9b4gemj5m";
 /** Meta Pixel (browser PageView + the _fbp cookie). Conversions are sent from the server: src/lib/meta/capi.ts. */
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? process.env.META_PIXEL_ID ?? "4537219149865300";
+const META_PIXEL_ID = metaPixelId();
 
 const SAFE_ID = /^[A-Za-z0-9-]+$/;
 
@@ -18,7 +19,7 @@ export function Analytics() {
   const ga = SAFE_ID.test(GA_ID) ? GA_ID : "";
   const gtm = SAFE_ID.test(GTM_ID) ? GTM_ID : "";
   const clarity = SAFE_ID.test(CLARITY_ID) ? CLARITY_ID : "";
-  const metaPixel = /^\d{5,20}$/.test(META_PIXEL_ID.trim()) ? META_PIXEL_ID.trim() : "";
+  const metaPixel = META_PIXEL_ID;
 
   return (
     <>

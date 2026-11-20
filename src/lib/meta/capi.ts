@@ -1,6 +1,6 @@
 // Meta Conversions API: sends key business events (free check, sign-up, payment…) from our server to Meta so
-// Instagram / Facebook ads can optimise for real results. Off until META_CAPI_TOKEN is set (META_PIXEL_ID overrides
-// the default pixel below; set it to "" to switch Meta off entirely).
+// Instagram / Facebook ads can optimise for real results. Off until META_CAPI_TOKEN is set. META_PIXEL_ID overrides
+// the default pixel below (digits only); META_PIXEL_ID=off switches Meta off entirely.
 // Best-effort: never throws, never slows the visitor's request (fire-and-forget, 4s timeout).
 //
 // Privacy: email and phone are SHA-256 hashed before sending (Meta's rule); the IP and browser user agent are sent
@@ -13,8 +13,15 @@ const GRAPH_VERSION = "v21.0";
 /** MyWebRank's Meta Pixel / Dataset ID (public: it is in every page's HTML). Override with META_PIXEL_ID. */
 export const DEFAULT_META_PIXEL_ID = "4537219149865300";
 
+/**
+ * The pixel to use: META_PIXEL_ID when it is a real id (digits), "" when it is "off", otherwise our default.
+ * A missing, empty or mistyped value (e.g. a copied placeholder) falls back to the default instead of silently
+ * switching Meta off.
+ */
 export function metaPixelId(env: Record<string, string | undefined> = process.env): string {
-  return (env.META_PIXEL_ID ?? DEFAULT_META_PIXEL_ID).trim();
+  const v = (env.META_PIXEL_ID ?? env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim();
+  if (/^off$/i.test(v)) return "";
+  return /^\d{5,20}$/.test(v) ? v : DEFAULT_META_PIXEL_ID;
 }
 
 export type MetaEventName = "Lead" | "SubmitApplication" | "Contact" | "CompleteRegistration" | "Subscribe" | "Purchase";
