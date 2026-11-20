@@ -83,88 +83,88 @@ export const PAGE_SEO = {
   // /tools/ai-mention-checker was the same check as /free-check and now redirects there (next.config.ts).
   // The two makers below moved to the names people search for; the old addresses redirect.
   "/tools/faq-schema-generator": {
-    title: "Free FAQ Schema Generator (FAQPage JSON-LD)",
+    title: "Free FAQ Schema Generator for JSON-LD",
     description:
-      "Type your customers' questions and answers and get ready-to-paste FAQ schema (JSON-LD) that helps Google and AI tools quote you. Free, no sign-up.",
+      "Convert your existing questions and answers into FAQPage JSON-LD. Copy the structured data and add it to the page where your FAQs appear.",
     published: "2026-11-04",
-    updated: "2026-11-15",
+    updated: "2026-11-20",
   },
   "/tools/llms-txt-generator": {
-    title: "Free llms.txt Generator for Your Website",
+    title: "Free llms.txt Generator for Websites",
     description:
-      "Make an llms.txt file in 2 minutes. Tell ChatGPT and other AI tools who you are and which pages matter most. Free, and no sign-up needed.",
+      "Create an llms.txt file with your site summary and links to key pages. Copy the formatted text and publish it at the root of your website.",
     published: "2026-11-04",
-    updated: "2026-11-15",
+    updated: "2026-11-20",
   },
   "/tools/meta-tag-checker": {
-    title: "Free Meta Title & Description Checker",
+    title: "Free Meta Tag Checker for Titles & Descriptions",
     description:
-      "Check any page's Google headline and summary for free: length, missing tags, share preview and what to change, in plain words. No sign-up needed.",
+      "Check any page’s meta title and description. Find missing tags, review character counts and preview how the page could appear in Google Search.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/heading-checker": {
-    title: "Free Heading Checker: H1 to H6 Outline",
+    title: "Free Heading Checker for H1–H6 Tags",
     description:
-      "See any page's heading outline (H1 to H6) for free. Spot a missing or repeated H1, skipped levels and question headings AI tools can quote. No sign-up.",
+      "View the H1–H6 outline of any web page. Find missing or repeated H1 tags and skipped heading levels that make your content harder to navigate.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/schema-checker": {
-    title: "Free Schema Markup Checker (JSON-LD Test)",
+    title: "Free Schema Markup Checker for JSON-LD",
     description:
-      "Find the schema markup (JSON-LD) on any page and check it for free: types found, errors, missing fields and what Google and AI tools can read from it.",
+      "Check the JSON-LD structured data on any web page. See which schema types are present and find syntax errors or missing fields to fix.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/robots-txt-tester": {
-    title: "Free Robots.txt Tester for Google and AI",
+    title: "Free Robots.txt Tester for Any URL",
     description:
-      "Test your robots.txt for free: see which pages Googlebot, GPTBot, PerplexityBot and other crawlers may read, and test any address. No sign-up needed.",
+      "Test a URL against your robots.txt rules. See whether Googlebot or another crawler can access it and identify the rule that applies.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/ai-crawler-checker": {
-    title: "AI Crawler Checker: Is ChatGPT Blocked?",
+    title: "Free AI Crawler Checker for Websites",
     description:
-      "Check if ChatGPT, Gemini, Claude and Perplexity can read your website. See which AI robots are blocked. Free, no sign-up, results in seconds.",
+      "Check which AI crawlers your website allows or blocks. Review robots.txt rules for OpenAI, Anthropic, Perplexity and other AI platforms.",
     published: TODAY,
-    updated: "2026-11-13",
+    updated: "2026-11-20",
   },
   "/tools/sitemap-checker": {
-    title: "Free XML Sitemap Checker and Generator",
+    title: "Free XML Sitemap Checker & Validator",
     description:
-      "Check your XML sitemap for free: find it, count its pages, spot errors and broken entries, or make a new sitemap from a list of your page addresses.",
+      "Find and validate your XML sitemap, count its URLs and spot broken entries or formatting errors. Generate a new sitemap from a list of URLs.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/broken-link-checker": {
-    title: "Free Broken Link Checker for Any Page",
+    title: "Free Broken Link Checker for Any Web Page",
     description:
-      "Find broken links on any web page for free: we test every link on the page and list the ones that fail, redirect or time out, with what to do next.",
+      "Scan any web page for broken links, redirects and timeouts. See which URLs returned errors and which links need updating.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/seo-title-generator": {
-    title: "Free AI SEO Title Generator for Any Page",
+    title: "Free SEO Title Generator for Web Pages",
     description:
-      "Get 5 SEO title ideas for any page in seconds, written by AI to fit Google's limit, with your keyword first and your brand last. Free, no sign-up.",
+      "Enter your page topic and target keyword to generate five SEO title ideas. Compare the options and choose a title that matches your content.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/meta-description-generator": {
     title: "Free AI Meta Description Generator",
     description:
-      "Write meta descriptions that get clicks: AI drafts 5 Google summaries for your page in the right length, with a clear reason to click. Free, no sign-up.",
+      "Generate five meta description options based on your page topic and target keyword. Compare the drafts and choose the clearest summary for search.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/tools/faq-generator": {
-    title: "Free AI FAQ Generator for Your Website",
+    title: "Free AI FAQ Generator for Website Content",
     description:
-      "Turn a page or topic into real customer questions and short answers with AI, then get FAQ schema code to paste on your site. Free and no sign-up needed.",
+      "Turn a page or topic into customer questions and concise answers. Review and edit the AI-generated FAQ draft, then copy the accompanying schema code.",
     published: TODAY,
-    updated: TODAY,
+    updated: "2026-11-20",
   },
   "/compare": {
     title: "Compare MyWebRank With Other SEO Tools",

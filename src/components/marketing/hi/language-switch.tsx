@@ -9,6 +9,9 @@ import clsx from "clsx";
 import { Languages } from "lucide-react";
 import { switchTarget } from "./pairs";
 
+/** Off for now: visitors see the English site only. Set to true to bring back the EN | हि switch everywhere. */
+export const SHOW_LANGUAGE_SWITCH = false;
+
 export function LanguageSwitch({
   className,
   onClick,
@@ -19,6 +22,7 @@ export function LanguageSwitch({
   variant?: "link" | "toggle";
 }) {
   const t = switchTarget(usePathname() ?? "/");
+  if (!SHOW_LANGUAGE_SWITCH) return null;
   const label = t.lang === "hi" ? "यह पेज हिन्दी में पढ़ें" : "Read this page in English";
 
   if (variant === "toggle") {

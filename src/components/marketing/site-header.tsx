@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { Menu, MessageCircle, X } from "lucide-react";
 import { Logo } from "./logo";
 import { brightPill } from "./ui";
-import { LanguageSwitch } from "./hi/language-switch";
+import { LanguageSwitch, SHOW_LANGUAGE_SWITCH } from "./hi/language-switch";
 import { newTabProps } from "./plans";
 import { useSignedIn } from "./signed-in";
 import { WHATSAPP_HELP_MESSAGE, brandWhatsappHref } from "@/lib/brand";
@@ -154,9 +154,11 @@ export function SiteHeader() {
                 Chat on WhatsApp
               </a>
             </li>
-            <li className="border-b border-border">
-              <LanguageSwitch onClick={() => setOpen(false)} className="w-full py-4 text-[1.375rem] tracking-[-0.02em] text-fg" />
-            </li>
+            {SHOW_LANGUAGE_SWITCH && (
+              <li className="border-b border-border">
+                <LanguageSwitch onClick={() => setOpen(false)} className="w-full py-4 text-[1.375rem] tracking-[-0.02em] text-fg" />
+              </li>
+            )}
             <li className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link href={CTA.href} onClick={() => setOpen(false)} className={brightPill("lg")}>
                 {CTA.label}
