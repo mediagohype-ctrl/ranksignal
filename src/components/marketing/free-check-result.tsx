@@ -9,7 +9,7 @@ import { ArrowRight, CalendarCheck, Check, ChevronDown, CircleAlert, Linkedin, L
 import { Button, Card, Field, Input, LinkButton, SCORE_BAND_CLASS, ScoreRing, SectionHeading, fieldDescribedBy, scoreBand, type ScoreBand } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { hindiFix } from "@/lib/free-check/hi-fixes";
-import { addWebsiteHref, freeCheckLink, linkedinShareHref, resultHost, signupHref, whatsappShareHref } from "@/lib/free-check/share";
+import { addWebsiteHref, freeCheckLink, linkedinShareHref, loginHref, resultHost, signupHref, whatsappShareHref } from "@/lib/free-check/share";
 import { freeCheckStrings, type FreeCheckLang, type FreeCheckStrings } from "@/lib/free-check/strings";
 import type { FreeCheckBenchmark, FreeCheckIssue, FreeCheckLockedIssue, FreeCheckPillar, FreeCheckResult, FreeCheckSnapshot } from "@/lib/free-check/types";
 import type { IssueEffort, IssueImpact } from "@/lib/report/types";
@@ -156,7 +156,14 @@ export function FreeCheckResultView({
 
       {/* 7. Email box. The locked problems above now show real titles, so the blurred placeholders are only used when an
           older server sends no moreIssues. */}
-      {(leadId || (hidden > 0 && !result.moreIssues)) && <HiddenFixes count={result.moreIssues ? 0 : hidden} leadId={leadId} s={s} />}
+      {(leadId || (hidden > 0 && !result.moreIssues)) && (
+        <HiddenFixes
+          count={result.moreIssues ? 0 : hidden}
+          leadId={leadId}
+          login={signedIn ? null : loginHref(result.url)}
+          s={s}
+        />
+      )}
 
       {/* 8. Share */}
       <ShareRow result={result} host={host} lang={lang} s={s} />
@@ -797,9 +804,9 @@ function StickyCta({ problems, href, label, s }: { problems: number; href: strin
 }
 
 /** The email box. When some fixes are not shown it sits on top of blurred placeholders for them. */
-function HiddenFixes({ count, leadId, s }: { count: number; leadId: string | null; s: FreeCheckStrings }) {
+function HiddenFixes({ count, leadId, login, s }: { count: number; leadId: string | null; login: string | null; s: FreeCheckStrings }) {
   const box = leadId ? (
-    <EmailBox leadId={leadId} s={s} />
+    <EmailBox leadId={leadId} login={login} s={s} />
   ) : (
     <p className="flex items-center gap-2 rounded-xl bg-surface px-4 py-3 text-small font-medium text-fg shadow-lg">
       <Lock aria-hidden size={16} className="text-primary" />
@@ -827,7 +834,11 @@ function HiddenFixes({ count, leadId, s }: { count: number; leadId: string | nul
   );
 }
 
-function EmailBox({ leadId, s }: { leadId: string; s: FreeCheckStrings }) {
+/**
+ * Log in first (the main way to see the full report), with the email form as the fallback for people who
+ * don't want to log in. Signed-in visitors (login = null) only get the email form; they have "Add to my account".
+ */
+function EmailBox({ leadId, login, s }: { leadId: string; login: string | null; s: FreeCheckStrings }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -877,6 +888,20 @@ function EmailBox({ leadId, s }: { leadId: string; s: FreeCheckStrings }) {
         }
       }}
     >
+      {login && (
+        <div className="mb-5 text-center">
+          <p className="text-h4 text-fg">{s.loginTitle}</p>
+          <p className="mt-1 text-xs text-muted">{s.loginBody}</p>
+          <LinkButton href={login} size="lg" className="mt-4 w-full" iconRight={<ArrowRight />}>
+            {s.loginButton}
+          </LinkButton>
+          <div className="mt-5 flex items-center gap-3 text-xs text-muted">
+            <span aria-hidden className="h-px flex-1 bg-border" />
+            {s.orEmail}
+            <span aria-hidden className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+      )}
       <Field label={s.emailLabel} htmlFor="fc-email" error={error}>
         <Input
           id="fc-email"

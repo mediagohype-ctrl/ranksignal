@@ -36,3 +36,8 @@ export function signupHref(url: string): string {
 export function addWebsiteHref(url: string): string {
   return `/app/onboarding?website=${encodeURIComponent(url)}`;
 }
+
+/** Log in, then land on the full report flow for the checked website (the login page links on to sign-up with the same next). */
+export function loginHref(url: string): string {
+  return `/login?next=${encodeURIComponent(addWebsiteHref(url))}`;
+}
