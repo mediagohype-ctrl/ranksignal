@@ -6,6 +6,8 @@ import { AI_VISIBILITY_NOTE, FREE_PILLAR_NAMES, type FreeCheckResult } from "@/l
 
 /** The free result shows the top 3 fixes; the rest are counted and shown blurred. */
 export const FREE_MAX_ISSUES = 3;
+/** Problems after the top fixes shown by title only, locked (their fixes are in the full report). */
+export const FREE_MAX_LOCKED_ISSUES = 5;
 export const FREE_MAX_FIX_STEPS = 2;
 export const FREE_MAX_STRENGTHS = 5;
 export const FREE_MAX_CHECKS_PER_PILLAR = 6;
@@ -87,6 +89,21 @@ export function trimReport(report: SiteReport, o: { brand: string | null; pagesC
         points,
       })),
     totalIssues: report.issues.length,
+    moreIssues: rankIssuesByPoints(report)
+      .slice(FREE_MAX_ISSUES, FREE_MAX_ISSUES + FREE_MAX_LOCKED_ISSUES)
+      .map(({ issue: i, points }) => ({
+        id: i.id,
+        pillar: i.pillar,
+        title: i.title,
+        impact: i.impact,
+        affectedCount: shownAffectedCount(i),
+        points,
+      })),
+    issueCounts: {
+      high: report.issues.filter((i) => i.impact === "high").length,
+      medium: report.issues.filter((i) => i.impact === "medium").length,
+      low: report.issues.filter((i) => i.impact === "low").length,
+    },
     strengths: report.strengths.slice(0, FREE_MAX_STRENGTHS),
     notes: [
       AI_VISIBILITY_NOTE,

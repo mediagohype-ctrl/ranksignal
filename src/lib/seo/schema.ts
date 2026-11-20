@@ -95,7 +95,8 @@ export function webPageLd(
     "@type": opts.type ?? "WebPage",
     "@id": `${url}#webpage`,
     url,
-    name: opts.name ?? seo?.title ?? BRAND.name,
+    // Page name without the " — MyWebRank" brand ending that some titles carry for Google.
+    name: opts.name ?? seo?.title.replace(/\s+[—|·-]\s+MyWebRank$/, "") ?? BRAND.name,
     ...(opts.description ?? seo?.description ? { description: opts.description ?? seo?.description } : {}),
     inLanguage: "en-IN",
     ...(seo?.published ? { datePublished: seo.published } : {}),

@@ -12,6 +12,7 @@ import { FreeCheckError, runFreeCheck } from "@/lib/free-check/run";
 import { recordLead } from "@/lib/admin/leads";
 import { topFixMessage } from "@/lib/admin/lead-followup";
 import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
+import { freeCheckBenchmark } from "@/lib/free-check/benchmark";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,12 +50,17 @@ export const POST = handler(withToolUsage("free-check", async (req: Request) => 
 
   try {
     const item = await runFreeCheck(valid.url);
+    // Comparison with earlier checks first (so this check doesn't count itself), then the lead; each waits ≤1.5s.
+    const benchmark = await Promise.race([
+      freeCheckBenchmark(item.overall.score),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), LEAD_WAIT_MS)),
+    ]);
     const leadId = await Promise.race([
       recordLead({ source: "free_check", url: item.url, score: item.overall.score, message: topFixMessage(item.issues[0]?.title), ip }),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), LEAD_WAIT_MS)),
     ]);
     setToolUsage({ url: item.url, score: item.overall.score, leadId });
-    return json({ item: { ...item, leadId } }, { headers: { "Cache-Control": "no-store" } });
+    return json({ item: { ...item, leadId, benchmark } }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof FreeCheckError) throw new HttpError(e.code === "blocked_url" ? 400 : 422, e.code, e.message);
     throw e;

@@ -14,7 +14,7 @@ import type { CheckContext, ReportPage } from "@/lib/report/inputs";
 import { emptyVisibility } from "@/lib/report/visibility";
 import type { ExtractedPage } from "@/lib/types";
 import { trimReport } from "@/lib/free-check/trim";
-import type { FreeCheckResult } from "@/lib/free-check/types";
+import type { FreeCheckResult, FreeCheckSnapshot } from "@/lib/free-check/types";
 
 export const FREE_CHECK_BUDGET_MS = 25_000;
 export const MAX_KEY_PAGES = 4;
@@ -191,6 +191,42 @@ export async function runFreeCheck(seedUrl: string, opts: { fetcher?: Fetcher; b
     crawl: { crawlRunId: "free-check", pagesCrawled: pages.length, pagesFound: pages.length, finishedAt: new Date(now()) },
     ctx,
   });
-  return trimReport(report, { brand, pagesChecked: pages.filter((p) => p.statusCode === 200).map((p) => p.finalUrl) });
+  const result = trimReport(report, { brand, pagesChecked: pages.filter((p) => p.statusCode === 200).map((p) => p.finalUrl) });
+  return { ...result, snapshot: buildSnapshot(homeUrl, homePage.extracted, site, aiRobots.aiBots) };
 }
 
+
+/** AI assistants shown on the result, and the robots.txt names that decide whether each can read live pages. */
+const AI_ASSISTANTS: { name: string; tokens: string[] }[] = [
+  { name: "ChatGPT", tokens: ["OAI-SearchBot", "ChatGPT-User"] },
+  { name: "Gemini", tokens: ["Google-Extended"] },
+  { name: "Claude", tokens: ["Claude-SearchBot"] },
+  { name: "Perplexity", tokens: ["PerplexityBot", "Perplexity-User"] },
+];
+
+/** Visual facts for the result screen: homepage as Google lists it, AI robots, and site basics. */
+export function buildSnapshot(
+  homeUrl: string,
+  home: ExtractedPage | null,
+  site: Pick<SiteContext, "https" | "robots" | "sitemapsFound" | "sitemapUrlCount" | "llmsTxtFound">,
+  aiBots: { token: string; allowed: boolean }[],
+): FreeCheckSnapshot {
+  const allowed = (token: string) => aiBots.find((b) => b.token === token)?.allowed ?? true;
+  const images = home?.images ?? [];
+  return {
+    google: { title: home?.title?.trim() || null, description: home?.description?.trim() || null, url: homeUrl },
+    ai: AI_ASSISTANTS.map((a) => ({ name: a.name, allowed: a.tokens.every(allowed) })),
+    facts: {
+      https: site.https ?? homeUrl.startsWith("https:"),
+      robotsTxt: site.robots.fetched,
+      sitemap: site.sitemapsFound.length > 0,
+      sitemapUrls: site.sitemapUrlCount ?? 0,
+      llmsTxt: site.llmsTxtFound ?? false,
+      schemaTypes: [...new Set(home?.schemaTypes ?? [])].slice(0, 6),
+      h1: (home?.h1.length ?? 0) > 0,
+      homeWords: home?.contentWordCount ?? home?.wordCount ?? 0,
+      images: images.length,
+      imagesWithoutAlt: images.filter((i) => !i.alt || !i.alt.trim()).length,
+    },
+  };
+}

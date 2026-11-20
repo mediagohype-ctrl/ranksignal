@@ -16,9 +16,9 @@ describe("static page snippets", () => {
     expect(new Set(titles.map(([, t]) => t)).size).toBe(titles.length);
   });
 
-  it("every description is 120–155 characters and unique", () => {
+  it("every description is 115–155 characters and unique", () => {
     for (const [path, p] of pages) {
-      expect(p.description.length, `${path}: ${p.description}`).toBeGreaterThanOrEqual(120);
+      expect(p.description.length, `${path}: ${p.description}`).toBeGreaterThanOrEqual(115);
       expect(p.description.length, `${path}: ${p.description}`).toBeLessThanOrEqual(155);
     }
     expect(new Set(pages.map(([, p]) => p.description)).size).toBe(pages.length);

@@ -18,6 +18,44 @@ export interface FreeCheckIssue {
   points?: number;
 }
 
+/** Facts we read from the homepage and site files, shown as pictures (no advice, no fix steps). */
+export interface FreeCheckSnapshot {
+  /** The homepage as Google would list it. */
+  google: { title: string | null; description: string | null; url: string };
+  /** AI assistants that can (or cannot) read the homepage, per robots.txt. */
+  ai: { name: string; allowed: boolean }[];
+  facts: {
+    https: boolean;
+    robotsTxt: boolean;
+    sitemap: boolean;
+    sitemapUrls: number;
+    llmsTxt: boolean;
+    /** Business / page info for Google and AI (schema.org types) on the homepage. */
+    schemaTypes: string[];
+    h1: boolean;
+    homeWords: number;
+    images: number;
+    imagesWithoutAlt: number;
+  };
+}
+
+/** "Better than N% of websites checked on MyWebRank". */
+export interface FreeCheckBenchmark {
+  betterThan: number;
+  average: number;
+  sample: number;
+}
+
+/** A problem shown by title only (its fix is in the full report). */
+export interface FreeCheckLockedIssue {
+  id: string;
+  pillar: Pillar;
+  title: string;
+  impact: IssueImpact;
+  affectedCount: number;
+  points?: number;
+}
+
 export interface FreeCheckPillar {
   pillar: Pillar;
   label: string;
@@ -46,6 +84,17 @@ export interface FreeCheckResult {
   issues: FreeCheckIssue[];
   /** Total number of issues found (the free result shows only the top ones). */
   totalIssues: number;
+  /**
+   * The next few problems after the top fixes: title, impact and points only, no fix steps (shown locked, as the
+   * reason to start the trial). Optional: a server from before this field existed sends none.
+   */
+  moreIssues?: FreeCheckLockedIssue[];
+  /** Every problem found, counted by impact (urgent / important / nice to have), for the severity bar. */
+  issueCounts?: Record<IssueImpact, number>;
+  /** Visual facts about the homepage and site (Google preview, AI robots, basics). Optional for older servers. */
+  snapshot?: FreeCheckSnapshot;
+  /** How this score compares with other free checks. Only sent when there are enough checks to be fair. */
+  benchmark?: FreeCheckBenchmark | null;
   /** Lead row for this check (admin CRM), so the visitor can add their email. Null when it could not be stored. */
   leadId?: string | null;
   strengths: string[];

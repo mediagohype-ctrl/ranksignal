@@ -102,6 +102,14 @@ describe("top fixes are ordered by points, biggest first", () => {
     expect(t.totalIssues).toBe(5);
   });
 
+  it("lists the next problems by title only (no fix steps) and counts every problem by impact", () => {
+    const t = trimReport(r, opts);
+    expect(t.moreIssues?.map((i) => i.id)).toEqual(["finding-one", "finding-five"]);
+    expect(t.moreIssues?.[0]).not.toHaveProperty("howToFix");
+    expect(t.moreIssues?.[0]).not.toHaveProperty("whatsWrong");
+    expect(t.issueCounts).toEqual({ high: 2, medium: 1, low: 2 });
+  });
+
   it("a fix tied to a scored check is ranked by what fixing that check adds", () => {
     // seo-b fails outright (score 0), seo-c only warns (score 50): fixing b must add more, so it comes first
     // even though the report lists c first.

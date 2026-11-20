@@ -43,22 +43,22 @@ export default async function FreeCheckPage({ searchParams }: { searchParams: Se
   return (
     <>
       <JsonLd data={[jsonLd, webPageLd("/free-check"), faqLdFromQa(FREE_CHECK_FAQ)]} />
-      {/* Hero, laid out like /how-it-works: small label, one big line, one short intro. The H1 keeps the searched phrase. */}
+      {/* Short header, then the tool straight away: on a phone the website box is on the first screen. The H1 keeps the
+          searched phrase. No entrance animation, so it is readable the moment it loads. */}
       <section aria-labelledby="fc-title" className="relative overflow-hidden">
-        <div className="container-marketing pb-10 pt-14 sm:pb-12 sm:pt-20 lg:pt-24">
-          <h1 id="fc-title" className="mk-label mk-rise">
+        <div className="container-marketing pb-6 pt-8 text-center sm:pb-8 sm:pt-14">
+          <h1 id="fc-title" className="mk-label text-primary">
             Free website SEO checker
           </h1>
-          <p className="mk-hero mk-rise mt-6 max-w-[16ch] text-fg">
-            Is your site ready for <span className="text-primary">Google and AI?</span>
+          <p className="mx-auto mt-3 max-w-[20ch] text-balance text-[2rem] font-semibold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[2.75rem]">
+            Is your website ready for Google and AI?
           </p>
-          <p className="mk-lead mk-rise mk-delay-1 mt-8 max-w-[38rem] text-fg-soft">
-            Type your website. We&apos;ll read your homepage and up to {MAX_KEY_PAGES} main pages, then score them for SEO,
-            answer engines (AEO) and AI assistants (GEO) — with your top 3 fixes, in plain words.
+          <p className="mx-auto mt-3 max-w-[30rem] text-[1.0625rem] text-fg-soft">
+            Get your free score and top 3 fixes in 30 seconds.
           </p>
         </div>
       </section>
-      <section id="fc-tool" aria-label="Run the free check" className="scroll-mt-24 border-t border-border bg-surface-2/50 py-12 sm:py-16">
+      <section id="fc-tool" aria-label="Run the free check" className="scroll-mt-24 pb-12 sm:pb-16">
         <div className="container-marketing">
           <FreeCheckTool initialUrl={initialUrl} bookHref={bookCallHref()} />
         </div>

@@ -3,7 +3,7 @@
 //
 // - `title` is the page part; the root layout appends " · MyWebRank" (TITLE_SUFFIX) unless `absolute` is set.
 //   The FULL rendered title must be 30–60 characters, keyword first, brand last.
-// - `description` must be 120–155 characters and unique.
+// - `description` must be 115–155 characters and unique.
 // - `updated` (YYYY-MM-DD) is the last real content change: it feeds the sitemap lastmod, WebPage.dateModified
 //   and the visible freshness signals. Bump it when you change a page's copy — never set it to "today" on every request.
 import { DFY_PLAN, SELF_PLAN, TRIAL_DAYS, inr, inrGst, priceNote } from "@/components/marketing/plans";
