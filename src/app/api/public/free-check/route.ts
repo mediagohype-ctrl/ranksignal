@@ -13,6 +13,7 @@ import { recordLead } from "@/lib/admin/leads";
 import { topFixMessage } from "@/lib/admin/lead-followup";
 import { setToolUsage, withToolUsage } from "@/lib/admin/tool-usage";
 import { freeCheckBenchmark } from "@/lib/free-check/benchmark";
+import { metaVisitor, trackMeta } from "@/lib/meta/capi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,6 +61,9 @@ export const POST = handler(withToolUsage("free-check", async (req: Request) => 
       new Promise<null>((resolve) => setTimeout(() => resolve(null), LEAD_WAIT_MS)),
     ]);
     setToolUsage({ url: item.url, score: item.overall.score, leadId });
+    // Meta (Instagram/Facebook ads): a finished free check is a lead.
+    const v = metaVisitor(req);
+    trackMeta({ name: "Lead", eventId: leadId ? `lead-${leadId}` : undefined, sourceUrl: v.sourceUrl, user: v.user, custom: { content_name: "free_check" } });
     return json({ item: { ...item, leadId, benchmark } }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof FreeCheckError) throw new HttpError(e.code === "blocked_url" ? 400 : 422, e.code, e.message);

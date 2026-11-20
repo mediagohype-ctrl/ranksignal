@@ -8,6 +8,7 @@ import { verifyTurnstile } from "@/lib/security/turnstile";
 import { contactEmail, contactSchema } from "@/lib/free-check/contact";
 import { checkContactLimit } from "@/lib/free-check/limits";
 import { recordLeadInBackground } from "@/lib/admin/leads";
+import { metaVisitor, trackMeta } from "@/lib/meta/capi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export const POST = handler(async (req: Request) => {
   }
 
   recordLeadInBackground({ source: "contact", name: body.name, email: body.email, company: body.company, message: body.message, ip });
+  const v = metaVisitor(req);
+  trackMeta({ name: "Contact", sourceUrl: v.sourceUrl, user: { ...v.user, email: body.email } });
 
   const { subject, html, text } = contactEmail(body, { ip, at: new Date() });
   const res = await sendEmail({ to: BRAND.supportEmail, subject, html, text, replyTo: body.email });

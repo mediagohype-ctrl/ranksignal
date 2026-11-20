@@ -9,6 +9,7 @@
 //   - GST invoices (src/lib/billing/invoice.ts, idempotent per payment) for `subscription.charged` (base derived from
 //     the charged amount and the GST rate) and for paid top-ups. Created after the event commits; a redelivered
 //     (duplicate) event retries a missing invoice.
+import { trackSubscribe } from "@/lib/meta/subscribe";
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -254,6 +255,8 @@ export async function processRazorpayWebhook(
   if (PAYMENT_FAILED_EVENTS.includes(type)) await alertPaymentFailed(type, eventId, body, result);
   // Referral: a paid subscription went active → one free month for the referrer (idempotent; never fails the webhook).
   if (result.status === "processed" && mapping?.sub === "active") await applyReferralReward(result.organizationId).catch(() => undefined);
+  // Meta (ads): a paid subscription went active. Same event id as the sync path, so Meta counts it once.
+  if (result.status === "processed" && mapping?.sub === "active" && entity?.id) await trackSubscribe(result.organizationId, entity.id);
 
   const g = grant as GrantResult | null;
   if (g?.ok && payment?.id) {

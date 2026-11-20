@@ -260,7 +260,7 @@ export const PAGE_SEO = {
     description:
       "How MyWebRank collects, uses and protects your personal information, who we share it with, and how to ask us to delete your data or raise a concern.",
     published: "2026-10-28",
-    updated: LEGAL,
+    updated: "2026-11-20",
   },
   "/terms": {
     title: "Terms of Service: SEO Software & Services",

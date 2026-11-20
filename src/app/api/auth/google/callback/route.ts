@@ -26,6 +26,7 @@ import {
 import { isDisposableEmail } from "@/lib/security/email-policy";
 import { placeholderOrgName } from "@/lib/setup/facts";
 import { writeAuditLog } from "@/lib/audit-log";
+import { metaVisitor, trackMeta } from "@/lib/meta/capi";
 import { log } from "@/lib/log";
 import type { Role } from "@/lib/types";
 
@@ -114,6 +115,8 @@ export const GET = handler(async (req: Request) => {
       userId = r.user.id;
       created = true;
       await writeAuditLog({ organizationId: r.org.id, actorId: userId, action: "auth.signup", resourceType: "user", resourceId: userId, after: { method: "google" }, ip });
+      const mv = metaVisitor(req);
+      trackMeta({ name: "CompleteRegistration", eventId: `signup-${userId}`, sourceUrl: `${appUrl()}/signup`, user: { ...mv.user, email: p.email, externalId: r.org.id } });
     }
   } catch (e) {
     // Two concurrent callbacks for the same Google account / email: the unique index wins; ask them to try again.

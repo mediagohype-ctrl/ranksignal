@@ -2,6 +2,7 @@
 // trouble), a customer who paid would stay on their old plan. This reads the organization's subscriptions
 // straight from the Razorpay API with our secret key — the browser only asks "please check", it never says
 // what was paid — and applies an active one exactly like the webhook would.
+import { trackSubscribe } from "@/lib/meta/subscribe";
 import { db } from "@/lib/db";
 import { fetchRazorpaySubscription, isRazorpayConfigured, listRazorpaySubscriptions, type RazorpaySubscription } from "./razorpay";
 import { planIdFromRazorpayPlan } from "./plans";
@@ -42,6 +43,7 @@ export async function syncOrganizationFromRazorpay(organizationId: string, subsc
 
   const applied = await db.$transaction((tx) => applySubscriptionEntity(tx, paid, RAZORPAY_STATUS_MAP.active!, "billing.synced_from_razorpay"));
   if (!applied.ok) return { status: "nothing_paid" };
+  await trackSubscribe(organizationId, paid.id);
   const after = await db.organization.findUnique({ where: { id: organizationId }, select: { planId: true } });
   return { status: "activated", planId: after?.planId ?? planId ?? "unknown", subscriptionId: paid.id };
 }

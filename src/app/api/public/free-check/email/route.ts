@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { checkFreeCheckEmailLimit } from "@/lib/free-check/limits";
 import { decideLeadEmail, leadEmailSchema } from "@/lib/free-check/lead-email";
 import { noteToolUseEmail } from "@/lib/admin/tool-usage";
+import { metaVisitor, trackMeta } from "@/lib/meta/capi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export const POST = handler(async (req: Request) => {
   if (decision.changed) {
     await db.lead.update({ where: { id: body.leadId }, data: { email: body.email } });
     void noteToolUseEmail(body.leadId, body.email); // team alert: warm lead
+    const v = metaVisitor(req);
+    trackMeta({ name: "SubmitApplication", eventId: `lead-email-${body.leadId}`, sourceUrl: v.sourceUrl, user: { ...v.user, email: body.email } });
   }
   return json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 });

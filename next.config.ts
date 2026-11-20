@@ -13,9 +13,9 @@ const isDev = process.env.NODE_ENV !== "production";
  * TODO(security): move to a nonce-based CSP (middleware-generated nonce + 'strict-dynamic') so 'unsafe-inline'
  * can be dropped from script-src. Next.js inline bootstrap scripts currently need it.
  */
-const ANALYTICS_SCRIPTS = "https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms";
+const ANALYTICS_SCRIPTS = "https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://connect.facebook.net";
 const ANALYTICS_CONNECT =
-  "https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.clarity.ms https://c.bing.com";
+  "https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.clarity.ms https://c.bing.com https://www.facebook.com https://connect.facebook.net";
 
 const csp = [
   "default-src 'self'",

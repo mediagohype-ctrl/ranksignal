@@ -11,6 +11,7 @@ import { verifyTurnstile } from "@/lib/security/turnstile";
 import { createOwnerWorkspace } from "@/lib/auth/create-account";
 import { placeholderOrgName } from "@/lib/setup/facts";
 import { writeAuditLog } from "@/lib/audit-log";
+import { metaVisitor, trackMeta } from "@/lib/meta/capi";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -99,6 +100,8 @@ export const POST = handler(async (req: Request) => {
   });
 
   await writeAuditLog({ organizationId: org.id, actorId: user.id, action: "auth.signup", resourceType: "user", resourceId: user.id, ip });
+  const mv = metaVisitor(req);
+  trackMeta({ name: "CompleteRegistration", eventId: `signup-${user.id}`, sourceUrl: mv.sourceUrl, user: { ...mv.user, email: user.email, externalId: org.id } });
   await setSessionCookie({ userId: user.id, email: user.email, organizationId: org.id, role: "owner" });
   if (!user.emailVerified) {
     await sendVerificationEmail(user.id, user.email, user.name).catch(() => undefined);

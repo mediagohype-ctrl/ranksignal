@@ -20,4 +20,4 @@ export const GRIEVANCE_OFFICER = "Gourav Gupta";
 export const JURISDICTION_CITY = "New Delhi";
 
 /** Date shown as "Last updated" on the Privacy Policy and Terms. */
-export const LEGAL_UPDATED = "13 November 2026";
+export const LEGAL_UPDATED = "20 November 2026";

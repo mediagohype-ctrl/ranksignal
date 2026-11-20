@@ -116,6 +116,14 @@ export default function PrivacyPage() {
         <li><strong>WhatsApp</strong> — our WhatsApp messaging provider, only if you turned on WhatsApp updates.</li>
         <li><strong>Security check</strong> — Cloudflare Turnstile, which checks that forms are filled in by a person, not a robot.</li>
         <li><strong>Services you connect</strong> — your website platform or Google, only to do what you asked.</li>
+        <li>
+          <strong>Analytics and advertising</strong> — Google Analytics and Google Tag Manager (how visitors use the
+          site), Microsoft Clarity (anonymous recordings of clicks and scrolling, with form fields hidden), and Meta
+          (Facebook and Instagram) to measure our ads. When you run a free check, leave your email, write to us, sign up
+          or start a paid plan, we tell Meta that this happened, with your email or phone scrambled (hashed) so it
+          cannot be read, your internet (IP) address and browser type. We never send Meta your website&apos;s check
+          results.
+        </li>
       </ul>
       <p>
         Some of these companies store data outside India. When they do, we use providers that protect it with
@@ -133,9 +141,11 @@ export default function PrivacyPage() {
 
       <h2>4. Cookies</h2>
       <p>
-        We use a small number of cookies that the site needs to work: one keeps you signed in, and others protect
-        forms from misuse. We do not use advertising cookies or cookies that track you across other websites. If you
-        block cookies, you will not be able to sign in.
+        We use cookies that the site needs to work: one keeps you signed in, and others protect forms from misuse. If
+        you block these, you will not be able to sign in. On our public pages we also use analytics and advertising
+        cookies from Google, Microsoft Clarity and Meta, to understand how visitors use the site and to measure our
+        Instagram and Facebook ads. You can block or delete these in your browser settings without losing anything
+        on our site.
       </p>
 
       <h2>5. How long we keep it</h2>
