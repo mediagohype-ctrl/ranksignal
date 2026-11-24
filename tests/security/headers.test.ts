@@ -28,7 +28,7 @@ describe("security headers", () => {
     expect(csp["font-src"]).toContain("https://fonts.gstatic.com");
     expect(csp["connect-src"]).toContain("https://api.razorpay.com");
     expect(csp["connect-src"]).toContain("https://lumberjack.razorpay.com");
-    expect(csp["frame-src"]).toBe("frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com");
+    expect(csp["frame-src"]).toBe("frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com https://www.facebook.com");
     expect(csp["object-src"]).toBe("object-src 'none'");
   });
 });

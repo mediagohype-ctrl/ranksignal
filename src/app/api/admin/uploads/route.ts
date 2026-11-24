@@ -26,7 +26,16 @@ export const POST = handler(async (req: Request) => {
     const url = await putObject(key, bytes, kind.type);
     return json({ item: { url, key, type: kind.type, bytes: bytes.byteLength } }, { status: 201 });
   } catch (e) {
-    console.warn("[uploads]", (e as Error)?.message ?? "error");
-    throw new HttpError(502, "upload_failed", "We couldn't save the image right now. Please try again in a minute.");
+    const reason = (e as Error)?.message ?? "error";
+    console.warn("[uploads]", reason);
+    // Staff-only route: show the storage error code so a wrong key / bucket is obvious (run deploy/check-r2.sh).
+    const code = /R2 upload failed: (.+)$/.exec(reason)?.[1];
+    throw new HttpError(
+      502,
+      "upload_failed",
+      code
+        ? `Cloudflare R2 refused the upload (${code}). An R2 setting on the server is probably wrong: run deploy/check-r2.sh.`
+        : "We couldn't reach the image storage. Please try again in a minute.",
+    );
   }
 });

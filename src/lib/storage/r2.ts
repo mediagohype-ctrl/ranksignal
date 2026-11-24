@@ -3,7 +3,8 @@
 // R2_PUBLIC_URL (the bucket's public r2.dev address or a custom domain like https://media.mywebrank.tech) and
 // R2_UPLOAD_PREFIX (folder inside the bucket, default "uploads").
 import { randomBytes } from "node:crypto";
-import { AwsClient } from "aws4fetch";
+import { request } from "node:https";
+import { AwsV4Signer } from "aws4fetch";
 
 type Env = Record<string, string | undefined>;
 
@@ -56,21 +57,49 @@ export function imageKey(prefix: string, fileName: string, ext: string, now = ne
   return `${prefix}/blog/${y}/${m}/${random}-${base}.${ext}`;
 }
 
-/** Upload one object; resolves to its public URL. Throws on any R2 error (the caller shows a friendly message). */
+/**
+ * Upload one object; resolves to its public URL. Throws on any R2 error (the caller shows a friendly message).
+ *
+ * Signed with aws4fetch, then sent with Node's own https client and an exact Content-Length: inside Next.js the
+ * global fetch is wrapped and sent the body as a stream without a length, which R2 refuses ("MissingContentLength").
+ */
 export async function putObject(key: string, body: Uint8Array, contentType: string, env: Env = process.env): Promise<string> {
   const c = r2Config(env);
   if (!c.ok) throw new Error("R2 is not configured");
-  const client = new AwsClient({ accessKeyId: c.accessKeyId, secretAccessKey: c.secretAccessKey, service: "s3", region: "auto" });
   const url = `https://${c.accountId}.r2.cloudflarestorage.com/${encodeURIComponent(c.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
-  const res = await client.fetch(url, {
+  const bytes = Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+  const signed = await new AwsV4Signer({
+    url,
     method: "PUT",
-    body: new Blob([body as Uint8Array<ArrayBuffer>], { type: contentType }),
     headers: { "Content-Type": contentType, "Cache-Control": "public, max-age=31536000, immutable" },
+    body: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
+    accessKeyId: c.accessKeyId,
+    secretAccessKey: c.secretAccessKey,
+    service: "s3",
+    region: "auto",
+  }).sign();
+  const headers: Record<string, string> = { "Content-Length": String(bytes.byteLength) };
+  signed.headers.forEach((v, k) => {
+    headers[k] = v;
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    const code = /<Code>([^<]+)<\/Code>/.exec(text)?.[1] ?? `HTTP ${res.status}`;
+  const { status, text } = await httpsPut(signed.url.toString(), headers, bytes);
+  if (status < 200 || status >= 300) {
+    const code = /<Code>([^<]+)<\/Code>/.exec(text)?.[1] ?? `HTTP ${status}`;
     throw new Error(`R2 upload failed: ${code}`);
   }
   return `${c.publicUrl}/${key}`;
+}
+
+function httpsPut(url: string, headers: Record<string, string>, body: Buffer): Promise<{ status: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    const req = request(url, { method: "PUT", headers, timeout: 30_000 }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (d: Buffer) => chunks.push(d));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, text: Buffer.concat(chunks).toString("utf8") }));
+      res.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(new Error("R2 upload timed out")));
+    req.on("error", reject);
+    req.end(body);
+  });
 }

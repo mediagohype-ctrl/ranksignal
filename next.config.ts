@@ -16,7 +16,7 @@ const isDev = process.env.NODE_ENV !== "production";
  */
 const ANALYTICS_SCRIPTS = "https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://connect.facebook.net";
 const ANALYTICS_CONNECT =
-  "https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.clarity.ms https://c.bing.com https://www.facebook.com https://connect.facebook.net";
+  "https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.clarity.ms https://c.bing.com https://www.facebook.com https://connect.facebook.net https://*.conversionsapigateway.com";
 
 const csp = [
   "default-src 'self'",
@@ -25,7 +25,7 @@ const csp = [
   "font-src https://fonts.gstatic.com data:",
   "img-src 'self' data: https:",
   `connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com ${ANALYTICS_CONNECT}${isDev ? " ws: wss:" : ""}`,
-  "frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com",
+  "frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com https://www.facebook.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",
