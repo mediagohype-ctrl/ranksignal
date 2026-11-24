@@ -18,11 +18,23 @@ const AH = COMPETITORS.ahrefs;
 const SR = COMPETITORS.semrush;
 const SE = COMPETITORS["se-ranking"];
 
-const SUMMARY: Record<(typeof COMPARE_PAGES)[number]["path"], string> = {
+// Alternatives pages not (yet) in COMPARE_PAGES (that list lives in competitors.ts, owned elsewhere).
+const MORE_PAGES = [
+  { path: "/compare/semrush-alternatives", label: "Semrush alternatives in India" },
+  { path: "/compare/se-ranking-alternatives", label: "SE Ranking alternatives in India" },
+] as const;
+const PAGES: readonly { path: string; label: string }[] = [
+  ...COMPARE_PAGES,
+  ...MORE_PAGES.filter((m) => !COMPARE_PAGES.some((p) => (p.path as string) === m.path)),
+];
+
+const SUMMARY: Record<(typeof COMPARE_PAGES)[number]["path"] | (typeof MORE_PAGES)[number]["path"], string> = {
   "/compare/ahrefs": "Ahrefs leads on backlinks and keyword data. MyWebRank is simpler, tracks AI answers and shows you exactly what to fix.",
   "/compare/semrush": "Semrush is a large marketing toolkit with keyword, backlink and rank data. MyWebRank focuses on fixes, AI answers and rupee pricing.",
   "/compare/se-ranking": "SE Ranking packs rank tracking, backlinks and AI tracking into one plan. MyWebRank adds ready-to-paste fixes and a done-for-you service.",
   "/compare/ahrefs-alternatives": "Semrush, SE Ranking, Ubersuggest, Google Search Console and MyWebRank, with who each one suits.",
+  "/compare/semrush-alternatives": "Ahrefs, SE Ranking, Ubersuggest, Google Search Console and MyWebRank, compared on price, AI tracking and who each suits.",
+  "/compare/se-ranking-alternatives": "Semrush, Ahrefs, Ubersuggest, Google Search Console and MyWebRank, compared on price, AI tracking and who each suits.",
 };
 
 const ROWS: Row[] = [
@@ -93,7 +105,7 @@ export default function ComparePage() {
             extra: {
               mainEntity: {
                 "@type": "ItemList",
-                itemListElement: COMPARE_PAGES.map((p, i) => ({
+                itemListElement: PAGES.map((p, i) => ({
                   "@type": "ListItem",
                   position: i + 1,
                   name: p.label,
@@ -124,7 +136,7 @@ export default function ComparePage() {
       <Section labelledBy="comparisons">
         <SectionHeading id="comparisons" size="lg" eyebrow="Comparisons" title="Pick a comparison" />
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {COMPARE_PAGES.map((p) => (
+          {PAGES.map((p) => (
             <li key={p.path} className="min-w-0">
               <Link
                 href={p.path}
@@ -134,7 +146,7 @@ export default function ComparePage() {
                   {p.label}
                   <ArrowRight aria-hidden size={18} className="shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
                 </span>
-                <span className="mt-2 block text-small leading-relaxed text-fg-soft">{SUMMARY[p.path]}</span>
+                <span className="mt-2 block text-small leading-relaxed text-fg-soft">{SUMMARY[p.path as keyof typeof SUMMARY]}</span>
               </Link>
             </li>
           ))}

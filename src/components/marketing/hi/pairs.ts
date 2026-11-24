@@ -16,7 +16,15 @@ export type HindiPath = (typeof HINDI_PAIRS)[EnglishPairedPath];
 
 export const HINDI_PATHS = Object.values(HINDI_PAIRS) as HindiPath[];
 
-const EN_BY_HI: Record<string, string> = Object.fromEntries(Object.entries(HINDI_PAIRS).map(([en, hi]) => [hi, en]));
+/** English guide → its Hindi guide (/hi/learn/…). Separate from HINDI_PAIRS, which lists fixed pages with PAGE_SEO entries. */
+export const ARTICLE_HINDI_PAIRS: Record<string, string> = {
+  "/learn/what-is-aeo": "/hi/learn/aeo-kya-hai",
+  "/learn/what-is-geo": "/hi/learn/geo-kya-hai",
+  "/learn/how-to-get-mentioned-by-chatgpt": "/hi/learn/chatgpt-mention",
+};
+
+const ALL_PAIRS: Record<string, string> = { ...HINDI_PAIRS, ...ARTICLE_HINDI_PAIRS };
+const EN_BY_HI: Record<string, string> = Object.fromEntries(Object.entries(ALL_PAIRS).map(([en, hi]) => [hi, en]));
 
 /** True for "/hi" and anything under "/hi/". */
 export function isHindiPath(pathname: string): boolean {
@@ -30,7 +38,7 @@ export function englishFor(path: string): string | undefined {
 
 /** The Hindi page for an English page, or undefined. */
 export function hindiFor(path: string): string | undefined {
-  return (HINDI_PAIRS as Record<string, string>)[path];
+  return ALL_PAIRS[path];
 }
 
 /**

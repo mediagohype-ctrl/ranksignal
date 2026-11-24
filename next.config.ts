@@ -51,6 +51,11 @@ const nextConfig: NextConfig = {
   // does not know as a bot. Crawlers outside its list (Screaming Frog, GPTBot, ClaudeBot, PerplexityBot, …) then
   // see them "outside <head>". Matching every UA makes all metadata render in <head> for everyone.
   htmlLimitedBots: /.*/,
+  experimental: {
+    // The site has several root layouts (English <html lang="en">, Hindi <html lang="hi">): unmatched URLs use
+    // src/app/global-not-found.tsx, which renders its own <html>.
+    globalNotFound: true,
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

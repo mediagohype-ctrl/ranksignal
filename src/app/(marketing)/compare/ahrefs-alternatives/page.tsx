@@ -139,12 +139,24 @@ const OPTIONS: { name: string; from: string; best: string; body: string }[] = [
 
 const FAQ: Qa[] = [
   {
-    q: "What is the cheapest alternative to Ahrefs?",
+    q: "Is there a free Ahrefs alternative?",
     a: (
       <>
-        Google Search Console is free and shows your own Google Search performance. Among paid tools, Ubersuggest starts at
-        $29 a month or $290 for a lifetime plan. Ahrefs itself has a free plan and a $29 Starter plan, so check whether those
-        cover what you need before you switch.
+        Yes, for part of the job. Google Search Console is free and shows your own Google Search traffic, index coverage and
+        issue alerts, but it has no backlink or keyword database. Semrush has a limited free plan with 10 reports a day.
+        Ahrefs itself also has a free plan. To check your own website for problems without paying, run our{" "}
+        <Link href="/free-check">free website check</Link>; no sign-up needed.
+      </>
+    ),
+  },
+  {
+    q: "What is a cheaper Ahrefs alternative?",
+    a: (
+      <>
+        Ubersuggest starts at $29 a month, or $290 once for a lifetime plan, for basic keyword research. SE Ranking Core is
+        $129 a month, the same as Ahrefs Lite, but includes 2,000 tracked keywords a day and 25 AI prompts a day. If what you
+        need is website fixes and AI visibility rather than link data, MyWebRank costs {OUR.fromPrice} a month in rupees.
+        Ahrefs also has a $29 Starter plan, so check whether that covers you before switching.
       </>
     ),
   },
@@ -256,6 +268,51 @@ export default function AhrefsAlternativesPage() {
               MyWebRank vs Ahrefs
             </Link>{" "}
             for the full comparison.
+          </p>
+        </div>
+      </Section>
+
+      <Section labelledBy="free-cheaper">
+        <div className="mx-auto max-w-3xl text-body leading-relaxed text-fg-soft">
+          <h2 id="free-cheaper" className="text-h2 text-fg">
+            Free and cheaper Ahrefs alternatives
+          </h2>
+          <p className="mt-4">
+            <strong className="text-fg">Free:</strong> Google Search Console costs nothing and reports what Google actually
+            saw on your site, but it has no backlink or keyword database. Semrush has a limited free plan (10 reports a day),
+            and Ahrefs has its own free plan. Our{" "}
+            <Link href="/free-check" className="font-medium text-primary underline-offset-4 hover:underline">
+              free website check
+            </Link>{" "}
+            and{" "}
+            <Link href="/tools/ai-visibility-checker" className="font-medium text-primary underline-offset-4 hover:underline">
+              free AI visibility checker
+            </Link>{" "}
+            need no sign-up.
+          </p>
+          <p className="mt-4">
+            <strong className="text-fg">Cheaper:</strong> Ubersuggest starts at $29 a month, or $290 once for a lifetime
+            plan. SE Ranking Core is $129 a month, the same as Ahrefs Lite, with AI tracking included. MyWebRank costs{" "}
+            {OUR.fromPrice} a month in rupees (see{" "}
+            <Link href="/pricing" className="font-medium text-primary underline-offset-4 hover:underline">
+              pricing
+            </Link>
+            ), but it is not a like-for-like swap: it has no backlink or keyword data, and focuses on fixes and{" "}
+            <Link href="/features/ai-visibility-tracking" className="font-medium text-primary underline-offset-4 hover:underline">
+              AI visibility tracking
+            </Link>
+            .
+          </p>
+          <p className="mt-4">
+            Comparing the other big suites too? See{" "}
+            <Link href="/compare/semrush-alternatives" className="font-medium text-primary underline-offset-4 hover:underline">
+              Semrush alternatives in India
+            </Link>{" "}
+            and{" "}
+            <Link href="/compare/se-ranking-alternatives" className="font-medium text-primary underline-offset-4 hover:underline">
+              SE Ranking alternatives in India
+            </Link>
+            .
           </p>
         </div>
       </Section>

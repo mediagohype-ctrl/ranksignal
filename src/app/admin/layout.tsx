@@ -1,12 +1,14 @@
 // Admin back-office shell. Staff only: everyone else gets a 404 (the admin surface is never revealed).
 import { db } from "@/lib/db";
+import { RootShell, rootViewport, withRootMetadata } from "@/components/shell/root-shell";
 import { requireStaffPage } from "@/lib/admin/guard";
 import { ToastProvider } from "@/components/ui";
 import { AdminShell } from "@/components/admin/shell";
 import { roleLabels } from "@/lib/admin/rbac";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: { default: "Admin", template: "%s · Admin" }, robots: { index: false, follow: false } };
+export const metadata = withRootMetadata({ title: { default: "Admin", template: "%s · Admin" }, robots: { index: false, follow: false } });
+export const viewport = rootViewport;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const staff = await requireStaffPage();
@@ -21,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ? await db.organization.findUnique({ where: { id: staff.session.organizationId }, select: { name: true } })
     : null;
   return (
+    <RootShell lang="en">
     <ToastProvider>
       <AdminShell staffEmail={staff.user.email} staffName={staff.user.name} supportOrgName={supportOrg?.name ?? null}
         permissions={[...staff.permissions]}
@@ -30,5 +33,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {children}
       </AdminShell>
     </ToastProvider>
+    </RootShell>
   );
 }

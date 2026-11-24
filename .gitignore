@@ -42,7 +42,7 @@ next-env.d.ts
 
 /prisma/*.db
 /prisma/*.db-journal
-/.next-verify/
+/.next-verify*/
 !.env.example
 /.next-build/
 /.next-old/

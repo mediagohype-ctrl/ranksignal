@@ -11,6 +11,7 @@ import { HiCheckLauncher, HiFaqSection } from "@/components/marketing/hi/hi-ui";
 import { hiWebPageLd } from "@/components/marketing/hi/seo";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { faqLd, siteUrl } from "@/lib/seo/schema";
+import { HINDI_ARTICLES } from "@/lib/learn/hi";
 
 // Hindi home page (/hi). Title and description live in src/lib/seo/pages.ts; hreflang comes from hi/pairs.ts.
 export const metadata: Metadata = staticPageMetadata("/hi", {
@@ -210,6 +211,31 @@ export default function HindiHomePage() {
         </div>
       </section>
 
+      {/* Hindi guides (/hi/learn/…): linked from the Hindi home so they are easy to find. */}
+      <section aria-labelledby="hi-guides-title" className="border-t border-border py-16 sm:py-20">
+        <div className="container-marketing">
+          <h2 id="hi-guides-title" className="mk-title text-fg">
+            आसान हिन्दी गाइड
+          </h2>
+          <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {HINDI_ARTICLES.map((a) => (
+              <li key={a.slug}>
+                <Link
+                  href={`/hi/learn/${a.slug}`}
+                  className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-shadow hover:shadow-card-hover"
+                >
+                  <span className="text-body font-semibold leading-snug text-fg group-hover:text-primary">{a.title}</span>
+                  <span className="mt-2 line-clamp-3 text-small text-muted">{a.description}</span>
+                  <span className="mt-auto inline-flex items-center gap-1 pt-4 text-small font-semibold text-primary">
+                    पढ़ें
+                    <ArrowRight aria-hidden size={15} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
       <HiFaqSection id="faq" title="सवाल, सीधे जवाब।" items={HOME_FAQ} />
     </>
   );

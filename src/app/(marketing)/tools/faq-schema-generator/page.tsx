@@ -7,6 +7,7 @@ import { FaqMaker } from "../_components/faq-maker";
 import { LeadBox } from "../_components/lead-box";
 import { QaSection, SourcesList, SourceLink, type Qa } from "@/components/marketing/answers";
 import { FAQ_MAX_ITEMS } from "@/lib/growth/tools";
+import { FAQ_SCHEMA_EXAMPLE } from "@/lib/tools/faq-schema-check";
 import { staticPageMetadata } from "@/lib/seo/metadata";
 import { PAGE_SEO } from "@/lib/seo/pages";
 import { breadcrumbLd, faqLdFromQa, webPageLd } from "@/lib/seo/schema";
@@ -49,7 +50,7 @@ export default function FaqMarkupMakerPage() {
         title="Free FAQ schema generator: info for Google and AI"
         intro={<p>Type the questions customers ask and your answers. Copy the code onto your page so Google and AI tools can quote you.</p>}
       />
-      <section aria-label="Make your FAQ code" className="bg-bg py-12 sm:py-16">
+      <section aria-label="Make or check your FAQ code" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <FaqMaker />
         </div>
@@ -85,6 +86,36 @@ export default function FaqMarkupMakerPage() {
               correctly.
             </li>
           </ol>
+        </div>
+      </Section>
+      <Section labelledBy="faq-check" tone="surface">
+        <div className="mx-auto max-w-3xl text-body leading-relaxed text-fg-soft">
+          <h2 id="faq-check" className="text-h2 text-fg">
+            FAQ schema checker: test the FAQ code on your page
+          </h2>
+          <p className="mt-4">
+            Open the <strong className="text-fg">Check my FAQ code</strong> tab and paste the code from your page, either the
+            JSON on its own or the whole script block. It runs in your browser and checks that the code is valid JSON, uses
+            schema.org, has an FAQPage (also inside @graph), and that every question has a name and an answer with text. It
+            also flags empty or repeated questions and script tags inside answers, and tells you how to fix each one.
+          </p>
+        </div>
+      </Section>
+      <Section labelledBy="faq-example">
+        <div className="mx-auto max-w-3xl text-body leading-relaxed text-fg-soft">
+          <h2 id="faq-example" className="text-h2 text-fg">
+            FAQ schema example
+          </h2>
+          <p className="mt-4">
+            This is what correct FAQ code looks like for a page with two questions. Swap in your own questions and answers,
+            keeping them the same as the text visitors see.
+          </p>
+          <figure className="mt-6">
+            <figcaption className="text-small font-medium text-fg">Example: FAQPage code with 2 questions</figcaption>
+            <pre className="mt-2 overflow-auto rounded-lg border border-border bg-surface-2 p-4 text-xs text-fg-soft">
+              <code>{FAQ_SCHEMA_EXAMPLE}</code>
+            </pre>
+          </figure>
         </div>
       </Section>
       {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}

@@ -44,10 +44,10 @@ export default function AiGuideFileMakerPage() {
       />
       <PageHero
         eyebrow="Free tool"
-        title="Free llms.txt generator: make an AI guide file for your website"
-        intro={<p>Tell ChatGPT and other AI tools who you are and which pages matter. Fill in the boxes, then download your file.</p>}
+        title="Free llms.txt generator and checker for your website"
+        intro={<p>Tell ChatGPT and other AI tools who you are and which pages matter. Fill in the boxes, then download your file, or check the AI guide file you already have.</p>}
       />
-      <section aria-label="Make your AI guide file" className="bg-bg py-12 sm:py-16">
+      <section aria-label="Make or check your AI guide file" className="bg-bg py-12 sm:py-16">
         <div className="container-marketing space-y-10">
           <GuideMaker />
         </div>
@@ -62,6 +62,24 @@ export default function AiGuideFileMakerPage() {
             </div>
           ))}
         </dl>
+      </Section>
+      <Section labelledBy="guide-check">
+        <div className="mx-auto max-w-3xl text-body leading-relaxed text-fg-soft">
+          <h2 id="guide-check" className="text-h2 text-fg">
+            llms.txt checker: test the AI guide file you already have
+          </h2>
+          <p className="mt-4">
+            Open the <strong className="text-fg">Check my llms.txt</strong> tab, then type your website address or paste the file
+            text. We check it against the format at llmstxt.org and list each result with what to do next:
+          </p>
+          <ul className="mt-4 list-disc space-y-2 pl-5">
+            <li>The first line is your name after a single #, and there is only one such line.</li>
+            <li>A one-line summary starting with &gt; sits under the name.</li>
+            <li>Each ## section lists links written as - [Page name](https://yoursite.com/page): short note.</li>
+            <li>Links use full addresses with https://, not /page on its own.</li>
+            <li>The file is plain text, not a web page, and short enough for AI tools to read in one go.</li>
+          </ul>
+        </div>
       </Section>
       {/* Email box sits below the explanation: the first heading after the tool explains the tool. */}
       <section aria-label="Weekly tips by email" className="bg-bg pb-12 sm:pb-16">

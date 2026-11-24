@@ -490,7 +490,7 @@ export default function HomePage() {
           </p>
 
           <a
-            href="#check"
+            href="/tools/ai-visibility-checker"
             className="inline-flex h-14 items-center gap-2 rounded-[14px] bg-white px-7 text-[17px] font-bold text-mk-ink hover:bg-mk-tint"
           >
             Find my rank free

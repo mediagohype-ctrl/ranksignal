@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { RootShell, rootMetadata, rootViewport } from "@/components/shell/root-shell";
 import { requireAppSession } from "@/lib/dashboard/server";
 import { db } from "@/lib/db";
 import { getPlan } from "@/lib/billing/plans";
@@ -17,6 +18,8 @@ import { getPlanBannerData, pickBanner } from "@/lib/billing/banner";
 import { TimeZoneProvider } from "@/components/app/time-zone";
 import { RunWatcher } from "@/components/app/run-watcher";
 
+export const metadata = rootMetadata;
+export const viewport = rootViewport;
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -47,6 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? "verify_email"
       : null;
   return (
+    <RootShell lang="en">
     <ToastProvider>
       <TimeZoneProvider timeZone={user?.timeZone}>
       <MenuProvider value={menu}>
@@ -129,5 +133,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </MenuProvider>
       </TimeZoneProvider>
     </ToastProvider>
+    </RootShell>
   );
 }

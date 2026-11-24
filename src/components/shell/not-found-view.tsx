@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, Gauge, Home, Mail, Tag } from "lucide-react";
 import { LinkButton } from "@/components/ui";
 import { Logo } from "@/components/marketing/logo";
 
-export const metadata: Metadata = {
+export const notFoundMetadata: Metadata = {
   title: "Page not found",
   description: "We couldn't find that page. Try the homepage, the free AI-readiness check, pricing or the docs.",
   robots: { index: false, follow: true },
@@ -18,7 +18,8 @@ const LINKS = [
   { href: "/contact", label: "Contact us", body: "A real person will reply.", icon: Mail },
 ];
 
-export default function NotFound() {
+/** The 404 page body, shared by each root layout's not-found.tsx and by src/app/global-not-found.tsx. */
+export function NotFoundView() {
   return (
     <div className="flex min-h-screen flex-col bg-bg">
       <header className="border-b border-border bg-surface">

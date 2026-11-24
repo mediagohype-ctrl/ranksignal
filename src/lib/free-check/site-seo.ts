@@ -2,6 +2,7 @@
 import type { MetadataRoute } from "next";
 import { BRAND } from "@/lib/brand";
 import { ARTICLES, articleToMarkdown } from "@/lib/learn/articles";
+import { HINDI_ARTICLES } from "@/lib/learn/hi";
 import { PAGE_UPDATED } from "@/lib/seo/pages";
 import { hreflangFor } from "@/components/marketing/hi/pairs";
 
@@ -35,6 +36,9 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/done-for-you", title: "SEO, AEO & GEO services (done for you)", summary: "Done-for-you SEO, AEO and GEO service from an India-based team (\"Do it for me\"): the team makes the fixes on the website, Google Business Profile and listings every month and sends a monthly report. ₹19,999/month, no setup fee; the work is promised, rankings never are.", changeFrequency: "monthly", priority: 0.9, section: "Product" },
   { path: "/pricing", title: "Pricing", summary: "Three ways to buy, in Indian rupees: Do it myself (software with a free trial; it shows exactly what to change and the owner makes the changes), Do it for me (the team changes the website) and Custom.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/tools", title: "Free SEO and AI tools", summary: "Free SEO and AI tools, no sign-up: website check, meta tag, heading, schema, broken link, robots.txt, AI crawler and sitemap checkers, and title, meta description, FAQ, FAQ schema and llms.txt generators.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/tools/ai-visibility-checker", title: "AI visibility checker", summary: "Free AI visibility checker: asks ChatGPT, Gemini and Perplexity a customer-style question and shows whether each names your business and who is named instead.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
+  { path: "/features/ai-visibility-tracking", title: "AI visibility tracking", summary: "Weekly AI visibility tracking and brand monitoring: how often ChatGPT, Gemini and Perplexity name a business, who they name instead, and what to fix.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
+  { path: "/seo-services-small-business", title: "SEO services for small businesses in India", summary: "SEO for Indian small businesses: a free website check, SEO audit software from ₹1,999 a month, or the team does the work for you.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/tools/faq-schema-generator", title: "FAQ schema generator", summary: "Free FAQ schema (FAQPage JSON-LD) generator for Google rich results and AI answers.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/llms-txt-generator", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/meta-tag-checker", title: "Meta title & description checker", summary: "Free checker for a page's title tag, meta description and share preview, with fixes.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
@@ -52,8 +56,11 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/compare/semrush", title: "MyWebRank vs Semrush", summary: "Side-by-side comparison of MyWebRank and Semrush.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
   { path: "/compare/se-ranking", title: "MyWebRank vs SE Ranking", summary: "Side-by-side comparison of MyWebRank and SE Ranking.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
   { path: "/compare/ahrefs-alternatives", title: "Best Ahrefs alternatives in India", summary: "Ahrefs alternatives for Indian businesses compared, including free options.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
+  { path: "/compare/semrush-alternatives", title: "Best Semrush alternatives in India", summary: "Semrush alternatives for Indian businesses compared on price, AI visibility tracking and ease of use.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
+  { path: "/compare/se-ranking-alternatives", title: "Best SE Ranking alternatives in India", summary: "SE Ranking alternatives for Indian businesses compared on price, AI visibility tracking and ease of use.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
   { path: "/blog", title: "Blog", summary: "News, research and how-tos on SEO, AEO and GEO from the MyWebRank team.", changeFrequency: "weekly", priority: 0.8, section: "Blog" },
   { path: "/learn", title: "SEO, AEO & GEO guides", summary: "Plain-English guides to ranking on Google and getting mentioned in AI answers.", changeFrequency: "weekly", priority: 0.8, section: "Guides" },
+  { path: "/author/shubhankar-gupta", title: "Shubhankar Gupta (author)", summary: "Author page for Shubhankar Gupta, who writes MyWebRank's SEO, AEO and GEO guides.", changeFrequency: "monthly", priority: 0.4, section: "Docs" },
   { path: "/about", title: "About us", summary: "Who runs MyWebRank: the India-based SEO, AEO and GEO team behind the product and service, and how to reach us.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/docs", title: "Getting started", summary: "Getting started, how fixes work on each offer, how approvals and connections work when our team does the work, check schedules, method and known limitations.", changeFrequency: "monthly", priority: 0.6, section: "Docs" },
   { path: "/docs/api", title: "API and MCP docs", summary: "Read-only REST API v1, MCP server for AI assistants and a Looker Studio connector for MyWebRank data, authenticated with API keys.", changeFrequency: "monthly", priority: 0.5, section: "Docs" },
@@ -82,7 +89,17 @@ const ARTICLE_ROUTES: MarketingRoute[] = ARTICLES.map((a) => ({
   updated: a.updated,
 }));
 
-export const MARKETING_ROUTES: MarketingRoute[] = [...STATIC_ROUTES, ...ARTICLE_ROUTES];
+const HINDI_ARTICLE_ROUTES: MarketingRoute[] = HINDI_ARTICLES.map((a) => ({
+  path: `/hi/learn/${a.slug}`,
+  title: a.title,
+  summary: a.description,
+  changeFrequency: "monthly",
+  priority: 0.6,
+  section: "Hindi",
+  updated: a.updated,
+}));
+
+export const MARKETING_ROUTES: MarketingRoute[] = [...STATIC_ROUTES, ...ARTICLE_ROUTES, ...HINDI_ARTICLE_ROUTES];
 
 const urlFor = (base: string, path: string) => (path === "/" ? `${base}/` : `${base}${path}`);
 

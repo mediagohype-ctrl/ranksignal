@@ -59,3 +59,9 @@ export const AI_TOOL_LIMITS = { perIp: 5, global: 150, windowMs: HOUR } as const
 export function checkAiToolLimit(tool: string, ip: string, now = Date.now()): LimitResult {
   return check(`ai-tool:${tool}`, AI_TOOL_LIMITS, ip, now);
 }
+
+/** AI visibility checker: each run asks 3 AI assistants with web search (paid) — 3 per IP per hour, 30 per hour overall. */
+export const AI_CHECK_LIMITS = { perIp: 3, global: 30, windowMs: HOUR } as const;
+export function checkAiVisibilityLimit(ip: string, now = Date.now()): LimitResult {
+  return check("ai-check", AI_CHECK_LIMITS, ip, now);
+}

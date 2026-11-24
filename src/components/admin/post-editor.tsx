@@ -425,7 +425,7 @@ export function PostEditor({
             )}
             {p.id && (
               <a
-                href={`/blog/${initial.slug}?preview=1`}
+                href={`/blog/${initial.slug}/preview`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-small font-medium text-fg hover:bg-surface-2"

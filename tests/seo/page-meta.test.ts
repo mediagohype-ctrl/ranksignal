@@ -25,7 +25,7 @@ describe("static page snippets", () => {
   });
 
   it("every indexable static route in the sitemap has a freshness date", () => {
-    for (const r of MARKETING_ROUTES.filter((x) => !x.path.startsWith("/learn/"))) {
+    for (const r of MARKETING_ROUTES.filter((x) => !x.path.startsWith("/learn/") && !x.path.startsWith("/hi/learn/"))) {
       expect(PAGE_UPDATED[r.path], r.path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(r.updated, r.path).toBe(PAGE_UPDATED[r.path]);
     }

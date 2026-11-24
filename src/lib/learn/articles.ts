@@ -2,6 +2,29 @@
 // ("what is AEO", "SEO vs GEO", "how to rank in ChatGPT", "SEO audit checklist", "how to choose an SEO company").
 // Structure is deliberately answer-first (AEO): a 40–60 word direct answer, question-shaped H2s, FAQs.
 // Inline links use [text](/path). Keep claims verifiable — no invented statistics.
+import { article as howToMeasureGeo } from "./guides/how-to-measure-geo";
+import { article as aiReadinessVsAiVisibility } from "./guides/ai-readiness-vs-ai-visibility";
+import { article as trackBrandMentionsInChatgpt } from "./guides/track-brand-mentions-in-chatgpt";
+import { article as improveAiSearchVisibility } from "./guides/improve-ai-search-visibility";
+import { article as seoAuditCostIndia } from "./guides/seo-audit-cost-india";
+import { article as bestAiVisibilityTools } from "./guides/best-ai-visibility-tools";
+import { article as robotsTxtForAiCrawlers } from "./guides/robots-txt-for-ai-crawlers";
+import { article as howToRankOnChatgpt } from "./guides/how-to-rank-on-chatgpt";
+import { article as googleAiOverview } from "./guides/google-ai-overview";
+
+/** Guides added 24 Nov 2026 (SEO keyword plan), one file each in ./guides. */
+const GUIDES = [
+  howToMeasureGeo,
+  aiReadinessVsAiVisibility,
+  trackBrandMentionsInChatgpt,
+  improveAiSearchVisibility,
+  seoAuditCostIndia,
+  bestAiVisibilityTools,
+  robotsTxtForAiCrawlers,
+  howToRankOnChatgpt,
+  googleAiOverview,
+];
+
 
 export type ArticleSection = {
   id: string;
@@ -61,16 +84,16 @@ const SRC = {
   llmsTxt: { label: "The llms.txt proposal (llmstxt.org)", url: "https://llmstxt.org/" },
 } satisfies Record<string, { label: string; url: string }>;
 
-export const ARTICLES: Article[] = [
+const CORE_ARTICLES: Article[] = [
   {
     slug: "what-is-aeo",
     title: "What is AEO (Answer Engine Optimization)?",
-    metaTitle: "What is AEO? Answer Engine Optimization explained (2026 guide)",
+    metaTitle: "What is AEO? Answer Engine Optimization guide",
     description:
-      "AEO (Answer Engine Optimization) means shaping your pages so Google featured snippets, AI Overviews, voice assistants and ChatGPT can lift your answer directly. What it is, how it differs from SEO, and a checklist to start.",
+      "AEO (Answer Engine Optimization) helps Google snippets, AI Overviews and ChatGPT quote your answer. What it is, how it differs from SEO and how to start.",
     keywords: ["what is AEO", "answer engine optimization", "AEO SEO", "AEO meaning", "answer engine optimisation"],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
       "AEO (Answer Engine Optimization) is the practice of structuring your content so answer engines — Google featured snippets and AI Overviews, voice assistants, ChatGPT, Perplexity and Gemini — can pick up your page and quote it as the direct answer to a question. SEO earns you a link in a list; AEO earns you the answer itself.",
     keyPoints: [
@@ -102,7 +125,7 @@ export const ARTICLES: Article[] = [
         paragraphs: [
           "More searches now end on the results page or inside an AI chat, because the answer is shown directly. If your page is not the one quoted, a competitor’s is — even if you rank on page one.",
           "Answers are also where trust is built. When Google or ChatGPT names your business as the answer to “who is the best … in Pune”, that recommendation carries more weight than an ad.",
-          "The shift is recent. Google launched AI Overviews in the United States in May 2024 and expanded them to India and several other countries in August 2024. In August 2023 Google also limited FAQ rich results to well-known government and health websites, so FAQ markup now mainly helps machines understand your answers rather than earning a drop-down in results.",
+          "The shift is recent. Google launched AI Overviews in the United States in May 2024 and expanded them to India and several other countries in August 2024. In August 2023 Google also limited FAQ rich results to well-known government and health websites, so FAQ markup now mainly helps machines understand your answers rather than earning a drop-down in results. Our guide to [Google AI Overviews](/learn/google-ai-overview) explains how those answers pick their sources.",
         ],
       },
       {
@@ -110,7 +133,7 @@ export const ARTICLES: Article[] = [
         heading: "How do you do AEO? A step-by-step checklist",
         paragraphs: ["Start with the pages that already get some traffic, then work outwards."],
         steps: [
-          "List the real questions customers ask — from sales calls, WhatsApp chats, Google’s “People also ask” box and AI assistants themselves.",
+          "List the real questions customers ask — from sales calls, WhatsApp chats, Google’s “People also ask” box and AI assistants themselves. The free [FAQ generator](/tools/faq-generator) can suggest more questions to start from.",
           "Give each important question its own heading, written the way people ask it (“How much does a website audit cost?”).",
           "Put a direct 40–60 word answer immediately under the heading, then add detail, examples and numbers below it.",
           "Use lists and tables for steps, comparisons and prices — engines lift these formats readily.",
@@ -125,7 +148,7 @@ export const ARTICLES: Article[] = [
         heading: "How do you measure AEO results?",
         paragraphs: [
           "Track featured-snippet and AI Overview appearances in Google Search Console and rank trackers, and sample the answers AI assistants give to your target questions. Because AI answers vary from one try to the next, measure over many samples and look at the rate, not a single screenshot.",
-          `${"MyWebRank"} does this automatically: it asks ChatGPT, Gemini, Perplexity, Claude and Grok your customers’ questions on a schedule and shows how often you are named and linked. You can start with the [free website check](/free-check).`,
+          `For a quick look, the free [AI visibility checker](/tools/ai-visibility-checker) asks ChatGPT, Gemini and Perplexity whether they name your business. ${"MyWebRank"}’s paid plan repeats those checks every week and shows how often you are named and linked. You can start with the [free website check](/free-check), which scores your AEO alongside SEO, GEO and Brand.`,
         ],
       },
     ],
@@ -135,19 +158,19 @@ export const ARTICLES: Article[] = [
       { q: "Does AEO replace SEO?", a: "No. An answer engine can only quote pages it can crawl, index and trust, so SEO remains the foundation. AEO is an extra layer focused on questions and answer formatting." },
       { q: "How long does AEO take to work?", a: "Formatting changes can be picked up within days to a few weeks after a page is re-crawled. Winning competitive questions usually also needs authority, which takes months." },
     ],
-    related: ["what-is-geo", "seo-vs-aeo-vs-geo", "how-to-get-mentioned-by-chatgpt"],
+    related: ["google-ai-overview", "seo-vs-aeo-vs-geo", "what-is-geo"],
     cta: { label: "Check your AEO score free", href: "/free-check" },
     sources: [SRC.featuredSnippets, SRC.aiFeatures, SRC.faqPageGoogle, SRC.faqChanges2023, SRC.schemaFaq],
   },
   {
     slug: "what-is-geo",
-    title: "What is GEO (Generative Engine Optimization)?",
-    metaTitle: "What is GEO? Generative Engine Optimization explained simply",
+    title: "What is GEO (Generative Engine Optimization) in SEO?",
+    metaTitle: "What is GEO in SEO? Simple guide for 2026",
     description:
-      "GEO (Generative Engine Optimization) is how you get your brand named and cited inside AI answers from ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews. What it is, how AI picks sources, and what to do first.",
-    keywords: ["what is GEO", "generative engine optimization", "GEO SEO", "AI search optimization", "LLM SEO"],
+      "What is GEO in SEO? Generative Engine Optimization gets your business named in ChatGPT, Gemini and Perplexity answers. How AI picks sources, what to fix.",
+    keywords: ["what is GEO", "what is GEO in SEO", "generative engine optimization", "GEO SEO", "AI search optimization", "LLM SEO"],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
       "GEO (Generative Engine Optimization) is the practice of making your brand, pages and facts easy for generative AI — ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews — to find, understand, trust and cite, so your business is named and linked inside AI-written answers. The term comes from a 2023 research paper by Princeton and partner researchers.",
     keyPoints: [
@@ -159,9 +182,9 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         id: "definition",
-        heading: "What does GEO mean in SEO?",
+        heading: "What is GEO in SEO?",
         paragraphs: [
-          "Generative engines write a fresh answer to every question by combining what a language model already knows with pages it retrieves from the web. GEO is about influencing both parts: being retrievable and quotable when the engine searches, and being well known and consistently described across the web so the model “knows” you.",
+          "In SEO, GEO is the part of the work aimed at AI answers rather than the list of Google results. Generative engines write a fresh answer to every question by combining what a language model already knows with pages it retrieves from the web. GEO is about influencing both parts: being retrievable and quotable when the engine searches, and being well known and consistently described across the web so the model “knows” you.",
           "The name was introduced in the 2023 paper “GEO: Generative Engine Optimization” (Aggarwal et al.), which found that adding clear statistics, quotations and cited sources to a page made it noticeably more likely to be used in generated answers.",
         ],
       },
@@ -178,7 +201,7 @@ export const ARTICLES: Article[] = [
         heading: "How do you do GEO? What to fix first",
         paragraphs: ["These steps are ordered by impact for most small and mid-sized businesses."],
         steps: [
-          "Let AI crawlers in: check robots.txt allows GPTBot, OAI-SearchBot, PerplexityBot and ClaudeBot, and that your firewall or CDN isn’t blocking them. Also check robots.txt doesn’t disallow Google-Extended (a control token for Gemini, not a separate crawler).",
+          "Let AI crawlers in: check robots.txt allows GPTBot, OAI-SearchBot, PerplexityBot and ClaudeBot, and that your firewall or CDN isn’t blocking them. Also check robots.txt doesn’t disallow Google-Extended (a control token for Gemini, not a separate crawler). The free [AI crawler checker](/tools/ai-crawler-checker) tests this in one go, and our guide to [robots.txt for AI crawlers](/learn/robots-txt-for-ai-crawlers) shows the exact lines.",
           "Get indexed by both Google and Bing — submit your sitemap in Google Search Console and Bing Webmaster Tools, and use IndexNow for fast updates.",
           "Make your entity unmistakable: the same business name, address, phone and description everywhere, an About page, and Organization structured data with links to your official profiles (sameAs).",
           "Write citable pages: specific facts, prices, numbers, dates and named sources; one clear claim per paragraph; comparison tables.",
@@ -198,8 +221,8 @@ export const ARTICLES: Article[] = [
         id: "measure",
         heading: "How do you measure GEO?",
         paragraphs: [
-          "Pick 20–100 questions your buyers ask, ask each AI assistant those questions repeatedly, and record how often you are named, linked and recommended — and how often competitors are. Report rates with the sample size, because single answers vary.",
-          "MyWebRank runs exactly this measurement across ChatGPT, Gemini, Perplexity, Claude and Grok and turns the gaps into a fix list. Try the [free website check](/free-check) to see where you stand.",
+          "Pick 20–100 questions your buyers ask, ask each AI assistant those questions repeatedly, and record how often you are named, linked and recommended — and how often competitors are. Report rates with the sample size, because single answers vary. Our step-by-step guide on [how to measure GEO](/learn/how-to-measure-geo) covers the method in detail.",
+          "For a quick first look, the free [AI visibility checker](/tools/ai-visibility-checker) asks ChatGPT, Gemini and Perplexity whether they name your business. MyWebRank’s paid plan repeats those checks every week and turns the gaps into a fix list. Try the [free website check](/free-check) to see your GEO score today.",
         ],
       },
     ],
@@ -209,19 +232,19 @@ export const ARTICLES: Article[] = [
       { q: "Can you pay to appear in ChatGPT answers?", a: "Organic ChatGPT answers cannot be bought. Brands appear because their pages and third-party mentions are retrieved and trusted. Be wary of anyone who guarantees AI mentions." },
       { q: "Does blocking GPTBot stop my site appearing in ChatGPT?", a: "Blocking GPTBot stops OpenAI using your pages for model training. Appearing in ChatGPT search results depends on OAI-SearchBot, which is a separate user agent. Most businesses that want visibility allow both." },
     ],
-    related: ["how-to-get-mentioned-by-chatgpt", "what-is-aeo", "llms-txt-guide"],
+    related: ["how-to-measure-geo", "seo-vs-aeo-vs-geo", "how-to-get-mentioned-by-chatgpt"],
     cta: { label: "See if AI mentions you", href: "/free-check" },
     sources: [SRC.geoPaper, SRC.aiFeatures, SRC.rfc9309, SRC.schemaOrg],
   },
   {
     slug: "seo-vs-aeo-vs-geo",
     title: "SEO vs AEO vs GEO: what’s the difference?",
-    metaTitle: "SEO vs AEO vs GEO: the difference explained, with examples",
+    metaTitle: "SEO vs AEO vs GEO: the difference explained",
     description:
-      "SEO ranks your pages, AEO gets your answer quoted, GEO gets your brand named in AI answers. A plain comparison of goals, tactics and metrics — and which one a small business should start with.",
+      "SEO ranks your pages, AEO gets your answer quoted, GEO gets your brand named in AI answers. Goals, tactics and metrics compared, and which to start with.",
     keywords: ["SEO vs AEO vs GEO", "AEO vs GEO", "SEO vs GEO", "difference between SEO AEO GEO", "SEO AEO GEO"],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
       "SEO (Search Engine Optimization) helps your pages rank in Google and Bing results. AEO (Answer Engine Optimization) helps a specific answer on your page get quoted in featured snippets, AI Overviews and voice results. GEO (Generative Engine Optimization) helps your brand get named and cited inside AI-written answers from ChatGPT, Gemini, Perplexity and Claude. They stack: SEO first, then AEO, then GEO.",
     keyPoints: [
@@ -234,7 +257,9 @@ export const ARTICLES: Article[] = [
       {
         id: "table",
         heading: "SEO, AEO and GEO side by side",
-        paragraphs: ["The quickest way to see the difference is to compare where each one wins and how it is measured."],
+        paragraphs: [
+          "The quickest way to see the difference is to compare where each one wins and how it is measured. For a deeper look at each, read [what AEO is](/learn/what-is-aeo) and [what GEO is in SEO](/learn/what-is-geo).",
+        ],
         table: {
           head: ["", "SEO", "AEO", "GEO"],
           rows: [
@@ -261,7 +286,7 @@ export const ARTICLES: Article[] = [
         steps: [
           "Fix SEO basics: indexing, titles and meta descriptions, page speed, mobile layout, HTTPS, a sitemap ([checklist](/learn/website-seo-audit-checklist)).",
           "Add AEO: rewrite key pages around customer questions with direct answers and FAQ structured data.",
-          "Add GEO: allow AI crawlers, make your business details consistent everywhere, get listed on the sites AI cites for your category, and track AI mentions monthly.",
+          "Add GEO: allow AI crawlers, make your business details consistent everywhere, get listed on the sites AI cites for your category, and track AI mentions monthly (the free [AI visibility checker](/tools/ai-visibility-checker) shows whether ChatGPT, Gemini and Perplexity name you today).",
         ],
       },
       {
@@ -271,6 +296,7 @@ export const ARTICLES: Article[] = [
           "SEO: the clinic’s “Teeth whitening in Andheri” page ranks #3 on Google for that phrase.",
           "AEO: Google shows the clinic’s two-sentence answer to “How long does teeth whitening last?” in a featured snippet and the AI Overview.",
           "GEO: when someone asks ChatGPT “Which dental clinic in Andheri is good for whitening?”, the clinic is named, with a link, because it appears on several local review lists and its own site states prices and credentials clearly.",
+          "Want to see where your own site stands on all three? The [free website check](/free-check) scores SEO, AEO and GEO (plus Brand) with no sign-up.",
         ],
       },
     ],
@@ -279,21 +305,29 @@ export const ARTICLES: Article[] = [
       { q: "Do I need a separate agency for AEO and GEO?", a: "Not necessarily. Most of the work overlaps with good SEO. What’s different is measurement: you need to track AI answers, not just rankings. A tool or service that reports all three avoids duplicated work." },
       { q: "What is AIO or LLMO?", a: "AIO (AI optimization) and LLMO (large language model optimization) are other names people use for roughly the same idea as GEO: getting a brand mentioned and cited by AI assistants." },
     ],
-    related: ["what-is-aeo", "what-is-geo", "website-seo-audit-checklist"],
+    related: ["what-is-aeo", "what-is-geo", "improve-ai-search-visibility"],
     cta: { label: "Get your SEO, AEO & GEO scores", href: "/free-check" },
     sources: [SRC.seoStarter, SRC.featuredSnippets, SRC.aiFeatures, SRC.geoPaper],
   },
   {
     slug: "how-to-get-mentioned-by-chatgpt",
-    title: "How to get your business mentioned by ChatGPT, Gemini and Perplexity",
-    metaTitle: "How to Get Your Business Recommended by ChatGPT",
+    title: "How to get my business on ChatGPT (and Gemini and Perplexity)",
+    metaTitle: "How to get my business on ChatGPT: 6 steps",
     description:
-      "A practical guide to getting your brand recommended in ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews: AI crawler access, Bing indexing, entity clarity, third-party mentions and how to track results.",
-    keywords: ["how to rank in ChatGPT", "get mentioned by ChatGPT", "ChatGPT SEO", "AI visibility", "rank in AI search", "Perplexity SEO"],
+      "How to get my business on ChatGPT, Gemini and Perplexity: let AI crawlers in, get indexed, be clear about who you are, earn mentions and track the results.",
+    keywords: [
+      "how to get my business on ChatGPT",
+      "how to get your business recommended on ChatGPT",
+      "how to get my business found on ChatGPT",
+      "get mentioned by ChatGPT",
+      "ChatGPT SEO",
+      "AI visibility",
+      "Perplexity SEO",
+    ],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
-      "To get mentioned by ChatGPT and other AI assistants: let their crawlers into your site, get indexed in both Google and Bing, state who you are and what you offer clearly and consistently, publish pages that directly answer buyer questions with specific facts, and get listed on the third-party pages AI already cites for your category. Then measure mentions over many sampled answers each month.",
+      "To get your business on ChatGPT and other AI assistants: let their crawlers into your site, get indexed in both Google and Bing, state who you are and what you offer clearly and consistently, publish pages that directly answer buyer questions with specific facts, and get listed on the third-party pages AI already cites for your category. Then measure mentions over many sampled answers each month.",
     keyPoints: [
       "There is no paid placement in organic ChatGPT answers — mentions are earned.",
       "OAI-SearchBot (ChatGPT search), PerplexityBot and Claude-SearchBot must be allowed in robots.txt and not blocked by your firewall.",
@@ -305,7 +339,7 @@ export const ARTICLES: Article[] = [
         id: "step-1",
         heading: "Step 1: Can AI crawlers read your website?",
         paragraphs: [
-          "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and the Google-Extended token are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default. The rules in robots.txt follow an internet standard, [RFC 9309](https://datatracker.ietf.org/doc/html/rfc9309), published by the IETF in 2022.",
+          "Open yoursite.com/robots.txt and check that GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot and the Google-Extended token are not disallowed. Then check your CDN or security plugin — Cloudflare and some WordPress plugins block AI bots by default. The rules in robots.txt follow an internet standard, [RFC 9309](https://datatracker.ietf.org/doc/html/rfc9309), published by the IETF in 2022. The free [AI crawler checker](/tools/ai-crawler-checker) tests each bot for you, and our guide to [robots.txt for AI crawlers](/learn/robots-txt-for-ai-crawlers) shows what to change.",
           "Also make sure your important content is in the HTML, not only rendered by JavaScript. Many AI crawlers don’t run JavaScript. Our [free website check](/free-check) tests all of this in about 30 seconds.",
         ],
       },
@@ -320,7 +354,7 @@ export const ARTICLES: Article[] = [
         id: "step-3",
         heading: "Step 3: Is it obvious who you are?",
         paragraphs: [
-          "AI assistants describe entities. Give yours a clear, repeated definition: one sentence that says what you do, for whom and where — on your home page, About page, Google Business Profile, LinkedIn and directory listings.",
+          "AI assistants describe entities. Give yours a clear, repeated definition: one sentence that says what you do, for whom and where — on your home page, About page, Google Business Profile, LinkedIn and directory listings. This is the heart of [GEO (Generative Engine Optimization)](/learn/what-is-geo).",
         ],
         bullets: [
           "Same business name, address and phone number everywhere.",
@@ -347,31 +381,42 @@ export const ARTICLES: Article[] = [
       },
       {
         id: "step-6",
-        heading: "Step 6: How do you track whether it’s working?",
+        heading: "Step 6: How do you know your business is found on ChatGPT?",
         paragraphs: [
-          "AI answers change from one try to the next, so a single screenshot proves little. Ask the same set of questions repeatedly across assistants and track the rate at which you’re named and linked, compared with competitors. [MyWebRank](/how-it-works) automates this every month and turns gaps into a fix list you approve.",
+          "AI answers change from one try to the next, so a single screenshot proves little. Ask the same set of questions repeatedly across assistants and track the rate at which you’re named and linked, compared with competitors. Our guide to [tracking brand mentions in ChatGPT](/learn/track-brand-mentions-in-chatgpt) walks through a simple method.",
+          "For a quick first answer, the free [AI visibility checker](/tools/ai-visibility-checker) asks ChatGPT, Gemini and Perplexity whether they name your business. [MyWebRank](/how-it-works) repeats those checks every week on the paid plan and turns gaps into a fix list.",
         ],
       },
     ],
     faqs: [
+      { q: "How do I get my business recommended on ChatGPT?", a: "Being recommended, not just mentioned, needs proof that others vouch for you: reviews, places on “best X in [city]” lists, and clear prices and credentials on your own site. Do the six steps above, then ask ChatGPT your buyers’ questions every month to see whether it recommends you." },
+      { q: "How do I get my business found on ChatGPT if it is new?", a: "Start with the basics a new business can control: allow AI crawlers, submit your sitemap to Google and Bing, create a Google Business Profile and a few directory listings with the same name, address and phone, and publish a clear About page. Mentions on other sites come next." },
       { q: "How long does it take to appear in ChatGPT answers?", a: "If you fix crawler access and indexing, ChatGPT search can pick up pages within days to weeks. Being recommended for competitive questions usually takes several months of content and third-party mentions." },
       { q: "Can I guarantee my business will be recommended by ChatGPT?", a: "No one can guarantee it. AI answers vary and depend on many sources. What you can do is remove barriers, publish citable content and earn mentions — and measure the rate honestly." },
       { q: "Does ChatGPT use Google or Bing?", a: "ChatGPT search uses OpenAI’s own crawler (OAI-SearchBot) together with third-party search providers; Microsoft Bing has historically been a major partner. Being well indexed in Bing as well as Google is a sensible step." },
       { q: "Does Google AI Overviews use the same signals?", a: "AI Overviews are generated from Google’s own search index, so normal Google SEO — indexing, helpful content, authority — is what gets you included. Google says there are no extra requirements or special files needed to appear in them." },
     ],
-    related: ["what-is-geo", "llms-txt-guide", "seo-vs-aeo-vs-geo"],
+    related: ["track-brand-mentions-in-chatgpt", "how-to-rank-on-chatgpt", "what-is-geo"],
     cta: { label: "Check if AI can find you", href: "/free-check" },
     sources: [SRC.geoPaper, SRC.rfc9309, SRC.aiFeatures, SRC.schemaOrg, SRC.schemaLocal],
   },
   {
     slug: "website-seo-audit-checklist",
     title: "Website SEO audit checklist (with AEO and GEO checks)",
-    metaTitle: "Website SEO audit checklist 2026: free SEO report template",
+    metaTitle: "Website SEO audit checklist (2026, free)",
     description:
-      "A complete website SEO audit checklist for 2026: indexing, titles, speed, mobile, structured data, internal links, plus the AEO and GEO checks for AI search. Run it yourself or get a free automated SEO report.",
-    keywords: ["website SEO audit", "SEO audit checklist", "website SEO report", "SEO checker", "technical SEO audit", "web report"],
+      "Website SEO audit checklist for 2026, plus how to do an SEO audit for a small business: indexing, titles, speed, mobile, AEO and GEO checks, step by step.",
+    keywords: [
+      "website SEO audit",
+      "SEO audit checklist",
+      "how to do an SEO audit for a small business",
+      "website SEO report",
+      "SEO checker",
+      "technical SEO audit",
+      "web report",
+    ],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
       "A website SEO audit checks whether search engines and AI assistants can crawl, index, understand and trust your pages. The essentials are: indexing and sitemap, HTTPS, unique titles and meta descriptions, one clear H1 per page, fast mobile pages (Core Web Vitals), internal links, structured data, and — for AI search — AI crawler access, direct answers and consistent business details.",
     keyPoints: [
@@ -431,7 +476,7 @@ export const ARTICLES: Article[] = [
       {
         id: "aeo",
         heading: "5. AEO checks (answer engines)",
-        paragraphs: [],
+        paragraphs: ["These checks decide whether Google and AI assistants can quote your answer directly ([what AEO is](/learn/what-is-aeo))."],
         bullets: [
           "Key pages are built around the questions customers ask.",
           "Each question heading is followed by a direct 40–60 word answer.",
@@ -452,10 +497,27 @@ export const ARTICLES: Article[] = [
         ],
       },
       {
+        id: "small-business-audit",
+        heading: "How to do an SEO audit for a small business",
+        paragraphs: [
+          "You don’t need to be an expert or buy an expensive tool. Set aside an afternoon, open a notepad, and work through these steps in order. Fix the problems you find from the top of the list down — the early steps matter most.",
+        ],
+        steps: [
+          "Run a [free website check](/free-check) on your home page. It scores SEO, AEO, GEO and Brand and lists the biggest problems in plain words, so you know where to start.",
+          "Search Google for your business name and for “site:” followed by your domain. If key pages are missing, sign up for Google Search Console (free) and submit your sitemap.",
+          "Open your five most important pages — home, main services, prices, about, contact. Check each has its own Google headline (title) and summary, and one main heading that says what the page is about.",
+          "Open each of those pages on your phone. Text should be readable without zooming, buttons easy to tap, and the page should load in a few seconds.",
+          "Check your business name, address, phone and opening hours match on your website, Google Business Profile and the main directories in your area.",
+          "Write down the five questions customers ask you most, and make sure your site answers each one clearly near the top of a page.",
+          "Ask ChatGPT or Gemini “best [your service] in [your city]” and note whether you are named and which sites it mentions.",
+          "Put the fixes in order and do one or two a week. If you’d rather not do the work yourself, our [SEO services for small businesses](/seo-services-small-business) team can do it for you.",
+        ],
+      },
+      {
         id: "report",
         heading: "How do I get an automated SEO report?",
         paragraphs: [
-          "Running this list by hand takes hours. The [MyWebRank free website check](/free-check) scores your home page and main pages for SEO, AEO and GEO in about 30 seconds, and the full report crawls your whole site, explains every problem in plain words and gives step-by-step fixes. See [pricing](/pricing) for full audits and monthly tracking.",
+          "Running this list by hand takes hours. The [MyWebRank free website check](/free-check) scores your home page and up to four more pages for SEO, AEO, GEO and Brand in about 30 seconds, explains each problem in plain words and lists the fixes. See [pricing](/pricing) for weekly checks and monthly tracking, or read [what an SEO audit costs in India](/learn/seo-audit-cost-india) if you are comparing agencies.",
         ],
       },
     ],
@@ -465,19 +527,19 @@ export const ARTICLES: Article[] = [
       { q: "What should an SEO report include?", a: "A good SEO report covers indexing status, technical errors, on-page issues, speed and Core Web Vitals, structured data, backlinks or mentions, and a prioritised fix list. In 2026 it should also show visibility in AI answers." },
       { q: "How much does an SEO audit cost in India?", a: "Manual agency audits commonly range from a few thousand to over a lakh rupees depending on site size. Automated tools cost far less; MyWebRank offers a free check and paid plans with a free trial." },
     ],
-    related: ["seo-vs-aeo-vs-geo", "what-is-aeo", "how-to-choose-an-seo-company"],
+    related: ["seo-audit-cost-india", "seo-vs-aeo-vs-geo", "how-to-choose-an-seo-company"],
     cta: { label: "Get your free SEO report", href: "/free-check" },
     sources: [SRC.seoStarter, SRC.titles, SRC.snippets, SRC.sitemaps, SRC.robotsIntro, SRC.structuredData, SRC.webVitals],
   },
   {
     slug: "llms-txt-guide",
-    title: "What is llms.txt and does your website need one?",
-    metaTitle: "What is llms.txt? Format, examples and free generator",
+    title: "What is llms.txt? Examples, format and whether you need one",
+    metaTitle: "llms.txt example: 3 sample files and format",
     description:
-      "llms.txt is a plain-text Markdown file at your site’s root that tells AI tools what your business is and which pages matter. The format, a real example, honest limits, and a free llms.txt generator.",
-    keywords: ["llms.txt", "what is llms.txt", "llms.txt generator", "llms.txt example", "llms-full.txt"],
+      "llms.txt examples for a bakery, a B2B firm and an online store, the llmstxt.org format line by line, whether it helps SEO, and a free llms.txt generator.",
+    keywords: ["llms.txt example", "llms.txt in seo", "llms.txt", "what is llms.txt", "llms.txt generator", "llms-full.txt"],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
       "llms.txt is a proposed standard (llmstxt.org, 2024): a Markdown file at yoursite.com/llms.txt with your site’s name, a one-paragraph summary and a list of your most important pages with short descriptions. It gives AI tools a clean map of your site. It is cheap to add and harmless, but not every AI system reads it yet.",
     keyPoints: [
@@ -496,12 +558,89 @@ export const ARTICLES: Article[] = [
         ],
       },
       {
+        id: "example-bakery",
+        heading: "llms.txt example 1: a local bakery",
+        paragraphs: [
+          "Below are three made-up businesses on made-up example domains, so you can see how the same format fits different kinds of business. Each table shows one line of the file per row, in order, with what that line is for. Copy the left column into a plain text file, leave a blank line between sections, and swap in your own details.",
+          "First, a small local shop. Keep it short: what you sell, where you are, and the five or six pages a customer actually needs.",
+        ],
+        table: {
+          head: ["Line in the file", "What it is for"],
+          rows: [
+            ["# Greenleaf Bakery", "The name of the business (the only H1)."],
+            ["> Eggless cakes, breads and cookies baked fresh daily in Indiranagar, Bengaluru. Open 8am–9pm, home delivery within 5 km.", "The one-paragraph summary: what, where, for whom."],
+            ["- Custom birthday cakes need 24 hours’ notice.", "A key fact AI tools should repeat correctly."],
+            ["- All products are 100% eggless and vegetarian.", "Another key fact."],
+            ["## Pages", "Start of the main list of pages."],
+            ["- [Menu and prices](https://greenleaf-bakery.example.com/menu): all cakes, breads and cookies with prices in rupees", "A link plus a one-line description."],
+            ["- [Order a custom cake](https://greenleaf-bakery.example.com/custom-cakes): sizes, flavours and how to order", "A link plus a one-line description."],
+            ["- [Visit us](https://greenleaf-bakery.example.com/contact): address, map, phone and opening hours", "A link plus a one-line description."],
+            ["## Optional", "Pages AI tools can skip if they are short on space."],
+            ["- [Our story](https://greenleaf-bakery.example.com/about): founded in 2015 by two home bakers", "A lower-priority page."],
+          ],
+        },
+      },
+      {
+        id: "example-b2b",
+        heading: "llms.txt example 2: a B2B service company",
+        paragraphs: [
+          "A business-to-business firm usually has more pages. Group them under clear headings so AI tools can tell services from case studies.",
+        ],
+        table: {
+          head: ["Line in the file", "What it is for"],
+          rows: [
+            ["# Northwind Payroll Services", "The company name."],
+            ["> Payroll, PF and ESI compliance outsourcing for Indian companies with 20–500 employees. Based in Pune, serving clients across India.", "The summary: service, customer size, location."],
+            ["- We do not offer recruitment or staffing services.", "A fact that stops AI tools describing you wrongly."],
+            ["## Services", "Main service pages."],
+            ["- [Payroll processing](https://northwind-payroll.example.com/payroll): monthly payroll, payslips and Form 16", "Link plus description."],
+            ["- [PF and ESI compliance](https://northwind-payroll.example.com/compliance): registrations, monthly filings and inspections", "Link plus description."],
+            ["- [Pricing](https://northwind-payroll.example.com/pricing): per-employee monthly fees", "Link plus description."],
+            ["## Case studies", "Proof pages AI tools can cite."],
+            ["- [Manufacturing client, 300 staff](https://northwind-payroll.example.com/case-studies/manufacturing): how payroll moved over in one month", "Link plus description."],
+            ["## Optional", "Lower-priority pages."],
+            ["- [Blog](https://northwind-payroll.example.com/blog): guides on payroll rules", "A page AI tools can skip."],
+          ],
+        },
+      },
+      {
+        id: "example-store",
+        heading: "llms.txt example 3: an online store",
+        paragraphs: [
+          "An online shop should point AI tools at category pages and the policies buyers ask about — shipping, returns, payment — rather than listing every product.",
+          "When your own file is ready, the free [llms.txt generator](/tools/llms-txt-generator) can build the same structure from a short form, so you don’t have to type the Markdown by hand.",
+        ],
+        table: {
+          head: ["Line in the file", "What it is for"],
+          rows: [
+            ["# Kora Handloom", "The store name."],
+            ["> Handwoven cotton sarees, dupattas and home linen from weavers in Andhra Pradesh. Ships across India; cash on delivery available.", "The summary: products, origin, delivery."],
+            ["## Shop", "Category pages, not every product."],
+            ["- [Cotton sarees](https://kora-handloom.example.com/sarees): handwoven sarees with prices and fabric details", "Link plus description."],
+            ["- [Home linen](https://kora-handloom.example.com/home): bedsheets, cushion covers and table linen", "Link plus description."],
+            ["## Policies", "The answers buyers ask AI about most."],
+            ["- [Shipping](https://kora-handloom.example.com/shipping): delivery times and charges by city", "Link plus description."],
+            ["- [Returns and exchanges](https://kora-handloom.example.com/returns): 7-day return rules", "Link plus description."],
+            ["## Optional", "Lower-priority pages."],
+            ["- [Our weavers](https://kora-handloom.example.com/weavers): the families who make our products", "A page AI tools can skip."],
+          ],
+        },
+      },
+      {
         id: "does-it-work",
         heading: "Do ChatGPT and Google actually use llms.txt?",
         paragraphs: [
           "Honest answer: support is uneven. Some AI coding tools, documentation platforms and agents fetch llms.txt, and adoption is growing, but Google has said its search systems don’t rely on it and no major assistant has committed to using it for ranking. Treat it as a low-cost clarity signal, not a ranking trick.",
           "Google’s guide to [AI features and your website](https://developers.google.com/search/docs/appearance/ai-features) says you don’t need new machine-readable files to appear in AI Overviews. By contrast, robots.txt has been a formal internet standard, [RFC 9309](https://datatracker.ietf.org/doc/html/rfc9309), since 2022, so get that file right before you worry about llms.txt.",
-          "What matters more for AI visibility is crawler access, indexing, clear content and third-party mentions — see [how to get mentioned by ChatGPT](/learn/how-to-get-mentioned-by-chatgpt).",
+          "What matters more for AI visibility is crawler access, indexing, clear content and third-party mentions — see [how to get your business on ChatGPT](/learn/how-to-get-mentioned-by-chatgpt) and [robots.txt for AI crawlers](/learn/robots-txt-for-ai-crawlers).",
+        ],
+      },
+      {
+        id: "llms-txt-seo",
+        heading: "Is llms.txt used for SEO?",
+        paragraphs: [
+          "Not for Google rankings. llms.txt is still a proposal, not an agreed standard, and Google does not use it to rank pages or to pick sources for AI Overviews. Adding one will not move you up in search results.",
+          "Where it can help is with AI tools that choose to read it — some assistants, agents and coding tools fetch it to get a quick map of a site. So think of llms.txt as part of [GEO (Generative Engine Optimization)](/learn/what-is-geo), not classic SEO: a small, cheap extra that sits on top of the basics. To see whether those basics are in place, run the [free website check](/free-check).",
         ],
       },
       {
@@ -522,19 +661,19 @@ export const ARTICLES: Article[] = [
       { q: "Does llms.txt improve SEO rankings?", a: "There is no evidence that llms.txt affects Google rankings. Its purpose is to help AI tools understand your site quickly. Rankings still depend on crawlable, indexable, genuinely helpful pages, so fix those first and treat llms.txt as a small extra." },
       { q: "Where do I upload llms.txt in WordPress?", a: "Upload it to your site’s root folder (the same folder as wp-config.php) using your host’s file manager or FTP, or use an SEO plugin that supports llms.txt." },
     ],
-    related: ["what-is-geo", "how-to-get-mentioned-by-chatgpt", "website-seo-audit-checklist"],
+    related: ["robots-txt-for-ai-crawlers", "what-is-geo", "how-to-get-mentioned-by-chatgpt"],
     cta: { label: "Make your llms.txt free", href: "/tools/llms-txt-generator" },
     sources: [SRC.llmsTxt, SRC.aiFeatures, SRC.rfc9309, SRC.robotsIntro],
   },
   {
     slug: "how-to-choose-an-seo-company",
     title: "How to choose an SEO company in India (and red flags to avoid)",
-    metaTitle: "How to choose an SEO company in India: 10 questions to ask",
+    metaTitle: "How to choose an SEO company in India",
     description:
-      "Hiring an SEO company or agency in India? What good SEO, AEO and GEO services include, typical prices, the questions to ask, and the red flags — like guaranteed #1 rankings — that mean you should walk away.",
+      "Hiring an SEO company in India? What good SEO, AEO and GEO work includes, typical prices, 10 questions to ask, and the red flags that mean walk away.",
     keywords: ["SEO company", "SEO company in India", "best SEO agency", "SEO services India", "hire SEO agency", "AI SEO agency"],
     published: "2026-11-09",
-    updated: "2026-11-09",
+    updated: "2026-11-24",
     answer:
       "Choose an SEO company that starts with a written audit, agrees a clear monthly list of deliverables, reports progress with real data from Google Search Console and AI answers, and never guarantees #1 rankings. In 2026, a good agency should also cover AEO (answer engines) and GEO (AI assistants like ChatGPT), not just classic keyword rankings.",
     keyPoints: [
@@ -547,13 +686,15 @@ export const ARTICLES: Article[] = [
       {
         id: "what-good-includes",
         heading: "What should a good SEO service include?",
-        paragraphs: [],
+        paragraphs: [
+          "Before you call any agency, run a [free website check](/free-check) on your own site. You’ll know your starting scores, and you can see whether an agency’s audit finds the same problems.",
+        ],
         bullets: [
-          "A starting audit of technical SEO, content and competitors — written, not verbal.",
+          "A starting audit of technical SEO, content and competitors — written, not verbal (compare it with our [website SEO audit checklist](/learn/website-seo-audit-checklist)).",
           "Technical fixes: indexing, speed, mobile, structured data, internal links.",
           "Content: pages and answers built around what your customers actually ask.",
           "Local SEO: Google Business Profile, reviews and consistent listings.",
-          "AEO and GEO: answer formatting, AI crawler access, entity clarity, AI mention tracking.",
+          "AEO and GEO: answer formatting, AI crawler access, entity clarity, AI mention tracking ([what GEO means](/learn/what-is-geo)).",
           "Monthly reports showing what was done and what changed, with evidence.",
         ],
       },
@@ -590,8 +731,8 @@ export const ARTICLES: Article[] = [
         id: "cost",
         heading: "How much does SEO cost in India?",
         paragraphs: [
-          "Prices vary widely. Freelancers may charge a few thousand rupees a month; established agencies typically charge from about ₹15,000 to well over ₹1,00,000 a month depending on scope, competition and the number of pages. Compare on deliverables, not price alone.",
-          "MyWebRank offers both routes: self-serve software with a free trial if you want to do it yourself, and a [done-for-you SEO, AEO and GEO service](/done-for-you) where our team ships agreed fixes every month and reports the impact. See [pricing](/pricing).",
+          "Prices vary widely. Freelancers may charge a few thousand rupees a month; established agencies typically charge from about ₹15,000 to well over ₹1,00,000 a month depending on scope, competition and the number of pages. Compare on deliverables, not price alone. A one-off audit is priced differently — see [how much an SEO audit costs in India](/learn/seo-audit-cost-india).",
+          "MyWebRank offers both routes: “Do it myself” software at ₹1,999/month + GST with a 7-day free trial, and a [done-for-you SEO, AEO and GEO service](/done-for-you) at ₹19,999/month + GST where our team does the agreed work every month and reports the impact. Small businesses can read more on our [SEO services for small businesses](/seo-services-small-business) page, or see [pricing](/pricing).",
         ],
       },
     ],
@@ -601,11 +742,14 @@ export const ARTICLES: Article[] = [
       { q: "How long does SEO take to show results?", a: "Technical fixes can show results within weeks; competitive rankings and AI mentions usually take three to six months or more of consistent work. Ask for monthly reports that show the work done next to what changed, so you can judge progress honestly." },
       { q: "Should I hire an agency or use an SEO tool?", a: "If you have time and some skills, a tool that tells you exactly what to fix is cheaper. If you don’t, a done-for-you service saves time. MyWebRank offers both, so you can start with the tool and switch later." },
     ],
-    related: ["website-seo-audit-checklist", "seo-vs-aeo-vs-geo", "what-is-geo"],
+    related: ["seo-audit-cost-india", "website-seo-audit-checklist", "seo-vs-aeo-vs-geo"],
     cta: { label: "See done-for-you plans", href: "/done-for-you" },
     sources: [SRC.doINeedSeo, SRC.spamPolicies, SRC.helpfulContent, SRC.seoStarter],
   },
 ];
+
+/** Every English guide: the original seven above, then the ones in src/lib/learn/guides/ (one file per guide). */
+export const ARTICLES: Article[] = [...CORE_ARTICLES, ...GUIDES];
 
 export function getArticle(slug: string): Article | undefined {
   return ARTICLES.find((a) => a.slug === slug);

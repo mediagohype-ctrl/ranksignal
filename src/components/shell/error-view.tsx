@@ -1,5 +1,5 @@
 "use client";
-// Error boundary for every route below the root layout: friendly message + retry.
+// Error boundary body shared by every root layout's error.tsx: friendly message + retry.
 import { useEffect } from "react";
 import { Home, RotateCcw } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui";

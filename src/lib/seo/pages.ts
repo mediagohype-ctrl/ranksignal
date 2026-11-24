@@ -80,7 +80,7 @@ export const PAGE_SEO = {
     published: "2026-11-04",
     updated: "2026-11-15",
   },
-  // /tools/ai-mention-checker was the same check as /free-check and now redirects there (next.config.ts).
+  // /tools/ai-mention-checker now redirects to /tools/ai-visibility-checker (src/lib/seo/redirects.ts).
   // The two makers below moved to the names people search for; the old addresses redirect.
   "/tools/faq-schema-generator": {
     title: "Free FAQ Schema Generator for JSON-LD",
@@ -200,6 +200,48 @@ export const PAGE_SEO = {
       "The best Ahrefs alternatives for Indian businesses compared: Semrush, SE Ranking, Ubersuggest, Google Search Console and MyWebRank, and who each suits.",
     published: TODAY,
     updated: TODAY,
+  },
+  "/tools/ai-visibility-checker": {
+    title: "Free AI Visibility Checker for ChatGPT & Gemini",
+    description:
+      "Check if ChatGPT, Gemini and Perplexity mention your business. Free AI visibility report with your score, who gets named instead, and what to fix.",
+    published: "2026-11-24",
+    updated: "2026-11-24",
+  },
+  "/features/ai-visibility-tracking": {
+    title: "AI Visibility Tracking & Brand Monitoring Tool",
+    description:
+      "Track how often ChatGPT, Gemini and Perplexity mention your brand. Weekly AI visibility tracking and GEO monitoring for businesses and agencies.",
+    published: "2026-11-24",
+    updated: "2026-11-24",
+  },
+  "/seo-services-small-business": {
+    title: "SEO Services for Small Businesses in India",
+    description:
+      "SEO for small businesses in India: a free website check, SEO audit software from ₹1,999 a month, or our team does the work. You approve every change.",
+    published: "2026-11-24",
+    updated: "2026-11-24",
+  },
+  "/compare/semrush-alternatives": {
+    title: "Best Semrush Alternatives in India (2026)",
+    description:
+      "Semrush alternatives for Indian businesses compared on price in rupees, AI visibility tracking and ease of use, including free options and MyWebRank.",
+    published: "2026-11-24",
+    updated: "2026-11-24",
+  },
+  "/compare/se-ranking-alternatives": {
+    title: "Best SE Ranking Alternatives in India (2026)",
+    description:
+      "SE Ranking alternatives for Indian businesses compared on price, AI visibility tracking and ease of use, including free tools and MyWebRank.",
+    published: "2026-11-24",
+    updated: "2026-11-24",
+  },
+  "/author/shubhankar-gupta": {
+    title: "Shubhankar Gupta: SEO, AEO and GEO Guides",
+    description:
+      "Shubhankar Gupta writes MyWebRank’s plain-English guides on SEO, AEO and GEO: how to get found on Google and named by ChatGPT, Gemini and Perplexity.",
+    published: "2026-11-24",
+    updated: "2026-11-24",
   },
   // The extension is not in the browser stores yet: the page stays reachable (the extension's own homepage link)
   // but is hidden from Google, the sitemap and the tools list. Remove `noindex` and re-list it when it is live.

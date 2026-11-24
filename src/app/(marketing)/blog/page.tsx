@@ -117,7 +117,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
                   >
                     {p.coverImageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.coverImageUrl} alt="" loading="lazy" className="aspect-[1200/630] w-full object-cover" />
+                      <img src={p.coverImageUrl} alt={p.title} loading="lazy" className="aspect-[1200/630] w-full object-cover" />
                     )}
                     <div className="flex flex-1 flex-col p-6">
                       <p className="text-caption font-semibold uppercase tracking-[0.06em] text-primary">{p.category}</p>

@@ -1,4 +1,5 @@
 // /api/admin/content — GET list of posts (content.view); POST create a draft (content.write).
+import { refreshBlogPages } from "@/lib/content/revalidate";
 import { handler, json, parseBody } from "@/lib/api";
 import { db } from "@/lib/db";
 import { requireStaffApi } from "@/lib/admin/guard";
@@ -18,5 +19,7 @@ export const GET = handler(async () => {
 export const POST = handler(async (req: Request) => {
   const staff = await requireStaffApi("content.write");
   const input = await parseBody(req, postInputSchema);
-  return json({ item: await createPost(staff, req, input) });
+  const item = await createPost(staff, req, input);
+  refreshBlogPages();
+  return json({ item });
 });

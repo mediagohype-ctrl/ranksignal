@@ -19,12 +19,14 @@ describe("moved pages", () => {
     const map = Object.fromEntries(PERMANENT_REDIRECTS.map((r) => [r.source, r.destination]));
     expect(map).toMatchObject({
       "/services": "/done-for-you",
-      "/tools/ai-mention-checker": "/free-check",
+      "/tools/ai-mention-checker": "/tools/ai-visibility-checker",
       "/tools/ai-guide-file-maker": "/tools/llms-txt-generator",
       "/tools/faq-markup-maker": "/tools/faq-schema-generator",
+      "/blog/website-seo-analysis-how-to-find-and-fix-common-issues": "/blog/website-seo-analysis",
     });
     for (const r of PERMANENT_REDIRECTS) {
-      expect(paths, r.destination).toContain(r.destination);
+      // Blog posts live in the database (not in the static route list); the merged duplicate post points at one.
+      if (!r.destination.startsWith("/blog/")) expect(paths, r.destination).toContain(r.destination);
       expect(paths, r.source).not.toContain(r.source);
     }
   });

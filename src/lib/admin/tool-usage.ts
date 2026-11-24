@@ -24,6 +24,8 @@ export const TOOL_LABELS: Record<string, string> = {
   "seo-title-generator": "SEO title generator (AI)",
   "meta-description-generator": "Meta description generator (AI)",
   "faq-generator": "FAQ generator (AI)",
+  "llms-txt-checker": "llms.txt checker",
+  "ai-visibility-checker": "AI visibility checker (AI)",
 };
 export const toolLabel = (tool: string) => TOOL_LABELS[tool] ?? tool;
 

@@ -1,13 +1,40 @@
 "use client";
 // "AI guide file" maker (llms.txt): a short file that tells AI tools who you are and which pages matter.
-// Runs in the browser only.
-import { useMemo, useState } from "react";
-import { Copy, Download, Plus, Trash2 } from "lucide-react";
-import { Button, Field, Input, Textarea } from "@/components/ui";
+// Two modes: "Create llms.txt" runs in the browser only; "Check my llms.txt" checks pasted text in the browser, or fetches
+// yoursite.com/llms.txt through /api/public/tools/llms-txt-checker and checks it in the browser.
+import { useMemo, useState, type FormEvent } from "react";
+import { Copy, Download, FileCheck, PenLine, Plus, Search, Trash2 } from "lucide-react";
+import { Button, Field, Input, Notice, Tabs, TabPanel, Textarea } from "@/components/ui";
 import { buildAiGuideFile, type GuideLink } from "@/lib/growth/tools";
+import { checkLlmsTxt, llmsFetchNote, LLMS_INPUT_MAX_CHARS, LLMS_TXT_EXAMPLE, type LlmsFetchResult } from "@/lib/tools/llms-txt-check";
+import { CheckResults } from "./check-results";
 import { WholeSiteCta } from "./whole-site-cta";
 
+type Mode = "create" | "check";
+
 export function GuideMaker() {
+  const [mode, setMode] = useState<Mode>("create");
+  return (
+    <div className="space-y-6">
+      <Tabs
+        label="Create or check an llms.txt file"
+        idPrefix="llms"
+        variant="pills"
+        value={mode}
+        onChange={(v) => setMode(v as Mode)}
+        tabs={[
+          { id: "create", label: "Create llms.txt", icon: <PenLine /> },
+          { id: "check", label: "Check my llms.txt", icon: <FileCheck /> },
+        ]}
+      />
+      <TabPanel idPrefix="llms" value={mode} className="pt-0">
+        {mode === "create" ? <GuideCreate /> : <LlmsTxtChecker />}
+      </TabPanel>
+    </div>
+  );
+}
+
+function GuideCreate() {
   const [name, setName] = useState("");
   const [summary, setSummary] = useState("");
   const [details, setDetails] = useState("");
@@ -94,6 +121,120 @@ export function GuideMaker() {
           <div className="mt-4">
             <WholeSiteCta lead="This file is one small step." />
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LlmsTxtChecker() {
+  const [source, setSource] = useState<"fetch" | "paste">("fetch");
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fetched, setFetched] = useState<LlmsFetchResult | null>(null);
+  const [pasted, setPasted] = useState("");
+
+  const text = source === "fetch" ? fetched?.text ?? null : pasted.trim() === "" ? null : pasted;
+  const result = useMemo(() => (text !== null ? checkLlmsTxt(text) : null), [text]);
+  const note = source === "fetch" && fetched ? llmsFetchNote(fetched) : null;
+
+  async function fetchFile(e: FormEvent) {
+    e.preventDefault();
+    if (!url.trim()) {
+      setError("Enter a website address like example.com.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setFetched(null);
+    try {
+      const res = await fetch("/api/public/tools/llms-txt-checker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = (await res.json().catch(() => null)) as { result?: LlmsFetchResult; error?: { message?: string } } | null;
+      if (!res.ok || !data?.result) throw new Error(data?.error?.message ?? "Something went wrong. Please try again, or paste the file text instead.");
+      setFetched(data.result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again, or paste the file text instead.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="How to get your llms.txt">
+        <Button size="sm" variant={source === "fetch" ? "primary" : "secondary"} aria-pressed={source === "fetch"} onClick={() => setSource("fetch")}>
+          Read it from my website
+        </Button>
+        <Button size="sm" variant={source === "paste" ? "primary" : "secondary"} aria-pressed={source === "paste"} onClick={() => setSource("paste")}>
+          Paste the file text
+        </Button>
+      </div>
+      {source === "fetch" ? (
+        <form onSubmit={fetchFile} className="rounded-2xl border border-border bg-surface p-5" noValidate>
+          <Field label="Website address" htmlFor="llms-url" hint="We read yoursite.com/llms.txt. Nothing is saved." error={error}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="llms-url"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="example.com"
+                value={url}
+                maxLength={2048}
+                onChange={(e) => setUrl(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? "llms-url-error" : "llms-url-hint"}
+                className="sm:flex-1"
+              />
+              <Button type="submit" icon={<Search />} loading={busy} loadingText="Checking…">
+                Check llms.txt
+              </Button>
+            </div>
+          </Field>
+        </form>
+      ) : (
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <Field
+            label="Your llms.txt text"
+            htmlFor="llms-text"
+            hint="Paste your file, or a draft before you upload it. This runs in your browser; nothing is sent."
+            labelAside={
+              <Button variant="link" onClick={() => setPasted(LLMS_TXT_EXAMPLE)}>
+                Use an example
+              </Button>
+            }
+          >
+            <Textarea
+              id="llms-text"
+              rows={12}
+              className="font-mono text-xs"
+              value={pasted}
+              maxLength={LLMS_INPUT_MAX_CHARS}
+              spellCheck={false}
+              onChange={(e) => setPasted(e.target.value)}
+              placeholder={"# Your business name\n\n> What you do, for whom and where.\n\n## Main pages\n\n- [Services](https://yoursite.com/services): what you offer"}
+            />
+          </Field>
+        </div>
+      )}
+
+      <div aria-live="polite" className="space-y-4">
+        {note && (
+          <Notice tone={note.tone} title={note.title}>
+            {note.body}
+            {fetched && <span className="mt-1 block break-all text-xs text-muted">{fetched.finalUrl ?? fetched.llmsUrl}</span>}
+          </Notice>
+        )}
+        {result && (
+          <>
+            <CheckResults title="What we found in your llms.txt" items={result.items} errors={result.errors} warnings={result.warnings} />
+            <WholeSiteCta lead="This checked one file." />
+          </>
         )}
       </div>
     </div>

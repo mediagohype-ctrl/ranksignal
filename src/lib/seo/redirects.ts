@@ -5,8 +5,10 @@
 export const PERMANENT_REDIRECTS: { source: string; destination: string }[] = [
   // 15 Nov 2026: the done-for-you service page got the name customers use.
   { source: "/services", destination: "/done-for-you" },
-  // The AI visibility checker was the same check as the free website check.
-  { source: "/tools/ai-mention-checker", destination: "/free-check" },
+  // The old AI mention checker URL ranked for "AI visibility checker": it now points at the real AI checker (24 Nov 2026).
+  { source: "/tools/ai-mention-checker", destination: "/tools/ai-visibility-checker" },
+  // 24 Nov 2026: two posts had the same H1 and topic; the longer-URL one merged into /blog/website-seo-analysis.
+  { source: "/blog/website-seo-analysis-how-to-find-and-fix-common-issues", destination: "/blog/website-seo-analysis" },
   // Tools renamed to the words people search for.
   { source: "/tools/ai-guide-file-maker", destination: "/tools/llms-txt-generator" },
   { source: "/tools/faq-markup-maker", destination: "/tools/faq-schema-generator" },

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlignLeft, ArrowRight, Braces, FileText, Heading, Link2Off, Map, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
+import { AlignLeft, ArrowRight, Bot, Braces, FileText, Heading, Link2Off, Map, MessageCircleQuestion, ScanSearch, ShieldCheck, Sparkles, Tag, Type } from "lucide-react";
 import { IconTile, JsonLd, PageHero } from "@/components/marketing/ui";
 import { ToolPreview, type ToolPreviewKind } from "@/components/marketing/showcase/tool-preview";
 import { QaSection, SourcesList, type Qa } from "@/components/marketing/answers";
@@ -40,6 +40,7 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
     title: "Google and AI crawlers",
     intro: "Make sure Google, ChatGPT, Gemini and Perplexity can read and list your pages.",
     tools: [
+      { href: "/tools/ai-visibility-checker", preview: "ai", icon: <Bot />, title: "AI visibility checker", body: "Does ChatGPT, Gemini or Perplexity name your business? See who they name instead." },
       { href: "/tools/ai-crawler-checker", preview: "crawlers", icon: <ShieldCheck />, title: "Is my site blocked from AI?", body: "See which AI crawlers your robots.txt and pages allow or block." },
       { href: "/tools/robots-txt-tester", preview: "robots", icon: <FileText />, title: "Robots.txt tester", body: "Test any address against your robots.txt for Googlebot and AI crawlers." },
       { href: "/tools/sitemap-checker", preview: "sitemap", icon: <Map />, title: "XML sitemap checker & generator", body: "Check your sitemap for errors and broken entries, or make a new one." },

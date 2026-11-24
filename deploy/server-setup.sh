@@ -223,6 +223,10 @@ chmod -R a+rX /var/www/mywebrank-maintenance
 cat > /etc/nginx/conf.d/ranksignal-upgrade.conf <<'EOF'
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
 EOF
+# www.<domain>: its own small server block that sends visitors to https://<domain> (one address for Google). Only
+# for real domains (not the sslip.io fallback), and the certificate below covers both names.
+WWW_DOMAIN=""
+case "$DOMAIN" in *sslip.io|www.*) ;; *) WWW_DOMAIN="www.$DOMAIN" ;; esac
 cat > /etc/nginx/sites-available/ranksignal <<EOF
 server {
     listen 80;
@@ -249,6 +253,18 @@ server {
     }
 }
 EOF
+if [ -n "$WWW_DOMAIN" ]; then
+cat >> /etc/nginx/sites-available/ranksignal <<EOF
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $WWW_DOMAIN;
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://$DOMAIN\$request_uri; }
+}
+EOF
+fi
 ln -sf /etc/nginx/sites-available/ranksignal /etc/nginx/sites-enabled/ranksignal
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl enable --now nginx && systemctl reload nginx
@@ -265,8 +281,12 @@ ok "firewall: only SSH, HTTP and HTTPS are open"
 {
   MAIL_ARGS=(--register-unsafely-without-email)
   [ -n "${LETSENCRYPT_EMAIL:-}" ] && MAIL_ARGS=(-m "$LETSENCRYPT_EMAIL")
-  if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect "${MAIL_ARGS[@]}"; then
+  # Both names when www is set up; if www's DNS is missing, fall back to the bare domain so the site still gets SSL.
+  if [ -n "$WWW_DOMAIN" ] && certbot --nginx -d "$DOMAIN" -d "$WWW_DOMAIN" --expand --non-interactive --agree-tos --redirect "${MAIL_ARGS[@]}"; then
+    ok "free SSL certificate for $DOMAIN and $WWW_DOMAIN (www redirects to https://$DOMAIN; renews automatically)"
+  elif certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect "${MAIL_ARGS[@]}"; then
     ok "free SSL certificate for $DOMAIN (renews automatically)"
+    if [ -n "$WWW_DOMAIN" ]; then warn "no certificate for $WWW_DOMAIN: point its DNS (A record or CNAME) at this server, then deploy again"; fi
   else
     warn "Let's Encrypt failed (is $DOMAIN pointing at $PUBLIC_IP?). Using a temporary self-signed certificate."
     mkdir -p /etc/ssl/ranksignal

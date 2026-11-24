@@ -1,4 +1,5 @@
 // Blog post data access + validation (server only).
+import { currentPath } from "@/lib/seo/redirects";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import type { BlogPost } from "@prisma/client";
@@ -56,6 +57,11 @@ export function faqsOf(p: Pick<BlogPost, "faqs">): { q: string; a: string }[] {
     .filter((f): f is { q: string; a: string } => typeof f.q === "string" && typeof f.a === "string" && !!f.q.trim() && !!f.a.trim());
 }
 
+/** A post whose address permanently redirects elsewhere (merged duplicate): hidden from lists, sitemap and feeds. */
+export function isMovedPost(slug: string): boolean {
+  return currentPath(`/blog/${slug}`) !== `/blog/${slug}`;
+}
+
 /** Published, indexable posts (newest first). Never throws: the public site must render without the DB. */
 export async function publishedPosts(opts: { take?: number; category?: string; includeNoindex?: boolean } = {}) {
   try {
@@ -68,7 +74,7 @@ export async function publishedPosts(opts: { take?: number; category?: string; i
       },
       orderBy: { publishedAt: "desc" },
       take: opts.take ?? 200,
-    });
+    }).then((posts) => posts.filter((p) => !isMovedPost(p.slug)));
   } catch {
     return [];
   }

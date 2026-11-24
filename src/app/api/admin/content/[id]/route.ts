@@ -1,4 +1,5 @@
 // /api/admin/content/[id] — GET one post; PATCH fields and/or status; DELETE (publishers only).
+import { refreshBlogPages } from "@/lib/content/revalidate";
 import { z } from "zod";
 import { handler, json, parseBody, HttpError } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -19,7 +20,9 @@ export const GET = handler(async (_req: Request, { params }: Ctx) => {
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const staff = await requireStaffApi("content.write");
   const { id } = await params;
-  return json({ item: await updatePost(staff, req, id, await parseBody(req, postPatchSchema)) });
+  const item = await updatePost(staff, req, id, await parseBody(req, postPatchSchema));
+  refreshBlogPages();
+  return json({ item });
 });
 
 export const DELETE = handler(async (req: Request, { params }: Ctx) => {
@@ -27,5 +30,6 @@ export const DELETE = handler(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const { reason } = await parseBody(req, z.object({ reason: z.string().trim().max(500).optional() }));
   await deletePost(staff, req, id, reason);
+  refreshBlogPages();
   return json({ item: { deleted: true } });
 });

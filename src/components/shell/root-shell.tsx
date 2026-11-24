@@ -1,15 +1,23 @@
+// The <html> document every root layout renders. The site has several root layouts (Next.js route groups), so the
+// English pages can say <html lang="en"> and the Hindi pages <html lang="hi"> in the server HTML — search engines
+// and screen readers read the page language from there:
+//   src/app/(marketing)/layout.tsx, (auth)/layout.tsx, app/layout.tsx, admin/layout.tsx, r/layout.tsx → lang "en"
+//   src/app/(hindi)/layout.tsx → lang "hi"
+// Moving between the two languages is a full page load, which is fine for a language switch.
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import { BRAND } from "@/lib/brand";
 import { OG_IMAGE } from "@/lib/seo/metadata";
 import { Analytics } from "@/components/analytics";
 import { AttributionCapture } from "@/components/attribution-capture";
-import "./globals.css";
+import "@/app/globals.css";
 
 // Search console ownership tags (Google, Bing Webmaster Tools, Yandex), set per environment.
 const verifyEnv = (name: string) => (process.env[name] ?? "").trim() || undefined;
 const bingVerification = verifyEnv("BING_SITE_VERIFICATION");
 
-export const metadata: Metadata = {
+/** Site-wide metadata. Each root layout exports this (merged with its own additions). */
+export const rootMetadata: Metadata = {
   metadataBase: new URL(BRAND.appUrl),
   // Keyword first, brand last; pages keep the full title within 60 characters (src/lib/seo/metadata.ts).
   title: { default: `SEO, AEO & GEO Platform for AI Visibility · ${BRAND.name}`, template: `%s · ${BRAND.name}` },
@@ -28,7 +36,16 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
+/** Root metadata plus a layout's own fields (openGraph is merged, not replaced). */
+export function withRootMetadata(extra: Metadata = {}): Metadata {
+  return {
+    ...rootMetadata,
+    ...extra,
+    openGraph: { ...(rootMetadata.openGraph ?? {}), ...(extra.openGraph ?? {}) } as Metadata["openGraph"],
+  };
+}
+
+export const rootViewport: Viewport = {
   themeColor: "#ffffff",
   colorScheme: "light",
 };
@@ -37,9 +54,10 @@ export const viewport: Viewport = {
 // from Google Fonts directly. The CSS variable --font-sans (globals.css) points at it.
 const FONT_HREF = "https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap";
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export function RootShell({ lang, children }: { lang: "en" | "hi"; children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang={lang}>
+      {/* eslint-disable-next-line @next/next/no-head-element -- App Router root layouts render <head> directly. */}
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

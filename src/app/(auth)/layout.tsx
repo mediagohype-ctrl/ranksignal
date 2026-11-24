@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { RootShell, rootMetadata, rootViewport } from "@/components/shell/root-shell";
 import Link from "next/link";
 import { CheckCircle2, Eye, ShieldCheck, Wrench } from "lucide-react";
 import { BRAND } from "@/lib/brand";
@@ -23,8 +24,13 @@ const VALUES = [
   },
 ];
 
+export const metadata = rootMetadata;
+export const viewport = rootViewport;
+
+// Root layout for sign-in pages (<html lang="en">): see src/components/shell/root-shell.tsx.
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
+    <RootShell lang="en">
     <div className="grid min-h-screen bg-bg lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       {/* Brand panel */}
       <aside className="bg-hero relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
@@ -84,5 +90,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </footer>
       </div>
     </div>
+    </RootShell>
   );
 }
