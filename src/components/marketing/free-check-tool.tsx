@@ -1,16 +1,22 @@
 "use client";
-// Interactive free website check: URL + captcha → POST /api/public/free-check → result.
-// Opened with the website already filled in (?url=… from the homepage box), it starts by itself: no second click.
-// When the result is in, the form folds away, the page scrolls to the score and the long explanations below
-// (HideWhenFreeCheckResult) are hidden so the result and its buttons stay in view.
+// Interactive free website check: URL + invisible captcha → POST /api/public/free-check → result.
+// Opened with the website already filled in (?url=… from the homepage box), there is no form at all: the progress
+// steps show at once and the check starts by itself — straight away with the security token the homepage made, or
+// as soon as this page's own invisible security check answers. Nothing red is ever shown while that is pending.
+// When the result is in, the page scrolls to the score and the long explanations below (HideWhenFreeCheckResult)
+// are hidden so the result and its buttons stay in view. A failed check is never a dead end: it offers the
+// WhatsApp box (our team runs it by hand). The hourly limit explains how to start the free trial in three steps.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { preconnect, preload } from "react-dom";
-import { ArrowRight, RotateCcw } from "lucide-react";
-import { Button, Card, Field, Input, ProgressSteps, fieldDescribedBy } from "@/components/ui";
-import { Turnstile, TURNSTILE_SCRIPT_SRC, isTurnstileConfigured } from "@/components/turnstile";
-import { freeCheckStrings, type FreeCheckLang } from "@/lib/free-check/strings";
+import { ArrowRight, RotateCcw, Sparkles } from "lucide-react";
+import { Button, Card, Field, Input, LinkButton, ProgressSteps, fieldDescribedBy } from "@/components/ui";
+import { Turnstile, TURNSTILE_SCRIPT_SRC, isTurnstileConfigured, takeTokenHandoff } from "@/components/turnstile";
+import { readAttribution } from "@/lib/attribution";
+import { freeCheckStrings, type FreeCheckLang, type FreeCheckStrings } from "@/lib/free-check/strings";
+import { resultHost, signupHref } from "@/lib/free-check/share";
 import type { FreeCheckResult } from "@/lib/free-check/types";
-import { FreeCheckResultView } from "./free-check-result";
+import { track, trackOnce } from "@/lib/track";
+import { FreeCheckResultView, WhatsAppBox } from "./free-check-result";
 
 const STEPS = [
   { id: "home", after: 0 },
@@ -19,11 +25,18 @@ const STEPS = [
   { id: "score", after: 15_000 },
 ] as const;
 
-/** How long the automatic start waits for the security check before telling the person what to do. */
-const SECURITY_HINT_AFTER_MS = 6_000;
+/** How long a queued check waits silently for the security check before saying it may need a tap. */
+const SECURITY_WAIT_MS = 8_000;
 
 /** Fired on `window` when a result appears or is cleared, so server-rendered sections can fold away. */
 const RESULT_EVENT = "mwr:free-check-result";
+/** Fired on `window` while a check is queued or running (the WhatsApp chat bubble stays out of the way). */
+export const BUSY_EVENT = "mwr:free-check-busy";
+
+/** Errors where the website itself couldn't be read: offer the WhatsApp box instead of a dead end. */
+const SITE_FAILURES = new Set(["unreachable", "timeout", "not_html"]);
+
+type Failure = { code: string; message: string; url: string } | null;
 
 export function FreeCheckTool({
   initialUrl = "",
@@ -42,57 +55,82 @@ export function FreeCheckTool({
   const [widgetKey, setWidgetKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  /** Field-level problem (bad address, network) shown under the box. */
   const [error, setError] = useState<string | null>(null);
+  /** The site couldn't be read, or the hourly limit was reached: shown as a card, not a red line. */
+  const [failure, setFailure] = useState<Failure>(null);
   const [result, setResult] = useState<FreeCheckResult | null>(null);
-  const [formOpen, setFormOpen] = useState(true);
-  // "waiting" = opened with a website filled in and the check has not started yet (it starts by itself).
-  const [auto, setAuto] = useState<"idle" | "waiting" | "done">(initialUrl.trim() ? "waiting" : "idle");
+  // Arriving with a website filled in: no form, only the progress steps and then the result.
+  const [formOpen, setFormOpen] = useState(!initialUrl.trim());
+  /** Website waiting for the security token; the check starts by itself once it arrives. */
+  const [queued, setQueued] = useState<string | null>(initialUrl.trim() ? initialUrl : null);
   const [securitySlow, setSecuritySlow] = useState(false);
-  /** True while the running check is the one that started by itself (its progress list keeps the security step). */
-  const [autoStarted, setAutoStarted] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const captcha = isTurnstileConfigured();
 
-  // The automatic start can't begin before the security check has loaded and answered, so fetch its script as
-  // early as the page itself (a <link rel="preload"> in the HTML) instead of after the page's own scripts ran.
+  // The security check must answer before the automatic start, so fetch its script as early as the page itself.
   if (captcha && initialUrl.trim()) {
     preconnect("https://challenges.cloudflare.com");
     preload(TURNSTILE_SCRIPT_SRC, { as: "script" });
   }
 
+  // Token made on the homepage for this website: use it, and the check starts at once (no widget needed).
+  const [handoffChecked, setHandoffChecked] = useState(false);
+  useEffect(() => {
+    if (captcha && initialUrl.trim()) {
+      const handed = takeTokenHandoff(initialUrl);
+      if (handed) setToken(handed);
+    }
+    setHandoffChecked(true);
+  }, [captcha, initialUrl]);
+
   const run = useCallback(
     async (target: string) => {
-      if (!target.trim()) {
-        setError(s.errEmptyUrl);
-        return;
-      }
-      if (captcha && !token) {
-        setError(s.errCaptcha);
-        return;
-      }
       setBusy(true);
       setError(null);
+      setFailure(null);
       setResult(null);
       setElapsed(0);
+      const host = resultHost(target.trim().startsWith("http") ? target.trim() : `https://${target.trim()}`);
+      track("check_started", { website: host, lang }, { name: "StartCheck" });
       const started = Date.now();
       const timer = window.setInterval(() => setElapsed(Date.now() - started), 500);
       try {
         const res = await fetch("/api/public/free-check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: target.trim(), turnstileToken: token || undefined }),
+          body: JSON.stringify({ url: target.trim(), turnstileToken: token || undefined, attribution: readAttribution() }),
         });
-        const data = (await res.json().catch(() => null)) as { item?: FreeCheckResult; error?: { code?: string; message?: string } } | null;
+        const data = (await res.json().catch(() => null)) as {
+          item?: FreeCheckResult;
+          error?: { code?: string; message?: string; details?: { scope?: string } };
+        } | null;
         if (!res.ok || !data?.item) {
-          const code = data?.error?.code;
-          // "Invalid input" (a malformed request) says nothing useful: show the address hint instead.
-          setError(s.serverError(code) ?? (code === "validation_error" ? s.errEmptyUrl : data?.error?.message) ?? s.errGeneric);
+          const code = data?.error?.code ?? "error";
+          const message = s.serverError(code) ?? (code === "validation_error" ? s.errEmptyUrl : data?.error?.message) ?? s.errGeneric;
+          track("check_failed", { website: host, reason: code });
+          if (SITE_FAILURES.has(code) || (code === "rate_limited" && data?.error?.details?.scope !== "global")) {
+            setFailure({ code, message, url: target.trim() });
+          } else {
+            setError(message);
+          }
+          setFormOpen(true);
         } else {
           setResult(data.item);
           setFormOpen(false);
+          const leadId = data.item.leadId;
+          trackOnce(
+            `check-${leadId ?? host}`,
+            "check_completed",
+            { website: host, score: data.item.overall.score ?? undefined },
+            // Same event id as the server's ViewContent, so Meta counts it once.
+            leadId ? { name: "ViewContent", eventId: `check-${leadId}` } : undefined,
+          );
         }
       } catch {
         setError(s.errNetwork);
+        setFormOpen(true);
+        track("check_failed", { website: host, reason: "network" });
       } finally {
         window.clearInterval(timer);
         setBusy(false);
@@ -101,24 +139,32 @@ export function FreeCheckTool({
         setWidgetKey((k) => k + 1);
       }
     },
-    [captcha, token, s],
+    [token, s, lang],
   );
 
-  // Arriving from the homepage URL box: start automatically, as soon as the captcha (if any) has answered.
+  // Start a queued check as soon as the security token is in (at once when there is no captcha).
   useEffect(() => {
-    if (auto !== "waiting" || busy) return;
+    if (!queued || busy) return;
     if (captcha && !token) return;
-    setAuto("done");
-    setAutoStarted(true);
-    void run(initialUrl);
-  }, [auto, initialUrl, captcha, token, busy, run]);
+    const target = queued;
+    setQueued(null);
+    setSecuritySlow(false);
+    void run(target);
+  }, [queued, captcha, token, busy, run]);
 
-  // Still waiting for the security check after a few seconds: it probably needs a tick from the person.
+  // Still no token after 8 seconds: the invisible check probably needs a tap — say so calmly (never in red).
   useEffect(() => {
-    if (auto !== "waiting") return;
-    const t = window.setTimeout(() => setSecuritySlow(true), SECURITY_HINT_AFTER_MS);
+    if (!queued) return;
+    const t = window.setTimeout(() => setSecuritySlow(true), SECURITY_WAIT_MS);
     return () => window.clearTimeout(t);
-  }, [auto]);
+  }, [queued]);
+
+  // Tell the page while a check is queued or running (the chat bubble keeps clear of the progress and buttons).
+  const active = busy || queued !== null;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(BUSY_EVENT, { detail: { busy: active } }));
+  }, [active]);
+  useEffect(() => () => void window.dispatchEvent(new CustomEvent(BUSY_EVENT, { detail: { busy: false } })), []);
 
   // Result in: bring the score into view (no animation for people who asked for reduced motion) and tell the
   // page so the long explanations below fold away.
@@ -133,29 +179,57 @@ export function FreeCheckTool({
     el.focus({ preventScroll: true });
   }, [hasResult]);
 
-  const waiting = auto === "waiting" && !busy;
-  const showSecurityStep = captcha && (waiting || (busy && autoStarted));
+  const waiting = queued !== null && !busy;
+  const showSecurityStep = captcha && waiting;
   const stepIndex = STEPS.reduce((i, st, n) => (elapsed >= st.after ? n : i), 0);
   const steps = [
-    ...(showSecurityStep ? [{ id: "security", label: s.steps.security, status: waiting ? ("active" as const) : ("done" as const) }] : []),
+    ...(showSecurityStep ? [{ id: "security", label: s.steps.security, status: "active" as const }] : []),
     ...STEPS.map((st, n) => ({
       id: st.id,
       label: s.steps[st.id],
-      // Waiting with no captcha lasts only until the page wakes up: show the first step as already under way.
       status: waiting ? (n === 0 && !captcha ? ("active" as const) : ("pending" as const)) : n < stepIndex ? ("done" as const) : n === stepIndex ? ("active" as const) : ("pending" as const),
     })),
   ];
 
+  // One invisible security widget, wherever the visitor is (form or progress card). Not needed while a token is held.
+  const widget = handoffChecked && !token && !busy ? <Turnstile key={widgetKey} invisible onToken={setToken} action="free_check" className="flex justify-center empty:hidden" /> : null;
+
+  const progress = (busy || waiting) && (
+    <div role="status" aria-live="polite">
+      <ProgressSteps label={s.progressLabel} steps={steps} />
+      <p className="mt-4 text-xs text-muted">{waiting ? (securitySlow ? s.securityTick : s.securityWaiting) : s.duration}</p>
+    </div>
+  );
+
   return (
     <div className="space-y-10">
+      {failure && (
+        <div className="mx-auto max-w-2xl">
+          {failure.code === "rate_limited" ? <LimitCard url={failure.url} s={s} /> : <FailureCard failure={failure} lang={lang} s={s} />}
+        </div>
+      )}
+
+      {!formOpen && !result && (busy || waiting) && (
+        <Card variant="elevated" padding="lg" className="mx-auto max-w-2xl">
+          <p className="mb-5 break-words text-small font-semibold text-fg">{s.checkedFor(resultHost(queued ?? url).replace(/^https?:\/\//, ""))}</p>
+          {progress}
+          {widget}
+        </Card>
+      )}
+
       {formOpen && (
         <Card variant="elevated" padding="lg" className="mx-auto max-w-2xl">
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              setAuto("done");
-              setAutoStarted(false);
-              void run(url);
+              if (!url.trim()) {
+                setError(s.errEmptyUrl);
+                return;
+              }
+              setError(null);
+              setFailure(null);
+              // Never an error while the security check is still answering: queue it, it starts by itself.
+              setQueued(url);
             }}
             className="space-y-5"
             noValidate
@@ -176,32 +250,27 @@ export function FreeCheckTool({
                 maxLength={2048}
                 inputSize="lg"
                 invalid={!!error}
-                disabled={busy}
+                disabled={busy || waiting}
                 aria-describedby={fieldDescribedBy("fc-url", { hint: true, error })}
               />
             </Field>
-            <Turnstile key={widgetKey} onToken={setToken} action="free_check" />
+            {widget}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted">{s.footnote}</p>
               <Button
                 type="submit"
                 size="lg"
-                loading={busy}
+                loading={busy || waiting}
                 loadingText={s.checking}
-                icon={result ? <RotateCcw /> : undefined}
-                iconRight={result ? undefined : <ArrowRight />}
+                icon={result || failure ? <RotateCcw /> : undefined}
+                iconRight={result || failure ? undefined : <ArrowRight />}
               >
-                {result ? s.runAgain : s.run}
+                {result || failure ? s.runAgain : s.run}
               </Button>
             </div>
           </form>
 
-          {(busy || waiting) && (
-            <div className="mt-6 border-t border-border pt-6" role="status" aria-live="polite">
-              <ProgressSteps label={s.progressLabel} steps={steps} />
-              <p className="mt-4 text-xs text-muted">{waiting ? (securitySlow ? s.securityTick : s.securityWaiting) : s.duration}</p>
-            </div>
-          )}
+          {progress && <div className="mt-6 border-t border-border pt-6">{progress}</div>}
         </Card>
       )}
 
@@ -221,6 +290,54 @@ export function FreeCheckTool({
         )}
       </div>
     </div>
+  );
+}
+
+/** Hourly limit reached: how to start the free trial, in three easy steps, with one big button. */
+function LimitCard({ url, s }: { url: string; s: FreeCheckStrings }) {
+  return (
+    <section aria-labelledby="fc-limit" className="rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8" role="status">
+      <h2 id="fc-limit" className="text-h4 text-fg">
+        {s.limitTitle}
+      </h2>
+      <p className="mt-2 text-small text-fg-soft">{s.limitIntro}</p>
+      <ol className="mt-5 space-y-3">
+        {s.limitSteps.map((step, n) => (
+          <li key={step} className="flex items-start gap-3 text-small text-fg">
+            <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-small font-semibold text-primary-fg">
+              {n + 1}
+            </span>
+            <span className="pt-1">{step}</span>
+          </li>
+        ))}
+      </ol>
+      <LinkButton
+        href={signupHref(url)}
+        size="lg"
+        className="mt-6 w-full sm:w-auto"
+        icon={<Sparkles />}
+        onClick={() => track("trial_click", { from: "free_check_limit" })}
+      >
+        {s.limitCta}
+      </LinkButton>
+      <p className="mt-3 text-xs text-muted">{s.limitLater}</p>
+    </section>
+  );
+}
+
+/** The site couldn't be read: get the report on WhatsApp instead (our team runs it by hand). */
+function FailureCard({ failure, lang, s }: { failure: NonNullable<Failure>; lang: FreeCheckLang; s: FreeCheckStrings }) {
+  return (
+    <section aria-labelledby="fc-fail" className="rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8">
+      <h2 id="fc-fail" className="text-h4 text-fg">
+        {s.failTitle}
+      </h2>
+      <p className="mt-2 text-small text-fg-soft">{s.failBody}</p>
+      <p className="mt-1 text-xs text-muted">{failure.message}</p>
+      <div className="mt-5">
+        <WhatsAppBox website={failure.url} failure={failure.code} lang={lang} s={s} bare />
+      </div>
+    </section>
   );
 }
 

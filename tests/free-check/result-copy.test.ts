@@ -244,7 +244,7 @@ describe("result wording", () => {
   it("Hindi has every string English has, and the fixed strings are in Hindi", () => {
     expect(Object.keys(hi).sort()).toEqual(Object.keys(en).sort());
     const devanagari = /[ऀ-ॿ]/;
-    const latinOnly = new Set(["overallName", "emailPlaceholder", "basedOnFor"]);
+    const latinOnly = new Set(["overallName", "emailPlaceholder", "basedOnFor", "waPlaceholder"]);
     for (const [k, v] of Object.entries(hi)) {
       if (typeof v === "string" && !latinOnly.has(k)) expect(devanagari.test(v), k).toBe(true);
     }

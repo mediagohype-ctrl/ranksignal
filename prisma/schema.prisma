@@ -617,6 +617,10 @@ model Lead {
   message   String?
   score     Int?
   ipHash    String?
+  /// WhatsApp number left after a free check, digits only with country code ("919876543210").
+  phone       String?
+  /// Where the visitor came from: { utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, landing }.
+  attribution Json?
   status    String   @default("new") // new | contacted | qualified | converted | closed
   notes     String?
   createdAt DateTime @default(now())
@@ -624,6 +628,7 @@ model Lead {
 
   @@index([source, createdAt])
   @@index([status, createdAt])
+  @@index([phone])
 }
 
 /**

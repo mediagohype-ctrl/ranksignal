@@ -1,10 +1,16 @@
 "use client";
 // Floating WhatsApp button, bottom-right on every public page. A small "Chat with us" bubble pops up once per visit
-// after a few seconds (closable, remembered for the session). The link opens WhatsApp with a ready message.
+// after 30 seconds (closable, remembered for the session) — never on the free-check pages, where it would cover the
+// check's buttons. While a check is running the whole button steps aside. The link opens WhatsApp with a ready message.
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 
 const SEEN_KEY = "mwr.waBubbleSeen";
+const BUBBLE_AFTER_MS = 30_000;
+/** Same name as BUSY_EVENT in free-check-tool.tsx (not imported, to keep that bundle off every page). */
+const CHECK_BUSY_EVENT = "mwr:free-check-busy";
+const NO_BUBBLE = /^\/(hi\/)?free-check\/?$/;
 
 /** Official WhatsApp glyph (white), drawn inline so there is no extra request. */
 function WhatsAppGlyph({ className }: { className?: string }) {
@@ -17,8 +23,21 @@ function WhatsAppGlyph({ className }: { className?: string }) {
 
 export function WhatsAppFloat({ href }: { href: string }) {
   const [bubble, setBubble] = useState(false);
+  const [checkBusy, setCheckBusy] = useState(false);
+  const pathname = usePathname() ?? "";
+  const bubbleAllowed = !NO_BUBBLE.test(pathname);
 
   useEffect(() => {
+    const on = (e: Event) => setCheckBusy(Boolean((e as CustomEvent<{ busy?: boolean }>).detail?.busy));
+    window.addEventListener(CHECK_BUSY_EVENT, on);
+    return () => window.removeEventListener(CHECK_BUSY_EVENT, on);
+  }, []);
+
+  useEffect(() => {
+    if (!bubbleAllowed) {
+      setBubble(false);
+      return;
+    }
     let seen = false;
     try {
       seen = sessionStorage.getItem(SEEN_KEY) === "1";
@@ -26,9 +45,9 @@ export function WhatsAppFloat({ href }: { href: string }) {
       /* private mode: just show it */
     }
     if (seen) return;
-    const t = setTimeout(() => setBubble(true), 5000);
+    const t = setTimeout(() => setBubble(true), BUBBLE_AFTER_MS);
     return () => clearTimeout(t);
-  }, []);
+  }, [bubbleAllowed]);
 
   const closeBubble = () => {
     setBubble(false);
@@ -38,6 +57,8 @@ export function WhatsAppFloat({ href }: { href: string }) {
       /* ignore */
     }
   };
+
+  if (checkBusy) return null;
 
   return (
     <div className="no-print fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 flex items-end gap-3 sm:bottom-6 sm:right-6">

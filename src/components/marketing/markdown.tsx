@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { ownSitePath, parseMarkdown, type Block, type Inline } from "@/lib/content/markdown";
+import { currentPath } from "@/lib/seo/redirects";
 
 function Inlines({ c }: { c: Inline[] }) {
   return (
@@ -25,7 +26,8 @@ function Inlines({ c }: { c: Inline[] }) {
               </em>
             );
           case "link": {
-            const own = ownSitePath(n.href);
+            const ownPath = ownSitePath(n.href);
+            const own = ownPath && currentPath(ownPath);
             return own ? (
               <Link key={i} href={own}>
                 <Inlines c={n.c} />

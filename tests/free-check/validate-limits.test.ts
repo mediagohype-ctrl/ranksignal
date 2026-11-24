@@ -16,7 +16,7 @@ vi.mock("node:dns/promises", () => {
 });
 
 import { normalizeInputUrl, validateFreeCheckUrl } from "@/lib/free-check/validate";
-import { checkContactLimit, checkFreeCheckLimit, FREE_CHECK_LIMITS } from "@/lib/free-check/limits";
+import { checkContactLimit, checkFreeCheckLimit, FREE_CHECK_LIMITS, refundFreeCheck } from "@/lib/free-check/limits";
 
 describe("normalizeInputUrl", () => {
   it("adds https:// to bare domains and normalises", () => {
@@ -57,7 +57,8 @@ describe("validateFreeCheckUrl (assertPublicUrl)", () => {
 });
 
 describe("free-check rate limits", () => {
-  it("allows 3 checks per IP per hour, then blocks with retry-after", () => {
+  it("allows 10 checks per IP per hour, then blocks with retry-after", () => {
+    expect(FREE_CHECK_LIMITS.perIp).toBe(10);
     const t0 = 2_000_000_000_000;
     for (let i = 0; i < FREE_CHECK_LIMITS.perIp; i++) expect(checkFreeCheckLimit("1.1.1.1", t0 + i).allowed).toBe(true);
     const blocked = checkFreeCheckLimit("1.1.1.1", t0 + 10);
@@ -68,11 +69,22 @@ describe("free-check rate limits", () => {
     expect(checkFreeCheckLimit("1.1.1.1", t0 + FREE_CHECK_LIMITS.windowMs + 1).allowed).toBe(true);
   });
 
-  it("caps everyone at 30 per hour and blocked IPs don't consume the global budget", () => {
+  it("doesn't count failed checks: 5 failures in a row, then a good one still runs", () => {
+    const t0 = 2_500_000_000_000;
+    for (let i = 0; i < FREE_CHECK_LIMITS.perIp - 1; i++) expect(checkFreeCheckLimit("7.7.7.7", t0).allowed).toBe(true);
+    for (let i = 0; i < 5; i++) {
+      expect(checkFreeCheckLimit("7.7.7.7", t0 + i).allowed).toBe(true);
+      refundFreeCheck("7.7.7.7", t0 + i); // the check failed: given back
+    }
+    expect(checkFreeCheckLimit("7.7.7.7", t0 + 10).allowed).toBe(true);
+    expect(checkFreeCheckLimit("7.7.7.7", t0 + 11)).toMatchObject({ allowed: false, scope: "ip" });
+  });
+
+  it("caps everyone per hour and blocked IPs don't consume the global budget", () => {
     const t0 = 3_000_000_000_000; // fresh windows
     let allowed = 0;
-    // 3 attempts from each of 15 IPs = 45 attempts; only 30 may pass globally.
-    for (let ip = 0; ip < 15; ip++) {
+    // 3 attempts from each of (global/3 + 5) IPs: more attempts than the global cap allows.
+    for (let ip = 0; ip < FREE_CHECK_LIMITS.global / 3 + 5; ip++) {
       for (let k = 0; k < 3; k++) if (checkFreeCheckLimit(`10.9.0.${ip}`, t0 + ip).allowed) allowed++;
     }
     expect(allowed).toBe(FREE_CHECK_LIMITS.global);

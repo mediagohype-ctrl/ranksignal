@@ -39,6 +39,37 @@ const EN = {
   /** Server errors by code. English uses the server's own message (null here). */
   serverError: serverMessage,
 
+  /* ---- hourly limit reached: how to start the free trial, in three easy steps ---- */
+  limitTitle: "You've used your free checks for this hour",
+  limitIntro: "Start your 7-day free trial to check your website as often as you like and see every fix. It's easy:",
+  limitSteps: [
+    "Tap \"Start my free trial\" below.",
+    "Sign up with Google or your email. It takes 1 minute, and no card is needed.",
+    "We check your website for you. Your full report and every fix are ready in a few minutes.",
+  ],
+  limitCta: "Start my free trial",
+  limitLater: "Or come back in an hour for another free check.",
+
+  /* ---- check failed: never a dead end ---- */
+  failTitle: "We couldn't read this website right now",
+  failBody: "Get your report on WhatsApp instead. Our team will check it by hand and send it to you today.",
+  failTryAgain: "Try again",
+
+  /* ---- WhatsApp unlock box ---- */
+  waTitle: "Your full report is ready",
+  waIntro: "Get every fix, step by step, on WhatsApp.",
+  waLabel: "WhatsApp number",
+  waPlaceholder: "98765 43210",
+  waButton: "Send it to my WhatsApp",
+  waSaving: "Sending…",
+  waInvalid: "Enter your 10-digit WhatsApp number, like 98765 43210.",
+  waFailed: "We couldn't save your number just now. Please try again in a minute.",
+  waNetwork: "We couldn't reach our server. Check your connection and try again.",
+  waNote: "We only use your number to send this report. No spam.",
+  waThanks: (num: string) => `Done! Your report is on its way to +91 ${num}.`,
+  waThanksFailed: (num: string) => `Thanks! Our team will send your report to +91 ${num} on WhatsApp today.`,
+  waThanksNext: "Want to see every fix right now? Start your free trial.",
+
   /* ---- result: score ---- */
   overallName: "Found Score",
   overallLabel: "Your Found Score",
@@ -269,6 +300,34 @@ const HI: FreeCheckStrings = {
   errGeneric: "हमारी तरफ़ से कुछ गड़बड़ हुई। एक मिनट बाद फिर कोशिश करें।",
   errNetwork: "हम अपने सर्वर तक नहीं पहुँच पाए। अपना इंटरनेट जाँचकर फिर कोशिश करें।",
   serverError: (code) => (code && HI_SERVER_ERRORS[code]) || "हमारी तरफ़ से कुछ गड़बड़ हुई। एक मिनट बाद फिर कोशिश करें।",
+
+  limitTitle: "इस घंटे के आपके फ्री चेक पूरे हो गए",
+  limitIntro: "7 दिन का फ्री ट्रायल शुरू करें: अपनी वेबसाइट जितनी बार चाहें चेक करें और हर सुधार देखें। बहुत आसान है:",
+  limitSteps: [
+    "नीचे \"मेरा फ्री ट्रायल शुरू करें\" पर टैप करें।",
+    "Google या ईमेल से साइन अप करें। 1 मिनट लगता है, कार्ड की ज़रूरत नहीं।",
+    "हम आपकी वेबसाइट चेक करते हैं। कुछ मिनट में पूरी रिपोर्ट और हर सुधार तैयार।",
+  ],
+  limitCta: "मेरा फ्री ट्रायल शुरू करें",
+  limitLater: "या एक घंटे बाद दूसरा फ्री चेक चलाएँ।",
+
+  failTitle: "हम अभी यह वेबसाइट नहीं पढ़ पाए",
+  failBody: "अपनी रिपोर्ट WhatsApp पर पाएँ। हमारी टीम इसे हाथ से चेक करके आज ही आपको भेजेगी।",
+  failTryAgain: "फिर कोशिश करें",
+
+  waTitle: "आपकी पूरी रिपोर्ट तैयार है",
+  waIntro: "हर सुधार, कदम-दर-कदम, WhatsApp पर पाएँ।",
+  waLabel: "WhatsApp नंबर",
+  waPlaceholder: "98765 43210",
+  waButton: "मेरे WhatsApp पर भेजें",
+  waSaving: "भेज रहे हैं…",
+  waInvalid: "अपना 10 अंकों का WhatsApp नंबर डालें, जैसे 98765 43210।",
+  waFailed: "अभी आपका नंबर सेव नहीं हो पाया। एक मिनट बाद फिर कोशिश करें।",
+  waNetwork: "हम अपने सर्वर तक नहीं पहुँच पाए। अपना इंटरनेट जाँचकर फिर कोशिश करें।",
+  waNote: "आपका नंबर सिर्फ़ यह रिपोर्ट भेजने के लिए है। कोई स्पैम नहीं।",
+  waThanks: (num) => `हो गया! आपकी रिपोर्ट +91 ${num} पर भेजी जा रही है।`,
+  waThanksFailed: (num) => `धन्यवाद! हमारी टीम आज ही +91 ${num} पर WhatsApp से आपकी रिपोर्ट भेजेगी।`,
+  waThanksNext: "हर सुधार अभी देखना है? अपना फ्री ट्रायल शुरू करें।",
 
   overallName: "Found Score",
   overallLabel: "आपका Found Score",

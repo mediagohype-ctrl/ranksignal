@@ -231,7 +231,7 @@ export default function HomePage() {
             className="inline-flex items-center gap-2 rounded-full border border-[#DCE3F5] bg-white px-4 py-2 text-[13px] font-semibold text-mk-accent sm:text-sm"
           >
             <Sparkles aria-hidden size={16} strokeWidth={2.4} />
-            Free SEO, AEO &amp; GEO website checker
+            Free website check for Google and ChatGPT
           </h1>
           {/* Two clean lines: "Are they finding you?" never breaks (sized by screen width so it fits on any phone). */}
           <h2 className="font-display text-[clamp(1.5rem,7.6vw,4.5rem)] font-bold leading-[1.08] tracking-[-0.03em]">
@@ -243,7 +243,7 @@ export default function HomePage() {
           <p className="max-w-[36rem] text-[1.0625rem] leading-relaxed text-mk-text sm:text-xl">
             See how Google and ChatGPT see your business. In 30 seconds.
           </p>
-          <FreeCheckLauncher id="hero-url" variant="hero" buttonLabel="Get my free report" hint={null} className="max-w-[620px] text-left" />
+          <FreeCheckLauncher id="hero-url" variant="hero" buttonLabel="Get my free report" hint={null} prefetchToken className="max-w-[620px] text-left" />
 
           {/* Phones: three compact tiles in a row (icon over text). Wider: icon beside text. */}
           <ul className="grid w-full max-w-[620px] grid-cols-3 gap-2 sm:gap-2.5">

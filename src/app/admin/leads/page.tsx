@@ -39,7 +39,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <PageHeader
         className="mb-0"
         title="Leads"
-        description="People who ran a free check (with the email they left for their result) or wrote in through the contact form. IP addresses are stored only as a salted hash."
+        description="People who ran a free check (with the WhatsApp number or email they left for their result) or wrote in through the contact form. IP addresses are stored only as a salted hash."
         meta={
           <>
             {LEAD_SOURCES.map((s) => (
@@ -105,10 +105,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                 <TR key={l.id}>
                   <TD>
                     <Link href={`/admin/leads/${l.id}`} className="font-medium text-fg hover:text-primary hover:underline">
-                      {l.email ?? l.name ?? "Anonymous free check"}
+                      {l.email ?? (l.phone ? `+${l.phone}` : null) ?? l.name ?? "Anonymous free check"}
                     </Link>
                     <div className="max-w-xs truncate text-xs text-muted">
-                      {[l.name && l.email ? l.name : null, l.company, l.message?.slice(0, 80)].filter(Boolean).join(" · ") || "—"}
+                      {[l.email && l.phone ? `WhatsApp +${l.phone}` : null, l.name && l.email ? l.name : null, l.company, l.message?.slice(0, 80)].filter(Boolean).join(" · ") || "—"}
                     </div>
                   </TD>
                   <TD>

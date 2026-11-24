@@ -1,11 +1,11 @@
 "use client";
 // Result of the free website check, in this order (simplified Nov 2026: fewer words, more visual):
 // Found Score + one plain line → the four scores as rings → "now → after these fixes" bar graph → top 3 fixes as
-// compact rows ("How to fix" folds open) → one unlock card (all fixes, what ChatGPT says, weekly check) → email box →
-// share buttons → "Our team will do it for you" card. Every word comes from src/lib/free-check/strings.ts (English and Hindi).
+// compact rows: fix 1 in full, fixes 2+ blurred under the WhatsApp box ("Your full report is ready") → one unlock card
+// (all fixes, what ChatGPT says, weekly check) → share buttons → "Our team will do it for you" card. Every word comes from src/lib/free-check/strings.ts (English and Hindi).
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { ArrowRight, CalendarCheck, Check, ChevronDown, CircleAlert, Linkedin, Lock, Mail, MessageCircle, RotateCcw, Timer, X as XIcon } from "lucide-react";
+import { ArrowRight, CalendarCheck, Check, ChevronDown, CircleAlert, Linkedin, Lock, MessageCircle, RotateCcw, Timer, X as XIcon } from "lucide-react";
 import { Button, Card, Field, Input, LinkButton, SCORE_BAND_CLASS, ScoreRing, SectionHeading, fieldDescribedBy, scoreBand, type ScoreBand } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { hindiFix } from "@/lib/free-check/hi-fixes";
@@ -13,6 +13,8 @@ import { addWebsiteHref, freeCheckLink, linkedinShareHref, resultHost, signupHre
 import { freeCheckStrings, type FreeCheckLang, type FreeCheckStrings } from "@/lib/free-check/strings";
 import type { FreeCheckBenchmark, FreeCheckIssue, FreeCheckLockedIssue, FreeCheckPillar, FreeCheckResult, FreeCheckSnapshot } from "@/lib/free-check/types";
 import type { IssueEffort, IssueImpact } from "@/lib/report/types";
+import { readAttribution } from "@/lib/attribution";
+import { track } from "@/lib/track";
 import { TRIAL_DAYS } from "./plans";
 
 export { signupHref };
@@ -107,10 +109,12 @@ export function FreeCheckResultView({
         <SectionHeading id="fc-issues" title={s.fixesTitle(result.issues.length)} description={result.issues.length ? s.fixesIntro : s.noFixesIntro} />
         {result.issues.length > 0 && (
           <ol className="space-y-6">
-            {result.issues.map((i, n) => (
-              <FixCard key={i.id} issue={i} n={n + 1} lang={lang} s={s} />
-            ))}
+            <FixCard issue={result.issues[0]!} n={1} lang={lang} s={s} />
           </ol>
+        )}
+        {/* Fixes 2+ blurred under one field: the WhatsApp number. Saving it unlocks them here and sends the report. */}
+        {(result.issues.length > 1 || leadId) && (
+          <LockedFixes issues={result.issues.slice(1)} leadId={leadId} website={result.url} lang={lang} s={s} />
         )}
         {gain > 0 && <p className="mt-4 text-xs text-muted">{s.pointsNote}</p>}
       </section>
@@ -154,10 +158,6 @@ export function FreeCheckResultView({
         <p className="mt-4 text-xs text-muted">{s.noPromise}</p>
       </section>
 
-      {/* 7. Email box. The locked problems above now show real titles, so the blurred placeholders are only used when an
-          older server sends no moreIssues. */}
-      {(leadId || (hidden > 0 && !result.moreIssues)) && <HiddenFixes count={result.moreIssues ? 0 : hidden} leadId={leadId} s={s} />}
-
       {/* 8. Share */}
       <ShareRow result={result} host={host} lang={lang} s={s} />
 
@@ -172,6 +172,7 @@ export function FreeCheckResultView({
           </div>
           <a
             href={bookHref}
+            onClick={() => track("call_booked", { from: "free_check" }, { name: "Schedule" })}
             {...(/^https?:\/\//.test(bookHref) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-bg px-6 text-base font-medium text-fg hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bg [&_svg]:size-5"
           >
@@ -796,107 +797,166 @@ function StickyCta({ problems, href, label, s }: { problems: number; href: strin
   );
 }
 
-/** The email box. When some fixes are not shown it sits on top of blurred placeholders for them. */
-function HiddenFixes({ count, leadId, s }: { count: number; leadId: string | null; s: FreeCheckStrings }) {
-  const box = leadId ? (
-    <EmailBox leadId={leadId} s={s} />
-  ) : (
-    <p className="flex items-center gap-2 rounded-xl bg-surface px-4 py-3 text-small font-medium text-fg shadow-lg">
-      <Lock aria-hidden size={16} className="text-primary" />
-      {s.lockedInFull}
-    </p>
-  );
-  if (count === 0) return <section aria-label={s.emailLabel} className="flex justify-center">{box}</section>;
-  const placeholders = Math.min(count, 3);
+/**
+ * Fixes 2+ blurred, with the WhatsApp box on top ("Your full report is ready"). Once a number is saved they are
+ * shown in full here, and the report link goes out on WhatsApp.
+ */
+function LockedFixes({
+  issues,
+  leadId,
+  website,
+  lang,
+  s,
+}: {
+  issues: FreeCheckIssue[];
+  leadId: string | null;
+  website: string;
+  lang: FreeCheckLang;
+  s: FreeCheckStrings;
+}) {
+  const [unlocked, setUnlocked] = useState(false);
+  const box = <WhatsAppBox leadId={leadId} website={website} lang={lang} s={s} onSaved={() => setUnlocked(true)} />;
+  if (issues.length === 0) return <div className="mt-6 flex justify-center">{box}</div>;
+  if (unlocked) {
+    return (
+      <>
+        <ol start={2} className="mt-6 space-y-6">
+          {issues.map((i, n) => (
+            <FixCard key={i.id} issue={i} n={n + 2} lang={lang} s={s} />
+          ))}
+        </ol>
+        <div className="mt-6 flex justify-center">{box}</div>
+      </>
+    );
+  }
   return (
-    <section aria-labelledby="fc-more" className="relative">
-      <h2 id="fc-more" className="mb-4 text-h4 text-fg">
-        {s.moreFixes(count)}
-      </h2>
-      <div aria-hidden className="pointer-events-none min-h-[18rem] select-none space-y-4 blur-[6px]">
-        {Array.from({ length: placeholders }, (_, n) => (
-          <div key={n} className="rounded-2xl border border-border bg-surface p-5">
-            <div className="h-4 w-2/3 rounded bg-surface-3" />
-            <div className="mt-3 h-3 w-full rounded bg-surface-2" />
-            <div className="mt-2 h-3 w-5/6 rounded bg-surface-2" />
-          </div>
+    <div className="relative mt-6">
+      <ol aria-hidden className="pointer-events-none min-h-[22rem] select-none space-y-6 blur-[6px]" inert>
+        {issues.map((i, n) => (
+          <FixCard key={i.id} issue={i} n={n + 2} lang={lang} s={s} />
         ))}
-      </div>
-      <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center p-2 sm:p-4">{box}</div>
-    </section>
+      </ol>
+      <div className="absolute inset-0 flex items-start justify-center p-2 pt-6 sm:p-4 sm:pt-10">{box}</div>
+    </div>
   );
 }
 
-function EmailBox({ leadId, s }: { leadId: string; s: FreeCheckStrings }) {
-  const [email, setEmail] = useState("");
+/** "98765 43210" from "919876543210". */
+const shownNumber = (n: string) => `${n.slice(-10, -5)} ${n.slice(-5)}`;
+
+/**
+ * One field: WhatsApp number (+91 shown, 10-digit check). With a lead id it unlocks the report; without one (the
+ * check failed) it asks our team to run the check by hand. Meta Lead fires once, with the server's event id.
+ */
+export function WhatsAppBox({
+  leadId = null,
+  website,
+  failure,
+  lang,
+  s,
+  onSaved,
+  bare = false,
+}: {
+  leadId?: string | null;
+  website: string;
+  /** Why the check failed (unreachable, timeout…): the box is the fallback for a check that didn't finish. */
+  failure?: string;
+  lang: FreeCheckLang;
+  s: FreeCheckStrings;
+  onSaved?: () => void;
+  /** No card frame and heading (inside another card). */
+  bare?: boolean;
+}) {
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const frame = bare ? "w-full" : "w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl";
 
   if (saved) {
     return (
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 text-center shadow-xl" role="status">
-        <Mail aria-hidden className="mx-auto text-primary" size={22} />
-        <p className="mt-2 text-small font-semibold text-fg">{s.emailThanks(saved)}</p>
-        <p className="mt-1 text-xs text-muted">{s.emailThanksNext}</p>
+      <div className={clsx(frame, "text-center")} role="status">
+        <MessageCircle aria-hidden className="mx-auto text-[#128C7E]" size={24} />
+        <p className="mt-2 text-small font-semibold text-fg">{failure ? s.waThanksFailed(shownNumber(saved)) : s.waThanks(shownNumber(saved))}</p>
+        <p className="mt-1 text-xs text-muted">{s.waThanksNext}</p>
+        <LinkButton href={signupHref(website)} size="md" className="mt-3" iconRight={<ArrowRight />} onClick={() => track("trial_click", { from: "whatsapp_box" })}>
+          {s.startTrial}
+        </LinkButton>
       </div>
     );
   }
 
+  const fieldId = failure ? "fc-wa-fail" : "fc-wa";
   return (
     <form
-      className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl"
+      className={frame}
       noValidate
       onSubmit={async (e) => {
         e.preventDefault();
-        const value = email.trim();
-        if (!/^\S+@\S+\.\S+$/.test(value)) {
-          setError(s.emailInvalid);
+        const digits = phone.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
+        if (!/^[6-9]\d{9}$/.test(digits)) {
+          setError(s.waInvalid);
           return;
         }
         setBusy(true);
         setError(null);
         try {
-          const res = await fetch("/api/public/free-check/email", {
+          const res = await fetch("/api/public/free-check/whatsapp", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ leadId, email: value }),
+            body: JSON.stringify({ ...(leadId ? { leadId } : { url: website }), failure, phone: digits, attribution: readAttribution() }),
           });
-          const data = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-          if (res.ok) setSaved(value);
-          else {
+          const data = (await res.json().catch(() => null)) as { eventId?: string; firstTime?: boolean; error?: { code?: string; message?: string } } | null;
+          if (res.ok) {
+            setSaved(`91${digits}`);
+            onSaved?.();
+            // Exactly once per number saved: the same event id as the server's Conversions API "Lead".
+            if (data?.firstTime && data.eventId) {
+              track("whatsapp_lead", { website: resultHost(website), failed: Boolean(failure), lang }, { name: "Lead", eventId: data.eventId });
+            }
+          } else {
             const code = data?.error?.code;
-            // Every error says what to do next: fix the address, run the check again, or start the trial.
-            // "Invalid input" (the server's wording for a bad address) and a missing message get our own line.
-            setError(s.emailServerError(code) ?? (code === "validation_error" ? s.emailInvalid : data?.error?.message) ?? s.emailFailed);
+            setError(code === "invalid_phone" || code === "validation_error" ? s.waInvalid : (lang === "en" ? data?.error?.message : null) ?? s.waFailed);
           }
         } catch {
-          setError(s.emailNetwork);
+          setError(s.waNetwork);
         } finally {
           setBusy(false);
         }
       }}
     >
-      <Field label={s.emailLabel} htmlFor="fc-email" error={error}>
-        <Input
-          id="fc-email"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          lang="en"
-          placeholder={s.emailPlaceholder}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          maxLength={254}
-          invalid={!!error}
-          disabled={busy}
-          aria-describedby={fieldDescribedBy("fc-email", { error })}
-        />
+      {!bare && (
+        <>
+          <h3 className="text-h4 text-fg">{s.waTitle}</h3>
+          <p className="mb-4 mt-1 text-small text-fg-soft">{s.waIntro}</p>
+        </>
+      )}
+      <Field label={s.waLabel} htmlFor={fieldId} error={error}>
+        <div className="flex items-stretch gap-2">
+          <span aria-hidden className="inline-flex shrink-0 items-center rounded-lg border border-border bg-surface-2 px-3 text-base font-medium text-fg">
+            +91
+          </span>
+          <Input
+            id={fieldId}
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
+            lang="en"
+            placeholder={s.waPlaceholder}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/[^\d\s+-]/g, "").slice(0, 16))}
+            maxLength={16}
+            invalid={!!error}
+            disabled={busy}
+            aria-describedby={fieldDescribedBy(fieldId, { error })}
+            className="min-w-0 flex-1"
+          />
+        </div>
       </Field>
-      <Button type="submit" className="mt-3 w-full" loading={busy} loadingText={s.emailSaving} icon={<Mail />}>
-        {s.emailLabel}
+      <Button type="submit" className="mt-3 w-full" loading={busy} loadingText={s.waSaving} icon={<MessageCircle />}>
+        {s.waButton}
       </Button>
-      <p className="mt-2 text-xs text-muted">{s.emailNote}</p>
+      <p className="mt-2 text-xs text-muted">{s.waNote}</p>
     </form>
   );
 }

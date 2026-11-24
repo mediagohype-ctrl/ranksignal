@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/lib/track";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -100,6 +101,7 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
       ...(ref ? { ref } : {}),
     });
     if (res.ok) {
+      track("trial_started", { method: "email" }, { name: "StartTrial" });
       router.replace(next);
       router.refresh();
       return;

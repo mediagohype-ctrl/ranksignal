@@ -7,18 +7,19 @@ import { crawlPriority, isUtilityUrl } from "@/lib/audit/page-kind";
 import { extractPage } from "@/lib/crawler/extract";
 import { isSameSite, looksLikePage, normalizeUrl, siteHost, urlKey } from "@/lib/crawler/normalize";
 import { analyzeRobots, type RobotsInfo } from "@/lib/crawler/robots";
-import { safeFetch, SafeFetchError, type SafeFetchOptions, type SafeFetchResult } from "@/lib/crawler/safe-fetch";
+import { BROWSER_USER_AGENT, safeFetch, SafeFetchError, TLS_CERT_ERRORS, type SafeFetchOptions, type SafeFetchResult } from "@/lib/crawler/safe-fetch";
 import { parseSitemapXml } from "@/lib/crawler/sitemap";
 import { composeReport } from "@/lib/report/compose";
 import type { CheckContext, ReportPage } from "@/lib/report/inputs";
 import { emptyVisibility } from "@/lib/report/visibility";
 import type { ExtractedPage } from "@/lib/types";
 import { trimReport } from "@/lib/free-check/trim";
-import type { FreeCheckResult, FreeCheckSnapshot } from "@/lib/free-check/types";
+import { FREE_PILLAR_NAMES, type FreeCheckIssue, type FreeCheckResult, type FreeCheckSnapshot } from "@/lib/free-check/types";
 
-export const FREE_CHECK_BUDGET_MS = 25_000;
+export const FREE_CHECK_BUDGET_MS = 27_000;
 export const MAX_KEY_PAGES = 4;
-const HOME_TIMEOUT_MS = 10_000;
+/** One homepage attempt; later attempts (www / no-www, http) get whatever is left of the budget. */
+const HOME_TIMEOUT_MS = 20_000;
 const SIDE_TIMEOUT_MS = 6_000;
 const PAGE_TIMEOUT_MS = 8_000;
 const PAGE_MAX_BYTES = 2 * 1024 * 1024;
@@ -59,6 +60,50 @@ export function pickKeyPages(home: ExtractedPage, homeUrl: string, hosts: Iterab
     .map((c) => c.url);
 }
 
+/** "https://acme.com/" → "https://www.acme.com/" and back. Null for IP addresses. */
+export function toggleWww(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (/^[\d.]+$/.test(u.hostname) || u.hostname.startsWith("[")) return null;
+    u.hostname = u.hostname.startsWith("www.") ? u.hostname.slice(4) : `www.${u.hostname}`;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** The homepage addresses to try, in order: as typed (https), with/without www, then plain http. */
+export function homeCandidates(seedUrl: string): string[] {
+  const out = [seedUrl];
+  const alt = toggleWww(seedUrl);
+  if (alt) out.push(alt);
+  if (seedUrl.startsWith("https:")) out.push(seedUrl.replace(/^https:/, "http:"));
+  return [...new Set(out)];
+}
+
+const reasonOf = (e: unknown) => (e instanceof SafeFetchError ? `${e.code}${e.detail ? `:${e.detail}` : ""}` : (e as Error)?.name ?? "error");
+
+/** Fix #1 when the site only opened after we accepted its broken security certificate. */
+export function certIssue(detail: string): FreeCheckIssue {
+  const expired = detail === "CERT_HAS_EXPIRED";
+  return {
+    id: "tls-certificate-invalid",
+    pillar: "seo",
+    pillarLabel: FREE_PILLAR_NAMES.seo,
+    title: expired ? "Your website's security certificate (SSL) has expired" : "Your website's security certificate (SSL) isn't valid",
+    whatsWrong: expired
+      ? "Browsers show visitors a \"Your connection is not private\" warning before your site opens, and Google and AI tools may not read or recommend it until this is fixed."
+      : "Browsers warn visitors that the site isn't secure before it opens, and Google and AI tools may not read or recommend it until this is fixed.",
+    howToFix: [
+      "Log in to your hosting (or Shopify / Wix / WordPress host) and renew or reissue the free SSL certificate — most hosts call it \"SSL\" or \"Let's Encrypt\".",
+      "Open your site in a private browser window and check the padlock shows with no warning.",
+    ],
+    impact: "high",
+    effort: "quick",
+    affectedCount: 1,
+  };
+}
+
 /** Brand name the site declares about itself (business markup or og:site_name); null if none. */
 export function detectBrand(home: ExtractedPage | null): string | null {
   const name = home?.organization?.name?.trim() || home?.openGraph?.siteName?.trim() || null;
@@ -75,21 +120,63 @@ export async function runFreeCheck(seedUrl: string, opts: { fetcher?: Fetcher; b
     const timeoutMs = remaining(cap);
     if (timeoutMs < 500) return null;
     try {
-      return await fetcher(url, { timeoutMs, maxBytes, maxRedirects: 5 });
+      return await fetcher(url, { timeoutMs, maxBytes, maxRedirects: 5, userAgent: BROWSER_USER_AGENT, ...(certProblem ? { allowInvalidCert: true } : {}) });
     } catch {
       return null;
     }
   };
 
-  // 1. Homepage — defines the site (redirects such as apex → www are followed).
-  let homeRes: SafeFetchResult;
-  try {
-    homeRes = await fetcher(seedUrl, { timeoutMs: remaining(HOME_TIMEOUT_MS), maxBytes: PAGE_MAX_BYTES, maxRedirects: 5 });
-  } catch (e) {
-    if (e instanceof SafeFetchError && (e.code === "blocked" || e.code === "invalid_url")) {
-      throw new FreeCheckError("blocked_url", "That address isn't a public website we can check.");
+  // 1. Homepage — defines the site (redirects such as apex → www are followed). Real sites must load: a browser
+  // user-agent, each address variant in turn, and a broken TLS certificate is read anyway (and becomes fix #1).
+  let certProblem: string | null = null;
+  const fetchOpts = (cap: number): SafeFetchOptions => ({
+    timeoutMs: remaining(cap),
+    maxBytes: PAGE_MAX_BYTES,
+    maxRedirects: 5,
+    userAgent: BROWSER_USER_AGENT,
+    ...(certProblem ? { allowInvalidCert: true } : {}),
+  });
+  const reasons: string[] = [];
+  let homeRes: SafeFetchResult | null = null;
+  let lastError: unknown = null;
+  for (const candidate of homeCandidates(seedUrl)) {
+    if (remaining(HOME_TIMEOUT_MS) < 1_000) break;
+    try {
+      const res = await fetcher(candidate, fetchOpts(HOME_TIMEOUT_MS));
+      if (res.status < 400) {
+        homeRes = res;
+        break;
+      }
+      reasons.push(`${candidate} → HTTP ${res.status}`);
+      homeRes ??= res; // keep the first error page in case nothing better turns up
+    } catch (e) {
+      if (e instanceof SafeFetchError && (e.code === "blocked" || e.code === "invalid_url")) {
+        throw new FreeCheckError("blocked_url", "That address isn't a public website we can check.");
+      }
+      if (e instanceof SafeFetchError && e.detail && TLS_CERT_ERRORS.has(e.detail) && !certProblem) {
+        certProblem = e.detail;
+        try {
+          const res = await fetcher(candidate, fetchOpts(HOME_TIMEOUT_MS));
+          if (res.status < 400) {
+            homeRes = res;
+            break;
+          }
+          reasons.push(`${candidate} → HTTP ${res.status} (bad cert)`);
+          homeRes ??= res;
+          continue;
+        } catch (e2) {
+          e = e2;
+        }
+      }
+      lastError = e;
+      reasons.push(`${candidate} → ${reasonOf(e)}`);
     }
-    if (e instanceof SafeFetchError && e.code === "timeout") {
+  }
+  if (!homeRes || homeRes.status >= 400) {
+    console.warn(`[free-check] could not read ${new URL(seedUrl).hostname}: ${reasons.join("; ") || "no time left"}`);
+  }
+  if (!homeRes) {
+    if (lastError instanceof SafeFetchError && lastError.code === "timeout") {
       throw new FreeCheckError("timeout", "Your homepage took too long to open. Please try again in a minute.");
     }
     throw new FreeCheckError("unreachable", "We couldn't load that website. Check the address and try again.");
@@ -192,7 +279,17 @@ export async function runFreeCheck(seedUrl: string, opts: { fetcher?: Fetcher; b
     ctx,
   });
   const result = trimReport(report, { brand, pagesChecked: pages.filter((p) => p.statusCode === 200).map((p) => p.finalUrl) });
-  return { ...result, snapshot: buildSnapshot(homeUrl, homePage.extracted, site, aiRobots.aiBots) };
+  const snapshot = buildSnapshot(homeUrl, homePage.extracted, site, aiRobots.aiBots);
+  if (!certProblem) return { ...result, snapshot };
+  // The site only opened once we accepted its broken certificate: that is the first thing to fix.
+  const cert = certIssue(certProblem);
+  return {
+    ...result,
+    issues: [cert, ...result.issues.filter((i) => i.id !== cert.id)].slice(0, Math.max(result.issues.length, 1)),
+    totalIssues: result.totalIssues + 1,
+    issueCounts: result.issueCounts ? { ...result.issueCounts, high: result.issueCounts.high + 1 } : result.issueCounts,
+    snapshot: { ...snapshot, facts: { ...snapshot.facts, https: false } },
+  };
 }
 
 

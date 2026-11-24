@@ -64,6 +64,17 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
                   items={[
                     { label: "Name", value: lead.name ?? "—" },
                     { label: "Email", value: lead.email ? <a className="text-primary hover:underline" href={`mailto:${lead.email}`}>{lead.email}</a> : "—" },
+                    {
+                      label: "WhatsApp",
+                      value: lead.phone ? (
+                        <a className="text-primary hover:underline" href={`https://wa.me/${lead.phone}`} target="_blank" rel="noreferrer noopener">
+                          +{lead.phone}
+                        </a>
+                      ) : (
+                        "—"
+                      ),
+                    },
+                    { label: "Came from", value: attributionLine(lead.attribution) },
                     { label: "Company", value: lead.company ?? "—" },
                     ...(lead.source === "free_check" ? [{ label: "Top fix", value: topFix ?? "—" }] : []),
                     {
@@ -133,4 +144,12 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
       </div>
     </div>
   );
+}
+
+/** "facebook / paid / diwali_sale" (or "Meta ad (fbclid)", or "—") from the lead's stored UTM tags. */
+function attributionLine(a: unknown): string {
+  if (!a || typeof a !== "object") return "—";
+  const v = a as Record<string, string | undefined>;
+  const tags = [v.utm_source, v.utm_medium, v.utm_campaign, v.utm_content].filter(Boolean).join(" / ");
+  return tags || (v.fbclid ? "Meta ad (fbclid)" : v.gclid ? "Google ad (gclid)" : "—");
 }

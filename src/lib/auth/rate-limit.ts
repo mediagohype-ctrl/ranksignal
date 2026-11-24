@@ -25,6 +25,12 @@ export function peekRateLimit(key: string, now = Date.now()): number {
   return b && b.resetAt > now ? b.count : 0;
 }
 
+/** Give back one use in the active window (e.g. the request failed for a reason that shouldn't count). */
+export function refundRateLimit(key: string, now = Date.now()) {
+  const b = buckets.get(key);
+  if (b && b.resetAt > now && b.count > 0) b.count -= 1;
+}
+
 export function resetRateLimit(key: string) {
   buckets.delete(key);
 }

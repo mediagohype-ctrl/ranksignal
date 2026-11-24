@@ -55,7 +55,7 @@ describe("lead rows", () => {
 
   it("CSV export escapes quotes/commas and neutralises formulas", () => {
     const csv = leadsToCsv([{ id: "l1", name: 'Ann "A", Co', message: "=HYPERLINK(1)" }]);
-    expect(csv.split("\r\n")[1]).toBe('l1,,,,"Ann ""A"", Co",,,,,\'=HYPERLINK(1),');
+    expect(csv.split("\r\n")[1]).toBe('l1,,,,"Ann ""A"", Co",,,,,,\'=HYPERLINK(1),');
   });
 });
 

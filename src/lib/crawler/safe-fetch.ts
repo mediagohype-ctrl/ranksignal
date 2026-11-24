@@ -20,7 +20,12 @@ export type SafeFetchErrorCode =
   | "network";
 
 export class SafeFetchError extends Error {
-  constructor(public code: SafeFetchErrorCode, message: string) {
+  constructor(
+    public code: SafeFetchErrorCode,
+    message: string,
+    /** Low-level reason when known, e.g. "CERT_HAS_EXPIRED", "ECONNRESET" (for logs and TLS fallbacks). */
+    public detail?: string,
+  ) {
     super(message);
     this.name = "SafeFetchError";
   }
@@ -34,7 +39,30 @@ export interface SafeFetchOptions {
   maxBytes?: number;
   timeoutMs?: number;
   maxRedirects?: number;
+  /** Overrides the User-Agent header (default: our bot's). */
+  userAgent?: string;
+  /**
+   * Accept an invalid TLS certificate (expired, self-signed, wrong name). Only for reading a public page whose
+   * broken certificate is itself the finding (free check) — never for anything carrying credentials.
+   */
+  allowInvalidCert?: boolean;
 }
+
+/** TLS errors that mean "the site's certificate is broken" rather than "the site is down". */
+export const TLS_CERT_ERRORS = new Set([
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
+/** A normal desktop Chrome user-agent, for sites whose firewall turns away anything that looks like a bot. */
+export const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 export interface SafeFetchResult {
   finalUrl: string;
@@ -177,7 +205,12 @@ function toHeaders(h: http.IncomingHttpHeaders): Headers {
   return out;
 }
 
-function requestOnce(target: ValidatedTarget, deadline: number, maxBytes: number): Promise<RawResponse> {
+function requestOnce(
+  target: ValidatedTarget,
+  deadline: number,
+  maxBytes: number,
+  opts: Pick<SafeFetchOptions, "userAgent" | "allowInvalidCert"> = {},
+): Promise<RawResponse> {
   const { url, address, family } = target;
   const isHttps = url.protocol === "https:";
   const mod = isHttps ? https : http;
@@ -213,8 +246,9 @@ function requestOnce(target: ValidatedTarget, deadline: number, maxBytes: number
         lookup: pinnedLookup,
         agent: false,
         servername: isHttps && !ipaddr.isValid(hostname) ? hostname : undefined,
+        ...(isHttps && opts.allowInvalidCert ? { rejectUnauthorized: false } : {}),
         headers: {
-          "user-agent": USER_AGENT,
+          "user-agent": opts.userAgent ?? USER_AGENT,
           accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
           "accept-encoding": "gzip, deflate, br",
           "accept-language": "en;q=0.9,*;q=0.5",
@@ -261,7 +295,7 @@ function requestOnce(target: ValidatedTarget, deadline: number, maxBytes: number
     );
     const timer = setTimeout(() => fail(new SafeFetchError("timeout", "Request timed out")), remaining);
     req.on("error", (e: NodeJS.ErrnoException) => {
-      fail(new SafeFetchError("network", `Network error${e.code ? ` (${e.code})` : ""}`));
+      fail(new SafeFetchError("network", `Network error${e.code ? ` (${e.code})` : ""}`, e.code));
     });
     req.end();
   });
@@ -279,7 +313,7 @@ export async function safeFetch(url: string, opts: SafeFetchOptions = {}): Promi
   for (let hop = 0; ; hop++) {
     const target = await assertPublicUrl(current);
     target.url.hash = "";
-    const res = await requestOnce(target, deadline, maxBytes);
+    const res = await requestOnce(target, deadline, maxBytes, opts);
     if (res.location) {
       if (hop >= maxRedirects) throw new SafeFetchError("too_many_redirects", `More than ${maxRedirects} redirects`);
       let next: URL;

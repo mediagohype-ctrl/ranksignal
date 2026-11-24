@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { BRAND } from "@/lib/brand";
 import { OG_IMAGE } from "@/lib/seo/metadata";
 import { Analytics } from "@/components/analytics";
+import { AttributionCapture } from "@/components/attribution-capture";
 import "./globals.css";
 
 // Search console ownership tags (Google, Bing Webmaster Tools, Yandex), set per environment.
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           to <body> before React hydrates. This only silences attribute mismatches on <body> itself. */}
       <body className="min-h-screen bg-bg font-sans text-fg antialiased" suppressHydrationWarning>
         {children}
+        <AttributionCapture />
         <Analytics />
       </body>
     </html>

@@ -23,6 +23,10 @@ export interface LeadInput {
   score?: number | null;
   /** Raw client IP — hashed here, never stored. */
   ip?: string | null;
+  /** WhatsApp number, digits with country code. */
+  phone?: string | null;
+  /** UTM tags / fbclid of the visit (src/lib/attribution.ts). */
+  attribution?: Record<string, string | undefined> | null;
 }
 
 const clip = (s: string | null | undefined, max: number) => (s ? s.slice(0, max) : null);
@@ -38,6 +42,8 @@ export function leadRowData(input: LeadInput) {
     message: clip(input.message, 5000),
     score: typeof input.score === "number" && Number.isFinite(input.score) ? Math.round(input.score) : null,
     ipHash: hashIp(input.ip),
+    ...(input.phone ? { phone: clip(input.phone, 20) } : {}),
+    ...(input.attribution && Object.keys(input.attribution).length ? { attribution: input.attribution } : {}),
   };
 }
 
@@ -61,7 +67,7 @@ export function recordLeadInBackground(input: LeadInput): void {
   }
 }
 
-export const LEAD_CSV_FIELDS = ["id", "createdAt", "source", "status", "name", "email", "company", "url", "score", "message", "notes"] as const;
+export const LEAD_CSV_FIELDS = ["id", "createdAt", "source", "status", "name", "email", "phone", "company", "url", "score", "message", "notes"] as const;
 
 function csvCell(v: unknown): string {
   if (v == null) return "";

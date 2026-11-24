@@ -1,9 +1,10 @@
 // Rate limits for unauthenticated public endpoints (in-memory, single instance).
-import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { checkRateLimit, refundRateLimit } from "@/lib/auth/rate-limit";
 
 const HOUR = 60 * 60 * 1000;
 
-export const FREE_CHECK_LIMITS = { perIp: 3, global: 30, windowMs: HOUR } as const;
+/** 10 per IP per hour (failed checks are refunded, repeats of the same site come from the 24-hour cache). */
+export const FREE_CHECK_LIMITS = { perIp: 10, global: 60, windowMs: HOUR } as const;
 export const CONTACT_LIMITS = { perIp: 5, global: 60, windowMs: HOUR } as const;
 export const FREE_CHECK_EMAIL_LIMITS = { perIp: 5, global: 120, windowMs: HOUR } as const;
 
@@ -18,9 +19,15 @@ function check(prefix: string, limits: { perIp: number; global: number; windowMs
   return { allowed: true };
 }
 
-/** 3 checks per IP per hour and 30 per hour across everyone (each check fetches up to ~8 URLs). */
+/** 10 checks per IP per hour and 60 per hour across everyone (each check fetches up to ~8 URLs). */
 export function checkFreeCheckLimit(ip: string, now = Date.now()): LimitResult {
   return check("free-check", FREE_CHECK_LIMITS, ip, now);
+}
+
+/** A check that failed (site unreachable, timed out, not a web page) doesn't count against the visitor or the total. */
+export function refundFreeCheck(ip: string, now = Date.now()): void {
+  refundRateLimit(`free-check:ip:${ip}`, now);
+  refundRateLimit("free-check:global", now);
 }
 
 export function checkContactLimit(ip: string, now = Date.now()): LimitResult {

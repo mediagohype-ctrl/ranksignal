@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PERMANENT_REDIRECTS } from "./src/lib/seo/redirects";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -39,24 +40,17 @@ export const securityHeaders: { key: string; value: string }[] = [
   { key: "Content-Security-Policy", value: csp },
 ];
 
-/**
- * Pages that moved for good (308). Old links, bookmarks and Google results keep working.
- * Keep a row here for as long as the old address may still be linked from anywhere.
- */
-export const PERMANENT_REDIRECTS: { source: string; destination: string }[] = [
-  // 15 Nov 2026: the done-for-you service page got the name customers use.
-  { source: "/services", destination: "/done-for-you" },
-  // The AI visibility checker was the same check as the free website check.
-  { source: "/tools/ai-mention-checker", destination: "/free-check" },
-  // Tools renamed to the words people search for.
-  { source: "/tools/ai-guide-file-maker", destination: "/tools/llms-txt-generator" },
-  { source: "/tools/faq-markup-maker", destination: "/tools/faq-schema-generator" },
-];
+// Pages that moved for good (308): the list lives in src/lib/seo/redirects.ts so blog links can skip the hop too.
+export { PERMANENT_REDIRECTS };
 
 const nextConfig: NextConfig = {
   // Lets a verification build run alongside `next dev` without sharing .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Next 15 streams <title>, meta description, canonical, robots and hreflang into <body> for any user agent it
+  // does not know as a bot. Crawlers outside its list (Screaming Frog, GPTBot, ClaudeBot, PerplexityBot, …) then
+  // see them "outside <head>". Matching every UA makes all metadata render in <head> for everyone.
+  htmlLimitedBots: /.*/,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

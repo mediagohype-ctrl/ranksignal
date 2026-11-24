@@ -44,15 +44,48 @@ export function isTurnstileConfigured(): boolean {
   return SITE_KEY.length > 0;
 }
 
+/** A token made on one page (the homepage box) and handed to the next (/free-check), so the check starts at once. */
+const HANDOFF_KEY = "mwr.fc.token";
+/** Turnstile tokens live 300 s; hand over only fresh ones. */
+const HANDOFF_MAX_AGE_MS = 240_000;
+
+export function storeTokenHandoff(token: string, url: string): void {
+  try {
+    window.sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ token, url: url.trim().toLowerCase(), at: Date.now() }));
+  } catch {
+    /* storage blocked: /free-check gets its own token */
+  }
+}
+
+/** The handed-over token for this website, used once (it is removed). */
+export function takeTokenHandoff(url: string): string | null {
+  try {
+    const raw = window.sessionStorage.getItem(HANDOFF_KEY);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(HANDOFF_KEY);
+    const v = JSON.parse(raw) as { token?: string; url?: string; at?: number };
+    if (!v.token || v.url !== url.trim().toLowerCase() || !v.at || Date.now() - v.at > HANDOFF_MAX_AGE_MS) return null;
+    return v.token;
+  } catch {
+    return null;
+  }
+}
+
 export function Turnstile({
   onToken,
   action,
   className,
+  invisible = false,
 }: {
   /** Called with the token, or "" when it expires/errors. */
   onToken: (token: string) => void;
   action?: string;
   className?: string;
+  /**
+   * Show nothing unless Cloudflare really needs a tap ("interaction-only"): most visitors never see a box. Pair it
+   * with an Invisible or Managed widget in the Cloudflare dashboard.
+   */
+  invisible?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const cb = useRef(onToken);
@@ -69,6 +102,7 @@ export function Turnstile({
           sitekey: SITE_KEY,
           action,
           theme: "auto",
+          ...(invisible ? { appearance: "interaction-only" } : {}),
           callback: (t: string) => cb.current(t),
           "expired-callback": () => cb.current(""),
           "error-callback": () => cb.current(""),
@@ -85,8 +119,8 @@ export function Turnstile({
         }
       }
     };
-  }, [action]);
+  }, [action, invisible]);
 
   if (!SITE_KEY) return null;
-  return <div ref={ref} className={clsx("min-h-[65px]", className)} aria-label="Security check" />;
+  return <div ref={ref} className={clsx(!invisible && "min-h-[65px]", className)} aria-label="Security check" />;
 }

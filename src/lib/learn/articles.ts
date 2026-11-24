@@ -491,7 +491,7 @@ export const ARTICLES: Article[] = [
         id: "format",
         heading: "What does an llms.txt file look like?",
         paragraphs: [
-          "Here is the structure, in plain text: the first line is “# Your Business Name”. Next comes a line starting with “>” that summarises what you do, for whom and where. Then a few bullet points of key facts. Then sections such as “## Services” and “## Optional”, each a list of links in the form “- [Page title](https://example.com/page): one-line description”.",
+          "Here is the structure, in plain text: the first line is “# Your Business Name”. Next comes a line starting with “>” that summarises what you do, for whom and where. Then a few bullet points of key facts. Then sections such as “## Services” and “## Optional”, each a list of links in the form “- [Page title](full page address): one-line description”.",
           `You can see a live example at ${"MyWebRank"}’s own [llms.txt](/llms.txt) and the longer [llms-full.txt](/llms-full.txt).`,
         ],
       },

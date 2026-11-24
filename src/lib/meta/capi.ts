@@ -24,7 +24,7 @@ export function metaPixelId(env: Record<string, string | undefined> = process.en
   return /^\d{5,20}$/.test(v) ? v : DEFAULT_META_PIXEL_ID;
 }
 
-export type MetaEventName = "Lead" | "SubmitApplication" | "Contact" | "CompleteRegistration" | "Subscribe" | "Purchase";
+export type MetaEventName = "Lead" | "SubmitApplication" | "Contact" | "CompleteRegistration" | "Subscribe" | "Purchase" | "ViewContent" | "StartTrial" | "Schedule";
 
 export interface MetaEvent {
   name: MetaEventName;

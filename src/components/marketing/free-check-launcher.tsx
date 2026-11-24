@@ -2,6 +2,7 @@
 // without JavaScript and in server components (homepage hero, CTA bands).
 import clsx from "clsx";
 import { ArrowRight, Globe } from "lucide-react";
+import { FreeCheckTokenPrefetch } from "./free-check-token";
 
 export function FreeCheckLauncher({
   id = "free-check-url",
@@ -10,6 +11,7 @@ export function FreeCheckLauncher({
   className,
   buttonLabel = "Check my website free",
   hint = "Free · No sign-up · Takes about 30 seconds",
+  prefetchToken = false,
 }: {
   id?: string;
   /** Ink (dark) bands: inverted colours. */
@@ -19,6 +21,8 @@ export function FreeCheckLauncher({
   className?: string;
   buttonLabel?: string;
   hint?: string | null;
+  /** Run the security check invisibly in the background and hand its token to /free-check (homepage hero). */
+  prefetchToken?: boolean;
 }) {
   const hero = variant === "hero";
   return (
@@ -93,6 +97,7 @@ export function FreeCheckLauncher({
           </button>
         </div>
       )}
+      {prefetchToken && <FreeCheckTokenPrefetch />}
       {/* Centred under the box: every place the box is used is a centred hero/band. */}
       {hint && <p className={clsx("mt-3 text-center text-small", onDark ? "text-bg/70" : "text-muted")}>{hint}</p>}
     </form>

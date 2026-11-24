@@ -124,8 +124,10 @@ describe("runFreeCheck (injected fetcher, no network/DB)", () => {
     // AI-answer checks are never shown as measured in the free check.
     const AI_ANSWER_CHECKS = ["geo.ai_mention_rate", "geo.ai_citation_rate", "geo.competitor_share", "brand.ai_recommendation", "brand.ai_knowledge"];
     expect(r.pillars.flatMap((p) => p.checks).some((c) => AI_ANSWER_CHECKS.includes(c.id))).toBe(false);
-    // Every fetch had a timeout within the budget.
-    expect(calls.every((c) => (c.opts.timeoutMs ?? 0) > 0 && (c.opts.timeoutMs ?? 0) <= 10_000)).toBe(true);
+    // Every fetch had a timeout within the budget (the homepage gets up to 20 seconds).
+    expect(calls.every((c) => (c.opts.timeoutMs ?? 0) > 0 && (c.opts.timeoutMs ?? 0) <= 20_000)).toBe(true);
+    // Real sites must load: every fetch looks like a normal browser.
+    expect(calls.every((c) => /Chrome\//.test(c.opts.userAgent ?? ""))).toBe(true);
     expect(calls.length).toBeLessThanOrEqual(1 + 3 + 1 + 4);
   });
 
@@ -134,5 +136,47 @@ describe("runFreeCheck (injected fetcher, no network/DB)", () => {
     await expect(runFreeCheck(`${ORIGIN}/`, { fetcher: async () => { throw new SafeFetchError("blocked", "b"); } })).rejects.toBeInstanceOf(FreeCheckError);
     await expect(runFreeCheck(`${ORIGIN}/`, { fetcher: async (u) => ({ ...ok(u, "x"), status: 500 }) })).rejects.toMatchObject({ code: "unreachable" });
     await expect(runFreeCheck(`${ORIGIN}/`, { fetcher: async (u) => ok(u, "%PDF", "application/pdf") })).rejects.toMatchObject({ code: "not_html" });
+  });
+
+  it("tries https, then www / no-www, then http before giving up", async () => {
+    const tried: string[] = [];
+    await expect(
+      runFreeCheck(`${ORIGIN}/`, {
+        fetcher: async (u) => {
+          tried.push(u);
+          throw new SafeFetchError("network", "reset", "ECONNRESET");
+        },
+      }),
+    ).rejects.toMatchObject({ code: "unreachable" });
+    expect(tried).toEqual([`${ORIGIN}/`, "https://www.acme.example/", "http://acme.example/"]);
+  });
+
+  it("opens the www version when the bare domain doesn't answer", async () => {
+    const fetcher = async (url: string) => {
+      if (url === `${ORIGIN}/`) throw new SafeFetchError("timeout", "t");
+      if (url === "https://www.acme.example/") return ok(url, GOOD_HOME);
+      if (url.startsWith("https://www.acme.example/")) return { ...ok(url, "nf"), status: 404 };
+      throw new SafeFetchError("blocked", "off-site");
+    };
+    const r = await runFreeCheck(`${ORIGIN}/`, { fetcher });
+    expect(r.url).toBe("https://www.acme.example/");
+    expect(r.overall.score).not.toBeNull();
+  });
+
+  it("reads a site with an expired SSL certificate and makes that fix #1", async () => {
+    const opts: SafeFetchOptions[] = [];
+    const fetcher = async (url: string, o: SafeFetchOptions) => {
+      opts.push(o);
+      if (!o.allowInvalidCert) throw new SafeFetchError("network", "cert", "CERT_HAS_EXPIRED");
+      if (url === `${ORIGIN}/`) return ok(url, GOOD_HOME);
+      if (url.startsWith(ORIGIN)) return { ...ok(url, "nf"), status: 404 };
+      throw new SafeFetchError("blocked", "off-site");
+    };
+    const r = await runFreeCheck(`${ORIGIN}/`, { fetcher });
+    expect(r.issues[0]).toMatchObject({ id: "tls-certificate-invalid", impact: "high" });
+    expect(r.issues[0]!.title).toMatch(/expired/i);
+    expect(r.snapshot?.facts.https).toBe(false);
+    // Only the first attempt went without the fallback; every later fetch of this site accepts the bad certificate.
+    expect(opts.slice(1).every((o) => o.allowInvalidCert)).toBe(true);
   });
 });

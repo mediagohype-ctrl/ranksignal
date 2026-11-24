@@ -14,7 +14,7 @@ export function leadWhere(sp: SearchParams): Prisma.LeadWhereInput {
   const q = str(sp, "q").slice(0, 120);
   if (q) {
     const c = { contains: q, mode: "insensitive" as const };
-    where.OR = [{ email: c }, { name: c }, { company: c }, { url: c }, { message: c }];
+    where.OR = [{ email: c }, { phone: c }, { name: c }, { company: c }, { url: c }, { message: c }];
   }
   return where;
 }

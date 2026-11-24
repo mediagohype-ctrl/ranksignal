@@ -38,6 +38,24 @@ function sameOrigin(req: NextRequest): boolean {
   }
 }
 
+/** Public origin for redirects: APP_URL when set, else the forwarded host, else the request URL. */
+function publicOrigin(req: NextRequest): string {
+  const appUrl = process.env.APP_URL;
+  if (appUrl) {
+    try {
+      return new URL(appUrl).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (host) {
+    const proto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim() || req.nextUrl.protocol.replace(":", "");
+    return `${proto}://${host}`;
+  }
+  return req.nextUrl.origin;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -65,8 +83,9 @@ export async function middleware(req: NextRequest) {
 
   if (pathname === "/app" || pathname.startsWith("/app/") || pathname === "/admin" || pathname.startsWith("/admin/")) {
     if (!(await hasValidSession(req))) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/login";
+      // Behind the reverse proxy req.nextUrl carries the internal host (https://localhost:3000), so build the
+      // redirect on the public APP_URL instead.
+      const url = new URL("/login", publicOrigin(req));
       url.search = `?next=${encodeURIComponent(pathname + search)}`;
       return NextResponse.redirect(url);
     }
