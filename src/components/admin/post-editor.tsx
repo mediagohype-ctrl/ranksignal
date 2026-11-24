@@ -10,6 +10,7 @@ import { parseMarkdown, relativizeOwnLinks, slugify } from "@/lib/content/markdo
 import type { LinkTarget } from "@/lib/content/link-targets";
 import { scorePost, type Pillar } from "@/lib/content/score";
 import { adminSend } from "./actions";
+import { shrinkImage } from "./shrink-image";
 import type { EditorPost } from "@/lib/content/editor-defaults";
 
 export type { EditorPost } from "@/lib/content/editor-defaults";
@@ -109,8 +110,14 @@ export function PostEditor({
     const target = uploadTarget.current;
     setUploading(target);
     try {
+      // Big photos are shrunk in the browser first (max 1920 px, WebP): faster pages and under the 5 MB limit.
+      const upload = await shrinkImage(file);
+      if (upload.size > 5 * 1024 * 1024) {
+        toast("That image is still over 5 MB. Save it smaller (for example 1600 px wide, JPG or WebP) and try again.", "error");
+        return;
+      }
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", upload);
       const res = await fetch("/api/admin/uploads", { method: "POST", body: fd });
       const data = (await res.json().catch(() => null)) as { item?: { url: string }; error?: { message?: string } } | null;
       if (!res.ok || !data?.item) {
