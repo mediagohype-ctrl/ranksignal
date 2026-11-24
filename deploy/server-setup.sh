@@ -163,16 +163,32 @@ as_app "npx prisma migrate deploy"
 # old version for the whole build. Step 9 swaps it in with a few seconds of downtime. If there is not enough memory
 # to build while the site runs, fall back to the old way: stop the site, then build in place.
 rm -rf "$APP_DIR/.next-build"
-if as_app "NEXT_DIST_DIR=.next-build NODE_OPTIONS=--max-old-space-size=3072 npm run build"; then
+BUILD_LOG=/root/mywebrank-build.log
+set +e
+as_app "NEXT_DIST_DIR=.next-build NODE_OPTIONS=--max-old-space-size=3072 npm run build" 2>&1 | tee "$BUILD_LOG"
+BUILD_STATUS=${PIPESTATUS[0]}
+set -e
+if [ "$BUILD_STATUS" -eq 0 ]; then
   BUILT=side
   ok "built (site stayed online)"
-else
-  warn "building next to the live site failed (low memory?): stopping the site and building in place"
+elif grep -qiE "heap out of memory|ENOMEM|Killed|signal SIGKILL|exit code 137" "$BUILD_LOG"; then
+  # Only a real out-of-memory failure may stop the site to free memory and build in place.
+  warn "building next to the live site ran out of memory: stopping the site and building in place"
   rm -rf "$APP_DIR/.next-build"
   systemctl stop ranksignal 2>/dev/null || true
   as_app "NODE_OPTIONS=--max-old-space-size=3072 npm run build"
   BUILT=inplace
   ok "built"
+else
+  # A code error (e.g. leftover Git conflict markers): never touch the live site. It keeps running the last good
+  # build; fix the error on your PC, commit and deploy again.
+  rm -rf "$APP_DIR/.next-build"
+  echo
+  echo -e "    \033[1;31mThe build failed because of an error in the code (see the messages above).\033[0m"
+  echo "    The live site was NOT changed and is still running the previous version."
+  echo "    Fix the error on your PC (search for <<<<<<< if you just merged), commit, push and deploy again."
+  if ! systemctl is-active --quiet ranksignal; then systemctl start ranksignal 2>/dev/null || true; fi
+  exit 1
 fi
 
 step "9/11 App service (website + background jobs)"

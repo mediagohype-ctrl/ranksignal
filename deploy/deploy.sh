@@ -30,6 +30,12 @@ cd "$(git rev-parse --show-toplevel 2>/dev/null)" || die "run this inside the pr
 [ -f .env ] || die ".env not found in $(pwd) — it holds your keys and the Neon database address"
 command -v ssh >/dev/null || die "ssh not found (use Git Bash on Windows)"
 
+# Block a deploy that would ship unresolved Git merge conflicts (the build would fail on the server).
+if git grep -nE '^(<<<<<<<|>>>>>>>) ' HEAD -- src tests deploy prisma next.config.ts package.json >/dev/null 2>&1; then
+  git grep -nE '^(<<<<<<<|>>>>>>>) ' HEAD -- src tests deploy prisma next.config.ts package.json | head -n 10
+  die "unresolved merge conflict markers (<<<<<<< / >>>>>>>) in the committed code. Fix those files, commit, then deploy again."
+fi
+
 # Warn (don't block) when the shipped code differs from what's on disk or on GitHub.
 if [ -n "$(git status --porcelain)" ]; then
   echo "Note: you have uncommitted changes. Only committed code (git HEAD) is deployed."
