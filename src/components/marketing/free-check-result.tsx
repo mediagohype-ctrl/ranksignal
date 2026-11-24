@@ -9,7 +9,7 @@ import { ArrowRight, CalendarCheck, Check, ChevronDown, CircleAlert, Linkedin, L
 import { Button, Card, Field, Input, LinkButton, SCORE_BAND_CLASS, ScoreRing, SectionHeading, fieldDescribedBy, scoreBand, type ScoreBand } from "@/components/ui";
 import { BRAND } from "@/lib/brand";
 import { hindiFix } from "@/lib/free-check/hi-fixes";
-import { addWebsiteHref, freeCheckLink, linkedinShareHref, resultHost, signupHref, whatsappShareHref } from "@/lib/free-check/share";
+import { addWebsiteHref, freeCheckLink, linkedinShareHref, loginHref, resultHost, signupHref, whatsappShareHref } from "@/lib/free-check/share";
 import { freeCheckStrings, type FreeCheckLang, type FreeCheckStrings } from "@/lib/free-check/strings";
 import type { FreeCheckBenchmark, FreeCheckIssue, FreeCheckLockedIssue, FreeCheckPillar, FreeCheckResult, FreeCheckSnapshot } from "@/lib/free-check/types";
 import type { IssueEffort, IssueImpact } from "@/lib/report/types";
@@ -158,6 +158,20 @@ export function FreeCheckResultView({
         <p className="mt-4 text-xs text-muted">{s.noPromise}</p>
       </section>
 
+<<<<<<< HEAD
+=======
+      {/* 7. Email box. The locked problems above now show real titles, so the blurred placeholders are only used when an
+          older server sends no moreIssues. */}
+      {(leadId || (hidden > 0 && !result.moreIssues)) && (
+        <HiddenFixes
+          count={result.moreIssues ? 0 : hidden}
+          leadId={leadId}
+          login={signedIn ? null : loginHref(result.url)}
+          s={s}
+        />
+      )}
+
+>>>>>>> eb3b71c1c7f6e3be7f98e3d19e6a6b9c216ea0d2
       {/* 8. Share */}
       <ShareRow result={result} host={host} lang={lang} s={s} />
 
@@ -797,6 +811,7 @@ function StickyCta({ problems, href, label, s }: { problems: number; href: strin
   );
 }
 
+<<<<<<< HEAD
 /**
  * Fixes 2+ blurred, with the WhatsApp box on top ("Your full report is ready"). Once a number is saved they are
  * shown in full here, and the report link goes out on WhatsApp.
@@ -829,6 +844,20 @@ function LockedFixes({
       </>
     );
   }
+=======
+/** The email box. When some fixes are not shown it sits on top of blurred placeholders for them. */
+function HiddenFixes({ count, leadId, login, s }: { count: number; leadId: string | null; login: string | null; s: FreeCheckStrings }) {
+  const box = leadId ? (
+    <EmailBox leadId={leadId} login={login} s={s} />
+  ) : (
+    <p className="flex items-center gap-2 rounded-xl bg-surface px-4 py-3 text-small font-medium text-fg shadow-lg">
+      <Lock aria-hidden size={16} className="text-primary" />
+      {s.lockedInFull}
+    </p>
+  );
+  if (count === 0) return <section aria-label={s.emailLabel} className="flex justify-center">{box}</section>;
+  const placeholders = Math.min(count, 3);
+>>>>>>> eb3b71c1c7f6e3be7f98e3d19e6a6b9c216ea0d2
   return (
     <div className="relative mt-6">
       <ol aria-hidden className="pointer-events-none min-h-[22rem] select-none space-y-6 blur-[6px]" inert>
@@ -841,6 +870,7 @@ function LockedFixes({
   );
 }
 
+<<<<<<< HEAD
 /** "98765 43210" from "919876543210". */
 const shownNumber = (n: string) => `${n.slice(-10, -5)} ${n.slice(-5)}`;
 
@@ -868,6 +898,14 @@ export function WhatsAppBox({
   bare?: boolean;
 }) {
   const [phone, setPhone] = useState("");
+=======
+/**
+ * Log in first (the main way to see the full report), with the email form as the fallback for people who
+ * don't want to log in. Signed-in visitors (login = null) only get the email form; they have "Add to my account".
+ */
+function EmailBox({ leadId, login, s }: { leadId: string; login: string | null; s: FreeCheckStrings }) {
+  const [email, setEmail] = useState("");
+>>>>>>> eb3b71c1c7f6e3be7f98e3d19e6a6b9c216ea0d2
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -925,6 +963,7 @@ export function WhatsAppBox({
         }
       }}
     >
+<<<<<<< HEAD
       {!bare && (
         <>
           <h3 className="text-h4 text-fg">{s.waTitle}</h3>
@@ -952,6 +991,37 @@ export function WhatsAppBox({
             className="min-w-0 flex-1"
           />
         </div>
+=======
+      {login && (
+        <div className="mb-5 text-center">
+          <p className="text-h4 text-fg">{s.loginTitle}</p>
+          <p className="mt-1 text-xs text-muted">{s.loginBody}</p>
+          <LinkButton href={login} size="lg" className="mt-4 w-full" iconRight={<ArrowRight />}>
+            {s.loginButton}
+          </LinkButton>
+          <div className="mt-5 flex items-center gap-3 text-xs text-muted">
+            <span aria-hidden className="h-px flex-1 bg-border" />
+            {s.orEmail}
+            <span aria-hidden className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+      )}
+      <Field label={s.emailLabel} htmlFor="fc-email" error={error}>
+        <Input
+          id="fc-email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          lang="en"
+          placeholder={s.emailPlaceholder}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          maxLength={254}
+          invalid={!!error}
+          disabled={busy}
+          aria-describedby={fieldDescribedBy("fc-email", { error })}
+        />
+>>>>>>> eb3b71c1c7f6e3be7f98e3d19e6a6b9c216ea0d2
       </Field>
       <Button type="submit" className="mt-3 w-full" loading={busy} loadingText={s.waSaving} icon={<MessageCircle />}>
         {s.waButton}

@@ -223,6 +223,10 @@ const EN = {
 
   /* ---- result: email box ---- */
   moreFixes: (n: number) => `+${n} more fix${n === 1 ? "" : "es"}`,
+  loginTitle: "See your full report",
+  loginBody: "Log in and we'll open the full report for this website. No account yet? You can make one free on the next screen.",
+  loginButton: "Log in to see the full report",
+  orEmail: "Don't want to log in? Get it by email instead",
   emailLabel: "Email me my full result",
   emailPlaceholder: "you@yourbusiness.com",
   emailSaving: "Saving…",
@@ -466,6 +470,10 @@ const HI: FreeCheckStrings = {
   noPromise: "Google पर कोई जगह या AI में नाम आने का वादा कोई नहीं कर सकता। हम ईमानदारी से मापते हैं।",
 
   moreFixes: (n) => `+${n} और सुधार`,
+  loginTitle: "अपनी पूरी रिपोर्ट देखें",
+  loginBody: "लॉग इन करें, हम इस वेबसाइट की पूरी रिपोर्ट खोल देंगे। अकाउंट नहीं है? अगली स्क्रीन पर मुफ़्त बना सकते हैं।",
+  loginButton: "पूरी रिपोर्ट देखने के लिए लॉग इन करें",
+  orEmail: "लॉग इन नहीं करना? ईमेल से पाएँ",
   emailLabel: "मेरा पूरा नतीजा ईमेल करें",
   emailPlaceholder: "you@yourbusiness.com",
   emailSaving: "सेव हो रहा है…",

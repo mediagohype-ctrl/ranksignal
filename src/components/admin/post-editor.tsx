@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { CheckCircle2, CircleAlert, CircleX, ExternalLink, Eye, Link2, ListChecks, Plus, Save, Search, Send, Trash2, Undo2, Upload, Wand2, X } from "lucide-react";
+import { CheckCircle2, CircleAlert, CircleX, ExternalLink, Eye, ImagePlus, Link2, ListChecks, Plus, Save, Search, Send, Trash2, Undo2, Upload, Wand2, X } from "lucide-react";
 import { Badge, Button, Dialog, Field, Input, Notice, Textarea, useToast, type Tone } from "@/components/ui";
 import { Markdown } from "@/components/marketing/markdown";
 import { parseMarkdown, relativizeOwnLinks, slugify } from "@/lib/content/markdown";
@@ -88,6 +88,52 @@ export function PostEditor({
     setLinkOpen(false);
     toast(`Linked to ${t.path}`, "success");
   };
+  // ---- images: upload to Cloudflare R2 (/api/admin/uploads), then use the public URL
+  const fileRef = useRef<HTMLInputElement>(null);
+  const uploadTarget = useRef<"cover" | "body">("body");
+  const [uploading, setUploading] = useState<"cover" | "body" | null>(null);
+  const pickImage = (target: "cover" | "body") => {
+    if (target === "body") rememberSelection();
+    uploadTarget.current = target;
+    fileRef.current?.click();
+  };
+  /** "best-cake-shop.jpg" → "Best cake shop": a starting description the writer can improve. */
+  const altFromName = (name: string) => {
+    const t = name.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : "Image description";
+  };
+  const onImageChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const target = uploadTarget.current;
+    setUploading(target);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/uploads", { method: "POST", body: fd });
+      const data = (await res.json().catch(() => null)) as { item?: { url: string }; error?: { message?: string } } | null;
+      if (!res.ok || !data?.item) {
+        toast(data?.error?.message ?? "Upload failed. Please try again.", "error");
+        return;
+      }
+      if (target === "cover") {
+        set("coverImageUrl", data.item.url);
+        toast("Cover image uploaded", "success");
+      } else {
+        const alt = altFromName(file.name);
+        const md = `\n\n![${alt}](${data.item.url})\n\n`;
+        // Select the description so the writer can type a better one straight away (Google and screen readers read it).
+        insertAtSelection(md, 4, 4 + alt.length);
+        toast("Image added. Write a short description of it in the [ ] brackets.", "success");
+      }
+    } catch {
+      toast("We couldn't reach the server. Check your connection and try again.", "error");
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const insertOutsideLink = () => {
     const words = rememberSelection() || "source name";
     const md = `[${words}](https://)`;
@@ -270,8 +316,19 @@ export function PostEditor({
             <Field label="Author" htmlFor="pe-author">
               <Input id="pe-author" value={p.authorName} onChange={(e) => set("authorName", e.target.value)} />
             </Field>
-            <Field label="Cover image (https URL, 1200×630)" htmlFor="pe-cover" optional>
-              <Input id="pe-cover" type="url" value={p.coverImageUrl} onChange={(e) => set("coverImageUrl", e.target.value)} />
+            <Field label="Cover image (1200×630)" htmlFor="pe-cover" optional hint="Upload an image, or paste an https address.">
+              <div className="flex gap-2">
+                <Input id="pe-cover" type="url" value={p.coverImageUrl} onChange={(e) => set("coverImageUrl", e.target.value)} />
+                {canWrite && (
+                  <Button type="button" variant="secondary" icon={<Upload />} loading={uploading === "cover"} onClick={() => pickImage("cover")}>
+                    Upload
+                  </Button>
+                )}
+              </div>
+              {p.coverImageUrl.trim() && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.coverImageUrl} alt="Cover preview" className="mt-2 aspect-[1200/630] w-full max-w-sm rounded-lg border border-border object-cover" />
+              )}
             </Field>
           </div>
         </section>
@@ -338,6 +395,18 @@ export function PostEditor({
                   <Button type="button" size="xs" variant="ghost" icon={<ExternalLink />} onClick={insertOutsideLink} title="Link a study, docs or data source">
                     Outside link
                   </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    icon={<ImagePlus />}
+                    loading={uploading === "body"}
+                    onClick={() => pickImage("body")}
+                    title="Upload an image and put it where your cursor is"
+                  >
+                    Insert image
+                  </Button>
+                  <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" className="hidden" onChange={onImageChosen} />
                   <span className="text-xs text-muted">
                     Links to our pages:{" "}
                     <strong className={score.stats.internalLinks >= 2 ? "text-success" : "text-danger"}>{score.stats.internalLinks}</strong> (aim for 2+)
