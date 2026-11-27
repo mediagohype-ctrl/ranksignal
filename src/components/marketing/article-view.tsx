@@ -156,6 +156,11 @@ export function ArticleView({ a, related, lang = "en" }: { a: Article; related: 
                       ))}
                     </ol>
                   )}
+                  {s.code && (
+                    <pre className="not-prose overflow-x-auto rounded-xl border border-border bg-surface-2 p-4 text-[0.8125rem] leading-relaxed text-fg">
+                      <code>{s.code}</code>
+                    </pre>
+                  )}
                 </section>
               ))}
               <section id="faq" aria-labelledby="faq-h">

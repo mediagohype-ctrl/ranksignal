@@ -28,7 +28,7 @@ export default function FaqGeneratorPage() {
           {
             "@context": "https://schema.org",
             "@type": "WebApplication",
-            name: "AI FAQ generator",
+            name: "FAQ question generator",
             url: `${base}${PATH}`,
             applicationCategory: "BusinessApplication",
             operatingSystem: "Any",
@@ -37,16 +37,20 @@ export default function FaqGeneratorPage() {
           },
           faqLdFromQa(FAQ),
           webPageLd(PATH, { base }),
-          breadcrumbLd([{ name: "Free tools", path: "/tools" }, { name: "FAQ generator", path: PATH }], base),
+          breadcrumbLd([{ name: "Free tools", path: "/tools" }, { name: "FAQ question generator", path: PATH }], base),
         ]}
       />
       <PageHero
         eyebrow="Free AI tool"
-        title="Free AI FAQ generator with schema code"
+        title="Free FAQ question generator"
         intro={
           <p>
             Give us a page address or paste your text. Get 6–8 questions your customers really ask, with short answers taken only
-            from your own words, plus FAQ code to paste on the page.
+            from your own words. Already have your questions? Turn them into code with the{" "}
+            <Link href="/tools/faq-schema-generator" className="font-medium text-primary underline-offset-4 hover:underline">
+              FAQ schema generator
+            </Link>
+            .
           </p>
         }
       />
@@ -95,7 +99,7 @@ export default function FaqGeneratorPage() {
       <Section labelledBy="fg-how">
         <div className={PROSE}>
           <h2 id="fg-how" className="text-h2 text-fg">
-            How to use the FAQ generator
+            How to use the FAQ question generator
           </h2>
           <ol className="mt-6 list-decimal space-y-3 pl-5">
             <li>
@@ -135,7 +139,7 @@ export default function FaqGeneratorPage() {
           </div>
         </div>
       </section>
-      <QaSection id="fg-faq" tone="surface" title="FAQ generator: common questions" items={FAQ}>
+      <QaSection id="fg-faq" tone="surface" title="FAQ question generator: common questions" items={FAQ}>
         <p className="text-body leading-relaxed text-fg-soft">
           See which of your pages already have FAQ code, and what else to fix:{" "}
           <Link href="/free-check" className="font-medium text-primary underline-offset-4 hover:underline">

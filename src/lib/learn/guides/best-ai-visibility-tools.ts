@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "best-ai-visibility-tools",
   title: "Best AI visibility tools for small businesses (and how to choose one)",
-  metaTitle: "Best AI visibility tools for small businesses",
+  metaTitle: "Best AI Visibility Tools for Small Businesses (2026)",
   description:
-    "The best AI visibility tools for small businesses compared fairly: free options, big SEO suites, dedicated AI trackers and MyWebRank, plus a checklist.",
+    "Compare the best AI visibility and generative engine optimization tools for small businesses. Features, pricing and which one fits your budget.",
   keywords: [
     "best AI visibility tools for small businesses",
     "generative engine optimization tools",

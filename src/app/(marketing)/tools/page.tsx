@@ -54,7 +54,7 @@ const TOOL_GROUPS: { id: string; title: string; intro: string; tools: Tool[] }[]
     tools: [
       { href: "/tools/seo-title-generator", preview: "titles", icon: <Type />, title: "SEO title generator", body: "5 AI-written title ideas that fit Google's limit, keyword first." },
       { href: "/tools/meta-description-generator", preview: "descriptions", icon: <AlignLeft />, title: "Meta description generator", body: "5 AI-written Google summaries in the right length, with a reason to click." },
-      { href: "/tools/faq-generator", preview: "faq", icon: <Sparkles />, title: "AI FAQ generator", body: "Turn a page into real customer questions and short answers, plus FAQ code." },
+      { href: "/tools/faq-generator", preview: "faq", icon: <Sparkles />, title: "FAQ question generator", body: "Turn a page into the questions customers really ask, with short answers from your own text." },
       { href: "/tools/faq-schema-generator", preview: "faq-code", icon: <MessageCircleQuestion />, title: "FAQ schema generator", body: "Type your own questions and answers and get FAQPage code to paste." },
     ],
   },

@@ -16,10 +16,11 @@ describe("static page snippets", () => {
     expect(new Set(titles.map(([, t]) => t)).size).toBe(titles.length);
   });
 
-  it("every description is 115–155 characters and unique", () => {
+  // Upper bound 160: Google cuts snippets at roughly 155–160 characters (the SEO sheet's copy uses up to 157).
+  it("every description is 115–160 characters and unique", () => {
     for (const [path, p] of pages) {
       expect(p.description.length, `${path}: ${p.description}`).toBeGreaterThanOrEqual(115);
-      expect(p.description.length, `${path}: ${p.description}`).toBeLessThanOrEqual(155);
+      expect(p.description.length, `${path}: ${p.description}`).toBeLessThanOrEqual(160);
     }
     expect(new Set(pages.map(([, p]) => p.description)).size).toBe(pages.length);
   });

@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "seo-audit-cost-india",
   title: "SEO audit cost in India: what drives the price and what you should get",
-  metaTitle: "SEO audit cost in India: what you should pay",
+  metaTitle: "SEO Audit Cost in India: Technical SEO Audit Prices",
   description:
-    "SEO audit cost in India depends on pages, depth and who does it. What drives the price, what a good audit includes, red flags, and free and paid options.",
+    "How much an SEO audit costs in India in 2026. Technical SEO audit price ranges, what's included at each level, and red flags to avoid.",
   keywords: [
     "SEO audit cost in India",
     "technical SEO audit cost",

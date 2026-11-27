@@ -211,7 +211,11 @@ export default function AiVisibilityTrackingPage() {
               An AI visibility tool for agencies
             </h2>
             <p className="mt-4 text-lead text-fg-soft">
-              Looking after many clients? Our {CUSTOM_PLAN.name} plan is built around you, for agencies and bigger companies.
+              Looking after many clients? Our {CUSTOM_PLAN.name} plan is built around you, for agencies and bigger companies. See{" "}
+              <Link href="/ai-visibility-for-agencies" className="font-medium text-primary underline-offset-4 hover:underline">
+                AI visibility for agencies
+              </Link>
+              .
             </p>
             <p className="mt-6">
               <a

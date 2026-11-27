@@ -33,9 +33,11 @@ const LEGAL = "2026-11-04";
 
 export const PAGE_SEO = {
   "/": {
-    title: "Free SEO & AI Visibility Checker",
+    // Home targets the brand; /free-check owns "free website SEO checker" and the tool page owns "AI visibility checker".
+    title: "MyWebRank: Free SEO & AI Search Visibility Check",
+    absolute: true,
     description:
-      "See if Google and ChatGPT can find your business. Get your free Found Score and 3 easy fixes in 30 seconds. No sign-up needed.",
+      "MyWebRank shows if Google, ChatGPT, Gemini and Perplexity can find your business. Get your free score and top 3 fixes in 30 seconds. No sign up.",
     published: "2026-10-28",
     updated: "2026-11-13",
   },
@@ -69,7 +71,7 @@ export const PAGE_SEO = {
   "/free-check": {
     title: "Free Website SEO Checker: Google + AI Report",
     description:
-      "Check your website free. See your SEO, AEO, GEO and Brand scores and the 3 fixes that matter most. Takes about 30 seconds, no sign-up.",
+      "Check your website free. Get SEO, AEO, GEO and brand scores in 30 seconds, plus the 3 fixes that will move your rankings most.",
     published: "2026-10-28",
     updated: "2026-11-13",
   },
@@ -83,16 +85,16 @@ export const PAGE_SEO = {
   // /tools/ai-mention-checker now redirects to /tools/ai-visibility-checker (src/lib/seo/redirects.ts).
   // The two makers below moved to the names people search for; the old addresses redirect.
   "/tools/faq-schema-generator": {
-    title: "Free FAQ Schema Generator for JSON-LD",
+    title: "FAQ Schema Generator: Free JSON-LD Markup Tool",
     description:
-      "Convert your existing questions and answers into FAQPage JSON-LD. Copy the structured data and add it to the page where your FAQs appear.",
+      "Free FAQ schema markup generator. Add your questions, get valid FAQPage JSON-LD code, and paste it into your site. Works with WordPress, Shopify and Next.js.",
     published: "2026-11-04",
     updated: "2026-11-20",
   },
   "/tools/llms-txt-generator": {
-    title: "Free llms.txt Generator for Websites",
+    title: "Free llms.txt Generator & Checker",
     description:
-      "Create an llms.txt file with your site summary and links to key pages. Copy the formatted text and publish it at the root of your website.",
+      "Free llms.txt file generator. Create your llms.txt in 2 minutes, copy it to your site root, then test it with our llms.txt checker. No sign up.",
     published: "2026-11-04",
     updated: "2026-11-20",
   },
@@ -111,9 +113,9 @@ export const PAGE_SEO = {
     updated: "2026-11-20",
   },
   "/tools/schema-checker": {
-    title: "Free Schema Markup Checker for JSON-LD",
+    title: "Schema Checker: Test FAQ & JSON-LD Markup Free",
     description:
-      "Check the JSON-LD structured data on any web page. See which schema types are present and find syntax errors or missing fields to fix.",
+      "Free FAQ schema checker. Test any page's JSON-LD for errors, missing fields and FAQPage issues, then fix them before Google sees them.",
     published: TODAY,
     updated: "2026-11-20",
   },
@@ -125,9 +127,9 @@ export const PAGE_SEO = {
     updated: "2026-11-20",
   },
   "/tools/ai-crawler-checker": {
-    title: "Free AI Crawler Checker for Websites",
+    title: "AI Crawler Checker: Free AI Bot Access Test",
     description:
-      "Check which AI crawlers your website allows or blocks. Review robots.txt rules for OpenAI, Anthropic, Perplexity and other AI platforms.",
+      "Free AI bot access checker. See if GPTBot, ClaudeBot, PerplexityBot and Google-Extended can crawl your site or are blocked by robots.txt.",
     published: TODAY,
     updated: "2026-11-20",
   },
@@ -160,11 +162,12 @@ export const PAGE_SEO = {
     updated: "2026-11-20",
   },
   "/tools/faq-generator": {
-    title: "Free AI FAQ Generator for Website Content",
+    // Targets "FAQ question generator"; "FAQ schema generator" belongs to /tools/faq-schema-generator.
+    title: "FAQ Question Generator: Free AI Tool",
     description:
-      "Turn a page or topic into customer questions and concise answers. Review and edit the AI-generated FAQ draft, then copy the accompanying schema code.",
+      "Free AI FAQ question generator. Turn a page or topic into the questions your customers really ask, with short answers you can edit and publish.",
     published: TODAY,
-    updated: "2026-11-20",
+    updated: "2026-11-27",
   },
   "/compare": {
     title: "Compare MyWebRank With Other SEO Tools",
@@ -202,18 +205,25 @@ export const PAGE_SEO = {
     updated: TODAY,
   },
   "/tools/ai-visibility-checker": {
-    title: "Free AI Visibility Checker for ChatGPT & Gemini",
+    title: "Free AI Visibility Checker for ChatGPT",
     description:
-      "Check if ChatGPT, Gemini and Perplexity mention your business. Free AI visibility report with your score, who gets named instead, and what to fix.",
+      "Free ChatGPT visibility checker. See if ChatGPT, Gemini and Perplexity mention your brand, which competitors they name instead, and how to fix it.",
     published: "2026-11-24",
     updated: "2026-11-24",
   },
   "/features/ai-visibility-tracking": {
-    title: "AI Visibility Tracking & Brand Monitoring Tool",
+    title: "ChatGPT Brand Mention Tracking & GEO Monitoring",
     description:
-      "Track how often ChatGPT, Gemini and Perplexity mention your brand. Weekly AI visibility tracking and GEO monitoring for businesses and agencies.",
+      "Track how often ChatGPT, Gemini, Perplexity and Google AI Overviews mention your brand. A GEO monitoring tool with weekly mention rates and competitor share.",
     published: "2026-11-24",
     updated: "2026-11-24",
+  },
+  "/ai-visibility-for-agencies": {
+    title: "AI Visibility Tool for Agencies",
+    description:
+      "Track AI visibility for every client in one dashboard. Monitor ChatGPT and Gemini brand mentions, GEO scores and fixes, with reports your clients understand.",
+    published: "2026-11-27",
+    updated: "2026-11-27",
   },
   "/seo-services-small-business": {
     title: "SEO Services for Small Businesses in India",

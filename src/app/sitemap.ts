@@ -5,9 +5,14 @@ import { publishedPosts } from "@/lib/content/posts";
 // Dynamic so URLs use APP_URL at runtime and newly published blog posts appear immediately.
 export const dynamic = "force-dynamic";
 
+// Pages that stay public (and in llms.txt / IndexNow) but are left out of the sitemap.
+const SITEMAP_EXCLUDED = new Set(["/privacy", "/terms", "/docs/api"]);
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await publishedPosts({ take: 5000 });
-  const entries = buildSitemap(undefined, undefined, blogRoutes(posts));
+  const entries = buildSitemap(undefined, undefined, blogRoutes(posts)).filter(
+    (e) => !SITEMAP_EXCLUDED.has(new URL(e.url).pathname),
+  );
   // The /blog index changes whenever a post does: give it the newest post's date.
   const newest = posts.reduce<Date | null>((d, p) => (!d || p.updatedAt > d ? p.updatedAt : d), null);
   if (newest) {

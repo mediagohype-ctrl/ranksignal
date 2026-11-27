@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "how-to-rank-on-chatgpt",
   title: "How to rank your website on ChatGPT in 2026",
-  metaTitle: "How to Rank Your Website on ChatGPT (2026)",
+  metaTitle: "How to Rank Your Website on ChatGPT in 2026",
   description:
-    "How to rank a website on ChatGPT: how ChatGPT search picks sources, how to get cited and named in recommended lists, and how to measure it for free.",
+    "How to rank on ChatGPT in 2026: how ChatGPT search picks sources, what gets your pages cited, and how to measure your ChatGPT ranking free.",
   keywords: ["how to rank website on chatgpt", "how to rank on chatgpt in 2026", "chatgpt search ranking", "get cited by chatgpt"],
   published: "2026-11-24",
   updated: "2026-11-24",

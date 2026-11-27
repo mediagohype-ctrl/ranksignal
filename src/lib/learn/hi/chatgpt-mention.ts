@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "chatgpt-mention",
   title: "ChatGPT में अपना बिज़नेस कैसे लाएँ? 6 आसान स्टेप",
-  metaTitle: "ChatGPT में अपना बिज़नेस कैसे लाएँ? गाइड",
+  metaTitle: "ChatGPT Par Apna Business Kaise Laayein?",
   description:
-    "ChatGPT, Gemini और Perplexity के जवाबों में अपने बिज़नेस का नाम आने की संभावना कैसे बढ़ाएँ: AI crawler, Bing index, साफ़ पहचान, रिव्यू और माप।",
+    "ChatGPT पर अपना बिज़नेस कैसे दिखाएँ? आसान हिंदी गाइड: AI recommendations के लिए क्या करें और free में कैसे check करें।",
   keywords: [
     "ChatGPT में अपना बिज़नेस कैसे लाएँ",
     "chatgpt me business kaise laye",

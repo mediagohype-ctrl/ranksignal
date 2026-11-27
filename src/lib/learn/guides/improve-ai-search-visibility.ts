@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "improve-ai-search-visibility",
   title: "How to improve AI search visibility: 9 steps for small businesses",
-  metaTitle: "How to improve AI search visibility (9 steps)",
+  metaTitle: "How to Improve AI Search Visibility: Step-by-Step",
   description:
-    "How to improve AI search visibility in 9 ordered steps: let AI robots in, state clear facts, answer first, add structured data and llms.txt, then measure.",
+    "How to improve your AI search visibility on ChatGPT, Gemini, Perplexity and Google AI Overviews. Practical steps any business can start today.",
   keywords: [
     "how to improve AI search visibility",
     "improve AI visibility",

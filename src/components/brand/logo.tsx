@@ -55,21 +55,24 @@ const SIZES = {
   lg: { mark: 40, text: "text-[26px]", gap: "gap-3" },
 } as const;
 
+/** "responsive" = sm on phones, md from the sm breakpoint up (one element, so one logo link in the header). */
+const RESPONSIVE = { mark: 30, markClass: "max-sm:size-6", text: "text-[16px] sm:text-[19px]", gap: "gap-2 sm:gap-2.5" };
+
 /** Mark + two-tone wordmark (MYWEB in ink, RANK in brand indigo). `tone="dark"` is for ink/navy backgrounds. */
 export function LogoLockup({
   size = "md",
   tone = "light",
   className,
 }: {
-  size?: keyof typeof SIZES;
+  size?: keyof typeof SIZES | "responsive";
   tone?: "light" | "dark";
   className?: string;
 }) {
-  const s = SIZES[size];
+  const s = size === "responsive" ? RESPONSIVE : { ...SIZES[size], markClass: undefined };
   const [first, second] = wordmarkParts();
   return (
     <span className={clsx("inline-flex items-center", s.gap, className)} aria-label={BRAND.name} role="img">
-      <LogoMark size={s.mark} />
+      <LogoMark size={s.mark} className={s.markClass} />
       <span
         aria-hidden
         className={clsx("font-[750] leading-none tracking-[0.01em]", s.text, tone === "dark" ? "text-white" : "text-fg")}

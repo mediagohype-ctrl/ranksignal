@@ -30,7 +30,6 @@ function WhatsAppLink({ className }: { className?: string }) {
     <a
       href={WHATSAPP}
       {...newTabProps(WHATSAPP)}
-      aria-label="Chat with us on WhatsApp (opens in a new tab)"
       title="Chat with us on WhatsApp"
       className={clsx(
         "inline-flex size-9 items-center justify-center rounded-full bg-[#25D366]/12 text-[#128C7E] ring-1 ring-[#25D366]/30 transition-colors hover:bg-[#25D366]/20",
@@ -38,6 +37,8 @@ function WhatsAppLink({ className }: { className?: string }) {
       )}
     >
       <MessageCircle aria-hidden size={18} strokeWidth={2.25} />
+      {/* Real anchor text, so crawlers see "Chat on WhatsApp" instead of the raw wa.me address. */}
+      <span className="sr-only">Chat with us on WhatsApp (opens in a new tab)</span>
     </a>
   );
 }
@@ -66,9 +67,8 @@ export function SiteHeader() {
     <header className="fixed inset-x-0 top-0 z-40 border-b border-border/80 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/85">
       <div className="container-marketing flex h-16 items-center justify-between gap-3 lg:h-[72px] lg:gap-6">
         <div className="min-w-0 shrink">
-          {/* Smaller logo on phones so the button and menu always fit beside it. */}
-          <Logo size="sm" className="sm:hidden" />
-          <Logo className="max-sm:hidden" />
+          {/* One logo link (smaller on phones so the button and menu always fit beside it). */}
+          <Logo size="responsive" />
         </div>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">

@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "track-brand-mentions-in-chatgpt",
   title: "How to track brand mentions in ChatGPT (and check if it mentions your business)",
-  metaTitle: "How to Track Brand Mentions in ChatGPT (Free)",
+  metaTitle: "How to Track Brand Mentions in ChatGPT (Free Method)",
   description:
-    "How to track brand mentions in ChatGPT: check if it names your business with a free tool or by hand, why answers vary, and how to track them weekly.",
+    "How to check if ChatGPT mentions your business and track brand mentions over time. Manual method, prompts to test, and free tools.",
   keywords: [
     "how to track brand mentions in ChatGPT",
     "how to check if ChatGPT mentions my business",

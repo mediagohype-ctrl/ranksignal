@@ -11,6 +11,7 @@ import { article as bestAiVisibilityTools } from "./guides/best-ai-visibility-to
 import { article as robotsTxtForAiCrawlers } from "./guides/robots-txt-for-ai-crawlers";
 import { article as howToRankOnChatgpt } from "./guides/how-to-rank-on-chatgpt";
 import { article as googleAiOverview } from "./guides/google-ai-overview";
+import { article as faqSchemaExample } from "./guides/faq-schema-example";
 
 /** Guides added 24 Nov 2026 (SEO keyword plan), one file each in ./guides. */
 const GUIDES = [
@@ -23,6 +24,7 @@ const GUIDES = [
   robotsTxtForAiCrawlers,
   howToRankOnChatgpt,
   googleAiOverview,
+  faqSchemaExample,
 ];
 
 
@@ -35,6 +37,8 @@ export type ArticleSection = {
   steps?: string[];
   /** A comparison table (rendered as a real <table> — answer engines lift tables readily). */
   table?: { head: string[]; rows: string[][] };
+  /** A copy-paste code sample (rendered as <pre><code>, after the other blocks). */
+  code?: string;
 };
 
 export type Article = {
@@ -165,9 +169,9 @@ const CORE_ARTICLES: Article[] = [
   {
     slug: "what-is-geo",
     title: "What is GEO (Generative Engine Optimization) in SEO?",
-    metaTitle: "What is GEO in SEO? Simple guide for 2026",
+    metaTitle: "What Is GEO in SEO? Generative Engine Optimization",
     description:
-      "What is GEO in SEO? Generative Engine Optimization gets your business named in ChatGPT, Gemini and Perplexity answers. How AI picks sources, what to fix.",
+      "What GEO means in SEO, how generative engine optimization works, and simple steps to get your brand named in ChatGPT, Gemini and AI Overviews.",
     keywords: ["what is GEO", "what is GEO in SEO", "generative engine optimization", "GEO SEO", "AI search optimization", "LLM SEO"],
     published: "2026-11-09",
     updated: "2026-11-24",
@@ -239,9 +243,9 @@ const CORE_ARTICLES: Article[] = [
   {
     slug: "seo-vs-aeo-vs-geo",
     title: "SEO vs AEO vs GEO: what’s the difference?",
-    metaTitle: "SEO vs AEO vs GEO: the difference explained",
+    metaTitle: "SEO vs AEO vs GEO: Differences Explained Simply",
     description:
-      "SEO ranks your pages, AEO gets your answer quoted, GEO gets your brand named in AI answers. Goals, tactics and metrics compared, and which to start with.",
+      "SEO vs AEO vs GEO in plain words: what each one optimises for, where they overlap, and which your business needs first.",
     keywords: ["SEO vs AEO vs GEO", "AEO vs GEO", "SEO vs GEO", "difference between SEO AEO GEO", "SEO AEO GEO"],
     published: "2026-11-09",
     updated: "2026-11-24",
@@ -312,9 +316,9 @@ const CORE_ARTICLES: Article[] = [
   {
     slug: "how-to-get-mentioned-by-chatgpt",
     title: "How to get my business on ChatGPT (and Gemini and Perplexity)",
-    metaTitle: "How to get my business on ChatGPT: 6 steps",
+    metaTitle: "How to Get Your Business on ChatGPT and Recommended",
     description:
-      "How to get my business on ChatGPT, Gemini and Perplexity: let AI crawlers in, get indexed, be clear about who you are, earn mentions and track the results.",
+      "How to get your business found and recommended on ChatGPT. The reviews, listings, content and schema AI looks for, plus a free way to check.",
     keywords: [
       "how to get my business on ChatGPT",
       "how to get your business recommended on ChatGPT",
@@ -444,8 +448,8 @@ const CORE_ARTICLES: Article[] = [
         paragraphs: [],
         bullets: [
           "Unique, descriptive title tag on every page, with the main phrase near the start.",
-          "Meta description that summarises the page and invites the click.",
-          "Exactly one H1 that matches the page’s topic; logical H2/H3 structure.",
+          "Meta description that summarises the page and invites the click (check both with the [meta tag checker](/tools/meta-tag-checker), or draft one with the [meta description generator](/tools/meta-description-generator)).",
+          "Exactly one H1 that matches the page’s topic; logical H2/H3 structure (see the outline with the [heading checker](/tools/heading-checker)).",
           "Descriptive image alt text and compressed images.",
           "Clean, readable URLs.",
           "Internal links from related pages using descriptive anchor text.",
@@ -533,11 +537,11 @@ const CORE_ARTICLES: Article[] = [
   },
   {
     slug: "llms-txt-guide",
-    title: "What is llms.txt? Examples, format and whether you need one",
-    metaTitle: "llms.txt example: 3 sample files and format",
+    title: "llms.txt in SEO: what it is, what it does and whether you need one",
+    metaTitle: "llms.txt in SEO: What It Is and Does It Help?",
     description:
-      "llms.txt examples for a bakery, a B2B firm and an online store, the llmstxt.org format line by line, whether it helps SEO, and a free llms.txt generator.",
-    keywords: ["llms.txt example", "llms.txt in seo", "llms.txt", "what is llms.txt", "llms.txt generator", "llms-full.txt"],
+      "What llms.txt does for SEO and AI search, what it can't do, and how to set it up the right way. An honest guide for site owners.",
+    keywords: ["llms.txt in SEO", "what is llms.txt", "does llms.txt help SEO", "llms.txt", "llms-full.txt"],
     published: "2026-11-09",
     updated: "2026-11-24",
     answer:
@@ -769,6 +773,7 @@ export function articleToMarkdown(a: Article, base: string): string {
     }
     if (s.bullets) out.push(...s.bullets.map((b) => `- ${fixLinks(b)}`), "");
     if (s.steps) out.push(...s.steps.map((b, i) => `${i + 1}. ${fixLinks(b)}`), "");
+    if (s.code) out.push("```", s.code, "```", "");
   }
   out.push("## FAQ", "");
   for (const f of a.faqs) out.push(`### ${f.q}`, "", f.a, "");

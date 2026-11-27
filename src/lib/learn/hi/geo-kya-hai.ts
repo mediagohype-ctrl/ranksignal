@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "geo-kya-hai",
   title: "GEO क्या है? (GEO kya hai) Generative Engine Optimization आसान भाषा में",
-  metaTitle: "GEO kya hai? Generative Engine Optimization",
+  metaTitle: "GEO Kya Hai? Generative Engine Optimization Hindi Mein",
   description:
-    "जिओ (GEO) क्या है, AI असिस्टेंट किन बिज़नेस का नाम लेते हैं और ChatGPT, Gemini में नाम आने की संभावना बढ़ाने के लिए पहले क्या ठीक करें। आसान गाइड।",
+    "GEO kya hai? आसान हिंदी में जानें Generative Engine Optimization क्या होता है और ChatGPT, Gemini में आपका बिज़नेस कैसे दिखे।",
   keywords: [
     "GEO kya hai",
     "जिओ क्या है",

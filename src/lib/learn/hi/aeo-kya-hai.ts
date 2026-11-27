@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "aeo-kya-hai",
   title: "AEO क्या है? (AEO kya hai) Answer Engine Optimization आसान भाषा में",
-  metaTitle: "AEO kya hai? Answer Engine Optimization",
+  metaTitle: "AEO Kya Hai? AEO Ka Full Form aur Matlab",
   description:
-    "AEO क्या होता है, इसका full form क्या है और यह SEO से कैसे अलग है। छोटे बिज़नेस के लिए आसान भाषा में AEO की पूरी गाइड और चेकलिस्ट।",
+    "AEO kya hota hai? AEO ka full form Answer Engine Optimization hai. आसान हिंदी में जानें AEO कैसे काम करता है और SEO से कैसे अलग है।",
   keywords: [
     "AEO kya hai",
     "aeo kya hota hai",

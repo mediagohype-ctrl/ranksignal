@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "how-to-measure-geo",
   title: "How to measure generative engine optimization (GEO): metrics, method and a simple tracker",
-  metaTitle: "How to Measure Generative Engine Optimization",
+  metaTitle: "How to Measure Generative Engine Optimization (GEO)",
   description:
-    "How to measure generative engine optimization: the 5 GEO metrics that matter, how to sample questions, how often to check, and a simple tracking sheet.",
+    "How to measure GEO: mention rate, citation rate, share of voice and AI referral traffic. The metrics that show whether your GEO is working.",
   keywords: [
     "how to measure generative engine optimization",
     "how to measure GEO",

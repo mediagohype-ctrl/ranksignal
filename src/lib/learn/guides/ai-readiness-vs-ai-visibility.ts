@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "ai-readiness-vs-ai-visibility",
   title: "AI readiness vs AI visibility: what’s the difference, and which should you check first?",
-  metaTitle: "AI Readiness vs AI Visibility: the Difference",
+  metaTitle: "AI Readiness vs AI Visibility: What's the Difference?",
   description:
-    "AI readiness vs AI visibility: readiness means AI can read your site; visibility means AI answers name you. A comparison table and how to check both.",
+    "AI readiness is whether AI can read your site. AI visibility is whether AI actually recommends you. Learn the difference and how to improve both.",
   keywords: [
     "AI readiness vs AI visibility",
     "AI readiness check",

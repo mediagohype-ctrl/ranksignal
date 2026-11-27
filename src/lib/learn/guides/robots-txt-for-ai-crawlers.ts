@@ -3,12 +3,12 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "robots-txt-for-ai-crawlers",
   title: "robots.txt for AI crawlers: allow or block GPTBot, ClaudeBot and more",
-  metaTitle: "robots.txt for AI Crawlers: GPTBot & More",
+  metaTitle: "robots.txt for AI Crawlers: GPTBot User Agent & Rules",
   description:
-    "robots.txt for AI crawlers explained: every AI bot user agent, what GPTBot does, and copy-paste rules to block AI training but stay in AI answers.",
+    "Copy-paste robots.txt rules for AI crawlers. Find the GPTBot user agent, block AI training, or allow ChatGPT and Perplexity to cite your site.",
   keywords: ["robots.txt for AI crawlers", "robots txt ai block", "gptbot robots.txt", "gptbot user agent"],
   published: "2026-11-24",
-  updated: "2026-11-24",
+  updated: "2026-11-27",
   answer:
     "robots.txt is a plain text file at yoursite.com/robots.txt that tells robots which pages they may read. AI companies use separate robots (user agents) for search answers and for model training, so you can block training — for example “User-agent: GPTBot” then “Disallow: /” — while still letting OAI-SearchBot and PerplexityBot show your site in AI answers.",
   keyPoints: [
@@ -59,6 +59,22 @@ export const article: Article = {
         "Names are not case-sensitive, but copy them exactly as shown to avoid typos.",
         "Companies add and rename robots from time to time. Check the official pages (OpenAI’s “Overview of OpenAI crawlers” and Google’s “common crawlers” list) before you rely on a rule.",
       ],
+    },
+    {
+      id: "gptbot-user-agent",
+      heading: "What is the full GPTBot user agent string?",
+      paragraphs: [
+        "In robots.txt you only write the short token (“User-agent: GPTBot”). The full user agent string is what shows up in your server logs when the robot visits. OpenAI documents these full strings for its three robots (the version numbers can change over time):",
+        "To be sure a visit really came from OpenAI and not from someone faking the name, check the visitor’s IP address against the lists OpenAI publishes at openai.com/gptbot.json, openai.com/searchbot.json and openai.com/chatgpt-user.json.",
+      ],
+      table: {
+        head: ["Robot", "Full user agent string (as documented by OpenAI)"],
+        rows: [
+          ["GPTBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.4; +https://openai.com/gptbot"],
+          ["OAI-SearchBot", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36; compatible; OAI-SearchBot/1.4; +https://openai.com/searchbot"],
+          ["ChatGPT-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot"],
+        ],
+      },
     },
     {
       id: "training-vs-answers",
@@ -163,7 +179,7 @@ export const article: Article = {
     },
   ],
   faqs: [
-    { q: "What is the GPTBot user agent?", a: "GPTBot is the robot OpenAI uses to collect public web pages that may be used to train its AI models. You control it in robots.txt with the line “User-agent: GPTBot”. It is separate from OAI-SearchBot, which powers ChatGPT search." },
+    { q: "What is the GPTBot user agent?", a: "GPTBot is the robot OpenAI uses to collect public web pages that may be used to train its AI models. You control it in robots.txt with the line “User-agent: GPTBot”. In your server logs its full user agent string looks like “Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.4; +https://openai.com/gptbot”. It is separate from OAI-SearchBot, which powers ChatGPT search." },
     { q: "Does blocking GPTBot remove my site from ChatGPT?", a: "No. Blocking GPTBot only opts you out of training. Whether ChatGPT search can show and link your pages depends on OAI-SearchBot, which you can keep allowed." },
     { q: "Does blocking Google-Extended remove me from AI Overviews?", a: "No. Google says Google-Extended does not affect Google Search, and AI Overviews are part of Search. It controls Gemini model training and grounding in the Gemini app." },
     { q: "Do all AI bots obey robots.txt?", a: "The major companies say their robots follow it, but robots.txt is a request, not a lock. To truly stop a robot you need a firewall or server rule." },
@@ -172,7 +188,7 @@ export const article: Article = {
   related: ["llms-txt-guide", "what-is-geo", "how-to-rank-on-chatgpt"],
   cta: { label: "Check AI crawler access free", href: "/tools/ai-crawler-checker" },
   sources: [
-    { label: "OpenAI: Overview of OpenAI crawlers", url: "https://platform.openai.com/docs/bots" },
+    { label: "OpenAI: Overview of OpenAI crawlers", url: "https://developers.openai.com/api/docs/bots" },
     { label: "Google Search Central: Google’s common crawlers (incl. Google-Extended)", url: "https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers" },
     { label: "Google Search Central: introduction to robots.txt", url: "https://developers.google.com/search/docs/crawling-indexing/robots/intro" },
     { label: "IETF RFC 9309: Robots Exclusion Protocol", url: "https://datatracker.ietf.org/doc/html/rfc9309" },

@@ -3,9 +3,9 @@ import type { Article } from "@/lib/learn/articles";
 export const article: Article = {
   slug: "google-ai-overview",
   title: "How to show up in Google AI Overview: what Google actually says",
-  metaTitle: "How to Show Up in Google AI Overviews",
+  metaTitle: "How to Show Up in Google AI Overview (2026 Guide)",
   description:
-    "How to show up in Google AI Overview, based on Google’s own guidance: get indexed, stay snippet-eligible, write answer-first passages, use honest schema.",
+    "How to appear in Google AI Overview: what Google picks, how to structure your content, and how to check if your pages are being cited.",
   keywords: ["how to show up in google ai overview", "how to appear in google ai overview", "google ai overview seo", "ai overviews ranking"],
   published: "2026-11-24",
   updated: "2026-11-24",

@@ -38,6 +38,7 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/tools", title: "Free SEO and AI tools", summary: "Free SEO and AI tools, no sign-up: website check, meta tag, heading, schema, broken link, robots.txt, AI crawler and sitemap checkers, and title, meta description, FAQ, FAQ schema and llms.txt generators.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/ai-visibility-checker", title: "AI visibility checker", summary: "Free AI visibility checker: asks ChatGPT, Gemini and Perplexity a customer-style question and shows whether each names your business and who is named instead.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/features/ai-visibility-tracking", title: "AI visibility tracking", summary: "Weekly AI visibility tracking and brand monitoring: how often ChatGPT, Gemini and Perplexity name a business, who they name instead, and what to fix.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
+  { path: "/ai-visibility-for-agencies", title: "AI visibility tool for agencies", summary: "AI visibility tracking for agencies: every client's ChatGPT, Gemini and Perplexity mentions, GEO scores and fixes in one dashboard, with client-ready reports.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/seo-services-small-business", title: "SEO services for small businesses in India", summary: "SEO for Indian small businesses: a free website check, SEO audit software from ₹1,999 a month, or the team does the work for you.", changeFrequency: "monthly", priority: 0.8, section: "Product" },
   { path: "/tools/faq-schema-generator", title: "FAQ schema generator", summary: "Free FAQ schema (FAQPage JSON-LD) generator for Google rich results and AI answers.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/llms-txt-generator", title: "llms.txt generator", summary: "Free llms.txt generator that tells AI tools what your website is about.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
@@ -50,7 +51,7 @@ const STATIC_ROUTE_LIST: MarketingRoute[] = [
   { path: "/tools/broken-link-checker", title: "Broken link checker", summary: "Free broken link checker that tests every link on a web page.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/seo-title-generator", title: "SEO title generator", summary: "Free AI SEO title (title tag) generator.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/tools/meta-description-generator", title: "Meta description generator", summary: "Free AI meta description generator.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
-  { path: "/tools/faq-generator", title: "AI FAQ generator", summary: "Free AI FAQ generator that drafts questions, answers and FAQPage schema.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
+  { path: "/tools/faq-generator", title: "FAQ question generator", summary: "Free AI FAQ question generator that drafts the questions customers ask about a page, with short answers from its own text.", changeFrequency: "monthly", priority: 0.7, section: "Product" },
   { path: "/compare", title: "Compare SEO tools", summary: "How MyWebRank compares with Ahrefs, Semrush and SE Ranking.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
   { path: "/compare/ahrefs", title: "MyWebRank vs Ahrefs", summary: "Side-by-side comparison of MyWebRank and Ahrefs.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
   { path: "/compare/semrush", title: "MyWebRank vs Semrush", summary: "Side-by-side comparison of MyWebRank and Semrush.", changeFrequency: "monthly", priority: 0.6, section: "Product" },
@@ -174,8 +175,8 @@ export function buildRobots(base = siteBase()): MetadataRoute.Robots {
       // Named groups: a bot that matches its own group ignores "*", so repeat the disallows.
       { userAgent: [...WELCOMED_AI_BOTS], allow: "/", disallow: PRIVATE_PATHS },
     ],
+    // No "Host:" line: it is a non-standard Yandex directive that Google ignores (the www → apex redirect does the job).
     sitemap: `${base}/sitemap.xml`,
-    host: base,
   };
 }
 
